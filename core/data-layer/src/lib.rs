@@ -1,3 +1,4 @@
+pub mod reader;
 mod types;
 pub use crate::types::metric::Metric;
 pub use crate::types::scaling_plan::ScalingPlan;

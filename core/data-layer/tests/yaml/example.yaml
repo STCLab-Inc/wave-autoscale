@@ -1,0 +1,5 @@
+---
+kind: Metric
+metric_kind: AAA
+---
+kind: SLO
