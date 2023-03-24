@@ -2,12 +2,36 @@
 mod reader {
     use data_layer::reader::yaml_reader::read_yaml_file;
 
+    const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
+    const EXPECTED_METRICS_COUNT: usize = 1;
+    const EXPECTED_SLOS_COUNT: usize = 1;
+
     #[test]
-    fn yaml_reader() -> Result<(), Box<dyn std::error::Error>> {
-        let result = read_yaml_file("./tests/yaml/example.yaml")?;
-        assert_eq!(result.metrics.len(), 1);
-        assert_eq!(result.slos.len(), 1);
+    fn test_yaml_reader() -> Result<(), Box<dyn std::error::Error>> {
+        // Given
+        let yaml_file_path = EXAMPLE_FILE_PATH;
+
+        // When
+        let result = read_yaml_file(yaml_file_path)?;
+
+        // Then
+        assert!(
+            result.metrics.len() == EXPECTED_METRICS_COUNT,
+            "Unexpected metrics count. Expected {}, but got {}",
+            EXPECTED_METRICS_COUNT,
+            result.metrics.len()
+        );
+
+        assert!(
+            result.slos.len() == EXPECTED_SLOS_COUNT,
+            "Unexpected SLOs count. Expected {}, but got {}",
+            EXPECTED_SLOS_COUNT,
+            result.slos.len()
+        );
+
+        // Print the result for debugging purposes
         println!("{:?}", result);
+
         Ok(())
     }
 }
