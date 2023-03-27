@@ -33,6 +33,14 @@ impl MetricAdapter for PrometheusMetricAdapter {
         let mut interval = time::interval(Duration::from_millis(1000));
 
         let metadata = self.metric.metadata.clone();
+        let polling_interval = metadata
+            .get("polling_interval")
+            .unwrap()
+            .parse::<u64>()
+            .unwrap();
+        let mut interval = time::interval(Duration::from_millis(polling_interval));
+
+        // Concurrency
         let shared_timestamp = self.last_timestamp.clone();
         let shared_value = self.last_value.clone();
         tokio::spawn(async move {
