@@ -1,12 +1,10 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
-
+use super::MetricAdapter;
 use async_trait::async_trait;
 use data_layer::Metric;
-use serde::Deserialize;
+use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
 
-use super::MetricAdapter;
-
+// This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
     metric: Metric,
     last_timestamp: Arc<Mutex<f64>>,
@@ -14,10 +12,13 @@ pub struct PrometheusMetricAdapter {
 }
 
 impl PrometheusMetricAdapter {
+    // Static variables
     pub const METRIC_KIND: &'static str = "prometheus";
+
+    // Functions
     pub fn new(metric: Metric) -> Self {
         PrometheusMetricAdapter {
-            metric: metric,
+            metric,
             last_value: Arc::new(Mutex::new(0.0)),
             last_timestamp: Arc::new(Mutex::new(0.0)),
         }
@@ -30,8 +31,6 @@ impl MetricAdapter for PrometheusMetricAdapter {
         PrometheusMetricAdapter::METRIC_KIND
     }
     async fn run(&self) {
-        let mut interval = time::interval(Duration::from_millis(1000));
-
         let metadata = self.metric.metadata.clone();
         let polling_interval = metadata
             .get("polling_interval")
@@ -51,24 +50,24 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 let url = metadata.get("endpoint").unwrap();
                 let query = metadata.get("query").unwrap();
                 let url_with_query = format!("{}/api/v1/query?query={}", url, query);
-                println!("url_with_query: {}", url_with_query);
                 let response = reqwest::get(url_with_query)
                     .await
                     .unwrap()
                     .json::<serde_json::Value>()
                     .await;
 
+                // Update the shared value.
                 if let Ok(response) = response {
+                    // Timestamp
                     let timestamp = &response["data"]["result"][0]["value"][0];
                     let mut shared_timestamp = shared_timestamp.lock().await;
                     *shared_timestamp = timestamp.as_f64().unwrap();
-
+                    // Value
                     let value = &response["data"]["result"][0]["value"][1];
                     let mut shared_value = shared_value.lock().await;
                     *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
-                    println!("b: {:?}", shared_value);
                 }
-
+                // Wait for the next interval.
                 interval.tick().await;
             }
         });
