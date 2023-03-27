@@ -13,3 +13,5 @@ async-trait = { version = "0.1.67" }
 reqwest = { version = "0.11.15", features = ["json"] }
 serde = { version = "1.0.158", features = ["derive"] }
 serde_json = { version = "1.0.94" }
+aws-config = "0.54.1"
+aws-sdk-autoscaling = "0.24.0"
