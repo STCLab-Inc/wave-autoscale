@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use super::kind::ObjectKind;
+use super::object_kind::ObjectKind;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScalingTrigger {
-    kind: ObjectKind,
+    pub kind: ObjectKind,
+    pub id: String,
 }

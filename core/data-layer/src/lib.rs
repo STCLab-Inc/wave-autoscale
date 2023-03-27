@@ -1,5 +1,5 @@
 pub mod reader;
-mod types;
+pub mod types;
 pub use crate::types::metric::Metric;
 pub use crate::types::scaling_plan::ScalingPlan;
 pub use crate::types::scaling_trigger::ScalingTrigger;
