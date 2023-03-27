@@ -1,0 +1,9 @@
+---
+kind: Metric
+id: metric-id
+metric_kind: prometheus
+metadata:
+  user_key: user_value
+---
+kind: SLO
+id: slo-id

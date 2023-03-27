@@ -6,3 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+data-layer = { path = "../data-layer" }
+anyhow = "1.0.70"
+tokio = { version = "1.26.0", features = ["full"] }
+async-trait = { version = "0.1.67" }
+reqwest = { version = "0.11.15", features = ["json"] }
+serde = { version = "1.0.158", features = ["derive"] }
+serde_json = { version = "1.0.94" }

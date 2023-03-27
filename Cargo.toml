@@ -3,4 +3,5 @@
 members = [
     "core/wave-autoscale",
     "core/api-server",
+    "core/data-layer",
 ]
