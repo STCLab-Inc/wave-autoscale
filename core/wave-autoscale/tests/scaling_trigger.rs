@@ -2,10 +2,10 @@
 mod scaling_trigger_test {
     use anyhow::Result;
     use data_layer::reader::yaml_reader::read_yaml_file;
+    use serde_json::{json, Value};
     use std::collections::HashMap;
     use wave_autoscale::scaling_trigger::{
         aws_ec2_autoscaling::EC2AutoScalingTrigger, create_scaling_trigger, ScalingTrigger,
-        ScalingTriggerValueType,
     };
 
     const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/trigger_ec2_autoscaling.yaml";
@@ -29,15 +29,16 @@ mod scaling_trigger_test {
             assert!(name == EC2AutoScalingTrigger::TRIGGER_KIND, "Unexpected");
 
             // run scaling trigger
-            let mut options: HashMap<String, ScalingTriggerValueType> = HashMap::new();
+            let mut options: HashMap<String, Value> = HashMap::new();
             options.insert(
                 "name".to_string(),
-                ScalingTriggerValueType::String(String::from("tf-wa-20230322020900305100000006")),
+                json!("tf-wa-20230322020900305100000006"),
             );
-            options.insert("min".to_string(), ScalingTriggerValueType::Int(1));
-            options.insert("max".to_string(), ScalingTriggerValueType::Int(10));
-            options.insert("desired".to_string(), ScalingTriggerValueType::Int(1));
-            scaling_trigger.apply(options).await;
+            options.insert("min".to_string(), json!(1));
+            options.insert("max".to_string(), json!(4));
+            options.insert("desired".to_string(), json!(1));
+            let result = scaling_trigger.apply(options).await;
+            return result;
         } else {
             assert!(false, "No metric adapter found")
         }
