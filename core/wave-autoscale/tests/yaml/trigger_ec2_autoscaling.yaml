@@ -1,0 +1,9 @@
+---
+kind: ScalingTrigger
+id: ec2-autoscaling-id-1
+trigger_kind: aws-ec2-autoscaling
+metadata:
+  region: ap-northeast-2
+  access_key: AKIAU7BQ6ZTCL6H3BU67
+  secret_key: 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
+  

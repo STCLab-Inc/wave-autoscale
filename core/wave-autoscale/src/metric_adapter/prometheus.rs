@@ -32,11 +32,12 @@ impl MetricAdapter for PrometheusMetricAdapter {
     }
     async fn run(&self) {
         let metadata = self.metric.metadata.clone();
-        let polling_interval = metadata
-            .get("polling_interval")
-            .unwrap()
-            .parse::<u64>()
-            .unwrap();
+
+        let mut polling_interval: u64 = 1000;
+        if let Some(metadata_polling_interval) = metadata["polling_interval"].as_u64() {
+            polling_interval = metadata_polling_interval;
+        }
+        println!("Polling interval: {:?}", polling_interval);
         let mut interval = time::interval(Duration::from_millis(polling_interval));
 
         // Concurrency
@@ -47,25 +48,37 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 // Every 1 second, get the metric value from prometheus using reqwest.
 
                 // Generate a url to call a prometheus query.
-                let url = metadata.get("endpoint").unwrap();
-                let query = metadata.get("query").unwrap();
-                let url_with_query = format!("{}/api/v1/query?query={}", url, query);
-                let response = reqwest::get(url_with_query)
+                let url = metadata["endpoint"].as_str().unwrap();
+                let query = metadata["query"].as_str().unwrap();
+                let url = format!("{}/api/v1/query", url);
+                println!("url: {:?}", url);
+                // println!("url_with_query: {:?}", url_with_query);
+                let client = reqwest::Client::new();
+                let params = vec![("query", query)];
+                let response = client
+                    .get(url)
+                    .query(&params)
+                    .send()
                     .await
                     .unwrap()
                     .json::<serde_json::Value>()
                     .await;
 
+                println!("response: {:?}", response);
                 // Update the shared value.
                 if let Ok(response) = response {
-                    // Timestamp
-                    let timestamp = &response["data"]["result"][0]["value"][0];
-                    let mut shared_timestamp = shared_timestamp.lock().await;
-                    *shared_timestamp = timestamp.as_f64().unwrap();
-                    // Value
-                    let value = &response["data"]["result"][0]["value"][1];
-                    let mut shared_value = shared_value.lock().await;
-                    *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
+                    if let Some(result) = response["data"]["result"].as_array() {
+                        if result.len() != 0 {
+                            // Timestamp
+                            let timestamp = &response["data"]["result"][0]["value"][0];
+                            let mut shared_timestamp = shared_timestamp.lock().await;
+                            *shared_timestamp = timestamp.as_f64().unwrap();
+                            // Value
+                            let value = &response["data"]["result"][0]["value"][1];
+                            let mut shared_value = shared_value.lock().await;
+                            *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
+                        }
+                    }
                 }
                 // Wait for the next interval.
                 interval.tick().await;

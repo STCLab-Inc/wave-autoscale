@@ -4,10 +4,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
-pub struct Metric {
+pub struct ScalingTriggerData {
     pub kind: ObjectKind,
     pub id: String,
-    pub metric_kind: String,
+    pub trigger_kind: String,
     pub metadata: HashMap<String, Value>,
 }
