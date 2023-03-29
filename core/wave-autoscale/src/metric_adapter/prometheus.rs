@@ -32,6 +32,9 @@ impl MetricAdapter for PrometheusMetricAdapter {
     fn get_metric_kind(&self) -> &str {
         PrometheusMetricAdapter::METRIC_KIND
     }
+    fn get_id(&self) -> &str {
+        &self.metric.id
+    }
     async fn run(&self) {
         let metadata = self.metric.metadata.clone();
 
