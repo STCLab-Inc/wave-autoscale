@@ -21,6 +21,7 @@ pub fn create_metric_adapter(metric: &Metric) -> Result<Box<dyn MetricAdapter>> 
 pub trait MetricAdapter {
     async fn run(&self);
     async fn get_value(&self) -> f64;
+    async fn get_multiple_values(&self) -> Vec<f64>;
     async fn get_timestamp(&self) -> f64;
     fn get_metric_kind(&self) -> &str;
 }

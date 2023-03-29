@@ -21,6 +21,9 @@ impl MetricAdapter for CloudWatchMetricAdapter {
     async fn get_value(&self) -> f64 {
         0.0
     }
+    async fn get_multiple_values(&self) -> Vec<f64> {
+        vec![]
+    }
     async fn get_timestamp(&self) -> f64 {
         0.0
     }

@@ -7,8 +7,9 @@ use tokio::{sync::Mutex, time};
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
     metric: Metric,
-    last_timestamp: Arc<Mutex<f64>>,
-    last_value: Arc<Mutex<f64>>,
+    last_result: Arc<Mutex<serde_json::Value>>,
+    // last_timestamp: Arc<Mutex<f64>>,
+    // last_value: Arc<Mutex<f64>>,
 }
 
 impl PrometheusMetricAdapter {
@@ -19,8 +20,9 @@ impl PrometheusMetricAdapter {
     pub fn new(metric: Metric) -> Self {
         PrometheusMetricAdapter {
             metric,
-            last_value: Arc::new(Mutex::new(0.0)),
-            last_timestamp: Arc::new(Mutex::new(0.0)),
+            last_result: Arc::new(Mutex::new(serde_json::Value::Null)),
+            // last_value: Arc::new(Mutex::new(0.0)),
+            // last_timestamp: Arc::new(Mutex::new(0.0)),
         }
     }
 }
@@ -41,8 +43,9 @@ impl MetricAdapter for PrometheusMetricAdapter {
         let mut interval = time::interval(Duration::from_millis(polling_interval));
 
         // Concurrency
-        let shared_timestamp = self.last_timestamp.clone();
-        let shared_value = self.last_value.clone();
+        let shared_result = self.last_result.clone();
+        // let shared_timestamp = self.last_timestamp.clone();
+        // let shared_value = self.last_value.clone();
         tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
@@ -67,18 +70,20 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 println!("response: {:?}", response);
                 // Update the shared value.
                 if let Ok(response) = response {
-                    if let Some(result) = response["data"]["result"].as_array() {
-                        if result.len() != 0 {
-                            // Timestamp
-                            let timestamp = &response["data"]["result"][0]["value"][0];
-                            let mut shared_timestamp = shared_timestamp.lock().await;
-                            *shared_timestamp = timestamp.as_f64().unwrap();
-                            // Value
-                            let value = &response["data"]["result"][0]["value"][1];
-                            let mut shared_value = shared_value.lock().await;
-                            *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
-                        }
-                    }
+                    let mut shared_result = shared_result.lock().await;
+                    *shared_result = response["data"]["result"].clone();
+                    // if let Some(result) = response["data"]["result"].as_array() {
+                    //     if result.len() != 0 {
+                    //         // Timestamp
+                    //         let timestamp = &response["data"]["result"][0]["value"][0];
+                    //         let mut shared_timestamp = shared_timestamp.lock().await;
+                    //         *shared_timestamp = timestamp.as_f64().unwrap();
+                    //         // Value
+                    //         let value = &response["data"]["result"][0]["value"][1];
+                    //         let mut shared_value = shared_value.lock().await;
+                    //         *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
+                    //     }
+                    // }
                 }
                 // Wait for the next interval.
                 interval.tick().await;
@@ -86,13 +91,36 @@ impl MetricAdapter for PrometheusMetricAdapter {
         });
     }
     async fn get_value(&self) -> f64 {
-        let shared_value = self.last_value.clone();
-        let shared_value = shared_value.lock().await;
-        *shared_value
+        let shared_result = self.last_result.clone();
+        let shared_result = shared_result.lock().await;
+        let result = shared_result.as_array().unwrap();
+        if result.len() != 0 {
+            let value = &result[0]["value"][1];
+            value.as_str().unwrap().parse::<f64>().unwrap()
+        } else {
+            0.0
+        }
+    }
+    async fn get_multiple_values(&self) -> Vec<f64> {
+        let shared_result = self.last_result.clone();
+        let shared_result = shared_result.lock().await;
+        let result = shared_result.as_array().unwrap();
+        let mut values: Vec<f64> = Vec::new();
+        for i in 0..result.len() {
+            let value = &result[i]["value"][1];
+            values.push(value.as_str().unwrap().parse::<f64>().unwrap());
+        }
+        values
     }
     async fn get_timestamp(&self) -> f64 {
-        let shared_timestamp = self.last_timestamp.clone();
-        let shared_timestamp = shared_timestamp.lock().await;
-        *shared_timestamp
+        let shared_result = self.last_result.clone();
+        let shared_result = shared_result.lock().await;
+        let result = shared_result.as_array().unwrap();
+        if result.len() != 0 {
+            let timestamp = &result[0]["value"][0];
+            timestamp.as_f64().unwrap()
+        } else {
+            0.0
+        }
     }
 }
