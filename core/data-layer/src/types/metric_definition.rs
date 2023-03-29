@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 
-pub struct Metric {
+pub struct MetricDefinition {
     pub kind: ObjectKind,
     pub id: String,
     pub metric_kind: String,

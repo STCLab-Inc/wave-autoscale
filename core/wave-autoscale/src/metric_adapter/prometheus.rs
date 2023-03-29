@@ -1,12 +1,12 @@
 use super::MetricAdapter;
 use async_trait::async_trait;
-use data_layer::Metric;
+use data_layer::MetricDefinition;
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
-    metric: Metric,
+    metric: MetricDefinition,
     last_result: Arc<Mutex<serde_json::Value>>,
     // last_timestamp: Arc<Mutex<f64>>,
     // last_value: Arc<Mutex<f64>>,
@@ -17,7 +17,7 @@ impl PrometheusMetricAdapter {
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
-    pub fn new(metric: Metric) -> Self {
+    pub fn new(metric: MetricDefinition) -> Self {
         PrometheusMetricAdapter {
             metric,
             last_result: Arc::new(Mutex::new(serde_json::Value::Null)),

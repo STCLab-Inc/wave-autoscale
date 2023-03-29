@@ -20,13 +20,13 @@ mod metric_adapter_test {
 
         // create metric adapter manager
         let mut metric_adapter_manager = MetricAdapterManager::new();
-        metric_adapter_manager.add_metrics(result.metrics);
+        metric_adapter_manager.add_definitions(result.metric_definitions);
         // run metric adapter
-        if let Some(first_metric) =
+        if let Some(metric_adapter) =
             metric_adapter_manager.get_metric_adapter("prometheus_api_server_cpu_average_each")
         {
             // check metric kind
-            let prometheus_metric_adapter = first_metric.as_ref();
+            let prometheus_metric_adapter = metric_adapter.as_ref();
             let name = prometheus_metric_adapter.get_metric_kind();
             assert!(name == PrometheusMetricAdapter::METRIC_KIND, "Unexpected");
 

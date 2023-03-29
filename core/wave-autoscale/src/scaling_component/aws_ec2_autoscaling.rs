@@ -1,35 +1,39 @@
-use super::ScalingTrigger;
+use super::ScalingComponent;
 use crate::util::aws_region::get_aws_region_static_str;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use aws_sdk_autoscaling::{Client, Credentials};
-use data_layer::ScalingTriggerData;
+use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
 use std::collections::HashMap;
 
 // This is a metric adapter for prometheus.
-pub struct EC2AutoScalingTrigger {
-    scaling_trigger: ScalingTriggerData,
+pub struct EC2AutoScalingComponent {
+    definition: ScalingComponentDefinition,
 }
 
-impl EC2AutoScalingTrigger {
+impl EC2AutoScalingComponent {
     // Static variables
     pub const TRIGGER_KIND: &'static str = "aws-ec2-autoscaling";
 
     // Functions
-    pub fn new(scaling_trigger: ScalingTriggerData) -> Self {
-        EC2AutoScalingTrigger { scaling_trigger }
+    pub fn new(definition: ScalingComponentDefinition) -> Self {
+        EC2AutoScalingComponent { definition }
     }
 }
 
 #[async_trait]
-impl ScalingTrigger for EC2AutoScalingTrigger {
-    fn get_trigger_kind(&self) -> &str {
-        EC2AutoScalingTrigger::TRIGGER_KIND
+impl ScalingComponent for EC2AutoScalingComponent {
+    fn get_scaling_component_kind(&self) -> &str {
+        &self.definition.component_kind
+    }
+    fn get_id(&self) -> &str {
+        &self.definition.id
     }
     async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
-        let metadata = self.scaling_trigger.metadata.clone();
+        let metadata = self.definition.metadata.clone();
         // let region = Region::new(region.clone());
+        let asg_name = metadata["asg_name"].as_str().unwrap();
         let access_key = metadata["access_key"].as_str().unwrap();
         let secret_key = metadata["secret_key"].as_str().unwrap();
         let credentials = Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
@@ -45,14 +49,13 @@ impl ScalingTrigger for EC2AutoScalingTrigger {
 
         let client = Client::new(&shared_config);
 
-        let name = params["name"].as_str().unwrap();
         let min = params["min"].as_i64().unwrap();
         let max = params["max"].as_i64().unwrap();
         let desired = params["desired"].as_i64().unwrap();
 
         let result = client
             .update_auto_scaling_group()
-            .auto_scaling_group_name(name)
+            .auto_scaling_group_name(asg_name)
             .min_size(min as i32)
             .max_size(max as i32)
             .desired_capacity(desired as i32)

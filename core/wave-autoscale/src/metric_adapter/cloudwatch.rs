@@ -1,15 +1,15 @@
 use async_trait::async_trait;
-use data_layer::Metric;
+use data_layer::MetricDefinition;
 
 use super::MetricAdapter;
 
 pub struct CloudWatchMetricAdapter {
-    metric: Metric,
+    metric: MetricDefinition,
 }
 
 impl CloudWatchMetricAdapter {
     pub const METRIC_KIND: &'static str = "cloudwatch";
-    pub fn new(metric: Metric) -> Self {
+    pub fn new(metric: MetricDefinition) -> Self {
         CloudWatchMetricAdapter { metric }
     }
 }

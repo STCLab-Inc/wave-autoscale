@@ -1,0 +1,46 @@
+---
+kind: Metric
+id: prometheus_api_server_cpu_average_total
+metric_kind: prometheus
+metadata:
+  endpoint: http://3.34.170.13:9090
+  # Note: query must return a vector/scalar single element response
+  query: avg(100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[20s])) by (hostname) * 100))
+  # milliseconds
+  polling_interval: 1000
+---
+kind: ScalingTrigger
+id: ec2_autoscaling_api_server
+trigger_kind: aws-ec2-autoscaling
+metadata:
+  region: ap-northeast-2
+  access_key: AKIAU7BQ6ZTCL6H3BU67
+  secret_key: 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
+  asg_name: tf-wa-20230322020900305100000006
+---
+kind: ScalingPlan
+id: scaling_plan_ec2_autoscaling
+plans:
+  - id: scale-out-plan-1
+    # JavaScript expression that returns a boolean value.
+    expression_bool: "prometheus_api_server_cpu_average_total >= 30"
+    # Higher priority values will be checked first.
+    priority: 1
+    triggers:
+      - trigger_id: ec2_autoscaling_api_server
+        # JavaScript expression that returns an integer.
+        desired_integer: "Math.floor(prometheus_api_server_cpu_average_total / 10)"
+        # desired_integer: "Math.floor(prometheus_api_server_cpu_average / 10)"
+        # If the result of desired_integer is 5 but right after it, the result of desired_integer is 3 then the desired capacity will be set to 3.
+  - id: scale-out-plan-2
+    expression_bool: "prometheus_metric >= 80"
+    priority: 2
+    triggers:
+      - trigger_id: ec2_autoscaling_api_server
+        desired_integer: "Math.floor(prometheus_api_server_cpu_average / 10)"
+  - id: scale-in-plan-1
+    expression_bool: "prometheus_api_server_cpu_average_total <= 10"
+    priority: 3
+    triggers:
+      - trigger_id: ec2_autoscaling_api_server
+        desired_integer: 1

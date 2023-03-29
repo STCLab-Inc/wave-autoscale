@@ -17,23 +17,23 @@ mod reader {
 
         // Then
         assert!(
-            result.metrics.len() == EXPECTED_METRICS_COUNT,
+            result.metric_definitions.len() == EXPECTED_METRICS_COUNT,
             "Unexpected metrics count. Expected {}, but got {}",
             EXPECTED_METRICS_COUNT,
-            result.metrics.len()
+            result.metric_definitions.len()
         );
         // how to get a first element in result.metrics
-        if let Some(first_metric) = result.metrics.get(0) {
+        if let Some(first_metric) = result.metric_definitions.get(0) {
             if let Some(user_key) = first_metric.metadata.get("user_key") {
                 assert!(user_key == "user_value", "Unexpected");
             }
         }
 
         assert!(
-            result.slos.len() == EXPECTED_SLOS_COUNT,
+            result.slo_definitions.len() == EXPECTED_SLOS_COUNT,
             "Unexpected SLOs count. Expected {}, but got {}",
             EXPECTED_SLOS_COUNT,
-            result.slos.len()
+            result.slo_definitions.len()
         );
 
         // Print the result for debugging purposes

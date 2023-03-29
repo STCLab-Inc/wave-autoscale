@@ -3,19 +3,19 @@ use std::collections::HashMap;
 use self::{cloudwatch::CloudWatchMetricAdapter, prometheus::PrometheusMetricAdapter};
 use anyhow::Result;
 use async_trait::async_trait;
-use data_layer::Metric;
+use data_layer::MetricDefinition;
 pub mod cloudwatch;
 pub mod prometheus;
 
-pub fn create_metric_adapter(metric: &Metric) -> Result<Box<dyn MetricAdapter>> {
+pub fn create_metric_adapter(definition: &MetricDefinition) -> Result<Box<dyn MetricAdapter>> {
     // Get a value of metric and clone it.
-    let cloned_metric = metric.clone();
-    match metric.metric_kind.as_str() {
+    let cloned_definition = definition.clone();
+    match definition.metric_kind.as_str() {
         PrometheusMetricAdapter::METRIC_KIND => {
-            Ok(Box::new(PrometheusMetricAdapter::new(cloned_metric)))
+            Ok(Box::new(PrometheusMetricAdapter::new(cloned_definition)))
         }
         CloudWatchMetricAdapter::METRIC_KIND => {
-            Ok(Box::new(CloudWatchMetricAdapter::new(cloned_metric)))
+            Ok(Box::new(CloudWatchMetricAdapter::new(cloned_definition)))
         }
         _ => Err(anyhow::anyhow!(
             "Metric adapter not implemented for this kind"
@@ -44,15 +44,15 @@ impl MetricAdapterManager {
         }
     }
 
-    pub fn add_metric(&mut self, metric: Metric) -> Result<()> {
-        let metric_adapter = create_metric_adapter(&metric)?;
+    pub fn add_definition(&mut self, definition: MetricDefinition) -> Result<()> {
+        let metric_adapter = create_metric_adapter(&definition)?;
         self.add_metric_adapter(metric_adapter);
         Ok(())
     }
 
-    pub fn add_metrics(&mut self, metrics: Vec<Metric>) -> Result<()> {
-        for metric in metrics {
-            self.add_metric(metric)?;
+    pub fn add_definitions(&mut self, definitions: Vec<MetricDefinition>) -> Result<()> {
+        for definition in definitions {
+            self.add_definition(definition)?;
         }
         Ok(())
     }

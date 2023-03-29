@@ -1,6 +1,6 @@
 pub mod reader;
 pub mod types;
-pub use crate::types::metric::Metric;
-pub use crate::types::scaling_plan_data::ScalingPlanData;
-pub use crate::types::scaling_trigger_data::ScalingTriggerData;
-pub use crate::types::slo::SLO;
+pub use crate::types::metric_definition::MetricDefinition;
+pub use crate::types::scaling_plan_definition::ScalingPlanDefinition;
+pub use crate::types::scaling_component_definition::ScalingComponentDefinition;
+pub use crate::types::slo_definition::SloDefinition;
