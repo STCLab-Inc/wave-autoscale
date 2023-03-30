@@ -1,19 +1,30 @@
-use std::collections::HashMap;
-
 use self::{cloudwatch::CloudWatchMetricAdapter, prometheus::PrometheusMetricAdapter};
 use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
+use serde_json::Value;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 pub mod cloudwatch;
 pub mod prometheus;
 
-pub fn create_metric_adapter(definition: &MetricDefinition) -> Result<Box<dyn MetricAdapter>> {
+pub type MetricStore = Arc<RwLock<HashMap<String, Value>>>;
+
+pub fn create_metric_store() -> MetricStore {
+    Arc::new(RwLock::new(HashMap::new()))
+}
+
+pub fn create_metric_adapter(
+    definition: &MetricDefinition,
+    metric_store: MetricStore,
+) -> Result<Box<dyn MetricAdapter>> {
     // Get a value of metric and clone it.
     let cloned_definition = definition.clone();
     match definition.metric_kind.as_str() {
-        PrometheusMetricAdapter::METRIC_KIND => {
-            Ok(Box::new(PrometheusMetricAdapter::new(cloned_definition)))
-        }
+        PrometheusMetricAdapter::METRIC_KIND => Ok(Box::new(PrometheusMetricAdapter::new(
+            cloned_definition,
+            metric_store,
+        ))),
         CloudWatchMetricAdapter::METRIC_KIND => {
             Ok(Box::new(CloudWatchMetricAdapter::new(cloned_definition)))
         }
@@ -35,17 +46,19 @@ pub trait MetricAdapter {
 
 pub struct MetricAdapterManager {
     metric_adapters: HashMap<String, Box<dyn MetricAdapter>>,
+    metric_store: MetricStore,
 }
 
 impl MetricAdapterManager {
-    pub fn new() -> Self {
+    pub fn new(metric_store: MetricStore) -> Self {
         MetricAdapterManager {
             metric_adapters: HashMap::new(),
+            metric_store,
         }
     }
 
     pub fn add_definition(&mut self, definition: MetricDefinition) -> Result<()> {
-        let metric_adapter = create_metric_adapter(&definition)?;
+        let metric_adapter = create_metric_adapter(&definition, self.metric_store.clone())?;
         self.add_metric_adapter(metric_adapter);
         Ok(())
     }
@@ -91,5 +104,9 @@ impl MetricAdapterManager {
             return metric_adapter.get_timestamp().await;
         }
         0.0
+    }
+
+    pub fn get_metric_store(&self) -> MetricStore {
+        self.metric_store.clone()
     }
 }

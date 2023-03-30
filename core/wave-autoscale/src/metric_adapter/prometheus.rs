@@ -1,4 +1,4 @@
-use super::MetricAdapter;
+use super::{MetricAdapter, MetricStore};
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::{sync::Arc, time::Duration};
@@ -7,6 +7,7 @@ use tokio::{sync::Mutex, time};
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
     metric: MetricDefinition,
+    metric_store: MetricStore,
     last_result: Arc<Mutex<serde_json::Value>>,
     // last_timestamp: Arc<Mutex<f64>>,
     // last_value: Arc<Mutex<f64>>,
@@ -17,9 +18,10 @@ impl PrometheusMetricAdapter {
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
-    pub fn new(metric: MetricDefinition) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
         PrometheusMetricAdapter {
             metric,
+            metric_store,
             last_result: Arc::new(Mutex::new(serde_json::Value::Null)),
             // last_value: Arc::new(Mutex::new(0.0)),
             // last_timestamp: Arc::new(Mutex::new(0.0)),
@@ -47,8 +49,8 @@ impl MetricAdapter for PrometheusMetricAdapter {
 
         // Concurrency
         let shared_result = self.last_result.clone();
-        // let shared_timestamp = self.last_timestamp.clone();
-        // let shared_value = self.last_value.clone();
+        let shared_metric_store = self.metric_store.clone();
+        let metric_id = self.get_id().to_string();
         tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
@@ -75,18 +77,12 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 if let Ok(response) = response {
                     let mut shared_result = shared_result.lock().await;
                     *shared_result = response["data"]["result"].clone();
-                    // if let Some(result) = response["data"]["result"].as_array() {
-                    //     if result.len() != 0 {
-                    //         // Timestamp
-                    //         let timestamp = &response["data"]["result"][0]["value"][0];
-                    //         let mut shared_timestamp = shared_timestamp.lock().await;
-                    //         *shared_timestamp = timestamp.as_f64().unwrap();
-                    //         // Value
-                    //         let value = &response["data"]["result"][0]["value"][1];
-                    //         let mut shared_value = shared_value.lock().await;
-                    //         *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
-                    //     }
-                    // }
+
+                    // Update the metric store.
+                    let mut shared_metric_store = shared_metric_store.write().await;
+                    let result = shared_result.as_array().unwrap();
+                    let value = &result[0]["value"][1];
+                    shared_metric_store.insert(metric_id.clone(), value.clone());
                 }
                 // Wait for the next interval.
                 interval.tick().await;
