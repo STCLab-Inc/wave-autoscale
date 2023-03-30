@@ -23,7 +23,7 @@ id: scaling_plan_ec2_autoscaling
 plans:
   - id: scale-out-plan-1
     # JavaScript expression that returns a boolean value.
-    expression_bool: "prometheus_api_server_cpu_average_total >= 30"
+    expression: "prometheus_api_server_cpu_average_total >= 30"
     # Higher priority values will be checked first.
     priority: 1
     triggers:
@@ -33,19 +33,19 @@ plans:
         # desired_integer: "Math.floor(prometheus_api_server_cpu_average / 10)"
         # If the result of desired_integer is 5 but right after it, the result of desired_integer is 3 then the desired capacity will be set to 3.
   - id: scale-out-plan-2
-    expression_bool: "prometheus_api_server_cpu_average_total >= 80"
+    expression: "prometheus_api_server_cpu_average_total >= 80"
     priority: 2
     triggers:
       - trigger_id: ec2_autoscaling_api_server
         desired_integer: "Math.floor(prometheus_api_server_cpu_average / 10)"
   - id: scale-in-plan-1
-    expression_bool: "prometheus_api_server_cpu_average_total <= 10"
+    expression: "prometheus_api_server_cpu_average_total <= 10"
     priority: 3
     triggers:
       - trigger_id: ec2_autoscaling_api_server
         desired_integer: 1
   - id: scale-in-plan-1-error
-    expression_bool: "prometheus_api_server_cpu_average_total_not_exists_ <= 10"
+    expression: "prometheus_api_server_cpu_average_total_not_exists_ <= 10"
     priority: 4
     triggers:
       - trigger_id: ec2_autoscaling_api_server

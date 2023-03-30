@@ -63,7 +63,7 @@ impl<'a> ScalingPlanner {
             let shared_metric_store = shared_metric_store.read().await;
             loop {
                 for plan in plans.iter() {
-                    if let Some(expression) = plan["expression_bool"].as_str() {
+                    if let Some(expression) = plan["expression"].as_str() {
                         println!("Expression: {}", expression);
                         let context = get_context_with_metric_store(&shared_metric_store);
                         match context.eval(expression) {
