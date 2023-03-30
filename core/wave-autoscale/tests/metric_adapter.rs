@@ -20,11 +20,12 @@ mod metric_adapter_test {
         let metric_store: MetricStore = Arc::new(RwLock::new(HashMap::new()));
         let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
         metric_adapter_manager.add_definitions(result.metric_definitions);
+        metric_adapter_manager.run().await;
+
         // run metric adapter
         if let Some(metric_adapter) =
             metric_adapter_manager.get_metric_adapter("prometheus_api_server_cpu_average_each")
         {
-            metric_adapter_manager.run().await;
             // // check metric kind
             // let prometheus_metric_adapter = metric_adapter.as_ref();
             // let name = prometheus_metric_adapter.get_metric_kind();

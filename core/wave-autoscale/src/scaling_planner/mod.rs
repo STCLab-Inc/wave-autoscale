@@ -1,12 +1,16 @@
-use crate::metric_adapter::MetricStore;
+use crate::{metric_adapter::MetricStore, scaling_component::ScalingComponentManager};
 use data_layer::ScalingPlanDefinition;
 use serde_json::Value;
-use std::{collections::HashMap, time::Duration};
-use tokio::{sync::RwLockReadGuard, time};
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::{
+    sync::{Mutex, RwLock, RwLockReadGuard},
+    time,
+};
 
 pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_store: MetricStore,
+    scaling_component_manager: Arc<RwLock<ScalingComponentManager>>,
 }
 
 // Get a context with the metric store values set as global variables
@@ -39,10 +43,15 @@ fn get_context_with_metric_store(
 }
 
 impl<'a> ScalingPlanner {
-    pub fn new(definition: ScalingPlanDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(
+        definition: ScalingPlanDefinition,
+        metric_store: MetricStore,
+        scaling_component_manager: Arc<RwLock<ScalingComponentManager>>,
+    ) -> Self {
         ScalingPlanner {
             definition,
             metric_store,
+            scaling_component_manager,
         }
     }
     pub async fn run(&self) {
@@ -58,17 +67,24 @@ impl<'a> ScalingPlanner {
         let polling_interval: u64 = 1000;
         let mut interval = time::interval(Duration::from_millis(polling_interval));
         let shared_metric_store = self.metric_store.clone();
+        let shared_scaling_component_manager = self.scaling_component_manager.clone();
 
         tokio::spawn(async move {
             let shared_metric_store = shared_metric_store.read().await;
             loop {
+                let mut scaling_components_metadata: &Vec<Value> = &Vec::new();
                 for plan in plans.iter() {
                     if let Some(expression) = plan["expression"].as_str() {
                         println!("Expression: {}", expression);
                         let context = get_context_with_metric_store(&shared_metric_store);
-                        match context.eval(expression) {
+                        match context.eval_as::<bool>(expression) {
                             Ok(value) => {
                                 println!("Value: {:?}", value);
+                                if value {
+                                    scaling_components_metadata =
+                                        plan["scaling_components"].as_array().unwrap();
+                                    break;
+                                }
                             }
                             Err(error) => {
                                 println!("Error: {:?}", error);
@@ -76,6 +92,28 @@ impl<'a> ScalingPlanner {
                         }
                     } else {
                         println!("No expression found")
+                    }
+                }
+                println!("Scaling components: {:?}", scaling_components_metadata);
+                if !scaling_components_metadata.is_empty() {
+                    for metadata in scaling_components_metadata.iter() {
+                        println!("Metadata: {:?}", metadata);
+                        let scaling_component_id = metadata["id"].as_str().unwrap();
+                        let shared_scaling_component_manager =
+                            shared_scaling_component_manager.read().await;
+
+                        println!("Scaling component id: {}", scaling_component_id);
+
+                        let params = metadata
+                            .as_object()
+                            .unwrap()
+                            .iter()
+                            .map(|(key, value)| (key.to_string(), value.clone()))
+                            .collect::<HashMap<String, Value>>();
+
+                        shared_scaling_component_manager
+                            .apply_to_scaling_component(scaling_component_id, params)
+                            .await;
                     }
                 }
                 // Wait for the next interval.

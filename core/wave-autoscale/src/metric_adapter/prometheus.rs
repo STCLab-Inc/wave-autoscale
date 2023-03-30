@@ -2,15 +2,14 @@ use super::{MetricAdapter, MetricStore};
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::{sync::Arc, time::Duration};
-use tokio::{sync::Mutex, time};
+use tokio::{sync::Mutex, task::JoinHandle, time};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
+    task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
     metric_store: MetricStore,
     last_result: Arc<Mutex<serde_json::Value>>,
-    // last_timestamp: Arc<Mutex<f64>>,
-    // last_value: Arc<Mutex<f64>>,
 }
 
 impl PrometheusMetricAdapter {
@@ -20,6 +19,7 @@ impl PrometheusMetricAdapter {
     // Functions
     pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
         PrometheusMetricAdapter {
+            task: None,
             metric,
             metric_store,
             last_result: Arc::new(Mutex::new(serde_json::Value::Null)),
@@ -37,7 +37,9 @@ impl MetricAdapter for PrometheusMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&self) {
+    async fn run(&mut self) {
+        self.stop();
+
         let metadata = self.metric.metadata.clone();
 
         let mut polling_interval: u64 = 1000;
@@ -51,7 +53,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
         let shared_result = self.last_result.clone();
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
 
@@ -88,6 +90,13 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 interval.tick().await;
             }
         });
+        self.task = Some(task);
+    }
+    fn stop(&mut self) {
+        if let Some(task) = &self.task {
+            task.abort();
+            self.task = None;
+        }
     }
     async fn get_value(&self) -> f64 {
         let shared_result = self.last_result.clone();

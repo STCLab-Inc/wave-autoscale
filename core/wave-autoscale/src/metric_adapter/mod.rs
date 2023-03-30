@@ -36,7 +36,8 @@ pub fn create_metric_adapter(
 
 #[async_trait]
 pub trait MetricAdapter {
-    async fn run(&self);
+    async fn run(&mut self);
+    fn stop(&mut self);
     async fn get_value(&self) -> f64;
     async fn get_multiple_values(&self) -> Vec<f64>;
     async fn get_timestamp(&self) -> f64;
@@ -75,9 +76,15 @@ impl MetricAdapterManager {
             .insert(metric_adapter.get_id().to_string(), metric_adapter);
     }
 
-    pub async fn run(&self) {
-        for metric_adapter in self.metric_adapters.values() {
+    pub async fn run(&mut self) {
+        for metric_adapter in self.metric_adapters.values_mut() {
             metric_adapter.run().await;
+        }
+    }
+
+    pub fn stop(&mut self) {
+        for metric_adapter in self.metric_adapters.values_mut() {
+            metric_adapter.stop();
         }
     }
 

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 pub mod aws_ec2_autoscaling;
 use anyhow::Result;
 
@@ -9,7 +10,7 @@ use self::aws_ec2_autoscaling::EC2AutoScalingComponent;
 
 pub fn create_scaling_component(
     definition: &ScalingComponentDefinition,
-) -> Result<Box<dyn ScalingComponent>> {
+) -> Result<Box<dyn ScalingComponent + Send + Sync>> {
     // Get a value of metric and clone it.
     let cloned_defintion = definition.clone();
     match cloned_defintion.component_kind.as_str() {
@@ -28,7 +29,7 @@ pub trait ScalingComponent {
 }
 
 pub struct ScalingComponentManager {
-    scaling_components: HashMap<String, Box<dyn ScalingComponent>>,
+    scaling_components: HashMap<String, Box<dyn ScalingComponent + Send + Sync>>,
 }
 
 impl ScalingComponentManager {
@@ -57,12 +58,18 @@ impl ScalingComponentManager {
         Ok(())
     }
 
-    pub fn add_scaling_component(&mut self, scaling_component: Box<dyn ScalingComponent>) {
+    pub fn add_scaling_component(
+        &mut self,
+        scaling_component: Box<dyn ScalingComponent + Send + Sync>,
+    ) {
         self.scaling_components
             .insert(scaling_component.get_id().to_string(), scaling_component);
     }
 
-    pub fn get_scaling_component(&self, id: &str) -> Option<&Box<dyn ScalingComponent>> {
+    pub fn get_scaling_component(
+        &self,
+        id: &str,
+    ) -> Option<&Box<dyn ScalingComponent + Send + Sync>> {
         self.scaling_components.get(id)
     }
 

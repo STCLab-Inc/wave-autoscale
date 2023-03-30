@@ -22,7 +22,8 @@ impl MetricAdapter for CloudWatchMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&self) {}
+    async fn run(&mut self) {}
+    fn stop(&mut self) {}
     async fn get_value(&self) -> f64 {
         0.0
     }
