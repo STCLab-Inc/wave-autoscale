@@ -1,11 +1,11 @@
+use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition, SloDefinition};
 use anyhow::Result;
 use serde::Deserialize;
+use serde_valid::Validate;
 use serde_yaml::{Deserializer, Value};
 use std::{fs::File, path::Path};
 
-use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition, SloDefinition};
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParserResult {
     pub metric_definitions: Vec<MetricDefinition>,
     pub slo_definitions: Vec<SloDefinition>,
@@ -22,40 +22,34 @@ where
     // Make a deserializer to iterate the yaml that could have multiple documents
     let mut deserializer = Deserializer::from_reader(file);
     // For result
-    let mut result = ParserResult {
-        metric_definitions: Vec::new(),
-        slo_definitions: Vec::new(),
-        scaling_plan_definitions: Vec::new(),
-        scaling_component_definitions: Vec::new(),
-    };
+    let mut result = ParserResult::default();
     // Each document
     while let Some(document) = deserializer.next() {
         let value = Value::deserialize(document)?;
         // The "kind" tells the document type like Metric, ScalingPlan
-        if let Some(kind) = value.get("kind") {
-            if let Value::String(kind_str) = kind {
-                println!("Found: {:?}", kind_str);
-                if kind_str == "Metric" {
-                    let metric_definition: MetricDefinition = serde_yaml::from_value(value)?;
-                    result.metric_definitions.push(metric_definition);
-                } else if kind_str == "SLO" {
-                    let slo_definition: SloDefinition = serde_yaml::from_value(value)?;
-                    result.slo_definitions.push(slo_definition);
-                } else if kind_str == "ScalingPlan" {
-                    let scaling_plan_definition: ScalingPlanDefinition =
-                        serde_yaml::from_value(value)?;
-                    result
-                        .scaling_plan_definitions
-                        .push(scaling_plan_definition);
-                } else if kind_str == "ScalingComponent" {
-                    let scaling_component_definition: ScalingComponentDefinition =
-                        serde_yaml::from_value(value)?;
-                    result
-                        .scaling_component_definitions
-                        .push(scaling_component_definition);
-                } else {
-                    println!("Not Found: {:?}", kind_str);
+        if let Some(kind) = value.get("kind").and_then(Value::as_str) {
+            match kind {
+                "Metric" => {
+                    let parsed = serde_yaml::from_value::<MetricDefinition>(value)?;
+                    parsed.validate()?;
+                    result.metric_definitions.push(parsed);
                 }
+                "SLO" => {
+                    let parsed = serde_yaml::from_value::<SloDefinition>(value)?;
+                    parsed.validate()?;
+                    result.slo_definitions.push(parsed);
+                }
+                "ScalingPlan" => {
+                    let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value)?;
+                    parsed.validate()?;
+                    result.scaling_plan_definitions.push(parsed);
+                }
+                "ScalingComponent" => {
+                    let parsed = serde_yaml::from_value::<ScalingComponentDefinition>(value)?;
+                    parsed.validate()?;
+                    result.scaling_component_definitions.push(parsed);
+                }
+                _ => println!("Not Found: {:?}", kind),
             }
         } else {
             // TODO: "kind" doesn't exist
