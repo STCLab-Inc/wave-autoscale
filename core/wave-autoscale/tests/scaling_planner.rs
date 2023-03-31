@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod scaling_planner_test {
-    use std::{sync::Arc, time::Duration};
+    use std::time::Duration;
 
     use anyhow::Result;
     use data_layer::reader::yaml_reader::read_yaml_file;
 
-    use tokio::{sync::RwLock, time::sleep};
+    use tokio::time::sleep;
     use wave_autoscale::{
         metric_adapter::MetricAdapterManager,
         metric_store::{new_metric_store, MetricStore},
-        scaling_component::{new_scaling_component_manager},
+        scaling_component::new_scaling_component_manager,
         scaling_planner::ScalingPlanner,
     };
 
@@ -31,6 +31,7 @@ mod scaling_planner_test {
         sleep(Duration::from_millis(2000)).await;
 
         let scaling_component_manager = new_scaling_component_manager();
+        // use {} to avoid the error: cannot move out of `result.scaling_component_definitions` which is behind a shared reference
         {
             let cloned = scaling_component_manager.clone();
             let mut cloned_scaling_component_manager = cloned.write().await;

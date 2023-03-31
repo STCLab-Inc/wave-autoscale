@@ -43,12 +43,15 @@ plans:
     priority: 3
     scaling_components:
       - id: ec2_autoscaling_api_server
-        desired: 1
+        desired: 2
         min: 1
-        max: 10
+        max: 5
   - id: scale-in-plan-1-error
     expression: "prometheus_api_server_cpu_average_total_not_exists_ <= 20"
     priority: 4
     scaling_components:
+      # TODO: Remove duplicate id by merging the same id.
       - id: ec2_autoscaling_api_server
         desired: 1
+      - id: ec2_autoscaling_api_server
+        desired: 2
