@@ -1,13 +1,14 @@
 #[cfg(test)]
 mod scaling_planner_test {
-    use std::{collections::HashMap, sync::Arc, time::Duration};
+    use std::{sync::Arc, time::Duration};
 
     use anyhow::Result;
     use data_layer::reader::yaml_reader::read_yaml_file;
 
     use tokio::{sync::RwLock, time::sleep};
     use wave_autoscale::{
-        metric_adapter::{create_metric_store, MetricAdapterManager, MetricStore},
+        metric_adapter::MetricAdapterManager,
+        metric_store::{create_metric_store, MetricStore},
         scaling_component::ScalingComponentManager,
         scaling_planner::ScalingPlanner,
     };

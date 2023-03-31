@@ -1,9 +1,9 @@
-use crate::{metric_adapter::MetricStore, scaling_component::ScalingComponentManager};
+use crate::{metric_store::MetricStore, scaling_component::ScalingComponentManager};
 use data_layer::ScalingPlanDefinition;
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
-    sync::{Mutex, RwLock, RwLockReadGuard},
+    sync::{RwLock, RwLockReadGuard},
     time,
 };
 

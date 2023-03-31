@@ -1,6 +1,8 @@
-use super::{MetricAdapter, MetricStore};
+use super::MetricAdapter;
+use crate::metric_store::MetricStore;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
+use serde_json::Value;
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time};
 
@@ -9,11 +11,9 @@ pub struct PrometheusMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
     metric_store: MetricStore,
-    last_result: Arc<Mutex<serde_json::Value>>,
 }
 
 impl PrometheusMetricAdapter {
-    // Static variables
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
@@ -22,12 +22,11 @@ impl PrometheusMetricAdapter {
             task: None,
             metric,
             metric_store,
-            last_result: Arc::new(Mutex::new(serde_json::Value::Null)),
-            // last_value: Arc::new(Mutex::new(0.0)),
-            // last_timestamp: Arc::new(Mutex::new(0.0)),
         }
     }
 }
+
+const DEFAULT_POLLING_INTERVAL: u64 = 1000;
 
 #[async_trait]
 impl MetricAdapter for PrometheusMetricAdapter {
@@ -42,49 +41,55 @@ impl MetricAdapter for PrometheusMetricAdapter {
 
         let metadata = self.metric.metadata.clone();
 
-        let mut polling_interval: u64 = 1000;
-        if let Some(metadata_polling_interval) = metadata["polling_interval"].as_u64() {
-            polling_interval = metadata_polling_interval;
-        }
-        println!("Polling interval: {:?}", polling_interval);
+        let polling_interval: u64 = metadata["polling_interval"]
+            .as_u64()
+            .unwrap_or(DEFAULT_POLLING_INTERVAL);
         let mut interval = time::interval(Duration::from_millis(polling_interval));
 
         // Concurrency
-        let shared_result = self.last_result.clone();
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
         let task = tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
-
                 // Generate a url to call a prometheus query.
-                let url = metadata["endpoint"].as_str().unwrap();
-                let query = metadata["query"].as_str().unwrap();
-                let url = format!("{}/api/v1/query", url);
-                println!("url: {:?}", url);
-                // println!("url_with_query: {:?}", url_with_query);
-                let client = reqwest::Client::new();
-                let params = vec![("query", query)];
-                let response = client
-                    .get(url)
-                    .query(&params)
-                    .send()
-                    .await
-                    .unwrap()
-                    .json::<serde_json::Value>()
-                    .await;
+                if let (Some(Value::String(url)), Some(Value::String(query))) =
+                    (metadata.get("endpoint"), metadata.get("query"))
+                {
+                    // TODO: validate url and query.
+                    let url = format!("{}/api/v1/query", url);
+                    let client = reqwest::Client::new();
+                    let params = vec![("query", query)];
 
-                println!("response: {:?}", response);
-                // Update the shared value.
-                if let Ok(response) = response {
-                    let mut shared_result = shared_result.lock().await;
-                    *shared_result = response["data"]["result"].clone();
+                    let response = client.get(url).query(&params).send().await;
 
-                    // Update the metric store.
-                    let mut shared_metric_store = shared_metric_store.write().await;
-                    let result = shared_result.as_array().unwrap();
-                    let value = &result[0]["value"][1];
-                    shared_metric_store.insert(metric_id.clone(), value.clone());
+                    // Update the shared value.
+                    match response {
+                        Ok(response) => {
+                            let json = response.json::<serde_json::Value>().await;
+                            match json {
+                                Ok(json) => {
+                                    // Update the metric store.
+                                    let mut shared_metric_store = shared_metric_store.write().await;
+                                    let value = json["data"]["result"].as_array();
+
+                                    if let Some(value) = value {
+                                        let value = &value[0]["value"][1];
+                                        shared_metric_store
+                                            .insert(metric_id.clone(), value.clone());
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("Error: {:?}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error: {:?}", e);
+                        }
+                    }
+                } else {
+                    println!("Error: missing endpoint or query in metadata.");
                 }
                 // Wait for the next interval.
                 interval.tick().await;
@@ -96,39 +101,6 @@ impl MetricAdapter for PrometheusMetricAdapter {
         if let Some(task) = &self.task {
             task.abort();
             self.task = None;
-        }
-    }
-    async fn get_value(&self) -> f64 {
-        let shared_result = self.last_result.clone();
-        let shared_result = shared_result.lock().await;
-        let result = shared_result.as_array().unwrap();
-        if result.len() != 0 {
-            let value = &result[0]["value"][1];
-            value.as_str().unwrap().parse::<f64>().unwrap()
-        } else {
-            0.0
-        }
-    }
-    async fn get_multiple_values(&self) -> Vec<f64> {
-        let shared_result = self.last_result.clone();
-        let shared_result = shared_result.lock().await;
-        let result = shared_result.as_array().unwrap();
-        let mut values: Vec<f64> = Vec::new();
-        for i in 0..result.len() {
-            let value = &result[i]["value"][1];
-            values.push(value.as_str().unwrap().parse::<f64>().unwrap());
-        }
-        values
-    }
-    async fn get_timestamp(&self) -> f64 {
-        let shared_result = self.last_result.clone();
-        let shared_result = shared_result.lock().await;
-        let result = shared_result.as_array().unwrap();
-        if result.len() != 0 {
-            let timestamp = &result[0]["value"][0];
-            timestamp.as_f64().unwrap()
-        } else {
-            0.0
         }
     }
 }

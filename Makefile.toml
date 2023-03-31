@@ -1,0 +1,10 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.test-data-reader]
+command = "cargo"
+args = ["test", "reader", "--", "--nocapture"]
+
+[tasks.test-controller-metric]
+command = "cargo"
+args = ["test", "metric_adapter_test", "--", "--nocapture"]

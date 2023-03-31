@@ -23,7 +23,7 @@ metadata:
   polling_interval: 1000
 ---
 kind: Metric
-id: cloudwatch-metric
+id: cloudwatch_metric
 metric_kind: cloudwatch
 metadata:
   endpoint: http://3.34.170.13:9090

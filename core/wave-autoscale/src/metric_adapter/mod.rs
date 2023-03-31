@@ -1,19 +1,14 @@
 use self::{cloudwatch::CloudWatchMetricAdapter, prometheus::PrometheusMetricAdapter};
+use crate::metric_store::MetricStore;
 use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
-use serde_json::Value;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::RwLock;
+use std::collections::HashMap;
+
 pub mod cloudwatch;
 pub mod prometheus;
 
-pub type MetricStore = Arc<RwLock<HashMap<String, Value>>>;
-
-pub fn create_metric_store() -> MetricStore {
-    Arc::new(RwLock::new(HashMap::new()))
-}
-
+// Factory method to create a metric adapter
 pub fn create_metric_adapter(
     definition: &MetricDefinition,
     metric_store: MetricStore,
@@ -38,13 +33,13 @@ pub fn create_metric_adapter(
 pub trait MetricAdapter {
     async fn run(&mut self);
     fn stop(&mut self);
-    async fn get_value(&self) -> f64;
-    async fn get_multiple_values(&self) -> Vec<f64>;
-    async fn get_timestamp(&self) -> f64;
     fn get_id(&self) -> &str;
     fn get_metric_kind(&self) -> &str;
 }
 
+//
+// MetricAdapterManager manages metric adapters
+//
 pub struct MetricAdapterManager {
     metric_adapters: HashMap<String, Box<dyn MetricAdapter>>,
     metric_store: MetricStore,
@@ -90,27 +85,6 @@ impl MetricAdapterManager {
 
     pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
         self.metric_adapters.get(id)
-    }
-
-    pub async fn get_value(&self, id: &str) -> f64 {
-        if let Some(metric_adapter) = self.metric_adapters.get(id) {
-            return metric_adapter.get_value().await;
-        }
-        0.0
-    }
-
-    pub async fn get_multiple_values(&self, id: &str) -> Vec<f64> {
-        if let Some(metric_adapter) = self.metric_adapters.get(id) {
-            return metric_adapter.get_multiple_values().await;
-        }
-        vec![]
-    }
-
-    pub async fn get_timestamp(&self, id: &str) -> f64 {
-        if let Some(metric_adapter) = self.metric_adapters.get(id) {
-            return metric_adapter.get_timestamp().await;
-        }
-        0.0
     }
 
     pub fn get_metric_store(&self) -> MetricStore {
