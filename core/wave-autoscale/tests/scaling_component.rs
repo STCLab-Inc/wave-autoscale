@@ -9,7 +9,7 @@ mod scaling_component_test {
         aws_ec2_autoscaling::EC2AutoScalingComponent, ScalingComponentManager,
     };
 
-    const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/trigger_ec2_autoscaling.yaml";
+    const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/component_ec2_autoscaling.yaml";
 
     // multithreaded test
     #[tokio::test]
@@ -26,17 +26,19 @@ mod scaling_component_test {
         {
             let name = scaling_component.get_scaling_component_kind();
             assert!(name == EC2AutoScalingComponent::TRIGGER_KIND, "Unexpected");
-
-            // run scaling trigger
-            let mut options: HashMap<String, Value> = HashMap::new();
-            options.insert("min".to_string(), json!(1));
-            options.insert("max".to_string(), json!(4));
-            options.insert("desired".to_string(), json!(1));
-            let result = scaling_component.apply(options).await;
-            return result;
         } else {
             assert!(false, "No scaling component found")
         }
+
+        // run scaling trigger
+        let mut options: HashMap<String, Value> = HashMap::new();
+        options.insert("min".to_string(), json!(1));
+        options.insert("max".to_string(), json!(5));
+        options.insert("desired".to_string(), json!(1));
+        let result = scaling_component_manager
+            .apply_to("ec2_autoscaling_api_server", options)
+            .await;
+        return result;
         Ok(())
     }
 }

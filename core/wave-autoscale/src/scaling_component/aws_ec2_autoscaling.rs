@@ -32,37 +32,50 @@ impl ScalingComponent for EC2AutoScalingComponent {
     }
     async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
         let metadata = self.definition.metadata.clone();
-        // let region = Region::new(region.clone());
-        let asg_name = metadata["asg_name"].as_str().unwrap();
-        let access_key = metadata["access_key"].as_str().unwrap();
-        let secret_key = metadata["secret_key"].as_str().unwrap();
-        let credentials = Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
-        let region = metadata["region"].as_str().unwrap();
-        println!("region: {}", region);
-        // aws_config needs a static region string
-        let region_static: &'static str = get_aws_region_static_str(region);
-        let shared_config = aws_config::from_env()
-            .region(region_static)
-            .credentials_provider(credentials)
-            .load()
-            .await;
 
-        let client = Client::new(&shared_config);
+        if let (
+            Some(Value::String(asg_name)),
+            Some(Value::String(access_key)),
+            Some(Value::String(secret_key)),
+            Some(Value::String(region)),
+            Some(desired),
+        ) = (
+            metadata.get("asg_name"),
+            metadata.get("access_key"),
+            metadata.get("secret_key"),
+            metadata.get("region"),
+            params.get("desired").and_then(Value::as_i64),
+        ) {
+            let credentials =
+                Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
+            // aws_config needs a static region string
+            let region_static: &'static str = get_aws_region_static_str(region);
+            let shared_config = aws_config::from_env()
+                .region(region_static)
+                .credentials_provider(credentials)
+                .load()
+                .await;
 
-        let min = params["min"].as_i64().unwrap();
-        let max = params["max"].as_i64().unwrap();
-        let desired = params["desired"].as_i64().unwrap();
+            let client = Client::new(&shared_config);
 
-        let result = client
-            .update_auto_scaling_group()
-            .auto_scaling_group_name(asg_name)
-            .min_size(min as i32)
-            .max_size(max as i32)
-            .desired_capacity(desired as i32)
-            .send()
-            .await;
+            let mut result = client
+                .update_auto_scaling_group()
+                .auto_scaling_group_name(asg_name)
+                .desired_capacity(desired as i32);
 
-        println!("{:?}", result);
-        Ok(())
+            if let Some(min) = params.get("min").and_then(Value::as_i64) {
+                result = result.min_size(min as i32);
+            }
+            if let Some(max) = params.get("max").and_then(Value::as_i64) {
+                result = result.max_size(max as i32);
+            }
+
+            let result = result.send().await;
+
+            println!("{:?}", result);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Invalid metadata"))
+        }
     }
 }

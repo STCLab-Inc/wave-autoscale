@@ -112,7 +112,7 @@ impl<'a> ScalingPlanner {
                             .collect::<HashMap<String, Value>>();
 
                         shared_scaling_component_manager
-                            .apply_to_scaling_component(scaling_component_id, params)
+                            .apply_to(scaling_component_id, params)
                             .await;
                     }
                 }
