@@ -8,7 +8,7 @@ mod scaling_planner_test {
     use tokio::{sync::RwLock, time::sleep};
     use wave_autoscale::{
         metric_adapter::MetricAdapterManager,
-        metric_store::{create_metric_store, MetricStore},
+        metric_store::{new_metric_store, MetricStore},
         scaling_component::ScalingComponentManager,
         scaling_planner::ScalingPlanner,
     };
@@ -22,7 +22,7 @@ mod scaling_planner_test {
         let result = read_yaml_file(PLAN_PROMETHEUS_EC2)?;
 
         // create metric adapter manager
-        let metric_store: MetricStore = create_metric_store();
+        let metric_store: MetricStore = new_metric_store();
         let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
         metric_adapter_manager.add_definitions(result.metric_definitions);
         metric_adapter_manager.run().await;

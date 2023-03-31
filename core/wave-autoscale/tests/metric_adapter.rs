@@ -6,7 +6,7 @@ mod metric_adapter_test {
     use tokio::time::sleep;
     use wave_autoscale::{
         metric_adapter::MetricAdapterManager,
-        metric_store::{create_metric_store, MetricStore},
+        metric_store::{new_metric_store, MetricStore},
     };
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/metric_prometheus.yaml";
@@ -18,7 +18,7 @@ mod metric_adapter_test {
         let result = read_yaml_file(EXAMPLE_FILE_PATH)?;
 
         // create metric adapter manager
-        let metric_store: MetricStore = create_metric_store();
+        let metric_store: MetricStore = new_metric_store();
         let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
         metric_adapter_manager.add_definitions(result.metric_definitions);
 
