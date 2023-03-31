@@ -9,7 +9,7 @@ mod scaling_planner_test {
     use wave_autoscale::{
         metric_adapter::MetricAdapterManager,
         metric_store::{new_metric_store, MetricStore},
-        scaling_component::ScalingComponentManager,
+        scaling_component::{new_scaling_component_manager},
         scaling_planner::ScalingPlanner,
     };
 
@@ -30,7 +30,7 @@ mod scaling_planner_test {
         // Give some time for the metric adapters to collect metrics
         sleep(Duration::from_millis(2000)).await;
 
-        let scaling_component_manager = Arc::new(RwLock::new(ScalingComponentManager::new()));
+        let scaling_component_manager = new_scaling_component_manager();
         {
             let cloned = scaling_component_manager.clone();
             let mut cloned_scaling_component_manager = cloned.write().await;

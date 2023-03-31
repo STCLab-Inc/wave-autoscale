@@ -1,16 +1,13 @@
 use crate::{metric_store::MetricStore, scaling_component::ScalingComponentManager};
 use data_layer::ScalingPlanDefinition;
 use serde_json::Value;
-use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{
-    sync::{RwLock, RwLockReadGuard},
-    time,
-};
+use std::{collections::HashMap, time::Duration};
+use tokio::{sync::RwLockReadGuard, time};
 
 pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_store: MetricStore,
-    scaling_component_manager: Arc<RwLock<ScalingComponentManager>>,
+    scaling_component_manager: ScalingComponentManager,
 }
 
 // Get a context with the metric store values set as global variables
@@ -46,7 +43,7 @@ impl<'a> ScalingPlanner {
     pub fn new(
         definition: ScalingPlanDefinition,
         metric_store: MetricStore,
-        scaling_component_manager: Arc<RwLock<ScalingComponentManager>>,
+        scaling_component_manager: ScalingComponentManager,
     ) -> Self {
         ScalingPlanner {
             definition,

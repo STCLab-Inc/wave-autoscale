@@ -6,7 +6,7 @@ mod scaling_component_test {
     use data_layer::reader::yaml_reader::read_yaml_file;
     use serde_json::{json, Value};
     use wave_autoscale::scaling_component::{
-        aws_ec2_autoscaling::EC2AutoScalingComponent, ScalingComponentManager,
+        aws_ec2_autoscaling::EC2AutoScalingComponent, ScalingComponentManagerInner,
     };
 
     const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/component_ec2_autoscaling.yaml";
@@ -18,7 +18,7 @@ mod scaling_component_test {
         let result = read_yaml_file(EC2_AUTOSCALING_FILE_PATH)?;
 
         // create metric adapter
-        let mut scaling_component_manager = ScalingComponentManager::new();
+        let mut scaling_component_manager = ScalingComponentManagerInner::new();
         scaling_component_manager.add_definitions(result.scaling_component_definitions);
 
         if let Some(scaling_component) =

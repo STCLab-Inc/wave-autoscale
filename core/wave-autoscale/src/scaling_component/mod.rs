@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 pub mod aws_ec2_autoscaling;
 use self::aws_ec2_autoscaling::EC2AutoScalingComponent;
 use anyhow::Result;
@@ -17,13 +18,19 @@ pub trait ScalingComponent: Send + Sync {
 //
 // ScalingComponentManager
 //
-pub struct ScalingComponentManager {
+pub type ScalingComponentManager = Arc<RwLock<ScalingComponentManagerInner>>;
+
+pub fn new_scaling_component_manager() -> ScalingComponentManager {
+    Arc::new(RwLock::new(ScalingComponentManagerInner::new()))
+}
+
+pub struct ScalingComponentManagerInner {
     scaling_components: HashMap<String, Box<dyn ScalingComponent>>,
 }
 
-impl ScalingComponentManager {
+impl ScalingComponentManagerInner {
     pub fn new() -> Self {
-        ScalingComponentManager {
+        ScalingComponentManagerInner {
             scaling_components: HashMap::new(),
         }
     }
