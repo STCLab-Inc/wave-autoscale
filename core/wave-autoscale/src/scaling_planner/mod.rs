@@ -41,6 +41,42 @@ fn get_context_with_metric_store(
     }
 }
 
+fn get_matching_scaling_plan<'a>(
+    plans: &'a [Value],
+    shared_metric_store: &HashMap<String, Value>,
+) -> Option<&'a Value> {
+    for plan in plans.iter() {
+        if let Some(expression) = plan["expression"].as_str() {
+            let context = get_context_with_metric_store(shared_metric_store).unwrap();
+            if context.eval_as::<bool>(expression).unwrap_or(false) {
+                return Some(plan);
+            }
+        }
+    }
+    None
+}
+
+async fn apply_scaling_components(
+    scaling_components_metadata: &[Value],
+    shared_scaling_component_manager: &ScalingComponentManager,
+) {
+    for metadata in scaling_components_metadata.iter() {
+        let scaling_component_id = metadata["component_id"].as_str().unwrap();
+        let shared_scaling_component_manager = shared_scaling_component_manager.read().await;
+
+        let params = metadata
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(key, value)| (key.to_string(), value.clone()))
+            .collect::<HashMap<String, Value>>();
+
+        shared_scaling_component_manager
+            .apply_to(scaling_component_id, params)
+            .await;
+    }
+}
+
 pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_store: MetricStore,
@@ -61,10 +97,8 @@ impl<'a> ScalingPlanner {
             last_plan_id: Arc::new(RwLock::new(String::new())),
         }
     }
-    pub async fn run(&self) {
-        let plans = &self.definition.plans;
-        let mut plans = plans.clone();
-        // Sort the plans by priority that is higher priority plans are executed first
+    fn sort_plan_by_priority(&self) -> Vec<Value> {
+        let mut plans = self.definition.plans.clone();
         plans.sort_by(|a, b| {
             a["priority"]
                 .as_u64()
@@ -72,6 +106,11 @@ impl<'a> ScalingPlanner {
                 .cmp(&b["priority"].as_u64().unwrap_or(0))
                 .reverse()
         });
+        plans
+    }
+    pub async fn run(&self) {
+        let plans = self.sort_plan_by_priority();
+        // TODO: Make this configurable
         let polling_interval: u64 = 1000;
         let mut interval = time::interval(Duration::from_millis(polling_interval));
         let shared_metric_store = self.metric_store.clone();
@@ -79,72 +118,31 @@ impl<'a> ScalingPlanner {
         let shared_last_run = self.last_plan_id.clone();
 
         tokio::spawn(async move {
-            let shared_metric_store = shared_metric_store.read().await;
-
             loop {
-                println!("Polling interval: {}", polling_interval);
-                let mut scaling_components_metadata: &Vec<Value> = &Vec::new();
-                let mut scaling_plan_id: String = String::new();
-                for plan in plans.iter() {
-                    if let Some(expression) = plan["expression"].as_str() {
-                        println!("Expression: {}", expression);
-                        let context = get_context_with_metric_store(&shared_metric_store);
-                        match context {
-                            Ok(context) => match context.eval_as::<bool>(expression) {
-                                Ok(value) => {
-                                    println!("Value: {:?}", value);
-                                    if value {
-                                        scaling_plan_id = plan["id"].as_str().unwrap().to_owned();
-                                        scaling_components_metadata =
-                                            plan["scaling_components"].as_array().unwrap();
-                                        // it is enough to find one plan that matches the expression
-                                        break;
-                                    }
-                                }
-                                Err(error) => {
-                                    println!("Error eval_as: {:?}", error);
-                                }
-                            },
-                            Err(error) => {
-                                println!("Error: {:?}", error);
-                            }
-                        }
+                let shared_metric_store = shared_metric_store.read().await;
+
+                if let Some(plan) = get_matching_scaling_plan(&plans, &shared_metric_store) {
+                    let scaling_plan_id = plan["id"].as_str().unwrap().to_owned();
+                    let shared_last_run_read = shared_last_run.read().await;
+                    if *shared_last_run_read.clone() != scaling_plan_id {
+                        drop(shared_last_run_read);
+
+                        let scaling_components_metadata =
+                            plan["scaling_components"].as_array().unwrap();
+                        apply_scaling_components(
+                            scaling_components_metadata,
+                            &shared_scaling_component_manager,
+                        )
+                        .await;
+
+                        let mut shared_last_run = shared_last_run.write().await;
+                        *shared_last_run = scaling_plan_id.clone();
+                        println!("Applied scaling plan: {}", scaling_plan_id);
                     } else {
-                        println!("No expression found")
-                    }
-                }
-                let shared_last_run_read = shared_last_run.read().await;
-                if *shared_last_run_read.clone() != scaling_plan_id {
-                    drop(shared_last_run_read);
-                    if !scaling_components_metadata.is_empty() {
-                        for metadata in scaling_components_metadata.iter() {
-                            let scaling_component_id = metadata["component_id"].as_str().unwrap();
-
-                            let shared_scaling_component_manager =
-                                shared_scaling_component_manager.read().await;
-
-                            println!("Scaling component id: {}", scaling_component_id);
-
-                            let params = metadata
-                                .as_object()
-                                .unwrap()
-                                .iter()
-                                .map(|(key, value)| (key.to_string(), value.clone()))
-                                .collect::<HashMap<String, Value>>();
-
-                            shared_scaling_component_manager
-                                .apply_to(scaling_component_id, params)
-                                .await;
-
-                            let mut shared_last_run = shared_last_run.write().await;
-                            *shared_last_run = scaling_plan_id.clone();
-                        }
-                        println!("Scaling components applied, plan id: {}", scaling_plan_id);
-                    } else {
-                        println!("No scaling components found");
+                        println!("Already executed");
                     }
                 } else {
-                    println!("Already executed");
+                    println!("No scaling components found");
                 }
                 println!("----------------------------------");
                 // Wait for the next interval.
