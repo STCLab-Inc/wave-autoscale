@@ -1,16 +1,29 @@
 ---
 kind: Metric
-id: prometheus-metric
+id: prometheus_api_server_cpu_average_each
 metric_kind: prometheus
 metadata:
   endpoint: http://3.34.170.13:9090
-  # Note: query must return a vector/scalar single element response
-  query: sum(rate(node_cpu_seconds_total{mode!="idle",hostname="ip-172-31-32-238"}[10s]))
+  # This query returns a vector of time series, each with a single sample.
+  # Metric Adapter will save the result of this query as a map of labels to values.
+  # [metric_id] will be the first value of the result.
+  # [metric_id]_values will be an array of values of the result.
+  query: node_cpu_seconds_total
   # milliseconds
   polling_interval: 1000
 ---
 kind: Metric
-id: cloudwatch-metric
+id: prometheus_api_server_cpu_average_total
+metric_kind: prometheus
+metadata:
+  endpoint: http://3.34.170.13:9090
+  # Note: query must return a vector/scalar single element response
+  query: avg(100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[20s])) by (hostname) * 100))
+  # milliseconds
+  polling_interval: 1000
+---
+kind: Metric
+id: cloudwatch_metric
 metric_kind: cloudwatch
 metadata:
   endpoint: http://3.34.170.13:9090

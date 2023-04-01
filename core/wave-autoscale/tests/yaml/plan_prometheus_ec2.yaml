@@ -1,0 +1,57 @@
+---
+kind: Metric
+id: prometheus_api_server_cpu_average_total
+metric_kind: prometheus
+metadata:
+  endpoint: http://3.34.170.13:9090
+  # Note: query must return a vector/scalar single element response
+  query: avg(100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[20s])) by (hostname) * 100))
+  # milliseconds
+  polling_interval: 1000
+---
+kind: ScalingComponent
+id: ec2_autoscaling_api_server
+component_kind: aws-ec2-autoscaling
+metadata:
+  region: ap-northeast-2
+  access_key: AKIAU7BQ6ZTCA2XGEZNN
+  secret_key: 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
+  asg_name: tf-wa-20230322020900305100000006
+---
+kind: ScalingPlan
+id: scaling_plan_ec2_autoscaling
+plans:
+  - id: scale-out-plan-1
+    # JavaScript expression that returns a boolean value.
+    expression: "prometheus_api_server_cpu_average_total >= 30"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: ec2_autoscaling_api_server
+        # JavaScript expression that returns an integer.
+        desired: "Math.floor(prometheus_api_server_cpu_average_total / 10)"
+        # desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
+        # If the result of desired is 5 but right after it, the result of desired is 3 then the desired capacity will be set to 3.
+  - id: scale-out-plan-2
+    expression: "prometheus_api_server_cpu_average_total >= 80"
+    priority: 2
+    scaling_components:
+      - component_id: ec2_autoscaling_api_server
+        desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
+  - id: scale-in-plan-1
+    expression: "prometheus_api_server_cpu_average_total <= 20"
+    priority: 3
+    scaling_components:
+      - component_id: ec2_autoscaling_api_server
+        desired: 2
+        min: 1
+        max: 5
+  - id: scale-in-plan-1-error
+    expression: "prometheus_api_server_cpu_average_total_not_exists_ <= 20"
+    priority: 4
+    scaling_components:
+      # TODO: Remove duplicate id by merging the same id.
+      - component_id: ec2_autoscaling_api_server
+        desired: 1
+      - id: ec2_autoscaling_api_server
+        desired: 2

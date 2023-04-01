@@ -1,98 +1,106 @@
 use super::MetricAdapter;
+use crate::metric_store::MetricStore;
 use async_trait::async_trait;
-use data_layer::Metric;
+use data_layer::MetricDefinition;
+use serde_json::Value;
 use std::{sync::Arc, time::Duration};
-use tokio::{sync::Mutex, time};
+use tokio::{sync::Mutex, task::JoinHandle, time};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
-    metric: Metric,
-    last_timestamp: Arc<Mutex<f64>>,
-    last_value: Arc<Mutex<f64>>,
+    task: Option<JoinHandle<()>>,
+    metric: MetricDefinition,
+    metric_store: MetricStore,
 }
 
 impl PrometheusMetricAdapter {
-    // Static variables
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
-    pub fn new(metric: Metric) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
         PrometheusMetricAdapter {
+            task: None,
             metric,
-            last_value: Arc::new(Mutex::new(0.0)),
-            last_timestamp: Arc::new(Mutex::new(0.0)),
+            metric_store,
         }
     }
 }
+
+const DEFAULT_POLLING_INTERVAL: u64 = 1000;
 
 #[async_trait]
 impl MetricAdapter for PrometheusMetricAdapter {
     fn get_metric_kind(&self) -> &str {
         PrometheusMetricAdapter::METRIC_KIND
     }
-    async fn run(&self) {
+    fn get_id(&self) -> &str {
+        &self.metric.id
+    }
+    async fn run(&mut self) {
+        self.stop();
+
         let metadata = self.metric.metadata.clone();
 
-        let mut polling_interval: u64 = 1000;
-        if let Some(metadata_polling_interval) = metadata["polling_interval"].as_u64() {
-            polling_interval = metadata_polling_interval;
-        }
-        println!("Polling interval: {:?}", polling_interval);
+        let polling_interval: u64 = metadata["polling_interval"]
+            .as_u64()
+            .unwrap_or(DEFAULT_POLLING_INTERVAL);
         let mut interval = time::interval(Duration::from_millis(polling_interval));
 
         // Concurrency
-        let shared_timestamp = self.last_timestamp.clone();
-        let shared_value = self.last_value.clone();
-        tokio::spawn(async move {
+        let shared_metric_store = self.metric_store.clone();
+        let metric_id = self.get_id().to_string();
+        let task = tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
-
                 // Generate a url to call a prometheus query.
-                let url = metadata["endpoint"].as_str().unwrap();
-                let query = metadata["query"].as_str().unwrap();
-                let url = format!("{}/api/v1/query", url);
-                println!("url: {:?}", url);
-                // println!("url_with_query: {:?}", url_with_query);
-                let client = reqwest::Client::new();
-                let params = vec![("query", query)];
-                let response = client
-                    .get(url)
-                    .query(&params)
-                    .send()
-                    .await
-                    .unwrap()
-                    .json::<serde_json::Value>()
-                    .await;
+                if let (Some(Value::String(url)), Some(Value::String(query))) =
+                    (metadata.get("endpoint"), metadata.get("query"))
+                {
+                    // TODO: validate url and query.
+                    let url = format!("{}/api/v1/query", url);
+                    let client = reqwest::Client::new();
+                    let params = vec![("query", query)];
 
-                println!("response: {:?}", response);
-                // Update the shared value.
-                if let Ok(response) = response {
-                    if let Some(result) = response["data"]["result"].as_array() {
-                        if result.len() != 0 {
-                            // Timestamp
-                            let timestamp = &response["data"]["result"][0]["value"][0];
-                            let mut shared_timestamp = shared_timestamp.lock().await;
-                            *shared_timestamp = timestamp.as_f64().unwrap();
-                            // Value
-                            let value = &response["data"]["result"][0]["value"][1];
-                            let mut shared_value = shared_value.lock().await;
-                            *shared_value = value.as_str().unwrap().parse::<f64>().unwrap();
+                    let response = client.get(url).query(&params).send().await;
+
+                    // Update the shared value.
+                    match response {
+                        Ok(response) => {
+                            let json = response.json::<serde_json::Value>().await;
+                            match json {
+                                Ok(json) => {
+                                    // Update the metric store.
+                                    let mut shared_metric_store = shared_metric_store.write().await;
+                                    let value = json["data"]["result"].as_array();
+
+                                    if let Some(value) = value {
+                                        let value = &value[0]["value"][1];
+                                        shared_metric_store
+                                            .insert(metric_id.clone(), value.clone());
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("Error: {:?}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error: {:?}", e);
                         }
                     }
+                } else {
+                    println!("Error: missing endpoint or query in metadata.");
                 }
                 // Wait for the next interval.
                 interval.tick().await;
             }
         });
+        self.task = Some(task);
     }
-    async fn get_value(&self) -> f64 {
-        let shared_value = self.last_value.clone();
-        let shared_value = shared_value.lock().await;
-        *shared_value
-    }
-    async fn get_timestamp(&self) -> f64 {
-        let shared_timestamp = self.last_timestamp.clone();
-        let shared_timestamp = shared_timestamp.lock().await;
-        *shared_timestamp
+    fn stop(&mut self) {
+        if let Some(task) = &self.task {
+            task.abort();
+            self.task = None;
+        }
     }
 }

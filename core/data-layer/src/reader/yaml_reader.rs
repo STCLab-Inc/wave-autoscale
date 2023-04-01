@@ -1,16 +1,16 @@
+use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition, SloDefinition};
 use anyhow::Result;
 use serde::Deserialize;
+use serde_valid::Validate;
 use serde_yaml::{Deserializer, Value};
 use std::{fs::File, path::Path};
 
-use crate::{Metric, ScalingPlanData, ScalingTriggerData, SLO};
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParserResult {
-    pub metrics: Vec<Metric>,
-    pub slos: Vec<SLO>,
-    pub scaling_plans: Vec<ScalingPlanData>,
-    pub scaling_triggers: Vec<ScalingTriggerData>,
+    pub metric_definitions: Vec<MetricDefinition>,
+    pub slo_definitions: Vec<SloDefinition>,
+    pub scaling_plan_definitions: Vec<ScalingPlanDefinition>,
+    pub scaling_component_definitions: Vec<ScalingComponentDefinition>,
 }
 
 pub fn read_yaml_file<P>(path: P) -> Result<ParserResult>
@@ -22,34 +22,34 @@ where
     // Make a deserializer to iterate the yaml that could have multiple documents
     let mut deserializer = Deserializer::from_reader(file);
     // For result
-    let mut result = ParserResult {
-        metrics: Vec::new(),
-        slos: Vec::new(),
-        scaling_plans: Vec::new(),
-        scaling_triggers: Vec::new(),
-    };
+    let mut result = ParserResult::default();
     // Each document
     while let Some(document) = deserializer.next() {
         let value = Value::deserialize(document)?;
         // The "kind" tells the document type like Metric, ScalingPlan
-        if let Some(kind) = value.get("kind") {
-            if let Value::String(kind_str) = kind {
-                println!("Found: {:?}", kind_str);
-                if kind_str == "Metric" {
-                    let metric: Metric = serde_yaml::from_value(value)?;
-                    result.metrics.push(metric);
-                } else if kind_str == "SLO" {
-                    let slo: SLO = serde_yaml::from_value(value)?;
-                    result.slos.push(slo);
-                } else if kind_str == "ScalingPlans" {
-                    let scaling_plan: ScalingPlanData = serde_yaml::from_value(value)?;
-                    result.scaling_plans.push(scaling_plan);
-                } else if kind_str == "ScalingTrigger" {
-                    let scaling_trigger: ScalingTriggerData = serde_yaml::from_value(value)?;
-                    result.scaling_triggers.push(scaling_trigger);
-                } else {
-                    println!("Not Found: {:?}", kind_str);
+        if let Some(kind) = value.get("kind").and_then(Value::as_str) {
+            match kind {
+                "Metric" => {
+                    let parsed = serde_yaml::from_value::<MetricDefinition>(value)?;
+                    parsed.validate()?;
+                    result.metric_definitions.push(parsed);
                 }
+                "SLO" => {
+                    let parsed = serde_yaml::from_value::<SloDefinition>(value)?;
+                    parsed.validate()?;
+                    result.slo_definitions.push(parsed);
+                }
+                "ScalingPlan" => {
+                    let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value)?;
+                    parsed.validate()?;
+                    result.scaling_plan_definitions.push(parsed);
+                }
+                "ScalingComponent" => {
+                    let parsed = serde_yaml::from_value::<ScalingComponentDefinition>(value)?;
+                    parsed.validate()?;
+                    result.scaling_component_definitions.push(parsed);
+                }
+                _ => println!("Not Found: {:?}", kind),
             }
         } else {
             // TODO: "kind" doesn't exist

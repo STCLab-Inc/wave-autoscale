@@ -4,6 +4,6 @@ use serde::{Deserialize, Serialize};
 pub enum ObjectKind {
     Metric,
     ScalingPlan,
-    ScalingTrigger,
+    ScalingComponent,
     SLO,
 }

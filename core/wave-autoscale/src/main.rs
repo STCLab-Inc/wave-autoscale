@@ -1,5 +1,7 @@
 mod metric_adapter;
-mod scaling_trigger;
+mod metric_store;
+mod scaling_component;
+mod scaling_planner;
 mod util;
 
 fn main() {

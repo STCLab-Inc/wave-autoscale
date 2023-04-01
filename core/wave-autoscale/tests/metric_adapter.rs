@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod metric_adapter_test {
-    use std::time::Duration;
-
     use anyhow::Result;
     use data_layer::reader::yaml_reader::read_yaml_file;
+    use std::time::Duration;
     use tokio::time::sleep;
-    use wave_autoscale::metric_adapter::{
-        create_metric_adapter, prometheus::PrometheusMetricAdapter, MetricAdapter,
+    use wave_autoscale::{
+        metric_adapter::MetricAdapterManager,
+        metric_store::{new_metric_store, MetricStore},
     };
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/metric_prometheus.yaml";
@@ -17,36 +17,27 @@ mod metric_adapter_test {
         // read yaml file
         let result = read_yaml_file(EXAMPLE_FILE_PATH)?;
 
-        // create metric adapter
-        let metrics: Vec<Box<dyn MetricAdapter>> = result
-            .metrics
-            .iter()
-            .map(|metric| create_metric_adapter(metric).unwrap())
-            .collect();
+        // create metric adapter manager
+        let metric_store: MetricStore = new_metric_store();
+        let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
+        metric_adapter_manager.add_definitions(result.metric_definitions);
 
-        // run metric adapter
-        if let Some(first_metric) = metrics.get(0) {
-            // check metric kind
-            let prometheus_metric_adapter = first_metric.as_ref();
-            let name = prometheus_metric_adapter.get_metric_kind();
-            assert!(name == PrometheusMetricAdapter::METRIC_KIND, "Unexpected");
+        // run metric adapters and wait for them to start
+        metric_adapter_manager.run().await;
 
-            // run metric adapter
-            prometheus_metric_adapter.run().await;
+        sleep(Duration::from_millis(2000)).await;
 
-            // wait for 5 seconds to get a value from prometheus
-            sleep(Duration::from_millis(5000)).await;
+        // Compare the value and timestamp in metric_adapter and timestamp in the metric store
+        let cloned_metric_store = metric_store.clone();
+        let cloned_metric_store = cloned_metric_store.read().await;
+        println!("metric_store: {:?}", cloned_metric_store);
+        let metric_from_store = cloned_metric_store
+            .get("prometheus_api_server_cpu_average_total")
+            .unwrap();
+        let value_from_store = metric_from_store.as_str().unwrap().parse::<f64>().unwrap();
+        println!("value_from_store: {}", value_from_store);
+        assert!(value_from_store > 0.0);
 
-            // get value from metric adapter if it gets a value from prometheus
-            let value = prometheus_metric_adapter.get_value().await;
-            assert_ne!(value, 0.0);
-
-            // get timestamp from metric adapter if it gets a value from prometheus
-            let timestamp = prometheus_metric_adapter.get_timestamp().await;
-            assert_ne!(timestamp, 0.0);
-        } else {
-            assert!(false, "No metric adapter found")
-        }
         Ok(())
     }
 }
