@@ -45,7 +45,7 @@ pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_store: MetricStore,
     scaling_component_manager: ScalingComponentManager,
-    last_runs: Arc<RwLock<Vec<String>>>,
+    last_plan_id: Arc<RwLock<String>>,
 }
 
 impl<'a> ScalingPlanner {
@@ -58,7 +58,7 @@ impl<'a> ScalingPlanner {
             definition,
             metric_store,
             scaling_component_manager,
-            last_runs: Arc::new(RwLock::new(Vec::new())),
+            last_plan_id: Arc::new(RwLock::new(String::new())),
         }
     }
     pub async fn run(&self) {
@@ -76,14 +76,15 @@ impl<'a> ScalingPlanner {
         let mut interval = time::interval(Duration::from_millis(polling_interval));
         let shared_metric_store = self.metric_store.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
-        let shared_last_runs = self.last_runs.clone();
+        let shared_last_run = self.last_plan_id.clone();
 
         tokio::spawn(async move {
             let shared_metric_store = shared_metric_store.read().await;
 
             loop {
+                println!("Polling interval: {}", polling_interval);
                 let mut scaling_components_metadata: &Vec<Value> = &Vec::new();
-                let mut plan_id: String = String::new();
+                let mut scaling_plan_id: String = String::new();
                 for plan in plans.iter() {
                     if let Some(expression) = plan["expression"].as_str() {
                         println!("Expression: {}", expression);
@@ -93,15 +94,15 @@ impl<'a> ScalingPlanner {
                                 Ok(value) => {
                                     println!("Value: {:?}", value);
                                     if value {
+                                        scaling_plan_id = plan["id"].as_str().unwrap().to_owned();
                                         scaling_components_metadata =
                                             plan["scaling_components"].as_array().unwrap();
                                         // it is enough to find one plan that matches the expression
-                                        plan_id = plan["id"].as_str().unwrap().to_owned();
                                         break;
                                     }
                                 }
                                 Err(error) => {
-                                    println!("Error: {:?}", error);
+                                    println!("Error eval_as: {:?}", error);
                                 }
                             },
                             Err(error) => {
@@ -112,40 +113,40 @@ impl<'a> ScalingPlanner {
                         println!("No expression found")
                     }
                 }
-                println!("Scaling components: {:?}", scaling_components_metadata);
-                if !scaling_components_metadata.is_empty() {
-                    let shared_last_runs_read = shared_last_runs.read().await;
-                    for metadata in scaling_components_metadata.iter() {
-                        println!("Metadata: {:?}", metadata);
-                        let scaling_component_id = metadata["id"].as_str().unwrap();
-                        let cache_key = plan_id.clone() + scaling_component_id;
-                        println!("Cache key: {}", cache_key);
-                        if shared_last_runs_read.contains(&cache_key) {
-                            println!("Already executed");
-                            continue;
+                let shared_last_run_read = shared_last_run.read().await;
+                if *shared_last_run_read.clone() != scaling_plan_id {
+                    drop(shared_last_run_read);
+                    if !scaling_components_metadata.is_empty() {
+                        for metadata in scaling_components_metadata.iter() {
+                            let scaling_component_id = metadata["component_id"].as_str().unwrap();
+
+                            let shared_scaling_component_manager =
+                                shared_scaling_component_manager.read().await;
+
+                            println!("Scaling component id: {}", scaling_component_id);
+
+                            let params = metadata
+                                .as_object()
+                                .unwrap()
+                                .iter()
+                                .map(|(key, value)| (key.to_string(), value.clone()))
+                                .collect::<HashMap<String, Value>>();
+
+                            shared_scaling_component_manager
+                                .apply_to(scaling_component_id, params)
+                                .await;
+
+                            let mut shared_last_run = shared_last_run.write().await;
+                            *shared_last_run = scaling_plan_id.clone();
                         }
-                        let shared_scaling_component_manager =
-                            shared_scaling_component_manager.read().await;
-
-                        println!("Scaling component id: {}", scaling_component_id);
-
-                        let params = metadata
-                            .as_object()
-                            .unwrap()
-                            .iter()
-                            .map(|(key, value)| (key.to_string(), value.clone()))
-                            .collect::<HashMap<String, Value>>();
-
-                        shared_scaling_component_manager
-                            .apply_to(scaling_component_id, params)
-                            .await;
-
-                        let mut last_runs = shared_last_runs.write().await;
-                        last_runs.push(cache_key);
+                        println!("Scaling components applied, plan id: {}", scaling_plan_id);
+                    } else {
+                        println!("No scaling components found");
                     }
                 } else {
-                    println!("No scaling components found");
+                    println!("Already executed");
                 }
+                println!("----------------------------------");
                 // Wait for the next interval.
                 interval.tick().await;
             }

@@ -27,7 +27,7 @@ plans:
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
-      - id: ec2_autoscaling_api_server
+      - component_id: ec2_autoscaling_api_server
         # JavaScript expression that returns an integer.
         desired: "Math.floor(prometheus_api_server_cpu_average_total / 10)"
         # desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
@@ -36,13 +36,13 @@ plans:
     expression: "prometheus_api_server_cpu_average_total >= 80"
     priority: 2
     scaling_components:
-      - id: ec2_autoscaling_api_server
+      - component_id: ec2_autoscaling_api_server
         desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
   - id: scale-in-plan-1
     expression: "prometheus_api_server_cpu_average_total <= 20"
     priority: 3
     scaling_components:
-      - id: ec2_autoscaling_api_server
+      - component_id: ec2_autoscaling_api_server
         desired: 2
         min: 1
         max: 5
@@ -51,7 +51,7 @@ plans:
     priority: 4
     scaling_components:
       # TODO: Remove duplicate id by merging the same id.
-      - id: ec2_autoscaling_api_server
+      - component_id: ec2_autoscaling_api_server
         desired: 1
       - id: ec2_autoscaling_api_server
         desired: 2
