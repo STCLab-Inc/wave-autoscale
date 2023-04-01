@@ -1,0 +1,40 @@
+---
+kind: Metric
+# id should be unique. And alphanumeric characters and underscores are allowed.
+# for example, "metric_id" is valid but "metric-id" is not.
+id: metric_id
+metric_kind: prometheus
+metadata:
+  user_key: user_value
+---
+kind: SLO
+id: slo_id
+---
+kind: ScalingComponent
+id: scaling_component_id
+component_kind: ec2-autoscaling
+metadata:
+  access_key: access_key
+  secret_key: secret_key
+---
+kind: ScalingPlan
+id: scaling_plan_id
+plans:
+  - id: plan_id
+    expression: "metric_id >= 30"
+    priority: 1
+    scaling_components:
+      - id: scaling_component_id
+        desired: "Math.floor(metric_id / 10)"
+        min: 1
+        max: 5
+        cooldown: 300
+  - id: plan_id_2
+    expression: "metric_id >= 50"
+    priority: 2
+    scaling_components:
+      - id: scaling_component_id
+        desired: "Math.floor(metric_id / 10)"
+        min: 1
+        max: 5
+        cooldown: 300
