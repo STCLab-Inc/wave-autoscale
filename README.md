@@ -58,6 +58,21 @@ The configuration file consists of three main sections: Metrics, Scaling Compone
 
 ### Metrics
 
+**Monitoring**
+- [x] Prometheus
+- [ ] Amazon CloudWatch
+- [ ] DataDog
+- [ ] New Relic
+- [ ] Dynatrace
+- [ ] AppDynamics
+- [ ] Splunk
+- [ ] Elastic APM
+
+**System Metrics**
+- [ ] Kafka
+- [ ] AWS SQS
+
+
 Metrics are used to define the data sources for the scaling plans. A metric has the following attributes:
 
 - `kind`: Metric
@@ -79,6 +94,23 @@ polling_interval: 1000
 ```
 
 ### Scaling Components
+
+
+- [ ] Amazon EC2 Autoscaling
+- [ ] Amazon ECS Autoscaling
+- [ ] Amazon EKS Cluster Autoscaling
+- [ ] Amazon Karpaenter
+- [ ] AWS Lambda Provisioned Concurrency
+- [ ] Amazon RDS Autoscaling
+- [ ] Amazon DynamoDB Autoscaling
+- [ ] Amazon Managed Streaming for Apache Kafka(MSK) Autoscaling
+- [ ] Amazon SQS Autoscaling
+- [ ] Amazon ElastiCache Autoscaling
+- [ ] Amazon Neptune Autoscaling
+- [ ] Amazon DocumentDB Autoscaling
+- [ ] Amazon Elasticache Redis Cluster Autoscaling
+- [ ] Amazon Elasticache Memcached Cluster Autoscaling
+- [ ] Amazon SageMaker Endpoint Autoscaling
 
 Scaling components define the resources that will be scaled. A scaling component has the following attributes:
 
