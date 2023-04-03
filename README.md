@@ -96,7 +96,7 @@ polling_interval: 1000
 ### Scaling Components
 
 
-- [ ] Amazon EC2 Autoscaling
+- [x] Amazon EC2 Autoscaling
 - [ ] Amazon ECS Autoscaling
 - [ ] Amazon EKS Cluster Autoscaling
 - [ ] Amazon Karpaenter
