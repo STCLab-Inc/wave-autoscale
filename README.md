@@ -89,8 +89,7 @@ Scaling components define the resources that will be scaled. A scaling component
 
 Example:
 
-```
-yamlCopy code
+```yaml
 kind: ScalingComponent
 id: ec2_autoscaling_api_server
 component_kind: aws-ec2-autoscaling
