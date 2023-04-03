@@ -99,7 +99,7 @@ polling_interval: 1000
 - [x] Amazon EC2 Autoscaling
 - [ ] Amazon ECS Autoscaling
 - [ ] Amazon EKS Cluster Autoscaling
-- [ ] Amazon Karpaenter
+- [ ] Amazon Karpenter
 - [ ] AWS Lambda Provisioned Concurrency
 - [ ] Amazon RDS Autoscaling
 - [ ] Amazon DynamoDB Autoscaling
