@@ -8,50 +8,6 @@ Developed by [STCLAB](https://www.stclab.com)
 **Table of contents**
 - [Wave Autoscale](#wave-autoscale)
   - [What is Wave Autoscale?](#what-is-wave-autoscale)
-- [Wave Autoscale](#wave-autoscale-1)
-  - [What is Wave Autoscale?](#what-is-wave-autoscale-1)
-    - [Principles](#principles)
-    - [Use Cases](#use-cases)
-  - [Getting started](#getting-started)
-  - [Configuration](#configuration)
-    - [Metrics](#metrics)
-    - [Scaling Components](#scaling-components)
-    - [Scaling Plans](#scaling-plans)
-  - [Development](#development)
-    - [Preparation](#preparation)
-  - [Additional Notes](#additional-notes)
-  - [Contributing](#contributing)
-  - [License](#license)
-  - [Support](#support)
-  - [Acknowledgments](#acknowledgments)
-    - [Principles](#principles-1)
-    - [Use Cases](#use-cases-1)
-  - [Getting started](#getting-started-1)
-  - [Configuration](#configuration-1)
-    - [Metrics](#metrics-1)
-    - [Scaling Components](#scaling-components-1)
-    - [Scaling Plans](#scaling-plans-1)
-  - [Development](#development-1)
-    - [Preparation](#preparation-1)
-  - [Additional Notes](#additional-notes-1)
-  - [Contributing](#contributing-1)
-  - [License](#license-1)
-  - [Support](#support-1)
-  - [Acknowledgments](#acknowledgments-1)
-
-## What is Wave Autoscale?
-Wave Autoscale is an advanced autoscaling service that provides both proactive and reactive event-driven autoscaling for a variety of platforms, including Amazon EC2, Kubernetes, serverless services Like AWS Lambda, and more. Designed as a coordinated solution to existing autoscaling technologies such as [AWS EC2 Autoscaling](https://aws.amazon.com/ec2/autoscaling/), [Kubernetes Karpenter](https://karpenter.sh/), and [Kubernetes Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/), Wave Autoscale extends their capabilities by incorporating both proactive and reactive scaling strategies. This ensures optimal resource allocation, improves application performance, and minimizes operational costs, resulting in a seamless end-user experience across diverse cloud environmea![drawing](https://docs.google.com/presentation/d/1mE9LXq-Z780BNVzUUA4eizlbridFnDp11PQD6tCqapw/export/png)
-
-# Wave Autoscale
-**Proactive and Reactive Event Driven Autoscaling for EC2, Kubernetes, Serverless, and more.**
-
-Developed by [STCLAB](https://www.stclab.com)
-
-**Table of contents**
-- [Wave Autoscale](#wave-autoscale)
-  - [What is Wave Autoscale?](#what-is-wave-autoscale)
-- [Wave Autoscale](#wave-autoscale-1)
-  - [What is Wave Autoscale?](#what-is-wave-autoscale-1)
     - [Principles](#principles)
     - [Use Cases](#use-cases)
   - [Getting started](#getting-started)
@@ -302,6 +258,21 @@ The configuration file consists of three main sections: Metrics, Scaling Compone
 
 ### Metrics
 
+**Monitoring**
+- [x] Prometheus
+- [ ] Amazon CloudWatch
+- [ ] DataDog
+- [ ] New Relic
+- [ ] Dynatrace
+- [ ] AppDynamics
+- [ ] Splunk
+- [ ] Elastic APM
+
+**System Metrics**
+- [ ] Kafka
+- [ ] AWS SQS
+
+
 Metrics are used to define the data sources for the scaling plans. A metric has the following attributes:
 
 - `kind`: Metric
@@ -324,6 +295,23 @@ polling_interval: 1000
 
 ### Scaling Components
 
+
+- [x] Amazon EC2 Autoscaling
+- [ ] Amazon ECS Autoscaling
+- [ ] Amazon EKS Cluster Autoscaling
+- [ ] Amazon Karpenter
+- [ ] AWS Lambda Provisioned Concurrency
+- [ ] Amazon RDS Autoscaling
+- [ ] Amazon DynamoDB Autoscaling
+- [ ] Amazon Managed Streaming for Apache Kafka(MSK) Autoscaling
+- [ ] Amazon SQS Autoscaling
+- [ ] Amazon ElastiCache Autoscaling
+- [ ] Amazon Neptune Autoscaling
+- [ ] Amazon DocumentDB Autoscaling
+- [ ] Amazon Elasticache Redis Cluster Autoscaling
+- [ ] Amazon Elasticache Memcached Cluster Autoscaling
+- [ ] Amazon SageMaker Endpoint Autoscaling
+
 Scaling components define the resources that will be scaled. A scaling component has the following attributes:
 
 - `kind`: ScalingComponent
@@ -333,8 +321,7 @@ Scaling components define the resources that will be scaled. A scaling component
 
 Example:
 
-```
-yamlCopy code
+```yaml
 kind: ScalingComponent
 id: ec2_autoscaling_api_server
 component_kind: aws-ec2-autoscaling
