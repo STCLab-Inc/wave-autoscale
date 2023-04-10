@@ -9,6 +9,10 @@ args = ["test", "reader", "--", "--nocapture"]
 command = "cargo"
 args = ["test", "metric_adapter_test", "--", "--nocapture"]
 
+[tasks.test-controller-metric-cloudwatch]
+command = "cargo"
+args = ["test", "metric_adapter_test::cloudwatch", "--", "--nocapture"]
+
 [tasks.test-controller-scaling-component]
 command = "cargo"
 args = ["test", "scaling_component_test", "--", "--nocapture"]

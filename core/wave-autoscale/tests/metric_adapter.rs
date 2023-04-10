@@ -40,4 +40,32 @@ mod metric_adapter_test {
 
         Ok(())
     }
+    #[tokio::test]
+    async fn cloudwatch() -> Result<()> {
+        // read yaml file
+        let result = read_yaml_file("./tests/yaml/metric_cloudwatch.yaml")?;
+
+        // create metric adapter manager
+        let metric_store: MetricStore = new_metric_store();
+        let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
+        metric_adapter_manager.add_definitions(result.metric_definitions);
+
+        // run metric adapters and wait for them to start
+        metric_adapter_manager.run().await;
+
+        sleep(Duration::from_millis(2000)).await;
+
+        // Compare the value and timestamp in metric_adapter and timestamp in the metric store
+        let cloned_metric_store = metric_store.clone();
+        let cloned_metric_store = cloned_metric_store.read().await;
+        println!("metric_store: {:?}", cloned_metric_store);
+        // let metric_from_store = cloned_metric_store
+        //     .get("cloudwatch_cpu_average_total")
+        //     .unwrap();
+        // let value_from_store = metric_from_store.as_str().unwrap().parse::<f64>().unwrap();
+        // println!("value_from_store: {}", value_from_store);
+        // assert!(value_from_store > 0.0);
+
+        Ok(())
+    }
 }

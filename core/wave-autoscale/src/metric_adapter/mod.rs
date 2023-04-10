@@ -20,9 +20,10 @@ pub fn create_metric_adapter(
             cloned_definition,
             metric_store,
         ))),
-        CloudWatchMetricAdapter::METRIC_KIND => {
-            Ok(Box::new(CloudWatchMetricAdapter::new(cloned_definition)))
-        }
+        CloudWatchMetricAdapter::METRIC_KIND => Ok(Box::new(CloudWatchMetricAdapter::new(
+            cloned_definition,
+            metric_store,
+        ))),
         _ => Err(anyhow::anyhow!(
             "Metric adapter not implemented for this kind"
         )),
