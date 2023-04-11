@@ -1,7 +1,7 @@
 ---
 kind: Metric
 id: cloudwatch_cpu_average
-metric_kind: cloudwatch
+metric_kind: cloudwatch-statistics
 metadata:
   region: ap-northeast-2
   access_key: AKIAU7BQ6ZTCA2XGEZNN

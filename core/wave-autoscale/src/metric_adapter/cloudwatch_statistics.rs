@@ -14,21 +14,21 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use chrono::Utc;
 use data_layer::MetricDefinition;
 use serde_json::Value;
-use std::{mem::ManuallyDrop, time::Duration};
+use std::time::Duration;
 use tokio::{task::JoinHandle, time};
 // This is a metric adapter for AWS CloudWatch Metrics.
-pub struct CloudWatchMetricAdapter {
+pub struct CloudWatchStatisticsMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
     metric_store: MetricStore,
 }
 
-impl CloudWatchMetricAdapter {
-    pub const METRIC_KIND: &'static str = "cloudwatch";
+impl CloudWatchStatisticsMetricAdapter {
+    pub const METRIC_KIND: &'static str = "cloudwatch-statistics";
 
     // Functions
     pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
-        CloudWatchMetricAdapter {
+        CloudWatchStatisticsMetricAdapter {
             task: None,
             metric,
             metric_store,
@@ -39,9 +39,9 @@ impl CloudWatchMetricAdapter {
 const DEFAULT_POLLING_INTERVAL: u64 = 1000;
 
 #[async_trait]
-impl MetricAdapter for CloudWatchMetricAdapter {
+impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
     fn get_metric_kind(&self) -> &str {
-        CloudWatchMetricAdapter::METRIC_KIND
+        CloudWatchStatisticsMetricAdapter::METRIC_KIND
     }
     fn get_id(&self) -> &str {
         &self.metric.id
@@ -60,7 +60,7 @@ impl MetricAdapter for CloudWatchMetricAdapter {
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
 
-        // println!("CloudWatchMetricAdapter::run() - shared_config: {:?}", shared_config);
+        // println!("CloudWatchStatisticsMetricAdapter::run() - shared_config: {:?}", shared_config);
 
         let task = tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
