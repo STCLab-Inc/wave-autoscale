@@ -21,11 +21,3 @@ metadata:
   query: avg(100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[20s])) by (hostname) * 100))
   # milliseconds
   polling_interval: 1000
----
-kind: Metric
-id: cloudwatch_metric
-metric_kind: cloudwatch
-metadata:
-  endpoint: http://3.34.170.13:9090
-  # Note: query must return a vector/scalar single element response
-  query: sum(rate(node_cpu_seconds_total{mode!="idle",hostname="ip-172-31-32-238"}[10s]))

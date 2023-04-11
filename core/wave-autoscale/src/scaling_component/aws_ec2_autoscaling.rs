@@ -2,7 +2,7 @@ use super::ScalingComponent;
 use crate::util::aws_region::get_aws_region_static_str;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_autoscaling::{Client, Credentials};
+use aws_sdk_autoscaling::{config::Credentials, Client};
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
 use std::collections::HashMap;

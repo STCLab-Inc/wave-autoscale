@@ -1,0 +1,22 @@
+---
+kind: Metric
+id: cloudwatch_cpu_average
+metric_kind: cloudwatch-statistics
+metadata:
+  region: ap-northeast-2
+  access_key: AKIAU7BQ6ZTCA2XGEZNN
+  secret_key: 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
+  polling_interval: 1000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricStatistics.html
+  namespace: AWS/EC2
+  metric_name: CPUUtilization
+  dimensions:
+    # - Name: InstanceId
+    #   Value: i-0b0b0b0b0b0b0b0b0
+    - Name: InstanceType
+      Value: t2.micro
+  duration_seconds: 3600
+  period: 5
+  # statistic: Average, Sum, SampleCount, Maximum, Minimum
+  statistic: Average
+  unit: Percent

@@ -1,11 +1,15 @@
-use self::{cloudwatch::CloudWatchMetricAdapter, prometheus::PrometheusMetricAdapter};
+use self::{
+    cloudwatch_data::CloudWatchDataMetricAdapter,
+    cloudwatch_statistics::CloudWatchStatisticsMetricAdapter, prometheus::PrometheusMetricAdapter,
+};
 use crate::metric_store::MetricStore;
 use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::collections::HashMap;
 
-pub mod cloudwatch;
+pub mod cloudwatch_data;
+pub mod cloudwatch_statistics;
 pub mod prometheus;
 
 // Factory method to create a metric adapter
@@ -20,9 +24,13 @@ pub fn create_metric_adapter(
             cloned_definition,
             metric_store,
         ))),
-        CloudWatchMetricAdapter::METRIC_KIND => {
-            Ok(Box::new(CloudWatchMetricAdapter::new(cloned_definition)))
-        }
+        CloudWatchDataMetricAdapter::METRIC_KIND => Ok(Box::new(CloudWatchDataMetricAdapter::new(
+            cloned_definition,
+            metric_store,
+        ))),
+        CloudWatchStatisticsMetricAdapter::METRIC_KIND => Ok(Box::new(
+            CloudWatchStatisticsMetricAdapter::new(cloned_definition, metric_store),
+        )),
         _ => Err(anyhow::anyhow!(
             "Metric adapter not implemented for this kind"
         )),
