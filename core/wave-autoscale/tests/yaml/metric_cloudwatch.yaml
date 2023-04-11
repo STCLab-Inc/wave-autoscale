@@ -1,6 +1,6 @@
 ---
 kind: Metric
-id: cloudwatch_cpu_average_each
+id: cloudwatch_cpu_average
 metric_kind: cloudwatch
 metadata:
   region: ap-northeast-2
@@ -17,5 +17,6 @@ metadata:
       Value: t2.micro
   duration_seconds: 3600
   period: 5
-  statistic: Maximum
+  # statistic: Average, Sum, SampleCount, Maximum, Minimum
+  statistic: Average
   unit: Percent

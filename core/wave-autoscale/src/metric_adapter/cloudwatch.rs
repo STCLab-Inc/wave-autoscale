@@ -147,26 +147,22 @@ impl MetricAdapter for CloudWatchMetricAdapter {
                 if let Ok(response) = response {
                     if let Some(datapoints) = response.datapoints {
                         if let Some(last_datapoint) = datapoints.last() {
-                            // let mut datapoint_copy = ManuallyDrop::new(last_datapoint);
-                            // let fields = [
-                            //     &mut datapoint_copy.sample_count,
-                            //     &mut datapoint_copy.average,
-                            //     &mut datapoint_copy.sum,
-                            //     &mut datapoint_copy.minimum,
-                            //     &mut datapoint_copy.maximum,
-                            // ];
-                            // for field in &fields  {
-                            //     if let Some(value) = ManuallyDrop::take(field) {
-                            //         println!("Found value: {:?}", value);
-                            //     }
-                            // }
-                            // let mut shared_metric_store = shared_metric_store.write().await;
-                            // let metric_value = last_datapoint.average.unwrap_or(0.0);
-                            // shared_metric_store
-                            //     .set_metric_value(metric_id.clone(), metric_value)
-                            //     .await;
+                            let values = [
+                                last_datapoint.sample_count,
+                                last_datapoint.average,
+                                last_datapoint.sum,
+                                last_datapoint.minimum,
+                                last_datapoint.maximum,
+                            ];
+                            for value in &values {
+                                if let Some(value) = value {
+                                    let mut shared_metric_store = shared_metric_store.write().await;
+                                    shared_metric_store
+                                        .insert(metric_id.clone(), Value::from(*value));
+                                    break;
+                                }
+                            }
                         }
-                        // let value = datapoints.last()
                     }
                 }
                 // Wait for the next interval.

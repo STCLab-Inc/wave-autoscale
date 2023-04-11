@@ -2,6 +2,7 @@
 mod metric_adapter_test {
     use anyhow::Result;
     use data_layer::reader::yaml_reader::read_yaml_file;
+    use serde_json::Value;
     use std::time::Duration;
     use tokio::time::sleep;
     use wave_autoscale::{
@@ -59,12 +60,12 @@ mod metric_adapter_test {
         let cloned_metric_store = metric_store.clone();
         let cloned_metric_store = cloned_metric_store.read().await;
         println!("metric_store: {:?}", cloned_metric_store);
-        // let metric_from_store = cloned_metric_store
-        //     .get("cloudwatch_cpu_average_total")
-        //     .unwrap();
-        // let value_from_store = metric_from_store.as_str().unwrap().parse::<f64>().unwrap();
-        // println!("value_from_store: {}", value_from_store);
-        // assert!(value_from_store > 0.0);
+        let metric_from_store = cloned_metric_store
+            .get("cloudwatch_cpu_average")
+            .and_then(Value::as_f64)
+            .unwrap();
+        println!("value_from_store: {}", metric_from_store);
+        assert!(metric_from_store > 0.0);
 
         Ok(())
     }
