@@ -14,7 +14,7 @@ pub struct EC2AutoScalingComponent {
 
 impl EC2AutoScalingComponent {
     // Static variables
-    pub const TRIGGER_KIND: &'static str = "aws-ec2-autoscaling";
+    pub const SCALING_KIND: &'static str = "aws-ec2-autoscaling";
 
     // Functions
     pub fn new(definition: ScalingComponentDefinition) -> Self {

@@ -1,3 +1,18 @@
+/**
+ * [Scaling Component] Kubernetes Deployment Scaling Component
+ *
+ * This component is used to scale a Kubernetes Deployment
+ * It requires the following metadata:
+ * - api_server_endpoint: The API server endpoint
+ * - namespace: The namespace of the deployment
+ * - name: The name of the deployment
+ * - ca_cert: The CA certificate of the API server
+ * It requires the following parameters:
+ * - replicas: The number of replicas to scale to
+ * It requires the following environment variables:
+ * - KUBECONFIG: The path to the kubeconfig file
+ *
+ */
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
@@ -5,8 +20,7 @@ use data_layer::ScalingComponentDefinition;
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::{
     api::{Api, Patch, PatchParams},
-    client::ConfigExt,
-    Client, Config,
+    Client,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -16,7 +30,7 @@ pub struct K8sDeploymentScalingComponent {
 }
 
 impl K8sDeploymentScalingComponent {
-    pub const TRIGGER_KIND: &'static str = "kubernetes-deployment";
+    pub const SCALING_KIND: &'static str = "kubernetes-deployment";
 
     pub fn new(definition: ScalingComponentDefinition) -> Self {
         K8sDeploymentScalingComponent { definition }
@@ -28,6 +42,7 @@ impl K8sDeploymentScalingComponent {
         ca_cert: &String,
         namespace: &String,
     ) -> Result<kube::Client> {
+        // TODO: Use the metadata to create a Kubernetes Client
         // Infer the runtime environment and try to create a Kubernetes Client
         let client = Client::try_default().await?;
         Ok(client)
@@ -59,6 +74,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             metadata.get("ca_cert"),
             params.get("replicas").and_then(Value::as_i64),
         ) {
+            // TODO: Use the metadata to create a Kubernetes Client
             let client = self
                 .get_client(api_server_endpoint, ca_cert, namespace)
                 .await;
@@ -68,7 +84,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             let client = client.unwrap();
 
             let deployment_api: Api<Deployment> = Api::namespaced(client, &namespace);
-
+            // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#deployment-v1-apps
             let patch = json!({
                 "apiVersion": "apps/v1",
                 "kind": "Deployment",
@@ -83,7 +99,24 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
                 .patch(&name, &patch_params, &Patch::Apply(patch))
                 .await;
 
-            println!("{:?}", result);
+            println!("{:#?}", result);
+            if let Err(e) = result {
+                return Err(anyhow::anyhow!(e));
+            }
+            let result = result.unwrap();
+
+            if let Some(spec) = result.spec {
+                if let Some(replicas_result) = spec.replicas {
+                    println!("{}: {} -> {}", name, replicas_result, replicas);
+                    if replicas_result != replicas as i32 {
+                        return Err(anyhow::anyhow!("Failed to scale deployment"));
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("Failed to scale deployment"));
+                }
+            } else {
+                return Err(anyhow::anyhow!("Failed to scale deployment"));
+            }
             Ok(())
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))

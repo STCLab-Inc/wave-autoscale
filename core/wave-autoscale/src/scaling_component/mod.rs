@@ -46,10 +46,10 @@ impl ScalingComponentManagerInner {
         // Get a value of metric and clone it.
         let cloned_defintion = definition.clone();
         match cloned_defintion.component_kind.as_str() {
-            EC2AutoScalingComponent::TRIGGER_KIND => {
+            EC2AutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(EC2AutoScalingComponent::new(cloned_defintion)))
             }
-            K8sDeploymentScalingComponent::TRIGGER_KIND => Ok(Box::new(
+            K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
                 K8sDeploymentScalingComponent::new(cloned_defintion),
             )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
