@@ -2,7 +2,7 @@ use super::ScalingComponent;
 use crate::util::aws_region::get_aws_region_static_str;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_autoscaling::{Client, Credentials};
+use aws_sdk_autoscaling::{config::Credentials, Client};
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ pub struct EC2AutoScalingComponent {
 
 impl EC2AutoScalingComponent {
     // Static variables
-    pub const TRIGGER_KIND: &'static str = "aws-ec2-autoscaling";
+    pub const SCALING_KIND: &'static str = "aws-ec2-autoscaling";
 
     // Functions
     pub fn new(definition: ScalingComponentDefinition) -> Self {

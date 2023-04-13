@@ -5,14 +5,29 @@ CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 command = "cargo"
 args = ["test", "reader", "--", "--nocapture"]
 
+# Metric Adapters
 [tasks.test-controller-metric]
 command = "cargo"
 args = ["test", "metric_adapter_test", "--", "--nocapture"]
 
+[tasks.test-controller-metric-cloudwatch-statistics]
+command = "cargo"
+args = ["test", "metric_adapter_test::cloudwatch_statistics", "--", "--nocapture"]
+
+[tasks.test-controller-metric-cloudwatch-data]
+command = "cargo"
+args = ["test", "metric_adapter_test::cloudwatch_data", "--", "--nocapture"]
+
+# Scaling Components
 [tasks.test-controller-scaling-component]
 command = "cargo"
 args = ["test", "scaling_component_test", "--", "--nocapture"]
 
+[tasks.test-controller-scaling-k8s-deployment]
+command = "cargo"
+args = ["test", "scaling_component_test::k8s_deployment_autoscaling", "--", "--nocapture"]
+
+# Planners
 [tasks.test-controller-planner]
 command = "cargo"
 args = ["test", "scaling_planner_test", "--", "--nocapture"]

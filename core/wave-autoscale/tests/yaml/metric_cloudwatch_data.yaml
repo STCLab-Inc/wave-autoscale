@@ -1,0 +1,15 @@
+---
+kind: Metric
+id: cloudwatch_cpu_average
+metric_kind: cloudwatch-data
+metadata:
+  region: ap-northeast-2
+  access_key: AKIAU7BQ6ZTCA2XGEZNN
+  secret_key: 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
+  polling_interval: 1000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
+  expression: "SELECT AVG(CPUUtilization) FROM \"AWS/EC2\""
+  period: 5
+  duration_seconds: 3600
+  # TODO: support MetricStat
