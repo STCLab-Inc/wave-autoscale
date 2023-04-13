@@ -74,7 +74,7 @@ The configuration file consists of three main sections: Metrics, Scaling Compone
 
 **Monitoring**
 - [x] Prometheus
-- [ ] Amazon CloudWatch
+- [x] Amazon CloudWatch
 - [ ] DataDog
 - [ ] New Relic
 - [ ] Dynatrace
@@ -82,9 +82,18 @@ The configuration file consists of three main sections: Metrics, Scaling Compone
 - [ ] Splunk
 - [ ] Elastic APM
 
-**System Metrics**
+**Messaging System**
 - [ ] Kafka
 - [ ] AWS SQS
+
+**Workflow**
+- [ ] Airflow
+- [ ] Luigi
+- [ ] MLFlow
+
+**Data Analytics**
+- [ ] Apache Spark
+- [ ] Databricks
 
 Metrics are used to define the data sources for the scaling plans. A metric has the following attributes:
 
@@ -108,9 +117,10 @@ polling_interval: 1000
 
 ### Scaling Components
 
-- [ ] Amazon EC2 Autoscaling
+- [x] Kubernetes Deployment Scaling
+- [x] Amazon EC2 Autoscaling
+- [ ] Amazon EMR managed scaling
 - [ ] Amazon ECS Autoscaling
-- [ ] Amazon EKS Cluster Autoscaling
 - [ ] Amazon Karpaenter
 - [ ] AWS Lambda Provisioned Concurrency
 - [ ] Amazon RDS Autoscaling
