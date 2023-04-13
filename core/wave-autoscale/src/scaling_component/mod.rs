@@ -4,7 +4,10 @@ use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 pub mod aws_ec2_autoscaling;
-use self::aws_ec2_autoscaling::EC2AutoScalingComponent;
+pub mod k8s_deployment;
+use self::{
+    aws_ec2_autoscaling::EC2AutoScalingComponent, k8s_deployment::K8sDeploymentScalingComponent,
+};
 use anyhow::Result;
 
 // ScalingComponent can be used in multiple threads. So it needs to be Send + Sync.
@@ -39,13 +42,16 @@ impl ScalingComponentManagerInner {
     fn create_scaling_component(
         &self,
         definition: &ScalingComponentDefinition,
-    ) -> Result<Box<impl ScalingComponent>> {
+    ) -> Result<Box<dyn ScalingComponent>> {
         // Get a value of metric and clone it.
         let cloned_defintion = definition.clone();
         match cloned_defintion.component_kind.as_str() {
-            EC2AutoScalingComponent::TRIGGER_KIND => {
+            EC2AutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(EC2AutoScalingComponent::new(cloned_defintion)))
             }
+            K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
+                K8sDeploymentScalingComponent::new(cloned_defintion),
+            )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
