@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.wa-main {
+  height: calc(100% - 4rem);
+}
+
+.tab.tab-active:not(.tab-disabled):not([disabled]) {
+  border-color: hsl(var(--p) / var(--tw-text-opacity)) !important;
+}
