@@ -2,7 +2,7 @@ import Menu from './menu';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div>
+    <div className="h-screen w-screen">
       <nav
         className="navbar bg-neutral text-neutral-content"
         data-te-navbar-ref
@@ -180,7 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div> */}
         </div>
       </nav>
-      <main>{children}</main>
+      <main className="wa-main">{children}</main>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-export default function PlanningPage() {
+export default function PlanningDetailCodePage() {
   return (
-    <div>sss</div>
+    <div>code</div>
     // <div className="flex h-full w-full">
     //   <aside className="flex w-80 flex-col border-r border-base-300 bg-base-200">
     //     {/* Header of aside */}
