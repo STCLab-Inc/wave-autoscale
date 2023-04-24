@@ -18,3 +18,4 @@ serde_json = "1.0.94"
 serde_valid = "0.15.0"
 regex = "1.7.3"
 lazy_static = "1.4.0"
+tokio = { version = "1.26.0", features = ["full"] }
