@@ -3,6 +3,7 @@
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "editor.tabSize": 2,
   "rust-analyzer.linkedProjects": [
-    "./core/api-server/Cargo.toml"
+    "./core/api-server/Cargo.toml",
+    "./core/data-layer/Cargo.toml"
   ]
 }
