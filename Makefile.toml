@@ -6,32 +6,51 @@ command = "cargo"
 args = ["test", "reader", "--", "--nocapture"]
 
 # 
-# Test Cases
+# Controller
 # 
 
-# Metric Adapters
+# Metric Adapters Test
 [tasks.test-controller-metric]
 command = "cargo"
 args = ["test", "metric_adapter_test", "--", "--nocapture"]
 
 [tasks.test-controller-metric-cloudwatch-statistics]
 command = "cargo"
-args = ["test", "metric_adapter_test::cloudwatch_statistics", "--", "--nocapture"]
+args = [
+  "test",
+  "metric_adapter_test::cloudwatch_statistics",
+  "--",
+  "--nocapture",
+]
 
 [tasks.test-controller-metric-cloudwatch-data]
 command = "cargo"
 args = ["test", "metric_adapter_test::cloudwatch_data", "--", "--nocapture"]
 
-# Scaling Components
+# Scaling Components Test
 [tasks.test-controller-scaling-component]
 command = "cargo"
 args = ["test", "scaling_component_test", "--", "--nocapture"]
 
 [tasks.test-controller-scaling-k8s-deployment]
 command = "cargo"
-args = ["test", "scaling_component_test::k8s_deployment_autoscaling", "--", "--nocapture"]
+args = [
+  "test",
+  "scaling_component_test::k8s_deployment_autoscaling",
+  "--",
+  "--nocapture",
+]
 
-# Planners
+# Planners Test
 [tasks.test-controller-planner]
 command = "cargo"
 args = ["test", "scaling_planner_test", "--", "--nocapture"]
+
+# 
+# Api Server
+# 
+
+# Metric Adapters Test
+[tasks.test-api-server-metric]
+command = "cargo"
+args = ["test", "test_api_server_metric", "--", "--nocapture"]
