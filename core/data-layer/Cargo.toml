@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+sqlx = { version = "0.6.3", features = [
+  "postgres",
+  "mysql",
+  "sqlite",
+  "runtime-tokio-rustls",
+  "uuid",
+] }
 anyhow = "1.0.70"
 serde = { version = "1.0.157", features = ["derive"] }
 serde_yaml = "0.9.19"
