@@ -45,7 +45,7 @@ impl DataLayer {
             }
             // Create the SQLite file if it doesn't exist
             if !path.exists() {
-                std::fs::File::create(&path);
+                std::fs::File::create(&path).unwrap();
             }
 
             let options = SqlitePoolOptions::new()
