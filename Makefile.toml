@@ -1,9 +1,16 @@
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 
+# 
+# Data Layer
+# 
 [tasks.test-data-reader]
 command = "cargo"
 args = ["test", "reader", "--", "--nocapture"]
+
+[tasks.test-data-layer-sqlite]
+command = "cargo"
+args = ["test", "data_layer::test_data_layer_sqlite", "--", "--nocapture"]
 
 # 
 # Controller
