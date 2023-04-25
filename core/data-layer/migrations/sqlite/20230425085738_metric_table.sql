@@ -1,5 +1,6 @@
 CREATE TABLE metric (
-  id TEXT PRIMARY KEY,
+  db_id TEXT PRIMARY KEY,
+  id TEXT UNIQUE,
   metric_kind TEXT NOT NULL,
   metadata TEXT
 );
