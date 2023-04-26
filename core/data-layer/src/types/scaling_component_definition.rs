@@ -4,8 +4,13 @@ use serde_json::Value;
 use serde_valid::Validate;
 use std::collections::HashMap;
 
+fn default_kind() -> ObjectKind {
+    ObjectKind::ScalingComponent
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Validate)]
 pub struct ScalingComponentDefinition {
+    #[serde(default = "default_kind")]
     pub kind: ObjectKind,
     #[serde(default)]
     pub db_id: String,

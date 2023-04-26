@@ -57,7 +57,17 @@ args = ["test", "scaling_planner_test", "--", "--nocapture"]
 # Api Server
 # 
 
-# Metric Adapters Test
+# Metric APIs Test
 [tasks.test-api-server-metric]
 command = "cargo"
-args = ["test", "test_api_server_metric", "--", "--nocapture"]
+args = ["test", "api_server::test_api_server_metric", "--", "--nocapture"]
+
+# Scaling Component APIs Test
+[tasks.test-api-server-scaling-component]
+command = "cargo"
+args = ["test", "api_server::test_api_server_scaling_component", "--", "--nocapture"]
+
+# Plan APIs Test
+[tasks.test-api-server-plan]
+command = "cargo"
+args = ["test", "api_server::test_api_server_plan", "--", "--nocapture"]

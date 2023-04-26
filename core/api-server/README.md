@@ -16,9 +16,9 @@
 * [PUT] `/api/scaling-components/:id` - Update scaling components by id
 * [DELETE] `/api/scaling-components/:id` - Delete scaling components by id
  
-**Planning**
-* [GET] `/api/planning` - Get plannings
-* [POST] `/api/planning` - Add plannings
-* [GET] `/api/planning/:id` - Get plannings by id
-* [PUT] `/api/planning/:id` - Update plannings by id
-* [DELETE] `/api/planning/:id` - Delete plannings by id
+**Plans**
+* [GET] `/api/plans` - Get plans
+* [POST] `/api/plans` - Add plans
+* [GET] `/api/plans/:id` - Get plans by id
+* [PUT] `/api/plans/:id` - Update plans by id
+* [DELETE] `/api/plans/:id` - Delete plans by id

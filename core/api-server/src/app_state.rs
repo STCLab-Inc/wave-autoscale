@@ -1,12 +1,22 @@
 use actix_web::web;
+use data_layer::data_layer::{DataLayer, DataLayerNewParam};
 use tokio::sync::Mutex;
 
 pub struct AppState {
     pub counter: Mutex<i32>,
+    pub data_layer: DataLayer,
 }
 
-pub fn get_app_state() -> web::Data<AppState> {
+pub struct GetAppStateParam {
+    pub sql_url: String,
+}
+
+pub async fn get_app_state(params: GetAppStateParam) -> web::Data<AppState> {
     web::Data::new(AppState {
         counter: Mutex::new(0),
+        data_layer: DataLayer::new(DataLayerNewParam {
+            sql_url: params.sql_url,
+        })
+        .await,
     })
 }
