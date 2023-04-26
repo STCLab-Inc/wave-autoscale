@@ -5,7 +5,7 @@ mod api_server {
         app_state::{get_app_state, GetAppStateParam},
         controller,
     };
-    use data_layer::{MetricDefinition, ScalingComponentDefinition};
+    use data_layer::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition};
     use serde_json::json;
 
     #[tokio::test]
@@ -168,6 +168,86 @@ mod api_server {
             .uri(&format!("/scaling-components/{}", scaling_component.db_id))
             .to_request();
         let resp = test::call_service(&app, delete_scaling_component).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.status().is_success(), "Response status is not success");
+    }
+
+    #[tokio::test]
+    async fn test_api_server_plan() {
+        const TEST_DB: &str = "sqlite://./tests/data-layer/test.db";
+        // Delete the test db if it exists
+        let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
+        let _ = std::fs::remove_file(path);
+
+        let app_state = get_app_state(GetAppStateParam {
+            sql_url: TEST_DB.to_owned(),
+        })
+        .await;
+
+        let app = test::init_service(
+            App::new()
+                .app_data(app_state.clone())
+                .configure(controller::init_plan_controller),
+        )
+        .await;
+
+        let id1 = uuid::Uuid::new_v4().to_string();
+        let id2 = uuid::Uuid::new_v4().to_string();
+
+        let payload = json!({
+            "plans": [{
+            "kind": "ScalingPlan",
+            "id": id1,
+            "plans": [{
+                "name": "test_plan_1",
+                "description": "test_plan_1",
+                "labels": {
+                    "test_plan_1": "test_plan_1",
+                },
+            }],
+        }, {
+            "kind": "ScalingPlan",
+            "id": id2,
+            "plans": [{
+                "name": "test_plan_2",
+                "description": "test_plan_2",
+                "labels": {
+                    "test_plan_2": "test_plan_2",
+                },
+            }],
+        }]});
+
+        // Add plans
+        let post_plans = test::TestRequest::post()
+            .uri("/plans")
+            .set_json(payload)
+            .to_request();
+        let resp = test::call_service(&app, post_plans).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.status().is_success(), "Response status is not success");
+
+        // Get plans
+        let get_plans = test::TestRequest::get().uri("/plans").to_request();
+        let resp: Vec<ScalingPlanDefinition> = test::call_and_read_body_json(&app, get_plans).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.len() == 2, "Response status is not success");
+
+        // Update a plan
+        let mut plan = resp[0].clone();
+        plan.plans[0]["name"] = json!("new_test_plan_1".to_owned());
+        let update_plan = test::TestRequest::put()
+            .uri(&format!("/plans/{}", plan.db_id))
+            .set_json(&plan)
+            .to_request();
+        let resp = test::call_service(&app, update_plan).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.status().is_success(), "Response status is not success");
+
+        // Delete a plan
+        let delete_plan = test::TestRequest::delete()
+            .uri(&format!("/plans/{}", plan.db_id))
+            .to_request();
+        let resp = test::call_service(&app, delete_plan).await;
         println!("resp: {:?}", resp);
         assert!(resp.status().is_success(), "Response status is not success");
     }

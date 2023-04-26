@@ -63,6 +63,11 @@ command = "cargo"
 args = ["test", "api_server::test_api_server_metric", "--", "--nocapture"]
 
 # Scaling Component APIs Test
-[tasks.test-api-server-scaling-components]
+[tasks.test-api-server-scaling-component]
 command = "cargo"
 args = ["test", "api_server::test_api_server_scaling_component", "--", "--nocapture"]
+
+# Plan APIs Test
+[tasks.test-api-server-plan]
+command = "cargo"
+args = ["test", "api_server::test_api_server_plan", "--", "--nocapture"]
