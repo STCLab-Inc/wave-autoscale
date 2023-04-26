@@ -1,12 +1,8 @@
-use actix_web::{
-    web::{self, Data},
-    App, HttpServer,
-};
+use actix_web::{App, HttpServer};
 use dotenv::dotenv;
-use tokio::sync::Mutex;
 
 use crate::{
-    app_state::{get_app_state, AppState},
+    app_state::{get_app_state, AppState, GetAppStateParam},
     controller,
 };
 
@@ -14,14 +10,18 @@ use crate::{
 pub async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
+    // get the ip_address from env
     let ip_address = std::env::var("IP_ADDRESS").expect("IP_ADDRESS must be set");
+
     // get the port from env and parse it to u16
     let port = std::env::var("PORT")
         .expect("PORT must be set")
         .parse::<u16>()
         .expect("PORT must be a number");
 
-    let app_state = get_app_state();
+    // get the sql_url from env
+    let sql_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let app_state = get_app_state(GetAppStateParam { sql_url }).await;
 
     let http_server = HttpServer::new(move || {
         App::new()
@@ -29,6 +29,7 @@ pub async fn main() -> std::io::Result<()> {
             .configure(controller::init_metric_controller)
     })
     .bind((ip_address.clone(), port));
+
     // Server structure implements Future.
     let server = match http_server {
         Ok(server) => server.run(),

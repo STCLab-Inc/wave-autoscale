@@ -1,12 +1,75 @@
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use data_layer::MetricDefinition;
+use serde::Deserialize;
+use validator::Validate;
+
+use crate::app_state::{self, AppState};
 
 pub fn init(cfg: &mut web::ServiceConfig) {
-    cfg.service(get);
+    cfg.service(get_metrics)
+        .service(post_metrics)
+        .service(put_metric_by_id)
+        .service(delete_metric_by_id);
 }
 
-#[get("/metric")]
-async fn get() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+#[get("/metrics")]
+async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
+    // HttpResponse::Ok().body("Hello world!")
+    // const metrics = &app
+    let metrics = app_state.data_layer.get_all_metrics().await;
+    if metrics.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", metrics));
+    }
+    HttpResponse::Ok().json(metrics.unwrap())
+}
+
+// [POST] /metrics
+#[derive(Deserialize, Validate)]
+struct PostMetricsRequest {
+    metrics: Vec<MetricDefinition>,
+}
+
+#[post("/metrics")]
+async fn post_metrics(
+    request: web::Json<PostMetricsRequest>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let result = app_state
+        .data_layer
+        .add_metrics(request.metrics.clone())
+        .await;
+    if result.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", result));
+    }
+    HttpResponse::Ok().body("ok")
+}
+
+#[put("/metrics/{db_id}")]
+async fn put_metric_by_id(
+    db_id: web::Path<String>,
+    request: web::Json<MetricDefinition>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let mut metric = request.into_inner();
+    metric.db_id = db_id.into_inner();
+
+    let result = app_state.data_layer.update_metric(metric).await;
+    if result.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", result));
+    }
+    HttpResponse::Ok().body("ok")
+}
+
+#[delete("/metrics/{db_id}")]
+async fn delete_metric_by_id(
+    db_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let result = app_state.data_layer.delete_metric(db_id.into_inner()).await;
+    if result.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", result));
+    }
+    HttpResponse::Ok().body("ok")
 }
 
 // use validator::ValidationError;
