@@ -3,7 +3,7 @@ use data_layer::MetricDefinition;
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::app_state::{self, AppState};
+use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_metrics)

@@ -5,7 +5,7 @@ mod api_server {
         app_state::{get_app_state, GetAppStateParam},
         controller,
     };
-    use data_layer::MetricDefinition;
+    use data_layer::{MetricDefinition, ScalingComponentDefinition};
     use serde_json::json;
 
     #[tokio::test]
@@ -56,6 +56,7 @@ mod api_server {
             },
         }]});
 
+        // Add metrics
         let post_metrics = test::TestRequest::post()
             .uri("/metrics")
             .set_json(payload)
@@ -85,6 +86,88 @@ mod api_server {
             .uri(&format!("/metrics/{}", metric.db_id))
             .to_request();
         let resp = test::call_service(&app, delete_metric).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.status().is_success(), "Response status is not success");
+    }
+
+    #[tokio::test]
+    async fn test_api_server_scaling_component() {
+        const TEST_DB: &str = "sqlite://./tests/data-layer/test.db";
+        // Delete the test db if it exists
+        let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
+        let _ = std::fs::remove_file(path);
+
+        let app_state = get_app_state(GetAppStateParam {
+            sql_url: TEST_DB.to_owned(),
+        })
+        .await;
+
+        let app = test::init_service(
+            App::new()
+                .app_data(app_state.clone())
+                .configure(controller::init_scaling_component_controller),
+        )
+        .await;
+
+        let id1 = uuid::Uuid::new_v4().to_string();
+        let id2 = uuid::Uuid::new_v4().to_string();
+        let payload = json!({
+            "scaling_components": [{
+            "kind": "ScalingComponent",
+            "id": id1,
+            "component_kind": "k8s",
+            "metadata": {
+                "name": "test_scaling_component_1",
+                "description": "test_scaling_component_1",
+                "labels": {
+                    "test_scaling_component_1": "test_scaling_component_1",
+                },
+            },
+        }, {
+            "kind": "ScalingComponent",
+            "id": id2,
+            "component_kind": "k8s",
+            "metadata": {
+                "name": "test_scaling_component_2",
+                "description": "test_scaling_component_2",
+                "labels": {
+                    "test_scaling_component_2": "test_scaling_component_2",
+                },
+            },
+        }]});
+
+        // Add scaling components
+        let post_scaling_components = test::TestRequest::post()
+            .uri("/scaling-components")
+            .set_json(payload)
+            .to_request();
+        let resp = test::call_service(&app, post_scaling_components).await;
+        println!("resp: {:?}", resp);
+
+        let get_scaling_components = test::TestRequest::get()
+            .uri("/scaling-components")
+            .to_request();
+        let resp: Vec<ScalingComponentDefinition> =
+            test::call_and_read_body_json(&app, get_scaling_components).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.len() == 2, "Response status is not success");
+
+        // Update a scaling component
+        let mut scaling_component = resp[0].clone();
+        scaling_component.component_kind = "new_k8s".to_owned();
+        let update_scaling_component = test::TestRequest::put()
+            .uri(&format!("/scaling-components/{}", scaling_component.db_id))
+            .set_json(&scaling_component)
+            .to_request();
+        let resp = test::call_service(&app, update_scaling_component).await;
+        println!("resp: {:?}", resp);
+        assert!(resp.status().is_success(), "Response status is not success");
+
+        // Delete a scaling component
+        let delete_scaling_component = test::TestRequest::delete()
+            .uri(&format!("/scaling-components/{}", scaling_component.db_id))
+            .to_request();
+        let resp = test::call_service(&app, delete_scaling_component).await;
         println!("resp: {:?}", resp);
         assert!(resp.status().is_success(), "Response status is not success");
     }
