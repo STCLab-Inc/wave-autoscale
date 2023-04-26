@@ -27,6 +27,8 @@ pub async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(app_state.clone())
             .configure(controller::init_metric_controller)
+            .configure(controller::init_scaling_component_controller)
+            .configure(controller::init_plan_controller)
     })
     .bind((ip_address.clone(), port));
 
