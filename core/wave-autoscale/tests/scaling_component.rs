@@ -26,7 +26,7 @@ mod scaling_component_test {
             scaling_component_manager.get_scaling_component("ec2_autoscaling_api_server")
         {
             let name = scaling_component.get_scaling_component_kind();
-            assert!(name == EC2AutoScalingComponent::TRIGGER_KIND, "Unexpected");
+            assert!(name == EC2AutoScalingComponent::SCALING_KIND, "Unexpected");
         } else {
             assert!(false, "No scaling component found")
         }
@@ -55,7 +55,7 @@ mod scaling_component_test {
         {
             let name = scaling_component.get_scaling_component_kind();
             assert!(
-                name == K8sDeploymentScalingComponent::TRIGGER_KIND,
+                name == K8sDeploymentScalingComponent::SCALING_KIND,
                 "Unexpected"
             );
         } else {
