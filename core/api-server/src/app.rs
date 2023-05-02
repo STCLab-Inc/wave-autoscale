@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[tokio::main]
-pub async fn main() -> std::io::Result<()> {
+pub async fn run_server() -> std::io::Result<()> {
     dotenv().ok();
 
     // get the ip_address from env

@@ -26,7 +26,10 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ]
+      ],
+      // "@metrics/*": [
+      //   "../data-layer/bindings/*"
+      // ]
     }
   },
   "include": [
@@ -34,7 +37,8 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    // "../data-layer/bindings/*.ts",
   ],
   "exclude": [
     "node_modules"

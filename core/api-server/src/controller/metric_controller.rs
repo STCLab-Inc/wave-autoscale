@@ -12,7 +12,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(delete_metric_by_id);
 }
 
-#[get("/metrics")]
+#[get("/api/metrics")]
 async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
     // HttpResponse::Ok().body("Hello world!")
     // const metrics = &app
@@ -29,7 +29,7 @@ struct PostMetricsRequest {
     metrics: Vec<MetricDefinition>,
 }
 
-#[post("/metrics")]
+#[post("/api/metrics")]
 async fn post_metrics(
     request: web::Json<PostMetricsRequest>,
     app_state: web::Data<AppState>,
@@ -44,7 +44,7 @@ async fn post_metrics(
     HttpResponse::Ok().body("ok")
 }
 
-#[put("/metrics/{db_id}")]
+#[put("/api/metrics/{db_id}")]
 async fn put_metric_by_id(
     db_id: web::Path<String>,
     request: web::Json<MetricDefinition>,
@@ -60,7 +60,7 @@ async fn put_metric_by_id(
     HttpResponse::Ok().body("ok")
 }
 
-#[delete("/metrics/{db_id}")]
+#[delete("/api/metrics/{db_id}")]
 async fn delete_metric_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
