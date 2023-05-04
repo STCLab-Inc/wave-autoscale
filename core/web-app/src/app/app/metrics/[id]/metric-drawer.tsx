@@ -5,10 +5,11 @@ import {
   getMetricKeyTypes,
 } from '@/utils/bindings';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FieldValues, UseFormRegister, useForm } from 'react-hook-form';
 import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
+import { forEach } from 'lodash';
 
 // Metric Types
 const metricKeyTypes = getMetricKeyTypes();
@@ -53,32 +54,13 @@ export default function MetricDetailDrawer({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm();
   const router = useRouter();
   const dbId = metricDefinition?.db_id;
   const isNew = !dbId;
   const [selectedMetricType, setSelectedMetricType] = useState<string>();
-
-  //
-  // Events
-  //
-  const goBack = (refresh?: boolean) => {
-    let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/')) + '?timestamp=1111';
-    router.push(path);
-    if (refresh) {
-      router.refresh();
-    }
-  };
-  const onClickOverlay = () => {
-    goBack(false);
-  };
-
-  const onChangeMetricType = (e: any) => {
-    const metricType = e.target.value;
-    setSelectedMetricType(metricType);
-  };
 
   const metadataFormControls = useMemo(() => {
     if (selectedMetricType) {
@@ -90,6 +72,52 @@ export default function MetricDetailDrawer({
       }
     }
   }, [selectedMetricType]);
+
+  const goBack = (refresh?: boolean) => {
+    let path = window.location.href;
+    path = path.slice(0, path.lastIndexOf('/')) + '?timestamp=1111';
+    router.push(path);
+    if (refresh) {
+      router.refresh();
+    }
+  };
+
+  //
+  // Events
+  //
+  useEffect(() => {
+    if (isNew) {
+      return;
+    }
+    const { id, metric_kind, metadata, ...rest } = metricDefinition;
+    setValue('id', id);
+    setValue('metric_kind', metric_kind);
+    forEach(metadata, (value, key) => {
+      setValue(key, value);
+    });
+    setSelectedMetricType(metric_kind);
+  }, [metricDefinition, isNew]);
+
+  const onClickOverlay = () => {
+    goBack(false);
+  };
+
+  const onChangeMetricType = (e: any) => {
+    const metricType = e.target.value;
+    setSelectedMetricType(metricType);
+  };
+
+  const onClickRemove = async () => {
+    if (isNew || !dbId) {
+      return;
+    }
+    try {
+      await MetricService.deleteMetric(dbId);
+      goBack(true);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const onSubmit = async (data: any) => {
     const { id, metric_kind, ...metadata } = data;
@@ -126,9 +154,21 @@ export default function MetricDetailDrawer({
           <form className="" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-bold">Metric</h2>
-              <button type="submit" className="btn-primary btn-sm btn">
-                Save
-              </button>
+              <div>
+                {isNew ? undefined : (
+                  <button
+                    type="button"
+                    className="btn-error btn-sm btn mr-2"
+                    onClick={onClickRemove}
+                  >
+                    Remove
+                  </button>
+                )}
+
+                <button type="submit" className="btn-primary btn-sm btn">
+                  Save
+                </button>
+              </div>
             </div>
             <div className="form-control mb-4 w-full">
               <label className="label">

@@ -27,7 +27,7 @@ export function getMetricKeyTypes(): MetricKeyType[] {
     prometheus_url: '',
   });
   metricKeyTypes.push({
-    metricName: 'Prometheus',
+    metricName: 'prometheus',
     keyTypes: prometheusMetric,
   });
 
@@ -43,7 +43,7 @@ export function getMetricKeyTypes(): MetricKeyType[] {
       period: 0,
     });
   metricKeyTypes.push({
-    metricName: 'Cloudwatch Data',
+    metricName: 'cloudwatch-data',
     keyTypes: cloudwatchDataMetric,
   });
 
@@ -63,7 +63,7 @@ export function getMetricKeyTypes(): MetricKeyType[] {
       unit: '',
     });
   metricKeyTypes.push({
-    metricName: 'Cloudwatch Statistics',
+    metricName: 'cloudwatch-statistics',
     keyTypes: cloudwatchStatisticsMetric,
   });
 
