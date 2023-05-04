@@ -7,6 +7,7 @@ use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_metrics)
+        .service(get_metric_by_id)
         .service(post_metrics)
         .service(put_metric_by_id)
         .service(delete_metric_by_id);
@@ -21,6 +22,21 @@ async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
         return HttpResponse::InternalServerError().body(format!("{:?}", metrics));
     }
     HttpResponse::Ok().json(metrics.unwrap())
+}
+
+#[get("/api/metrics/{db_id}")]
+async fn get_metric_by_id(
+    db_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let metric = app_state
+        .data_layer
+        .get_metric_by_id(db_id.into_inner())
+        .await;
+    if metric.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", metric));
+    }
+    HttpResponse::Ok().json(metric.unwrap())
 }
 
 // [POST] /metrics

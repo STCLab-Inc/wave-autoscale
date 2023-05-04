@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 
@@ -24,7 +25,10 @@ pub async fn run_server() -> std::io::Result<()> {
     let app_state = get_app_state(GetAppStateParam { sql_url }).await;
 
     let http_server = HttpServer::new(move || {
+        let cors = Cors::permissive().max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(app_state.clone())
             .configure(controller::init_metric_controller)
             .configure(controller::init_scaling_component_controller)
