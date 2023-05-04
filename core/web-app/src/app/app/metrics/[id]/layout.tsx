@@ -3,8 +3,12 @@ import MetricDetailDrawer from './metric-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 async function getMetricDefinition(dbId: string) {
-  const metricDefinition = await MetricService.getMetric(dbId);
-  return metricDefinition;
+  try {
+    const metricDefinition = await MetricService.getMetric(dbId);
+    return metricDefinition;
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 const NEW_PATH = 'new';

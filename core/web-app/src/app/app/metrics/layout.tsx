@@ -2,7 +2,6 @@ import Link from 'next/link';
 import ContentHeader from '../content-header';
 import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
-import { map } from 'lodash';
 
 async function getMetrics() {
   const metrics = await MetricService.getMetrics();
@@ -48,11 +47,14 @@ export default async function MetricsLayout({
               </thead>
               <tbody>
                 {metrics.map((metric: MetricDefinition) => {
-                  const metadata = map(metric.metadata, (value, key) => (
-                    <div key={key}>
-                      <span className="font-bold">{key}</span>: {value}
-                    </div>
-                  ));
+                  const metadata = Object.keys(metric.metadata)
+                    .sort()
+                    .map((key) => (
+                      <div key={key}>
+                        <span className="font-bold">{key}</span>:{' '}
+                        {(metric.metadata as any)[key]}
+                      </div>
+                    ));
                   return (
                     <tr key={metric.db_id}>
                       <th>

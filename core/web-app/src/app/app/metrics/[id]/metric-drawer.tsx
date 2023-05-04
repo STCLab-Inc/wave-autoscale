@@ -55,6 +55,8 @@ export default function MetricDetailDrawer({
     handleSubmit,
     watch,
     setValue,
+    getValues,
+    reset,
     formState: { errors },
   } = useForm();
   const router = useRouter();
@@ -75,7 +77,7 @@ export default function MetricDetailDrawer({
 
   const goBack = (refresh?: boolean) => {
     let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/')) + '?timestamp=1111';
+    path = path.slice(0, path.lastIndexOf('/'));
     router.push(path);
     if (refresh) {
       router.refresh();
@@ -105,6 +107,12 @@ export default function MetricDetailDrawer({
   const onChangeMetricType = (e: any) => {
     const metricType = e.target.value;
     setSelectedMetricType(metricType);
+
+    // Clear metadata
+    const id = getValues('id');
+    reset();
+    setValue('id', id);
+    setValue('metric_kind', metricType);
   };
 
   const onClickRemove = async () => {
@@ -172,18 +180,6 @@ export default function MetricDetailDrawer({
             </div>
             <div className="form-control mb-4 w-full">
               <label className="label">
-                <span className="label-text">ID</span>
-                <span className="label-text-alt">used as a variable name</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Type here"
-                className="input-bordered input w-full"
-                {...register('id', { required: true })}
-              />
-            </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
                 <span className="label-text">Metric Type</span>
                 <span className="label-text-alt"></span>
               </label>
@@ -199,6 +195,19 @@ export default function MetricDetailDrawer({
                 {metricOptions}
               </select>
             </div>
+            <div className="form-control mb-4 w-full">
+              <label className="label">
+                <span className="label-text">ID</span>
+                <span className="label-text-alt">used as a variable name</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Type here"
+                className="input-bordered input w-full"
+                {...register('id', { required: true })}
+              />
+            </div>
+
             {metadataFormControls}
           </form>
         </div>
