@@ -1,9 +1,25 @@
+import MetricService from '@/services/metric';
 import MetricDetailDrawer from './metric-drawer';
+import { MetricDefinition } from '@/types/bindings/metric-definition';
 
-export default function MetricDetailLayout({
+async function getMetricDefinition(dbId: string) {
+  const metricDefinition = await MetricService.getMetric(dbId);
+  return metricDefinition;
+}
+
+const NEW_PATH = 'new';
+
+export default async function MetricDetailLayout({
   children,
+  params: { id: dbId },
 }: {
   children: React.ReactNode;
+  params: { id: string };
 }) {
-  return <MetricDetailDrawer />;
+  let metricDefinition: MetricDefinition | undefined;
+  if (dbId && dbId !== NEW_PATH) {
+    metricDefinition = await getMetricDefinition(dbId);
+    console.log({ metricDefinition });
+  }
+  return <MetricDetailDrawer metricDefinition={metricDefinition} />;
 }

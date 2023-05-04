@@ -1,5 +1,4 @@
 'use client';
-
 import {
   KeyType,
   generateMetricDefinition,
@@ -8,6 +7,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { FieldValues, UseFormRegister, useForm } from 'react-hook-form';
+import MetricService from '@/services/metric';
+import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 // Metric Types
 const metricKeyTypes = getMetricKeyTypes();
@@ -43,7 +44,11 @@ const getMetadataFormControls = (
   return metadataFormControls;
 };
 
-export default function MetricDetailDrawer() {
+export default function MetricDetailDrawer({
+  metricDefinition,
+}: {
+  metricDefinition?: MetricDefinition;
+}) {
   const {
     register,
     handleSubmit,
@@ -51,16 +56,20 @@ export default function MetricDetailDrawer() {
     formState: { errors },
   } = useForm();
   const router = useRouter();
-
+  const dbId = metricDefinition?.db_id;
+  const isNew = !dbId;
   const [selectedMetricType, setSelectedMetricType] = useState<string>();
 
   //
   // Events
   //
-  const onClickOverlay = () => {
+  const onClickOverlay = (refresh?: boolean) => {
     let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/'));
+    path = path.slice(0, path.lastIndexOf('/')) + '?timestamp=1111';
     router.push(path);
+    if (refresh) {
+      router.refresh();
+    }
   };
 
   const onChangeMetricType = (e: any) => {
@@ -79,14 +88,26 @@ export default function MetricDetailDrawer() {
     }
   }, [selectedMetricType]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     const { id, metric_kind, ...metadata } = data;
     const metricDefinition = generateMetricDefinition({
       id,
+      db_id: isNew ? '' : dbId,
       metric_kind,
       metadata,
     });
-    console.log({ metricDefinition });
+    try {
+      if (isNew) {
+        const result = await MetricService.createMetric(metricDefinition);
+        console.log({ result, isNew });
+      } else {
+        const result = await MetricService.updateMetric(metricDefinition);
+        console.log({ result });
+      }
+      onClickOverlay(true);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
