@@ -63,13 +63,16 @@ export default function MetricDetailDrawer({
   //
   // Events
   //
-  const onClickOverlay = (refresh?: boolean) => {
+  const goBack = (refresh?: boolean) => {
     let path = window.location.href;
     path = path.slice(0, path.lastIndexOf('/')) + '?timestamp=1111';
     router.push(path);
     if (refresh) {
       router.refresh();
     }
+  };
+  const onClickOverlay = () => {
+    goBack(false);
   };
 
   const onChangeMetricType = (e: any) => {
@@ -104,7 +107,7 @@ export default function MetricDetailDrawer({
         const result = await MetricService.updateMetric(metricDefinition);
         console.log({ result });
       }
-      onClickOverlay(true);
+      goBack(true);
     } catch (error) {
       console.log(error);
     }
