@@ -26,3 +26,4 @@ uuid = { version = "1.3.0", features = [
   "macro-diagnostics",
   "serde",
 ] }
+ts-rs = "6.2.1"

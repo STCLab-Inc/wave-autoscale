@@ -14,3 +14,5 @@ Cargo.lock
 **/*.rs.bk
 core/data-layer/tests/data-layer/test.db
 .DS_Store
+
+temp/

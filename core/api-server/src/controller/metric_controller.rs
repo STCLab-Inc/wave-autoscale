@@ -7,12 +7,13 @@ use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_metrics)
+        .service(get_metric_by_id)
         .service(post_metrics)
         .service(put_metric_by_id)
         .service(delete_metric_by_id);
 }
 
-#[get("/metrics")]
+#[get("/api/metrics")]
 async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
     // HttpResponse::Ok().body("Hello world!")
     // const metrics = &app
@@ -23,13 +24,28 @@ async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(metrics.unwrap())
 }
 
+#[get("/api/metrics/{db_id}")]
+async fn get_metric_by_id(
+    db_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let metric = app_state
+        .data_layer
+        .get_metric_by_id(db_id.into_inner())
+        .await;
+    if metric.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", metric));
+    }
+    HttpResponse::Ok().json(metric.unwrap())
+}
+
 // [POST] /metrics
 #[derive(Deserialize, Validate)]
 struct PostMetricsRequest {
     metrics: Vec<MetricDefinition>,
 }
 
-#[post("/metrics")]
+#[post("/api/metrics")]
 async fn post_metrics(
     request: web::Json<PostMetricsRequest>,
     app_state: web::Data<AppState>,
@@ -44,7 +60,7 @@ async fn post_metrics(
     HttpResponse::Ok().body("ok")
 }
 
-#[put("/metrics/{db_id}")]
+#[put("/api/metrics/{db_id}")]
 async fn put_metric_by_id(
     db_id: web::Path<String>,
     request: web::Json<MetricDefinition>,
@@ -60,7 +76,7 @@ async fn put_metric_by_id(
     HttpResponse::Ok().body("ok")
 }
 
-#[delete("/metrics/{db_id}")]
+#[delete("/api/metrics/{db_id}")]
 async fn delete_metric_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,

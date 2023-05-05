@@ -3,8 +3,8 @@ use crate::metric_store::MetricStore;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use serde_json::Value;
-use std::{sync::Arc, time::Duration};
-use tokio::{sync::Mutex, task::JoinHandle, time};
+use std::time::Duration;
+use tokio::{task::JoinHandle, time};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {

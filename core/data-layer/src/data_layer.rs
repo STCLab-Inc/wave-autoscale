@@ -77,12 +77,12 @@ impl DataLayer {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
                 "INSERT INTO metric (db_id, id, metric_kind, metadata) VALUES (?,?,?,?)";
-            let id = Uuid::new_v4().to_string();
+            let db_id = Uuid::new_v4().to_string();
 
             let result = sqlx::query(query_string)
-                .bind(id)
-                .bind(metric.id)
-                .bind(metric.metric_kind)
+                .bind(db_id)
+                .bind(metric.id.to_lowercase())
+                .bind(metric.metric_kind.to_lowercase())
                 .bind(metadata_string)
                 .execute(&self.pool)
                 .await;
@@ -111,6 +111,26 @@ impl DataLayer {
             });
         }
         Ok(metrics)
+    }
+    // Get a metric from the database
+    pub async fn get_metric_by_id(&self, db_id: String) -> Result<MetricDefinition> {
+        let query_string = "SELECT db_id, id, metric_kind, metadata FROM metric WHERE db_id=?";
+        let result = sqlx::query(query_string)
+            .bind(db_id)
+            .fetch_one(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        let metric = MetricDefinition {
+            kind: ObjectKind::Metric,
+            db_id: result.get("db_id"),
+            id: result.get("id"),
+            metric_kind: result.get("metric_kind"),
+            metadata: serde_json::from_str(result.get("metadata")).unwrap(),
+        };
+        Ok(metric)
     }
     // Delete all metrics from the database
     pub async fn delete_all_metrics(&self) -> Result<()> {
