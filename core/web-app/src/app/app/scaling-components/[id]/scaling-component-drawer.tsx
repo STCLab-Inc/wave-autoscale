@@ -1,28 +1,32 @@
 'use client';
-import {
-  generateMetricDefinition,
-  getMetricKeyTypes,
-} from '@/utils/metric-binding';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import MetricService from '@/services/metric';
-import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { forEach } from 'lodash';
+import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import {
+  generateScalingComponentDefinition,
+  getScalingComponentKeyTypes,
+} from '@/utils/scaling-component-binding';
 import { getMetadataFormControls } from '../../metadata-form-controls';
+import ScalingComponentService from '@/services/scaling-component';
 
 // Metric Types
-const metricKeyTypes = getMetricKeyTypes();
-const metricOptions = metricKeyTypes.map((metricKeyType) => (
-  <option key={metricKeyType.metricName} value={metricKeyType.metricName}>
-    {metricKeyType.metricName}
+const componentKeyTypes = getScalingComponentKeyTypes();
+const componentOptions = componentKeyTypes.map((componentKeyType) => (
+  <option
+    key={componentKeyType.componentName}
+    value={componentKeyType.componentName}
+  >
+    {componentKeyType.componentName}
   </option>
 ));
 
-export default function MetricDetailDrawer({
-  metricDefinition,
+export default function ScalingComponentDetailDrawer({
+  componentDefinition,
 }: {
-  metricDefinition?: MetricDefinition;
+  componentDefinition?: ScalingComponentDefinition;
 }) {
   const {
     register,
@@ -34,20 +38,21 @@ export default function MetricDetailDrawer({
     formState: { errors },
   } = useForm();
   const router = useRouter();
-  const dbId = metricDefinition?.db_id;
+  const dbId = componentDefinition?.db_id;
   const isNew = !dbId;
-  const [selectedMetricType, setSelectedMetricType] = useState<string>();
+  const [selectedComponentKind, setSelectedComponentKind] = useState<string>();
 
   const metadataFormControls = useMemo(() => {
-    if (selectedMetricType) {
-      const keyTypes = metricKeyTypes.find(
-        (metricKeyType) => metricKeyType.metricName === selectedMetricType
+    if (selectedComponentKind) {
+      const keyTypes = componentKeyTypes.find(
+        (componentKeyType) =>
+          componentKeyType.componentName === selectedComponentKind
       )?.keyTypes;
       if (keyTypes) {
         return getMetadataFormControls(keyTypes, register);
       }
     }
-  }, [selectedMetricType]);
+  }, [selectedComponentKind]);
 
   const goBack = (refresh?: boolean) => {
     let path = window.location.href;
@@ -61,32 +66,34 @@ export default function MetricDetailDrawer({
   //
   // Events
   //
+
+  // Set default values
   useEffect(() => {
     if (isNew) {
       return;
     }
-    const { id, metric_kind, metadata, ...rest } = metricDefinition;
+    const { id, component_kind, metadata, ...rest } = componentDefinition;
     setValue('id', id);
-    setValue('metric_kind', metric_kind);
+    setValue('component_kind', component_kind);
     forEach(metadata, (value, key) => {
       setValue(key, value);
     });
-    setSelectedMetricType(metric_kind);
-  }, [metricDefinition, isNew]);
+    setSelectedComponentKind(component_kind);
+  }, [componentDefinition, isNew]);
 
   const onClickOverlay = () => {
     goBack(false);
   };
 
-  const onChangeMetricType = (e: any) => {
-    const metricType = e.target.value;
-    setSelectedMetricType(metricType);
+  const onChangeComponentKind = (e: any) => {
+    const componentKind = e.target.value;
+    setSelectedComponentKind(componentKind);
 
     // Clear metadata
     const id = getValues('id');
     reset();
     setValue('id', id);
-    setValue('metric_kind', metricType);
+    setValue('component_kind', componentKind);
   };
 
   const onClickRemove = async () => {
@@ -94,7 +101,7 @@ export default function MetricDetailDrawer({
       return;
     }
     try {
-      await MetricService.deleteMetric(dbId);
+      await ScalingComponentService.deleteScalingComponent(dbId);
       goBack(true);
     } catch (error) {
       console.log(error);
@@ -102,19 +109,25 @@ export default function MetricDetailDrawer({
   };
 
   const onSubmit = async (data: any) => {
-    const { id, metric_kind, ...metadata } = data;
-    const metricDefinition = generateMetricDefinition({
+    const { id, component_kind, ...metadata } = data;
+    const componentDefinition = generateScalingComponentDefinition({
       id,
       db_id: isNew ? '' : dbId,
-      metric_kind,
+      component_kind,
       metadata,
     });
     try {
       if (isNew) {
-        const result = await MetricService.createMetric(metricDefinition);
+        // const result = await MetricService.createMetric(componentDefinition);
+        const result = await ScalingComponentService.createScalingComponent(
+          componentDefinition
+        );
         console.log({ result, isNew });
       } else {
-        const result = await MetricService.updateMetric(metricDefinition);
+        // const result = await MetricService.updateMetric(componentDefinition);
+        const result = await ScalingComponentService.updateScalingComponent(
+          componentDefinition
+        );
         console.log({ result });
       }
       goBack(true);
@@ -135,7 +148,7 @@ export default function MetricDetailDrawer({
         <div className="drawer-content w-[32rem] overflow-y-auto bg-base-100 p-4">
           <form className="" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-bold">Metric</h2>
+              <h2 className="font-bold">Scaling Component</h2>
               <div>
                 {isNew ? undefined : (
                   <button
@@ -154,19 +167,19 @@ export default function MetricDetailDrawer({
             </div>
             <div className="form-control mb-4 w-full">
               <label className="label">
-                <span className="label-text">Metric Type</span>
+                <span className="label-text">Scaling Component Type</span>
                 <span className="label-text-alt"></span>
               </label>
               <select
                 className="select-bordered select"
                 defaultValue="Pick one"
-                {...register('metric_kind', {
+                {...register('component_kind', {
                   required: true,
-                  onChange: onChangeMetricType,
+                  onChange: onChangeComponentKind,
                 })}
               >
                 <option disabled>Pick one</option>
-                {metricOptions}
+                {componentOptions}
               </select>
             </div>
             <div className="form-control mb-4 w-full">

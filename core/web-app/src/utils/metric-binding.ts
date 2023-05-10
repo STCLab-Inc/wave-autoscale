@@ -2,19 +2,9 @@ import { CloudwatchDataMetricMetadata } from '@/types/bindings/cloudwatch-data-m
 import { CloudwatchStatisticsMetricMetadata } from '@/types/bindings/cloudwatch-statistics-metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { PrometheusMetricMetadata } from '@/types/bindings/prometheus-metric';
+import { getInterfaceKeyTypes, MetadataKeyType } from './metadata-key-type';
 
-// https://stackoverflow.com/questions/51465182/typescript-get-keys-of-a-generic-interface-without-using-enum
-// type KeyTypes<T> = { [K in keyof T]: { key: K; type: T[K] } }[keyof T][];
-export type KeyType = { key: string; type: string };
-function getInterfaceKeyTypes<T extends {}>(obj: T): KeyType[] {
-  const keys = Object.keys(obj) as (keyof T)[];
-  return keys.map((key) => ({
-    key: key as string,
-    type: typeof obj[key],
-  })) as KeyType[];
-}
-
-export type MetricKeyType = { metricName: string; keyTypes: KeyType[] };
+export type MetricKeyType = { metricName: string; keyTypes: MetadataKeyType[] };
 
 export function getMetricKeyTypes(): MetricKeyType[] {
   const metricKeyTypes: MetricKeyType[] = [];

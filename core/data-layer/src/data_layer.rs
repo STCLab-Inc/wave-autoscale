@@ -222,6 +222,30 @@ impl DataLayer {
         }
         Ok(scaling_components)
     }
+    // Get a scaling component from the database
+    pub async fn get_scaling_component_by_id(
+        &self,
+        db_id: String,
+    ) -> Result<ScalingComponentDefinition> {
+        let query_string =
+            "SELECT db_id, id, component_kind, metadata FROM scaling_component WHERE db_id=?";
+        let result = sqlx::query(query_string)
+            .bind(db_id)
+            .fetch_one(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        let scaling_component = ScalingComponentDefinition {
+            kind: ObjectKind::ScalingComponent,
+            db_id: result.get("db_id"),
+            id: result.get("id"),
+            component_kind: result.get("component_kind"),
+            metadata: serde_json::from_str(result.get("metadata")).unwrap(),
+        };
+        Ok(scaling_component)
+    }
     // Delete all scaling components from the database
     pub async fn delete_all_scaling_components(&self) -> Result<()> {
         let query_string = "DELETE FROM scaling_component";
