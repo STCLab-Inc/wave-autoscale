@@ -1,33 +1,89 @@
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 
+# 
+# Data Layer
+# 
+[tasks.generate-types]
+workspace = false
+cwd = "./core/data-layer/"
+command = "cargo"
+args = ["test"]
+
 [tasks.test-data-reader]
 command = "cargo"
 args = ["test", "reader", "--", "--nocapture"]
 
-# Metric Adapters
+[tasks.test-data-layer-sqlite]
+command = "cargo"
+args = ["test", "data_layer::test_data_layer_sqlite", "--", "--nocapture"]
+
+# 
+# Controller
+# 
+
+# Metric Adapters Test
 [tasks.test-controller-metric]
 command = "cargo"
 args = ["test", "metric_adapter_test", "--", "--nocapture"]
 
 [tasks.test-controller-metric-cloudwatch-statistics]
 command = "cargo"
-args = ["test", "metric_adapter_test::cloudwatch_statistics", "--", "--nocapture"]
+args = [
+  "test",
+  "metric_adapter_test::cloudwatch_statistics",
+  "--",
+  "--nocapture",
+]
 
 [tasks.test-controller-metric-cloudwatch-data]
 command = "cargo"
 args = ["test", "metric_adapter_test::cloudwatch_data", "--", "--nocapture"]
 
-# Scaling Components
+# Scaling Components Test
 [tasks.test-controller-scaling-component]
 command = "cargo"
 args = ["test", "scaling_component_test", "--", "--nocapture"]
 
 [tasks.test-controller-scaling-k8s-deployment]
 command = "cargo"
-args = ["test", "scaling_component_test::k8s_deployment_autoscaling", "--", "--nocapture"]
+args = [
+  "test",
+  "scaling_component_test::k8s_deployment_autoscaling",
+  "--",
+  "--nocapture",
+]
 
-# Planners
+# Planners Test
 [tasks.test-controller-planner]
 command = "cargo"
 args = ["test", "scaling_planner_test", "--", "--nocapture"]
+
+# 
+# Api Server
+# 
+
+# Run As Standalone
+[tasks.run-api-server]
+command = "cargo"
+args = ["run", "--bin", "api-server"]
+
+# Metric APIs Test
+[tasks.test-api-server-metric]
+command = "cargo"
+args = ["test", "api_server::test_api_server_metric", "--", "--nocapture"]
+
+# Scaling Component APIs Test
+[tasks.test-api-server-scaling-component]
+command = "cargo"
+args = [
+  "test",
+  "api_server::test_api_server_scaling_component",
+  "--",
+  "--nocapture",
+]
+
+# Plan APIs Test
+[tasks.test-api-server-plan]
+command = "cargo"
+args = ["test", "api_server::test_api_server_plan", "--", "--nocapture"]

@@ -1,3 +1,5 @@
+use api_server::app;
+
 fn main() {
-    println!("Hello, world!");
+    app::run_server().unwrap();
 }

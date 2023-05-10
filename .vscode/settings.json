@@ -1,0 +1,9 @@
+{
+  "typescript.tsdk": "core/web-app/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.tabSize": 2,
+  "rust-analyzer.linkedProjects": [
+    "./core/api-server/Cargo.toml",
+    "./core/data-layer/Cargo.toml"
+  ]
+}
