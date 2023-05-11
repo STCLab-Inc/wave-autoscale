@@ -1,12 +1,14 @@
 'use client';
 
+import PlanService from '@/services/plan';
+import { generatePlanDefinition } from '@/utils/plan-binding';
 import classNames from 'classnames';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export default function PlanningSidebar() {
   const [addModalToggle, setAddModalToggle] = useState(false);
-  const { register, reset, setFocus } = useForm();
+  const { register, reset, setFocus, handleSubmit } = useForm();
 
   const onClickAdd = () => {
     reset();
@@ -16,8 +18,14 @@ export default function PlanningSidebar() {
       setFocus('title');
     }, 100);
   };
-  const onClickCreateInModal = () => {
-    setAddModalToggle(false);
+
+  const onSubmitAddDialog = async (data: any) => {
+    const { title } = data;
+    const plan = generatePlanDefinition({ title });
+    try {
+      const response = await PlanService.createPlan(plan);
+      setAddModalToggle(false);
+    } catch (e) {}
   };
   const onClickCancelInModal = () => {
     setAddModalToggle(false);
@@ -41,8 +49,8 @@ export default function PlanningSidebar() {
       </aside>
       <div className={classNames('modal', { 'modal-open': addModalToggle })}>
         <div className="modal-box">
-          <h3 className="text-lg font-bold">Add a Plan</h3>
-          <form>
+          <form onSubmit={handleSubmit(onSubmitAddDialog)}>
+            <h3 className="text-lg font-bold">Add a Plan</h3>
             <div className="form-control w-full">
               <label className="label">
                 <span className="label-text">Plan Title</span>
@@ -54,15 +62,16 @@ export default function PlanningSidebar() {
                 className="input-bordered input w-full"
               />
             </div>
+
+            <div className="modal-action">
+              <button className="btn-ghost btn" onClick={onClickCancelInModal}>
+                Cancel
+              </button>
+              <button className="btn-primary btn" type="submit">
+                Add
+              </button>
+            </div>
           </form>
-          <div className="modal-action">
-            <button className="btn-ghost btn" onClick={onClickCancelInModal}>
-              Cancel
-            </button>
-            <button className="btn-primary btn" onClick={onClickCreateInModal}>
-              Add
-            </button>
-          </div>
         </div>
       </div>
     </>
