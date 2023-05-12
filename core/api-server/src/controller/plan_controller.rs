@@ -12,7 +12,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(delete_plan_by_id);
 }
 
-#[get("/plans")]
+#[get("/api/plans")]
 async fn get_plans(app_state: web::Data<AppState>) -> impl Responder {
     // HttpResponse::Ok().body("Hello world!")
     // const plans = &app
@@ -28,7 +28,7 @@ struct PostPlansRequest {
     plans: Vec<ScalingPlanDefinition>,
 }
 
-#[post("/plans")]
+#[post("/api/plans")]
 async fn post_plans(
     request: web::Json<PostPlansRequest>,
     app_state: web::Data<AppState>,
@@ -40,7 +40,7 @@ async fn post_plans(
     HttpResponse::Ok().body("ok")
 }
 
-#[put("/plans/{db_id}")]
+#[put("/api/plans/{db_id}")]
 async fn put_plan_by_id(
     db_id: web::Path<String>,
     request: web::Json<ScalingPlanDefinition>,
@@ -56,7 +56,7 @@ async fn put_plan_by_id(
     HttpResponse::Ok().body("ok")
 }
 
-#[delete("/plans/{db_id}")]
+#[delete("/api/plans/{db_id}")]
 async fn delete_plan_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
