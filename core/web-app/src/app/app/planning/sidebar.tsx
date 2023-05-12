@@ -1,14 +1,30 @@
 'use client';
 
 import PlanService from '@/services/plan';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import { generatePlanDefinition } from '@/utils/plan-binding';
 import classNames from 'classnames';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export default function PlanningSidebar() {
   const [addModalToggle, setAddModalToggle] = useState(false);
+  // Used to force refresh
+  const [timestamp, setTimestamp] = useState(Date.now());
   const { register, reset, setFocus, handleSubmit } = useForm();
+  const [plans, setPlans] = useState([]);
+  const params = useParams();
+  const selectePlanId = params?.id;
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      const response = await PlanService.getPlans();
+      setPlans(response);
+    };
+    fetchPlans();
+  }, [timestamp]);
 
   const onClickAdd = () => {
     reset();
@@ -21,13 +37,21 @@ export default function PlanningSidebar() {
 
   const onSubmitAddDialog = async (data: any) => {
     const { title } = data;
+    if (!title?.trim()) {
+      return;
+    }
     const plan = generatePlanDefinition({ title });
     try {
       const response = await PlanService.createPlan(plan);
+      setTimestamp(Date.now());
       setAddModalToggle(false);
     } catch (e) {}
   };
-  const onClickCancelInModal = () => {
+  const onClickCancelInModal = (event: Event) => {
+    // Check if this event is from the element itself
+    if (event.target !== event.currentTarget) {
+      return;
+    }
     setAddModalToggle(false);
   };
 
@@ -45,9 +69,35 @@ export default function PlanningSidebar() {
           </button>
         </div>
         {/* Plan List */}
-        <div className="flex-1 overflow-y-auto">{/* Plan Item */}</div>
+        <div className="flex-1 overflow-y-auto p-3">
+          {/* Plan Item */}
+          {plans?.map((plan: ScalingPlanDefinition) => (
+            <Link
+              href={`/app/planning/${plan.db_id}`}
+              key={plan.db_id}
+              className={classNames(
+                'mb mb-2 flex h-8 w-full cursor-pointer items-center justify-start rounded-xl px-3',
+                {
+                  'bg-primary': plan.db_id === selectePlanId,
+                }
+              )}
+            >
+              <div
+                className={classNames('prose', {
+                  'text-white': plan.db_id === selectePlanId,
+                })}
+              >
+                {plan.title}
+              </div>
+            </Link>
+          ))}
+        </div>
       </aside>
-      <div className={classNames('modal', { 'modal-open': addModalToggle })}>
+      {/* Add a Plan Modal */}
+      <div
+        className={classNames('modal', { 'modal-open': addModalToggle })}
+        onClick={onClickCancelInModal}
+      >
         <div className="modal-box">
           <form onSubmit={handleSubmit(onSubmitAddDialog)}>
             <h3 className="text-lg font-bold">Add a Plan</h3>
