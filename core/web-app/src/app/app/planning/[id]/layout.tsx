@@ -12,7 +12,7 @@ export default function PlanningDetailLayout({
       <ContentHeader title="Free Plan Tenancy Autoscaling">
         <PlanningDetailTabs />
       </ContentHeader>
-      <div className="w-full min-w-full flex-1">{children}</div>
+      <div className="w-full min-w-full flex-1 relative">{children}</div>
     </>
   );
 }
