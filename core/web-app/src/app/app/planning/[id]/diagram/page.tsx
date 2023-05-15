@@ -1,4 +1,3 @@
-import { ReactFlowProvider } from 'reactflow';
 import PlanningDetailDiagramBase from './diagram-base';
 
 export default function PlanningDetailDiagramPage() {

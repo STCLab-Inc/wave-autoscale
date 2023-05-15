@@ -6,10 +6,11 @@ export interface Plan {
   description?: string;
   expression?: string;
   priority?: number;
-  ui?: object;
+  ui?: any;
 }
 interface PlanState {
   plans: Plan[];
+  selectedPlan: Plan | undefined;
   addPlan: () => void;
   updatePlan: (plan: Plan) => void;
 }
@@ -17,6 +18,7 @@ interface PlanState {
 const ID_PREFIX = 'scale-plan-';
 export const usePlanStore = create<PlanState>((set, get) => ({
   plans: [],
+  selectedPlan: undefined,
   addPlan: () =>
     set(
       produce((state: PlanState) => {
@@ -34,7 +36,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       produce((state) => {
         const plans = state.plans;
         const index = plans.findIndex((p: Plan) => p.id === plan.id);
+        if (index === -1) return;
         plans[index] = plan;
+        const selectedPlan = plans.find((p: Plan) => p.ui?.selected);
+        state.selectedPlan = selectedPlan;
       })
     ),
 }));

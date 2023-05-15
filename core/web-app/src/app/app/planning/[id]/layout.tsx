@@ -1,4 +1,5 @@
 import ContentHeader from '../../content-header';
+import PlanDrawerContainer from './plan-drawer-container';
 import PlanningDetailTabs from './tabs';
 
 export default function PlanningDetailLayout({
@@ -7,12 +8,15 @@ export default function PlanningDetailLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="flex w-full flex-row h-full">
       {/* Plan Detail Header */}
-      <ContentHeader title="Free Plan Tenancy Autoscaling">
-        <PlanningDetailTabs />
-      </ContentHeader>
-      <div className="w-full min-w-full flex-1 relative">{children}</div>
-    </>
+      <div className="flex flex-1 flex-col">
+        <ContentHeader title="Free Plan Tenancy Autoscaling">
+          <PlanningDetailTabs />
+        </ContentHeader>
+        <div className="relative w-full min-w-full flex-1">{children}</div>
+      </div>
+      <PlanDrawerContainer />
+    </div>
   );
 }

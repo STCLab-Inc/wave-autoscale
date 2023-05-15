@@ -6,11 +6,9 @@ import {
   Controls,
   NodeChange,
   ReactFlow,
-  useNodes,
-  useReactFlow,
 } from 'reactflow';
 import { usePlanStore } from '../plan-store';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { produce } from 'immer';
 
 export default function PlanningDiagramFlow() {
@@ -25,7 +23,7 @@ export default function PlanningDiagramFlow() {
         id: plan.id,
         position: { x: 0, y: 0 },
         data: { label: plan.id },
-        draggable: true,
+        draggable: false,
         // Get the ui property from the plan
         ...plan?.ui,
       };
@@ -33,14 +31,28 @@ export default function PlanningDiagramFlow() {
   }, [plans]);
 
   const onNodesChange = (nodes: NodeChange[]) => {
+    // Find the plan by id
+    const findPlan = (planId: string) =>
+      plans.find((plan) => plan.id === planId);
+
+    // Update the plan with new attributes
     nodes.forEach((node) => {
       const type = node.type;
+      // Update the plan with the new position
       if (type === 'position' && node.position) {
-        const plan = plans.find((plan) => plan.id === node.id);
+        const plan = findPlan(node.id);
         if (plan) {
-          // Update the plan with the new position
           const newPlan = produce(plan, (draft) => {
             draft.ui = { ...draft.ui, position: node.position };
+          });
+          updatePlan(newPlan);
+        }
+      } else if (type === 'select') {
+        // Update the plan with the new selected state
+        const plan = findPlan(node.id);
+        if (plan) {
+          const newPlan = produce(plan, (draft) => {
+            draft.ui = { ...draft.ui, selected: node.selected };
           });
           updatePlan(newPlan);
         }

@@ -4,13 +4,12 @@ import 'reactflow/dist/style.css';
 import { usePlanStore } from '../plan-store';
 import PlanningDiagramFlow from './diagram-flow';
 import { ReactFlowProvider } from 'reactflow';
+import PlanDetailDrawer from '@/app/app/planning/[id]/plan-drawer';
 
 export default function PlanningDetailDiagramBase() {
   const addPlan = usePlanStore((state) => state.addPlan);
-
   // Events
-  const onClickAddNode = () => {
-    console.log('onClickAddNode');
+  const onClickAddPlan = () => {
     addPlan();
   };
 
@@ -21,9 +20,9 @@ export default function PlanningDetailDiagramBase() {
       </ReactFlowProvider>
       <button
         className="btn-primary btn-sm btn absolute left-8 top-4"
-        onClick={onClickAddNode}
+        onClick={onClickAddPlan}
       >
-        Add Node
+        Add Plan
       </button>
     </>
   );
