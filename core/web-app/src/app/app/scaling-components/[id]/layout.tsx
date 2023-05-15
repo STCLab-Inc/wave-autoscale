@@ -1,5 +1,5 @@
 import MetricService from '@/services/metric';
-import ScalingComponentDetailDrawer from './scaling-component-drawer';
+import ScalingComponentDetailDrawer from '../../scaling-component-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import ScalingComponentService from '@/services/scaling-component';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
