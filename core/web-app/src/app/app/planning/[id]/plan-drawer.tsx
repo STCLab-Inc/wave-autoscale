@@ -63,6 +63,9 @@ export default function PlanDetailDrawer({
                 type="text"
                 placeholder="Type here"
                 className="input-bordered input input-md w-full"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
                 {...register('id', { required: true })}
               />
             </div>
