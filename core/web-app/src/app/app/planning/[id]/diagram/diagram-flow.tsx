@@ -7,13 +7,26 @@ import {
   NodeChange,
   ReactFlow,
 } from 'reactflow';
-import { usePlanStore } from '../plan-store';
-import { useMemo } from 'react';
+import { usePlanStore } from '../../plan-store';
+import { useEffect, useMemo, useState } from 'react';
 import { produce } from 'immer';
+import { useParams } from 'next/navigation';
 
 export default function PlanningDiagramFlow() {
-  const plans = usePlanStore((state) => state.plans);
-  const updatePlan = usePlanStore((state) => state.updatePlan);
+  const { id: scalingPlanId } = useParams();
+  const plans = usePlanStore(
+    (state) => state.currentScalingPlanState?.plans || []
+  );
+  const sync = usePlanStore((state) => state.fetch);
+  const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI);
+
+  // If scalingPlanId changes, fetch the scaling plan then it updates plans and nodes.
+  useEffect(() => {
+    const fetch = async () => {
+      await sync(scalingPlanId);
+    };
+    fetch();
+  }, [scalingPlanId]);
 
   const nodes = useMemo(() => {
     return plans.map((plan) => {
@@ -45,7 +58,7 @@ export default function PlanningDiagramFlow() {
           const newPlan = produce(plan, (draft) => {
             draft.ui = { ...draft.ui, position: node.position };
           });
-          updatePlan(newPlan);
+          updatePlanItemUI(scalingPlanId, newPlan);
         }
       } else if (type === 'select') {
         // Update the plan with the new selected state
@@ -54,7 +67,7 @@ export default function PlanningDiagramFlow() {
           const newPlan = produce(plan, (draft) => {
             draft.ui = { ...draft.ui, selected: node.selected };
           });
-          updatePlan(newPlan);
+          updatePlanItemUI(scalingPlanId, newPlan);
         }
       }
     });

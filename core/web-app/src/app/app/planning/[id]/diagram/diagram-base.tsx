@@ -1,16 +1,17 @@
 'use client';
 
 import 'reactflow/dist/style.css';
-import { usePlanStore } from '../plan-store';
+import { usePlanStore } from '../../plan-store';
 import PlanningDiagramFlow from './diagram-flow';
 import { ReactFlowProvider } from 'reactflow';
-import PlanDetailDrawer from '@/app/app/planning/[id]/plan-drawer';
+import { useParams } from 'next/navigation';
 
 export default function PlanningDetailDiagramBase() {
-  const addPlan = usePlanStore((state) => state.addPlan);
+  const { id: scalingPlanId } = useParams();
+  const addPlanItem = usePlanStore((state) => state.addPlanItem);
   // Events
   const onClickAddPlan = () => {
-    addPlan();
+    addPlanItem(scalingPlanId);
   };
 
   return (

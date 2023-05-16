@@ -1,34 +1,56 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
-import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import AceEditor from 'react-ace';
-
+import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
+import { usePlanStore } from '../plan-store';
+import { useEffect } from 'react';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 // import 'ace-builds/src-noconflict/ext-language_tools';
 
-export default function PlanDetailDrawer({
-  planDefinition,
+export default function PlanItemDrawer({
+  planItemDefinition,
 }: {
-  planDefinition?: ScalingPlanDefinition;
+  planItemDefinition?: PlanItemDefinition;
 }) {
-  const { register, handleSubmit, control } = useForm();
-  const router = useRouter();
-  const dbId = planDefinition?.db_id;
-  const isNew = !dbId;
+  const { register, handleSubmit, control, reset, setValue } = useForm();
+  const { id: scalingPlanId } = useParams();
+  const clearSelectedPlan = usePlanStore((state) => state.clearSelectedPlan);
+  const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
+
+  useEffect(() => {
+    reset();
+    if (!planItemDefinition) {
+      return;
+    }
+    const { id, description, priority, expression } = planItemDefinition;
+    setValue('id', id);
+    setValue('description', description);
+    setValue('priority', priority);
+    setValue('expression', expression);
+  }, [planItemDefinition]);
 
   const goBack = (refresh?: boolean) => {
-    let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/'));
-    router.push(path);
-    if (refresh) {
-      router.refresh();
-    }
+    clearSelectedPlan(scalingPlanId);
   };
 
-  const onSubmit = async () => {};
+  const onSubmit = async (data: any) => {
+    const { id, description, priority, expression } = data;
+    const planItemDefinition: PlanItemDefinition = {
+      id,
+      description,
+      priority,
+      expression,
+      scaling_components: [],
+      ui: {},
+    };
+
+    updatePlanItem(scalingPlanId, planItemDefinition);
+
+    alert('updated!');
+  };
 
   return (
     <div className="plan-drawer drawer drawer-end w-[32rem]">
@@ -39,16 +61,13 @@ export default function PlanDetailDrawer({
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-bold">Plan</h2>
               <div>
-                {isNew ? undefined : (
-                  <button
-                    type="button"
-                    className="btn-error btn-sm btn mr-2"
-                    // onClick={onClickRemove}
-                  >
-                    Remove
-                  </button>
-                )}
-
+                <button
+                  type="button"
+                  className="btn-error btn-sm btn mr-2"
+                  // onClick={onClickRemove}
+                >
+                  Remove
+                </button>
                 <button type="submit" className="btn-primary btn-sm btn">
                   Save
                 </button>

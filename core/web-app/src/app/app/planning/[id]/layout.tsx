@@ -1,22 +1,39 @@
+import PlanService from '@/services/plan';
 import ContentHeader from '../../content-header';
-import PlanDrawerContainer from './plan-drawer-container';
+import PlanItemDrawerContainer from './plan-item-drawer-container';
 import PlanningDetailTabs from './tabs';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 
-export default function PlanningDetailLayout({
+async function getScalingPlanDefinition(dbId: string) {
+  try {
+    const scalingPlanDefinition = await PlanService.getPlan(dbId);
+    return scalingPlanDefinition as ScalingPlanDefinition;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export default async function PlanningDetailLayout({
   children,
+  params: { id: dbId },
 }: {
   children: React.ReactNode;
+  params: { id: string };
 }) {
+  const scalingPlanDefinition = await getScalingPlanDefinition(dbId);
+  if (!scalingPlanDefinition) {
+    return <div>Plan not found</div>;
+  }
   return (
-    <div className="flex w-full flex-row h-full">
+    <div className="flex h-full w-full flex-row">
       {/* Plan Detail Header */}
       <div className="flex flex-1 flex-col">
-        <ContentHeader title="Free Plan Tenancy Autoscaling">
+        <ContentHeader title={scalingPlanDefinition.title}>
           <PlanningDetailTabs />
         </ContentHeader>
         <div className="relative w-full min-w-full flex-1">{children}</div>
       </div>
-      <PlanDrawerContainer />
+      <PlanItemDrawerContainer />
     </div>
   );
 }

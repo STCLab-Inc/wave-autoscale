@@ -8,9 +8,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { usePlanStore } from './plan-store';
 
 export default function PlanningSidebar() {
   const [addModalToggle, setAddModalToggle] = useState(false);
+  const needToSave = usePlanStore((state) => state.needToSave);
+  const currentScalingPlanState = usePlanStore(
+    (state) => state.currentScalingPlanState
+  );
   // Used to force refresh
   const [timestamp, setTimestamp] = useState(Date.now());
   const { register, reset, setFocus, handleSubmit } = useForm();
@@ -47,7 +52,7 @@ export default function PlanningSidebar() {
       setAddModalToggle(false);
     } catch (e) {}
   };
-  const onClickCancelInModal = (event: Event) => {
+  const onClickCancelInModal = (event: any) => {
     // Check if this event is from the element itself
     if (event.target !== event.currentTarget) {
       return;
@@ -88,6 +93,7 @@ export default function PlanningSidebar() {
                 })}
               >
                 {plan.title}
+                {needToSave(plan.db_id) && '*'}
               </div>
             </Link>
           ))}
