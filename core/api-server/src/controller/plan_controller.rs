@@ -7,6 +7,7 @@ use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_plans)
+        .service(get_plan_by_id)
         .service(post_plans)
         .service(put_plan_by_id)
         .service(delete_plan_by_id);
@@ -21,6 +22,21 @@ async fn get_plans(app_state: web::Data<AppState>) -> impl Responder {
         return HttpResponse::InternalServerError().body(format!("{:?}", plans));
     }
     HttpResponse::Ok().json(plans.unwrap())
+}
+
+#[get("/api/plans/{db_id}")]
+async fn get_plan_by_id(
+    db_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let plan = app_state
+        .data_layer
+        .get_plan_by_id(db_id.into_inner())
+        .await;
+    if plan.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", plan));
+    }
+    HttpResponse::Ok().json(plan.unwrap())
 }
 
 #[derive(Deserialize, Validate)]
