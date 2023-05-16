@@ -12,6 +12,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { produce } from 'immer';
 import { useParams } from 'next/navigation';
 
+const POSITION_X_OFFSET = 200;
+
 export default function PlanningDiagramFlow() {
   const { id: scalingPlanId } = useParams();
   const plans = usePlanStore(
@@ -29,12 +31,12 @@ export default function PlanningDiagramFlow() {
   }, [scalingPlanId]);
 
   const nodes = useMemo(() => {
-    return plans.map((plan) => {
+    return plans.map((plan, index) => {
       console.log({ plan });
       return {
         // Default properties
         id: plan.id,
-        position: { x: 0, y: 0 },
+        position: { x: POSITION_X_OFFSET * index, y: 0 },
         data: { label: plan.id },
         draggable: false,
         // Get the ui property from the plan
