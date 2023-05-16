@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import AceEditor from 'react-ace';
 import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
 import { usePlanStore } from '../plan-store';
@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
+import ScalingComponentPlanSelect from './scaling-component-plan-select';
 // import 'ace-builds/src-noconflict/ext-language_tools';
 
 export default function PlanItemDrawer({
@@ -16,6 +17,10 @@ export default function PlanItemDrawer({
   planItemDefinition?: PlanItemDefinition;
 }) {
   const { register, handleSubmit, control, reset, setValue } = useForm();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'scaling_components',
+  });
   const { id: scalingPlanId } = useParams();
   const clearSelectedPlan = usePlanStore((state) => state.clearSelectedPlan);
   const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
@@ -26,11 +31,13 @@ export default function PlanItemDrawer({
     if (!planItemDefinition) {
       return;
     }
-    const { id, description, priority, expression } = planItemDefinition;
+    const { id, description, priority, expression, scaling_components } =
+      planItemDefinition;
     setValue('id', id);
     setValue('description', description);
     setValue('priority', priority);
     setValue('expression', expression);
+    setValue('scaling_components', scaling_components || []);
   }, [planItemDefinition]);
 
   const onClickRemove = async () => {
@@ -166,107 +173,32 @@ export default function PlanItemDrawer({
                     />
                   )}
                 />
-                {/* <Controller
-                  control={control}
-                  name="expression"
-                  render={({ field: { onChange, onBlur, value, ref } }) => (
-                    <MentionsInput
-                      value={value}
-                      onChange={(
-                        event,
-                        newValue,
-                        newPlainTextValue,
-                        mentions
-                      ) => {
-                        console.log('event', event);
-                        onChange(newValue);
-                      }}
-                      // style={defaultStyle}
-                      className="textarea-mention"
-                      placeholder={"Mention people using '@'"}
-                      a11ySuggestionsListLabel={'Suggested mentions'}
-                    >
-                      <Mention
-                        markup="@[__display__](user:__id__)"
-                        trigger="@"
-                        data={[
-                          {
-                            id: 'walter',
-                            display: 'Walter White',
-                          },
-                          {
-                            id: 'pipilu',
-                            display: '皮皮鲁',
-                          },
-                          {
-                            id: 'luxixi',
-                            display: '鲁西西',
-                          },
-                          {
-                            id: 'satoshi1',
-                            display: '中本聪',
-                          },
-                          {
-                            id: 'satoshi2',
-                            display: 'サトシ・ナカモト',
-                          },
-                          {
-                            id: 'nobi',
-                            display: '野比のび太',
-                          },
-                          {
-                            id: 'sung',
-                            display: '성덕선',
-                          },
-                          {
-                            id: 'jesse',
-                            display: 'Jesse Pinkman',
-                          },
-                          {
-                            id: 'gus',
-                            display: 'Gustavo "Gus" Fring',
-                          },
-                          {
-                            id: 'saul',
-                            display: 'Saul Goodman',
-                          },
-                          {
-                            id: 'hank',
-                            display: 'Hank Schrader',
-                          },
-                          {
-                            id: 'skyler',
-                            display: 'Skyler White',
-                          },
-                          {
-                            id: 'mike',
-                            display: 'Mike Ehrmantraut',
-                          },
-                          {
-                            id: 'lydia',
-                            display: 'Lydìã Rôdarté-Qüayle',
-                          },
-                        ]}
-                        renderSuggestion={(
-                          suggestion,
-                          search,
-                          highlightedDisplay,
-                          index,
-                          focused
-                        ) => (
-                          <div className={`user ${focused ? 'focused' : ''}`}>
-                            {highlightedDisplay}
-                          </div>
-                        )}
-                        // onAdd={onAdd}
-                        // style={defaultMentionStyle}
-                      />
-                    </MentionsInput>
-                  )}
-                /> */}
               </div>
             </div>
-            {/* {metadataFormControls} */}
+            <div className="form-control mb-4 w-full">
+              <label className="label">
+                <span className="label-text">Scaling Components</span>
+                {/* <span className="label-text-alt">used as a variable name</span> */}
+              </label>
+              {/* Scaling Component List */}
+              <div className="">
+                {fields?.map((field, index) => (
+                  <ScalingComponentPlanSelect
+                    key={field.id}
+                    {...{ control, index, field }}
+                  />
+                ))}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="btn-outline btn-secondary btn-sm btn"
+                    onClick={() => append({})}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
           </form>
         </div>
       </div>
