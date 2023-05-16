@@ -22,7 +22,7 @@ pub struct PlanItemDefinition {
     pub expression: String,
     #[serde(default)]
     pub priority: i16,
-    #[ts(type = "Array<object>")]
+    #[ts(type = "Array<any>")]
     pub scaling_components: Vec<Value>,
     #[ts(type = "any")]
     pub ui: Option<HashMap<String, Value>>,
