@@ -89,8 +89,8 @@ export default function ScalingComponentPlanSelect(props: any) {
             control={control}
             name={`scaling_components.${index}.component`}
             render={({ field }) => (
-              <select className="select-bordered select" {...field}>
-                <option disabled>Pick one</option>
+              <select className="select-bordered select" defaultValue="" {...field}>
+                <option value="" disabled>Pick one</option>
                 {scalingComponentOptions}
               </select>
             )}
