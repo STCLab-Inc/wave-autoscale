@@ -19,6 +19,7 @@ export default function PlanItemDrawer({
   const { id: scalingPlanId } = useParams();
   const clearSelectedPlan = usePlanStore((state) => state.clearSelectedPlan);
   const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
+  const removePlanItem = usePlanStore((state) => state.removePlanItem);
 
   useEffect(() => {
     reset();
@@ -32,22 +33,39 @@ export default function PlanItemDrawer({
     setValue('expression', expression);
   }, [planItemDefinition]);
 
-  const goBack = (refresh?: boolean) => {
-    clearSelectedPlan(scalingPlanId);
+  const onClickRemove = async () => {
+    if (!planItemDefinition) {
+      return;
+    }
+    const { id } = planItemDefinition;
+    if (!id) {
+      return;
+    }
+    if (!confirm('Are you sure you want to remove this plan item?')) {
+      return;
+    }
+    await removePlanItem(scalingPlanId, id);
+    await clearSelectedPlan(scalingPlanId);
   };
 
   const onSubmit = async (data: any) => {
     const { id, description, priority, expression } = data;
-    const planItemDefinition: PlanItemDefinition = {
+    if (
+      !planItemDefinition ||
+      !planItemDefinition.ui ||
+      !planItemDefinition.scaling_components
+    ) {
+      return;
+    }
+    const newPlanItemDefinition: PlanItemDefinition = {
+      ...planItemDefinition,
       id,
       description,
       priority,
       expression,
-      scaling_components: [],
-      ui: {},
     };
 
-    updatePlanItem(scalingPlanId, planItemDefinition);
+    updatePlanItem(scalingPlanId, newPlanItemDefinition);
 
     alert('updated!');
   };
@@ -64,7 +82,7 @@ export default function PlanItemDrawer({
                 <button
                   type="button"
                   className="btn-error btn-sm btn mr-2"
-                  // onClick={onClickRemove}
+                  onClick={onClickRemove}
                 >
                   Remove
                 </button>

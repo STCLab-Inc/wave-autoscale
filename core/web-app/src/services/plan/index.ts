@@ -20,9 +20,7 @@ class PlanServiceClass {
   }
 
   async updatePlan(plan: ScalingPlanDefinition) {
-    const response = await DataLayer.put(`/api/plans/${plan.db_id}`, {
-      plans: [plan],
-    });
+    const response = await DataLayer.put(`/api/plans/${plan.db_id}`, plan);
     return response.data;
   }
 }

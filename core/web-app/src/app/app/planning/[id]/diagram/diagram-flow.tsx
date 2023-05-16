@@ -15,7 +15,7 @@ import { useParams } from 'next/navigation';
 export default function PlanningDiagramFlow() {
   const { id: scalingPlanId } = useParams();
   const plans = usePlanStore(
-    (state) => state.currentScalingPlanState?.plans || []
+    (state) => state.currentScalingPlanState?.scalingPlan?.plans || []
   );
   const sync = usePlanStore((state) => state.fetch);
   const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI);
