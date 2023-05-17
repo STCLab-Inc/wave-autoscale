@@ -4,11 +4,12 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import AceEditor from 'react-ace';
 import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
 import { usePlanStore } from '../plan-store';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import ScalingComponentPlanSelect from './scaling-component-plan-select';
+import { omit } from 'lodash';
 // import 'ace-builds/src-noconflict/ext-language_tools';
 
 export default function PlanItemDrawer({
@@ -16,18 +17,26 @@ export default function PlanItemDrawer({
 }: {
   planItemDefinition?: PlanItemDefinition;
 }) {
+  // react-hook-form
   const { register, handleSubmit, control, reset, setValue } = useForm();
+  // For Scaling Component List
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'scaling_components',
   });
+  //
+  const topElement = useRef<HTMLDivElement>(null);
+  // Plan data management
   const { id: scalingPlanId } = useParams();
   const clearSelectedPlan = usePlanStore((state) => state.clearSelectedPlan);
   const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
   const removePlanItem = usePlanStore((state) => state.removePlanItem);
 
+  // Initialize form data
   useEffect(() => {
-    reset();
+    reset({
+      scaling_components: [],
+    });
     if (!planItemDefinition) {
       return;
     }
@@ -37,9 +46,23 @@ export default function PlanItemDrawer({
     setValue('description', description);
     setValue('priority', priority);
     setValue('expression', expression);
-    setValue('scaling_components', scaling_components || []);
-  }, [planItemDefinition]);
+    // setValue('scaling_components', scaling_components || []);
+    scaling_components?.forEach((scalingComponent, index) => {
+      append(scalingComponent);
+    });
+    // WORKAROUND: scroll to top
+    setTimeout(() => {
+      topElement?.current?.scroll({
+        top: 0,
+      });
+    }, 1);
+  }, [planItemDefinition, topElement?.current]);
 
+  //
+  // Events
+  //
+
+  // Remove plan item
   const onClickRemove = async () => {
     if (!planItemDefinition) {
       return;
@@ -55,23 +78,24 @@ export default function PlanItemDrawer({
     await clearSelectedPlan(scalingPlanId);
   };
 
+  // Update plan item
   const onSubmit = async (data: any) => {
-    const { id, description, priority, expression } = data;
-    if (
-      !planItemDefinition ||
-      !planItemDefinition.ui ||
-      !planItemDefinition.scaling_components
-    ) {
+    const { id, description, priority, expression, scaling_components } = data;
+    if (!planItemDefinition || !planItemDefinition.ui) {
       return;
     }
+    const filteredScalingComponents = scaling_components.filter(
+      (scalingComponent: any) => scalingComponent.component_id
+    );
     const newPlanItemDefinition: PlanItemDefinition = {
       ...planItemDefinition,
       id,
       description,
       priority,
       expression,
+      // scaling_components: [],
+      scaling_components: filteredScalingComponents,
     };
-
     updatePlanItem(scalingPlanId, newPlanItemDefinition);
 
     alert('updated!');
@@ -81,7 +105,10 @@ export default function PlanItemDrawer({
     <div className="plan-drawer drawer drawer-end w-[32rem]">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side w-[32rem] border-l border-base-300">
-        <div className="drawer-content overflow-y-auto bg-base-100 p-4">
+        <div
+          className="drawer-content overflow-y-auto bg-base-100 p-4"
+          ref={topElement}
+        >
           <form className="" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-bold">Plan</h2>
@@ -185,16 +212,16 @@ export default function PlanItemDrawer({
                 {fields?.map((field, index) => (
                   <ScalingComponentPlanSelect
                     key={field.id}
-                    {...{ control, index, field }}
+                    {...{ control, index, field, remove }}
                   />
                 ))}
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    className="btn-outline btn-secondary btn-sm btn"
+                    className="btn-outline btn-primary btn-xs btn w-full"
                     onClick={() => append({})}
                   >
-                    Add
+                    Add Scaling Components
                   </button>
                 </div>
               </div>

@@ -72,17 +72,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   push: async (scalingPlanId: string) => {
     const state = get();
     let scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-    console.log({ scalingPlanState });
     if (!scalingPlanState) {
-      return;
+      throw new Error(`Scaling plan ${scalingPlanId} not found`);
     }
     const scalingPlan = scalingPlanState.scalingPlan;
     if (!scalingPlan) {
-      return;
+      throw new Error(`Scaling plan ${scalingPlanId} not found`);
     }
-    console.log({ scalingPlan });
     const response = await PlanService.updatePlan(scalingPlan);
-    scalingPlanState.savedAt = new Date();
+
+    set(
+      produce((state: PlanState) => {
+        let scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
+        if (!scalingPlanState) {
+          return;
+        }
+        scalingPlanState.savedAt = new Date();
+        state.currentScalingPlanState = scalingPlanState;
+      })
+    );
   },
   addPlanItem: async (scalingPlanId: string) => {
     // Fetch from server to get the latest plan
@@ -138,9 +146,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         };
         scalingPlanState.modifiedAt = new Date();
         state.currentScalingPlanState = scalingPlanState;
-        console.log({
-          'state.currentScalingPlanState': state.currentScalingPlanState,
-        });
       })
     );
   },
