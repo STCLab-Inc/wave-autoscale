@@ -8,9 +8,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { usePlanStore } from './plan-store';
 
 export default function PlanningSidebar() {
   const [addModalToggle, setAddModalToggle] = useState(false);
+  const needToSave = usePlanStore((state) => state.needToSave);
+  const currentScalingPlanState = usePlanStore(
+    (state) => state.currentScalingPlanState
+  );
   // Used to force refresh
   const [timestamp, setTimestamp] = useState(Date.now());
   const { register, reset, setFocus, handleSubmit } = useForm();
@@ -47,7 +52,7 @@ export default function PlanningSidebar() {
       setAddModalToggle(false);
     } catch (e) {}
   };
-  const onClickCancelInModal = (event: Event) => {
+  const onClickCancelInModal = (event: any) => {
     // Check if this event is from the element itself
     if (event.target !== event.currentTarget) {
       return;
@@ -62,7 +67,9 @@ export default function PlanningSidebar() {
         <div className="prose flex h-14 w-full items-center justify-start border-b border-base-300 px-3">
           <div className="flex flex-1 flex-row items-center justify-start">
             <h4 className="m-0">Plans</h4>
-            <span className="badge ml-2">4</span>
+            <span className="badge ml-2">
+              {plans !== undefined ? plans.length : undefined}
+            </span>
           </div>
           <button className="btn-primary btn-sm btn" onClick={onClickAdd}>
             Add
@@ -88,6 +95,7 @@ export default function PlanningSidebar() {
                 })}
               >
                 {plan.title}
+                {needToSave(plan.db_id) && '*'}
               </div>
             </Link>
           ))}

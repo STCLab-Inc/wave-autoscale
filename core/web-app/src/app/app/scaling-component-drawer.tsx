@@ -9,7 +9,7 @@ import {
   generateScalingComponentDefinition,
   getScalingComponentKeyTypes,
 } from '@/utils/scaling-component-binding';
-import { getMetadataFormControls } from '../../metadata-form-controls';
+import { getMetadataFormControls } from './metadata-form-controls';
 import ScalingComponentService from '@/services/scaling-component';
 
 // Metric Types

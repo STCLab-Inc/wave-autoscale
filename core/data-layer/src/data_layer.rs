@@ -319,7 +319,7 @@ impl DataLayer {
     // Get all plans from the database
     pub async fn get_all_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
         let mut plans: Vec<ScalingPlanDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, title, plans FROM plan";
+        let query_string = "SELECT db_id, id, title, plans, priority FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -335,6 +335,26 @@ impl DataLayer {
             });
         }
         Ok(plans)
+    }
+    // Get a plan from the database
+    pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
+        let query_string = "SELECT db_id, id, title, plans FROM plan WHERE db_id=?";
+        let result = sqlx::query(query_string)
+            .bind(db_id)
+            .fetch_one(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        let plan = ScalingPlanDefinition {
+            kind: ObjectKind::ScalingPlan,
+            db_id: result.get("db_id"),
+            id: result.get("id"),
+            title: result.get("title"),
+            plans: serde_json::from_str(result.get("plans")).unwrap(),
+        };
+        Ok(plan)
     }
     // Delete all plans from the database
     pub async fn delete_all_plans(&self) -> Result<()> {

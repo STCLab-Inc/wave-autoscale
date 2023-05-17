@@ -1,9 +1,9 @@
-import PlanningDetailDiagram from './diagram';
+import PlanningDetailDiagramBase from './diagram-base';
 
 export default function PlanningDetailDiagramPage() {
   return (
     <div className="h-full w-full">
-      <PlanningDetailDiagram />
+      <PlanningDetailDiagramBase />
     </div>
     // <div className="flex h-full w-full">
     //   <aside className="flex w-80 flex-col border-r border-base-300 bg-base-200">
