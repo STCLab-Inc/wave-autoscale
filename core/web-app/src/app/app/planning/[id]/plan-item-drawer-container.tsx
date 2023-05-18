@@ -16,7 +16,7 @@ const PlanItemDrawerDynamic = dynamic(() => import('./plan-item-drawer'), {
 export default function PlanItemDrawerContainer() {
   // Only render the PlanItemDrawerDynamic component if there is a selected plan.
   const selectedPlan = usePlanStore(
-    (state) => state.currentScalingPlanState?.selectedPlan
+    (state) => state.currentScalingPlanState?.selectedPlanItem
   );
 
   return (

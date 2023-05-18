@@ -4,11 +4,10 @@ import { useParams } from 'next/navigation';
 import { usePlanStore } from '../plan-store';
 
 export default function PlanningDetailControls() {
-  const { id: scalingPlanId } = useParams();
   const push = usePlanStore((state) => state.push);
 
   const onClickDeploy = async () => {
-    await push(scalingPlanId);
+    await push();
     alert('deployed!');
   };
 

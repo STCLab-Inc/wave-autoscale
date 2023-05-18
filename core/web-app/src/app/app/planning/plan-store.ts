@@ -3,107 +3,160 @@ import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import { enableMapSet, produce } from 'immer';
 import { create } from 'zustand';
+import * as acorn from 'acorn';
+import * as walk from 'acorn-walk';
 
 enableMapSet();
 
 interface ScalingPlanState {
+  // The Plan has PlanItems
+  scalingPlan: ScalingPlanDefinition;
+  // For UI
+  selectedPlanItem?: PlanItemDefinition;
   modifiedAt?: Date;
   savedAt?: Date;
-  scalingPlan?: ScalingPlanDefinition;
-  selectedPlan: PlanItemDefinition | undefined;
+  metricIds?: string[];
 }
 
 interface PlanState {
   // Cache
-  scalingPlanMap: Map<string, ScalingPlanState>;
+  cache: Map<string, ScalingPlanState>;
+  // Get current scaling plan. Do not modify it directly
   currentScalingPlanState?: ScalingPlanState;
-  // Scaling Plan
-  fetch: (scalingPlanId: string) => Promise<void>;
-  push: (scalingPlanId: string) => Promise<void>;
-  addPlanItem: (scalingPlanId: string) => Promise<void>;
-  updatePlanItem: (
-    scalingPlanId: string,
-    plan: PlanItemDefinition
-  ) => Promise<void>;
-  updatePlanItemUI: (
-    scalingPlanId: string,
-    plan: PlanItemDefinition
-  ) => Promise<void>;
-  removePlanItem: (scalingPlanId: string, planId: string) => Promise<void>;
-  clearSelectedPlan: (scalingPlanId: string) => Promise<void>;
+  currentScalingPlanId?: string;
+  // Load from server. It should be called before any other actions
+  load: (scalingPlanId: string) => Promise<void>;
+  // Save to server
+  push: () => Promise<void>;
+  // Get current scaling plan state
+  getCurrentScalingPlanState: (state?: any) => ScalingPlanState;
+  // For internal use
+  syncCurrentScalingPlan: () => void;
+  // For current scaling plan
+  addPlanItem: () => void;
+  updatePlanItem: (plan: PlanItemDefinition) => void;
+  updatePlanItemUI: (plan: PlanItemDefinition) => void;
+  removePlanItem: (planId: string) => void;
+  clearSelection: () => void;
+  // General actions, not related to current scaling plan
   needToSave: (scalingPlanId: string) => boolean;
 }
 
-const ID_PREFIX = 'plan_';
-
 export const usePlanStore = create<PlanState>((set, get) => ({
   // Cache
-  scalingPlanMap: new Map<string, ScalingPlanState>(),
+  cache: new Map<string, ScalingPlanState>(),
   currentScalingPlanState: undefined,
+  currentScalingPlanId: undefined,
 
   // Fetch from server to get the latest plan
-  fetch: async (scalingPlanId: string) => {
+  load: async (scalingPlanId: string) => {
     const state = get();
-    let scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
+    // Load from cache
+    let scalingPlanState = state.cache.get(scalingPlanId);
+    // If there is no cache
     if (!scalingPlanState) {
+      // Load from server
       const scalingPlan = await PlanService.getPlan(scalingPlanId);
       scalingPlanState = {
+        scalingPlan,
         modifiedAt: undefined,
         savedAt: undefined,
-        scalingPlan,
-        selectedPlan: scalingPlan?.plans.find(
-          (p: PlanItemDefinition) => p.ui?.selected
-        ),
+        selectedPlanItem: undefined,
       };
+      // Save to cache
       set(
         produce((state: PlanState) => {
           if (scalingPlanState) {
-            state.scalingPlanMap.set(scalingPlanId, scalingPlanState);
+            state.cache.set(scalingPlanId, scalingPlanState);
           }
         })
       );
     }
+    // Set current scaling plan
     set(
       produce((state: PlanState) => {
         state.currentScalingPlanState = scalingPlanState;
+        state.currentScalingPlanId = scalingPlanId;
       })
     );
+    state.syncCurrentScalingPlan();
   },
-  push: async (scalingPlanId: string) => {
+  push: async () => {
     const state = get();
-    let scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-    if (!scalingPlanState) {
-      throw new Error(`Scaling plan ${scalingPlanId} not found`);
-    }
+    const scalingPlanState = state.getCurrentScalingPlanState();
     const scalingPlan = scalingPlanState.scalingPlan;
-    if (!scalingPlan) {
-      throw new Error(`Scaling plan ${scalingPlanId} not found`);
+    try {
+      const response = await PlanService.updatePlan(scalingPlan);
+      // TODO: Handle response
+      set(
+        produce((state: PlanState) => {
+          const scalingPlanState = state.getCurrentScalingPlanState(state);
+          scalingPlanState.savedAt = new Date();
+        })
+      );
+    } catch (error) {
+      // TODO: Handle error
     }
-    const response = await PlanService.updatePlan(scalingPlan);
-
+    state.syncCurrentScalingPlan();
+  },
+  getCurrentScalingPlanState: (state?: any) => {
+    // if state is not provided from produce(immer), get the latest state
+    if (!state) {
+      state = get();
+    }
+    if (!state.currentScalingPlanId) {
+      throw new Error(`Should call load() before getCurrentState()`);
+    }
+    const scalingPlanState = state.cache.get(state.currentScalingPlanId);
+    if (!scalingPlanState || !scalingPlanState.scalingPlan) {
+      throw new Error(`Should call load() before push()`);
+    }
+    return scalingPlanState;
+  },
+  syncCurrentScalingPlan: () => {
+    const state = get();
+    const scalingPlanState = state.getCurrentScalingPlanState();
+    const plans = scalingPlanState.scalingPlan.plans;
+    // Update metric ids
+    const variables = new Set<string>();
+    plans.forEach((plan) => {
+      const expression = plan.expression;
+      if (!expression) {
+        return;
+      }
+      try {
+        // Abstract Syntax Tree
+        const ast = acorn.parse(expression, {
+          ecmaVersion: 2020,
+          sourceType: 'script',
+        });
+        walk.simple(ast, {
+          Identifier(node: any) {
+            variables.add(node.name);
+          },
+        });
+      } catch (error) {
+        // TODO: Error handling
+      }
+    });
     set(
       produce((state: PlanState) => {
-        let scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState) {
-          return;
-        }
-        scalingPlanState.savedAt = new Date();
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
+        scalingPlanState.metricIds = Array.from(variables);
         state.currentScalingPlanState = scalingPlanState;
       })
     );
   },
-  addPlanItem: async (scalingPlanId: string) => {
-    // Fetch from server to get the latest plan
-    await get().fetch(scalingPlanId);
+  addPlanItem: () => {
     set(
-      await produce((state: PlanState) => {
-        const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState || !scalingPlanState.scalingPlan) {
-          throw new Error(`Scaling plan ${scalingPlanId} not found`);
-        }
+      produce((state: PlanState) => {
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
+        // Generate new id
+        const ID_PREFIX = 'plan_';
         let postfixNumber = plans.length + 1;
         let id = `${ID_PREFIX}${postfixNumber}`;
+        // Find a unique id
         while (plans.find((plan) => plan.id === id)) {
           postfixNumber++;
           id = `${ID_PREFIX}${postfixNumber}`;
@@ -120,19 +173,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           },
         ];
         scalingPlanState.modifiedAt = new Date();
-        state.currentScalingPlanState = scalingPlanState;
       })
     );
+    get().syncCurrentScalingPlan();
   },
-  updatePlanItem: async (scalingPlanId: string, plan: PlanItemDefinition) => {
-    // Fetch from server to get the latest plan
-    await get().fetch(scalingPlanId);
+  updatePlanItem: (plan: PlanItemDefinition) => {
     set(
       produce((state: PlanState) => {
-        const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState || !scalingPlanState.scalingPlan) {
-          throw new Error(`Scaling plan ${scalingPlanId} not found`);
-        }
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
         const index = plans.findIndex(
           (p: PlanItemDefinition) => p.id === plan.id
@@ -145,19 +193,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           ...plan,
         };
         scalingPlanState.modifiedAt = new Date();
-        state.currentScalingPlanState = scalingPlanState;
       })
     );
+    get().syncCurrentScalingPlan();
   },
-  updatePlanItemUI: async (scalingPlanId: string, plan: PlanItemDefinition) => {
-    // Fetch from server to get the latest plan
-    await get().fetch(scalingPlanId);
+  updatePlanItemUI: (plan: PlanItemDefinition) => {
     set(
       produce((state: PlanState) => {
-        const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState || !scalingPlanState.scalingPlan) {
-          throw new Error(`Scaling plan ${scalingPlanId} not found`);
-        }
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
         const index = plans.findIndex(
           (p: PlanItemDefinition) => p.id === plan.id
@@ -169,21 +212,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         const selectedPlan = plans.find(
           (p: PlanItemDefinition) => p.ui?.selected
         );
-        scalingPlanState.selectedPlan = selectedPlan;
+        scalingPlanState.selectedPlanItem = selectedPlan;
         scalingPlanState.modifiedAt = new Date();
-        state.currentScalingPlanState = scalingPlanState;
       })
     );
+    get().syncCurrentScalingPlan();
   },
-  removePlanItem: async (scalingPlanId: string, planId: string) => {
-    // Fetch from server to get the latest plan
-    await get().fetch(scalingPlanId);
+  removePlanItem: (planId: string) => {
     set(
       produce((state: PlanState) => {
-        const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState || !scalingPlanState.scalingPlan) {
-          throw new Error(`Scaling plan ${scalingPlanId} not found`);
-        }
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
         const index = plans.findIndex(
           (p: PlanItemDefinition) => p.id === planId
@@ -193,20 +231,15 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         }
         plans.splice(index, 1);
         scalingPlanState.modifiedAt = new Date();
-        state.currentScalingPlanState = scalingPlanState;
       })
     );
+    get().syncCurrentScalingPlan();
   },
 
-  clearSelectedPlan: async (scalingPlanId: string) => {
-    // Fetch from server to get the latest plan
-    await get().fetch(scalingPlanId);
+  clearSelection: () => {
     set(
       produce((state: PlanState) => {
-        const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
-        if (!scalingPlanState || !scalingPlanState.scalingPlan) {
-          return;
-        }
+        const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
         const index = plans.findIndex(
           (p: PlanItemDefinition) => p.ui?.selected
@@ -214,14 +247,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         if (index !== -1) {
           plans[index].ui.selected = false;
         }
-        scalingPlanState.selectedPlan = undefined;
-        state.currentScalingPlanState = scalingPlanState;
+        scalingPlanState.selectedPlanItem = undefined;
       })
     );
+    get().syncCurrentScalingPlan();
   },
   needToSave: (scalingPlanId: string) => {
     const state = get();
-    const scalingPlanState = state.scalingPlanMap.get(scalingPlanId);
+    const scalingPlanState = state.cache.get(scalingPlanId);
     if (!scalingPlanState) {
       // throw new Error('Scaling plan not found');
       return false;
@@ -229,10 +262,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     if (!scalingPlanState.modifiedAt) {
       return false;
-    }
-    if (!scalingPlanState.savedAt) {
+    } else if (!scalingPlanState.savedAt) {
       return true;
     }
-    return scalingPlanState.modifiedAt <= scalingPlanState.savedAt;
+    return scalingPlanState.modifiedAt > scalingPlanState.savedAt;
   },
 }));

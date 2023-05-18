@@ -19,31 +19,39 @@ export default function PlanningDiagramFlow() {
   const plans = usePlanStore(
     (state) => state.currentScalingPlanState?.scalingPlan?.plans || []
   );
-  const sync = usePlanStore((state) => state.fetch);
+  const metricIds = usePlanStore(
+    (state) => state.currentScalingPlanState?.metricIds || []
+  );
+  console.log({ metricIds2: metricIds });
   const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI);
 
-  // If scalingPlanId changes, fetch the scaling plan then it updates plans and nodes.
-  useEffect(() => {
-    const fetch = async () => {
-      await sync(scalingPlanId);
-    };
-    fetch();
-  }, [scalingPlanId]);
 
   const nodes = useMemo(() => {
-    return plans.map((plan, index) => {
+    const planNodes = plans.map((plan, index) => {
       console.log({ plan });
       return {
         // Default properties
         id: plan.id,
-        position: { x: POSITION_X_OFFSET * index, y: 0 },
+        position: { x: POSITION_X_OFFSET * index, y: 100 },
         data: { label: plan.id },
         draggable: false,
         // Get the ui property from the plan
         ...plan?.ui,
       };
     });
-  }, [plans]);
+    const metricNodes = metricIds.map((metricId, index) => {
+      return {
+        // Default properties
+        id: metricId,
+        position: { x: POSITION_X_OFFSET * index, y: 0 },
+        data: { label: metricId },
+        draggable: false,
+      };
+    });
+    console.log({ metricIds });
+    console.log({ metricNodes });
+    return [...planNodes, ...metricNodes];
+  }, [plans, metricIds]);
 
   const onNodesChange = (nodes: NodeChange[]) => {
     // Find the plan by id
@@ -60,7 +68,7 @@ export default function PlanningDiagramFlow() {
           const newPlan = produce(plan, (draft) => {
             draft.ui = { ...draft.ui, position: node.position };
           });
-          updatePlanItemUI(scalingPlanId, newPlan);
+          updatePlanItemUI(newPlan);
         }
       } else if (type === 'select') {
         // Update the plan with the new selected state
@@ -69,7 +77,7 @@ export default function PlanningDiagramFlow() {
           const newPlan = produce(plan, (draft) => {
             draft.ui = { ...draft.ui, selected: node.selected };
           });
-          updatePlanItemUI(scalingPlanId, newPlan);
+          updatePlanItemUI(newPlan);
         }
       }
     });
