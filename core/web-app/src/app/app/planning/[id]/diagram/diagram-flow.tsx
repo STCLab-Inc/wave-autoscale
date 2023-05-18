@@ -9,31 +9,67 @@ import {
   NodeChange,
   ReactFlow,
 } from 'reactflow';
-import { usePlanStore } from '../../plan-store';
+import { MetricUI, ScalingComponentUI, usePlanStore } from '../../plan-store';
 import { useEffect, useMemo, useState } from 'react';
 import { produce } from 'immer';
 import { useParams } from 'next/navigation';
+import PlanNode from './plan-node';
+import MetricNode from './metric-node';
+import ScalingComponentNode from './scaling-component-node';
+import MetricService from '@/services/metric';
+import ScalingComponentService from '@/services/scaling-component';
+import { flatten, keyBy, unionBy } from 'lodash';
+
+const nodeTypes = {
+  plan: PlanNode,
+  metric: MetricNode,
+  scalingComponent: ScalingComponentNode,
+};
 
 export default function PlanningDiagramFlow() {
-  const { id: scalingPlanId } = useParams();
   const plans = usePlanStore(
     (state) => state.currentScalingPlanState?.scalingPlan?.plans || []
   );
-  const metricIds = usePlanStore(
-    (state) => state.currentScalingPlanState?.metricIds || []
-  );
-  const scalingComponentIds = usePlanStore(
-    (state) => state.currentScalingPlanState?.scalingComponentIds || []
-  );
-  console.log({ metricIds2: metricIds });
+  // const metricIds = usePlanStore(
+  //   (state) => state.currentScalingPlanState?.metricIds || []
+  // );
+  // const scalingComponentIds = usePlanStore(
+  //   (state) => state.currentScalingPlanState?.scalingComponentIds || []
+  // );
+  const [metricMap, setMetricMap] = useState<any>({});
+  const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
   const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI);
+
+  // Initialize
+  useEffect(() => {
+    const fetch = async () => {
+      const promises = [
+        MetricService.getMetrics(),
+        ScalingComponentService.getScalingComponents(),
+      ];
+      const results = await Promise.all(promises);
+      console.log({ results });
+      setMetricMap(keyBy(results[0], 'id'));
+      setScalingComponentMap(keyBy(results[1], 'id'));
+    };
+    fetch();
+  }, []);
 
   // Nodes are the plans and metrics
   const nodes = useMemo(() => {
-    const POSITION_X_OFFSET = 200;
+    const POSITION_X_OFFSET = 400;
     const POSITION_Y_OFFSET = 200;
+    const metrics = unionBy(
+      flatten(plans?.map((plan) => plan?.ui?.metrics)),
+      'id'
+    );
+    const scalingComponents = unionBy(
+      flatten(plans?.map((plan) => plan?.ui?.scalingComponents)),
+      'id'
+    );
+
     const maxWidth =
-      Math.max(plans?.length, metricIds?.length, scalingComponentIds?.length) *
+      Math.max(plans?.length, metrics?.length, scalingComponents?.length) *
       POSITION_X_OFFSET;
 
     const planNodeXOffset = (maxWidth - plans?.length * POSITION_X_OFFSET) / 2;
@@ -41,7 +77,7 @@ export default function PlanningDiagramFlow() {
       return {
         // Default properties
         id: plan.id,
-        type: 'default',
+        type: 'plan',
         position: {
           x: POSITION_X_OFFSET * index + planNodeXOffset,
           y: POSITION_Y_OFFSET,
@@ -53,38 +89,48 @@ export default function PlanningDiagramFlow() {
       };
     });
     const metricNodeXOffset =
-      (maxWidth - metricIds?.length * POSITION_X_OFFSET) / 2;
-    const metricNodes = metricIds.map((metricId, index) => {
+      (maxWidth - metrics?.length * POSITION_X_OFFSET) / 2;
+
+    const metricNodes = metrics.map((metric: MetricUI, index) => {
+      console.log('metricsss', metric);
       return {
         // Default properties
-        id: metricId,
-        type: 'input',
+        id: metric.id,
+        type: 'metric',
         position: { x: POSITION_X_OFFSET * index + metricNodeXOffset, y: 0 },
-        data: { label: metricId },
+        data: {
+          label: metric.id,
+          metricKind: metricMap[metric.id]?.metric_kind ?? 'Not defined',
+        },
         draggable: false,
       };
     });
 
     const scalingComponentNodeXOffset =
-      (maxWidth - scalingComponentIds?.length * POSITION_X_OFFSET) / 2;
-    const scalingComponentNodes = scalingComponentIds.map(
-      (scalingComponentId, index) => {
+      (maxWidth - scalingComponents?.length * POSITION_X_OFFSET) / 2;
+    const scalingComponentNodes = scalingComponents.map(
+      (scalingComponent: ScalingComponentUI, index) => {
         return {
           // Default properties
-          id: scalingComponentId,
-          type: 'outpput',
+          id: scalingComponent.id,
+          type: 'scalingComponent',
           position: {
             x: POSITION_X_OFFSET * index + scalingComponentNodeXOffset,
             y: POSITION_Y_OFFSET * 2,
           },
-          data: { label: scalingComponentId },
+          data: {
+            label: scalingComponent.id,
+            componentKind:
+              scalingComponentMap[scalingComponent.id]?.component_kind ??
+              'Not defined',
+          },
           draggable: false,
         };
       }
     );
 
     return [...planNodes, ...metricNodes, ...scalingComponentNodes];
-  }, [plans, metricIds]);
+  }, [plans, metricMap, scalingComponentMap]);
 
   const edges = useMemo(() => {
     const edgesForPlanAndMetric: Edge[] = [];
@@ -104,7 +150,6 @@ export default function PlanningDiagramFlow() {
               width: 20,
               height: 20,
             },
-            // arrowHeadType: 'arrowclosed',
           });
         });
       }
@@ -123,7 +168,6 @@ export default function PlanningDiagramFlow() {
               width: 20,
               height: 20,
             },
-            // arrowHeadType: 'arrowclosed',
           });
         });
       }
@@ -165,6 +209,7 @@ export default function PlanningDiagramFlow() {
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      nodeTypes={nodeTypes}
       fitView={true}
       fitViewOptions={{
         padding: 0.5,

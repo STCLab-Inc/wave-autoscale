@@ -8,6 +8,15 @@ import * as walk from 'acorn-walk';
 
 enableMapSet();
 
+export interface MetricUI {
+  id: string;
+  selected?: boolean;
+}
+export interface ScalingComponentUI {
+  id: string;
+  selected?: boolean;
+}
+
 interface ScalingPlanState {
   // The Plan has PlanItems
   scalingPlan: ScalingPlanDefinition;
@@ -15,8 +24,6 @@ interface ScalingPlanState {
   selectedPlanItem?: PlanItemDefinition;
   modifiedAt?: Date;
   savedAt?: Date;
-  metricIds?: string[];
-  scalingComponentIds?: string[];
 }
 
 interface PlanState {
@@ -63,8 +70,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         modifiedAt: undefined,
         savedAt: undefined,
         selectedPlanItem: undefined,
-        metricIds: [],
-        scalingComponentIds: [],
       };
       // Save to cache
       set(
@@ -122,8 +127,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         const scalingPlanState = state.getCurrentScalingPlanState(state);
         const plans = scalingPlanState.scalingPlan.plans;
         // Update metric ids and scaling component ids
-        const metricIds = new Set<string>();
-        const scalingComponentIds = new Set<string>();
         plans.forEach((plan) => {
           const expression = plan.expression;
           const metricIdsInPlan = new Set<string>();
@@ -139,7 +142,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
               walk.simple(ast, {
                 Identifier(node: any) {
                   metricIdsInPlan.add(node.name);
-                  metricIds.add(node.name);
                 },
               });
             } catch (error) {
@@ -150,18 +152,26 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           // 2. Scaling Component Ids
           plan.scaling_components?.forEach((component) => {
             scalingComponentIdsInPlan.add(component.component_id);
-            scalingComponentIds.add(component.component_id);
           });
 
           plan.ui = {
             ...(plan.ui ?? {}),
-            metricIds: Array.from(metricIdsInPlan),
-            scalingComponentIds: Array.from(scalingComponentIdsInPlan),
+            metrics: Array.from(metricIdsInPlan).map(
+              (metricId) =>
+                ({
+                  id: metricId,
+                  selected: false,
+                } as MetricUI)
+            ),
+            scalingComponents: Array.from(scalingComponentIdsInPlan).map(
+              (scalingComponentId) =>
+                ({
+                  id: scalingComponentId,
+                  selected: false,
+                } as ScalingComponentUI)
+            ),
           };
         });
-
-        scalingPlanState.metricIds = Array.from(metricIds);
-        scalingPlanState.scalingComponentIds = Array.from(scalingComponentIds);
 
         state.currentScalingPlanState = scalingPlanState;
       })
