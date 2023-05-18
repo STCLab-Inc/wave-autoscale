@@ -28,7 +28,7 @@ export default function PlanItemDrawer({
   const topElement = useRef<HTMLDivElement>(null);
   // Plan data management
   const { id: scalingPlanId } = useParams();
-  const clearSelectedPlan = usePlanStore((state) => state.clearSelectedPlan);
+  const clearSelectedPlan = usePlanStore((state) => state.clearSelection);
   const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
   const removePlanItem = usePlanStore((state) => state.removePlanItem);
 
@@ -74,8 +74,8 @@ export default function PlanItemDrawer({
     if (!confirm('Are you sure you want to remove this plan item?')) {
       return;
     }
-    await removePlanItem(scalingPlanId, id);
-    await clearSelectedPlan(scalingPlanId);
+    removePlanItem(id);
+    clearSelectedPlan();
   };
 
   // Update plan item
@@ -96,7 +96,7 @@ export default function PlanItemDrawer({
       // scaling_components: [],
       scaling_components: filteredScalingComponents,
     };
-    updatePlanItem(scalingPlanId, newPlanItemDefinition);
+    updatePlanItem(newPlanItemDefinition);
 
     alert('updated!');
   };
@@ -218,7 +218,7 @@ export default function PlanItemDrawer({
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    className="btn-outline btn-primary btn-xs btn w-full"
+                    className="btn-primary btn-outline btn-xs btn w-full"
                     onClick={() => append({})}
                   >
                     Add Scaling Components

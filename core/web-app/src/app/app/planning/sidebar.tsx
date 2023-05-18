@@ -16,6 +16,7 @@ export default function PlanningSidebar() {
   const currentScalingPlanState = usePlanStore(
     (state) => state.currentScalingPlanState
   );
+  console.log({ currentScalingPlanState });
   // Used to force refresh
   const [timestamp, setTimestamp] = useState(Date.now());
   const { register, reset, setFocus, handleSubmit } = useForm();
@@ -95,7 +96,7 @@ export default function PlanningSidebar() {
                 })}
               >
                 {plan.title}
-                {needToSave(plan.db_id) && '*'}
+                {currentScalingPlanState && needToSave(plan.db_id) && '*'}
               </div>
             </Link>
           ))}

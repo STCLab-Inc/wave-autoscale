@@ -7,11 +7,10 @@ import { ReactFlowProvider } from 'reactflow';
 import { useParams } from 'next/navigation';
 
 export default function PlanningDetailDiagramBase() {
-  const { id: scalingPlanId } = useParams();
   const addPlanItem = usePlanStore((state) => state.addPlanItem);
   // Events
   const onClickAddPlan = () => {
-    addPlanItem(scalingPlanId);
+    addPlanItem();
   };
 
   return (
