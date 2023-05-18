@@ -16,6 +16,7 @@ interface ScalingPlanState {
   modifiedAt?: Date;
   savedAt?: Date;
   metricIds?: string[];
+  scalingComponentIds?: string[];
 }
 
 interface PlanState {
@@ -62,6 +63,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         modifiedAt: undefined,
         savedAt: undefined,
         selectedPlanItem: undefined,
+        metricIds: [],
+        scalingComponentIds: [],
       };
       // Save to cache
       set(
@@ -114,35 +117,52 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     return scalingPlanState;
   },
   syncCurrentScalingPlan: () => {
-    const state = get();
-    const scalingPlanState = state.getCurrentScalingPlanState();
-    const plans = scalingPlanState.scalingPlan.plans;
-    // Update metric ids
-    const variables = new Set<string>();
-    plans.forEach((plan) => {
-      const expression = plan.expression;
-      if (!expression) {
-        return;
-      }
-      try {
-        // Abstract Syntax Tree
-        const ast = acorn.parse(expression, {
-          ecmaVersion: 2020,
-          sourceType: 'script',
-        });
-        walk.simple(ast, {
-          Identifier(node: any) {
-            variables.add(node.name);
-          },
-        });
-      } catch (error) {
-        // TODO: Error handling
-      }
-    });
     set(
       produce((state: PlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        scalingPlanState.metricIds = Array.from(variables);
+        const plans = scalingPlanState.scalingPlan.plans;
+        // Update metric ids and scaling component ids
+        const metricIds = new Set<string>();
+        const scalingComponentIds = new Set<string>();
+        plans.forEach((plan) => {
+          const expression = plan.expression;
+          const metricIdsInPlan = new Set<string>();
+          const scalingComponentIdsInPlan = new Set<string>();
+          if (expression) {
+            // 1. Metric Ids
+            try {
+              // Abstract Syntax Tree
+              const ast = acorn.parse(expression, {
+                ecmaVersion: 2020,
+                sourceType: 'script',
+              });
+              walk.simple(ast, {
+                Identifier(node: any) {
+                  metricIdsInPlan.add(node.name);
+                  metricIds.add(node.name);
+                },
+              });
+            } catch (error) {
+              // TODO: Error handling
+            }
+          }
+
+          // 2. Scaling Component Ids
+          plan.scaling_components?.forEach((component) => {
+            scalingComponentIdsInPlan.add(component.component_id);
+            scalingComponentIds.add(component.component_id);
+          });
+
+          plan.ui = {
+            ...(plan.ui ?? {}),
+            metricIds: Array.from(metricIdsInPlan),
+            scalingComponentIds: Array.from(scalingComponentIdsInPlan),
+          };
+        });
+
+        scalingPlanState.metricIds = Array.from(metricIds);
+        scalingPlanState.scalingComponentIds = Array.from(scalingComponentIds);
+
         state.currentScalingPlanState = scalingPlanState;
       })
     );
