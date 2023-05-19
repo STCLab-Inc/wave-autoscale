@@ -8,11 +8,11 @@ function ScalingComponentNode({ data }: { data: any }) {
   return (
     <div className="rounded-md border-2 border-stone-400 bg-white px-4 py-2 shadow-md">
       <div className="flex">
-        {/* <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-          {data.emoji}
-        </div> */}
-        <div className="ml-2">
-          <div className="text-xs text-gray-500">🚀 Scaling Component</div>
+        <div className="flex h-12 w-12 items-center justify-center text-3xl">
+          🚀
+        </div>
+        <div className="ml-2 flex flex-col justify-center">
+          <div className="text-xs text-gray-500">Scaling Component</div>
           <div className="text-sm font-bold">{`[${componentKind}] - ${label}`}</div>
           {/* <div className="text-sm">{label}</div> */}
         </div>
