@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { forEach } from 'lodash';
-import { getMetadataFormControls } from '../../metadata-form-controls';
+import { getMetadataFormControls } from './metadata-form-controls';
 
 // Metric Types
 const metricKeyTypes = getMetricKeyTypes();

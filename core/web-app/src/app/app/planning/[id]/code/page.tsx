@@ -1,28 +1,80 @@
+'use client';
+
+import { Controller, useForm } from 'react-hook-form';
+import dynamic from 'next/dynamic';
+import { useParams } from 'next/navigation';
+import { usePlanStore } from '../../plan-store';
+import { useEffect, useState } from 'react';
+import { YAMLParseError } from 'yaml';
+
+// This is a dynamic import that will only be rendered in the client side.
+// This is because AceEditor is not compatible with SSR.
+const EditorContainerDynamic = dynamic(() => import('./editor-container'), {
+  ssr: false,
+});
+
 export default function PlanningDetailCodePage() {
+  const { id: scalingPlanId } = useParams();
+  // react-hook-form
+  const { handleSubmit, control, setValue } = useForm();
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  // Plan data management
+  const load = usePlanStore((state) => state.load);
+  const getYAMLCode = usePlanStore((state) => state.getYAMLCode);
+  const applyYAMLCode = usePlanStore((state) => state.applyYAMLCode);
+
+  // If scalingPlanId changes, fetch the scaling plan then it updates plans and nodes.
+  useEffect(() => {
+    const fetch = async () => {
+      await load(scalingPlanId);
+      const yamlCode = await getYAMLCode();
+      setValue('expression', yamlCode);
+    };
+    fetch();
+  }, [scalingPlanId]);
+
+  const onSubmit = async (data: any) => {
+    const { expression } = data;
+    setAnnotations([]);
+    try {
+      await applyYAMLCode(expression);
+    } catch (error: any) {
+      const { message, linePos } = error as YAMLParseError;
+      if (linePos?.[0] && message) {
+        setAnnotations([
+          {
+            row: linePos?.[0].line - 1,
+            column: linePos?.[0].col,
+            text: message,
+            type: 'error',
+          },
+        ]);
+      }
+    }
+  };
+
   return (
-    <div>code</div>
-    // <div className="flex h-full w-full">
-    //   <aside className="flex w-80 flex-col border-r border-base-300 bg-base-200">
-    //     {/* Header of aside */}
-    //     <div className="prose flex h-14 w-full items-center justify-start border-b border-base-300 px-3">
-    //       <h4 className="m-0 flex-1">Plans</h4>
-    //       <span className="badge">4</span>
-    //     </div>
-    //     {/* Plan List */}
-    //     <div className="flex-1 overflow-y-auto">{/* Plan Item */}</div>
-    //   </aside>
-    //   <main className="flex flex-1 flex-col">
-    //     {/* Plan Detail Header */}
-    //     <div className="h-22 prose flex w-full min-w-full flex-col border-b border-base-300 bg-slate-50 p-3">
-    //       {/* Plan Title */}
-    //       <h3 className="m-0 flex-1">Free Plan Tenancy Autoscaling</h3>
-    //       <div className="tabs">
-    //         <a className="tab-bordered tab no-underline">Tab 1</a>
-    //         <a className="tab-bordered tab tab-active no-underline">Tab 2</a>
-    //         <a className="tab-bordered tab no-underline">Tab 3</a>
-    //       </div>
-    //     </div>
-    //   </main>
-    // </div>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex h-full flex-col p-4"
+    >
+      <div className="mb-4 flex items-center justify-end">
+        <button className="btn-outline btn-primary btn-sm btn">Update</button>
+      </div>
+
+      <div className="textarea-bordered textarea textarea-md h-full w-full">
+        <Controller
+          control={control}
+          name="expression"
+          render={({ field: { onChange, value } }) => (
+            <EditorContainerDynamic
+              onChange={onChange}
+              value={value}
+              annotations={annotations}
+            />
+          )}
+        />
+      </div>
+    </form>
   );
 }

@@ -1,5 +1,5 @@
 import MetricService from '@/services/metric';
-import MetricDetailDrawer from './metric-drawer';
+import MetricDetailDrawer from '../../metric-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 async function getMetricDefinition(dbId: string) {

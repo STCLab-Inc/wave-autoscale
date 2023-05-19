@@ -234,7 +234,7 @@ mod api_server {
 
         // Update a plan
         let mut plan = resp[0].clone();
-        plan.plans[0]["name"] = json!("new_test_plan_1".to_owned());
+        plan.plans[0].id = "new_test_plan_1".to_owned();
         let update_plan = test::TestRequest::put()
             .uri(&format!("/plans/{}", plan.db_id))
             .set_json(&plan)
