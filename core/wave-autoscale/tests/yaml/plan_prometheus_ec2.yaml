@@ -40,23 +40,11 @@ plans:
     priority: 2
     scaling_components:
       - component_id: ec2_autoscaling_api_server
-        desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
+        desired: "Math.floor(prometheus_api_server_cpu_average / 5)"
   - id: scale-in-plan-1
-    description: "Scale in if CPU usage is less than 20%."
-    expression: "prometheus_api_server_cpu_average_total <= 20"
+    description: "Scale in if CPU usage is less than 30%."
+    expression: "prometheus_api_server_cpu_average_total < 30"
     priority: 3
     scaling_components:
       - component_id: ec2_autoscaling_api_server
-        desired: 2
-        min: 1
-        max: 5
-  - id: scale-in-plan-1-error
-    description: "Scale in if CPU usage is less than 20%."
-    expression: "prometheus_api_server_cpu_average_total_not_exists_ <= 20"
-    priority: 4
-    scaling_components:
-      # TODO: Remove duplicate id by merging the same id.
-      - component_id: ec2_autoscaling_api_server
         desired: 1
-      - id: ec2_autoscaling_api_server
-        desired: 2
