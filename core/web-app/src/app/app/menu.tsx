@@ -19,7 +19,6 @@ function getMenuClassNames(currentPathname: string, targetPath?: string) {
 
 export default function Menu() {
   const pathname = usePathname();
-  console.log('pathname', pathname);
   return (
     <ul
       className="list-style-none mr-auto flex flex-col pl-8 lg:flex-row"

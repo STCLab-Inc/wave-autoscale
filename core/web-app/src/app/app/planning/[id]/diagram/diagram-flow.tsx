@@ -48,7 +48,6 @@ export default function PlanningDiagramFlow() {
         ScalingComponentService.getScalingComponents(),
       ];
       const results = await Promise.all(promises);
-      console.log({ results });
       setMetricMap(keyBy(results[0], 'id'));
       setScalingComponentMap(keyBy(results[1], 'id'));
     };
@@ -92,7 +91,6 @@ export default function PlanningDiagramFlow() {
       (maxWidth - metrics?.length * POSITION_X_OFFSET) / 2;
 
     const metricNodes = metrics.map((metric: MetricUI, index) => {
-      console.log('metricsss', metric);
       return {
         // Default properties
         id: metric.id,
@@ -136,12 +134,12 @@ export default function PlanningDiagramFlow() {
     const edgesForPlanAndMetric: Edge[] = [];
     const edgesForPlanAndScalingComponent: Edge[] = [];
     plans.forEach((plan) => {
-      const metricIds = plan?.ui?.metricIds;
-      if (metricIds?.length) {
-        metricIds?.forEach((metricId: string) => {
+      const metrics = plan?.ui?.metrics;
+      if (metrics?.length) {
+        metrics?.forEach((metric: MetricUI) => {
           edgesForPlanAndMetric.push({
-            id: `${plan.id}-${metricId}`,
-            source: metricId,
+            id: `${plan.id}-${metric.id}`,
+            source: metric.id,
             target: plan.id,
             animated: true,
             type: 'smoothstep',
@@ -154,13 +152,13 @@ export default function PlanningDiagramFlow() {
         });
       }
 
-      const scalingComponentIds = plan?.ui?.scalingComponentIds;
-      if (scalingComponentIds?.length) {
-        scalingComponentIds?.forEach((scalingComponentId: string) => {
+      const scalingComponents = plan?.ui?.scalingComponents;
+      if (scalingComponents?.length) {
+        scalingComponents?.forEach((scalingComponent: ScalingComponentUI) => {
           edgesForPlanAndMetric.push({
-            id: `${plan.id}-${scalingComponentId}`,
+            id: `${plan.id}-${scalingComponent.id}`,
             source: plan.id,
-            target: scalingComponentId,
+            target: scalingComponent.id,
             animated: true,
             type: 'smoothstep',
             markerEnd: {

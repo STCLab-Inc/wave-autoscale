@@ -5,6 +5,7 @@ import { enableMapSet, produce } from 'immer';
 import { create } from 'zustand';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 enableMapSet();
 
@@ -48,6 +49,8 @@ interface PlanState {
   clearSelection: () => void;
   // General actions, not related to current scaling plan
   needToSave: (scalingPlanId: string) => boolean;
+  getYAMLCode: () => string;
+  applyYAMLCode: (yamlCode: string) => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -296,5 +299,37 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       return true;
     }
     return scalingPlanState.modifiedAt > scalingPlanState.savedAt;
+  },
+  getYAMLCode: () => {
+    const state = get();
+    const scalingPlanState = state.getCurrentScalingPlanState(state);
+    const scalingPlan = scalingPlanState.scalingPlan;
+    const scalingPlanForCode = produce(scalingPlan, (draft: any) => {
+      delete draft.db_id;
+      draft.plans?.forEach((plan: any) => {
+        delete plan.ui;
+      });
+    });
+    const code = stringifyYaml(scalingPlanForCode);
+    return code;
+  },
+  applyYAMLCode: (code: string) => {
+    const state = get();
+    try {
+      const newScalingPlan = parseYaml(code);
+      set(
+        produce((state: PlanState) => {
+          const scalingPlanState = state.getCurrentScalingPlanState(state);
+          const dbId = scalingPlanState.scalingPlan.db_id;
+          scalingPlanState.scalingPlan = newScalingPlan;
+          scalingPlanState.scalingPlan.db_id = dbId;
+          scalingPlanState.modifiedAt = new Date();
+        })
+      );
+      get().syncCurrentScalingPlan();
+    } catch (error) {
+      // TODO: Error handling\
+      throw error;
+    }
   },
 }));

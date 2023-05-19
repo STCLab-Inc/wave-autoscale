@@ -1,7 +1,8 @@
 'use client';
 
 import classNames from 'classnames';
-import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useParams, usePathname } from 'next/navigation';
 
 function getActiveTabClassNames(pathname: string, tabPath: string) {
   return classNames('tab no-underline mr-3', {
@@ -12,10 +13,21 @@ function getActiveTabClassNames(pathname: string, tabPath: string) {
 
 export default function PlanningDetailTabs() {
   const pathname = usePathname();
+  const { id } = useParams();
   return (
     <div className="tabs ml-3">
-      <a className={getActiveTabClassNames(pathname, '/diagram')}>Diagram</a>
-      <a className={getActiveTabClassNames(pathname, '/code')}>Code</a>
+      <Link
+        className={getActiveTabClassNames(pathname, '/diagram')}
+        href={`/app/planning/${id}/diagram`}
+      >
+        Diagram
+      </Link>
+      <Link
+        className={getActiveTabClassNames(pathname, '/code')}
+        href={`/app/planning/${id}/code`}
+      >
+        Code
+      </Link>
     </div>
   );
 }

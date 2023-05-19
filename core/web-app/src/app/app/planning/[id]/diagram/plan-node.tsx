@@ -15,11 +15,11 @@ function PlanNode({ data, selected }: { data: any; selected?: boolean }) {
       )}
     >
       <div className="flex">
-        {/* <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-          {data.emoji}
-        </div> */}
-        <div className="ml-2">
-          <div className="text-xs text-gray-500">🗺️ Plan</div>
+        <div className="flex h-12 w-12 items-center justify-center text-3xl">
+          🗺️
+        </div>
+        <div className="ml-2 flex flex-col justify-center">
+          <div className="text-xs text-gray-500">Plan</div>
           <div className="text-sm font-bold">{data.label}</div>
         </div>
       </div>
