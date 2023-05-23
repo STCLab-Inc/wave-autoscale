@@ -99,13 +99,6 @@ impl<'a> ScalingPlanner {
     fn sort_plan_by_priority(&self) -> Vec<PlanItemDefinition> {
         let mut plans = self.definition.plans.clone();
         plans.sort_by(|a, b| a.priority.cmp(&b.priority).reverse());
-        // plans.sort_by(|a, b| {
-        //     a["priority"]
-        //         .as_u64()
-        //         .unwrap_or(0)
-        //         .cmp(&b["priority"].as_u64().unwrap_or(0))
-        //         .reverse()
-        // });
         plans
     }
     pub async fn run(&self) {
