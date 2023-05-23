@@ -10,8 +10,10 @@ mod data_layer {
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
         reader::yaml_reader::{read_yaml_file, ParserResult},
+        types::autoscaling_history_definition::AutoscalingHistoryDefinition,
     };
     use serde_json::json;
+    use sqlx::types::chrono::Utc;
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 1;
@@ -141,6 +143,29 @@ mod data_layer {
         //     assert!(false, "Unexpected error: {:?}", update_scaling_plan_result);
         // }
 
+        let scaling_plan = scaling_plans_result[0].clone();
+        let plan_db_id = scaling_plan.db_id.clone();
+        // Add a AutoscalingHistory
+        let autoscaling_history = AutoscalingHistoryDefinition {
+            id: "".to_string(),
+            plan_db_id,
+            plan_id: "".to_string(),
+            plan_item_json: "".to_string(),
+            metric_values_json: "".to_string(),
+            metadata_values_json: "".to_string(),
+            fail_message: "".to_string(),
+            created_at: Utc::now(),
+        };
+        let add_autoscaling_history_result = data_layer
+            .add_autoscaling_history(autoscaling_history.clone())
+            .await;
+        if add_autoscaling_history_result.is_err() {
+            assert!(
+                false,
+                "Unexpected error: {:?}",
+                add_autoscaling_history_result
+            );
+        }
         Ok(())
     }
 }

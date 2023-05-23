@@ -7,8 +7,10 @@ use std::path::Path;
 use uuid::Uuid;
 
 use crate::{
-    types::object_kind::ObjectKind, MetricDefinition, ScalingComponentDefinition,
-    ScalingPlanDefinition,
+    types::{
+        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+    },
+    MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
 
 #[derive(Debug)]
@@ -400,5 +402,28 @@ impl DataLayer {
             return Err(anyhow!("No rows affected"));
         }
         Ok(result)
+    }
+    // Add AutoscalingHistory to the database
+    pub async fn add_autoscaling_history(
+        &self,
+        autoscaling_history: AutoscalingHistoryDefinition,
+    ) -> Result<()> {
+        let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at) VALUES (?,?,?,?,?,?,?,?)";
+        let id = Uuid::new_v4().to_string();
+        let result = sqlx::query(query_string)
+            .bind(id)
+            .bind(autoscaling_history.plan_db_id)
+            .bind(autoscaling_history.plan_id)
+            .bind(autoscaling_history.plan_item_json)
+            .bind(autoscaling_history.metric_values_json)
+            .bind(autoscaling_history.metadata_values_json)
+            .bind(autoscaling_history.fail_message)
+            .bind(autoscaling_history.created_at)
+            .execute(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        Ok(())
     }
 }
