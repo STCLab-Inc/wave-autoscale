@@ -11,7 +11,9 @@ sqlx = { version = "0.6.3", features = [
   "runtime-tokio-rustls",
   "uuid",
   "any",
+  "chrono",
 ] }
+chrono = { version = "0.4.24", features = ["serde"] }
 anyhow = "1.0.70"
 serde = { version = "1.0.157", features = ["derive"] }
 serde_yaml = "0.9.19"
