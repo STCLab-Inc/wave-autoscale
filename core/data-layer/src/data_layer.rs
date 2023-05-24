@@ -426,4 +426,35 @@ impl DataLayer {
         }
         Ok(())
     }
+    // Get an AutoscalingHistory by plan_id from the database
+    pub async fn get_autoscaling_history_by_plan_id(
+        &self,
+        plan_id: String,
+    ) -> Result<Vec<AutoscalingHistoryDefinition>> {
+        let mut autoscaling_history: Vec<AutoscalingHistoryDefinition> = Vec::new();
+        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at FROM autoscaling_history WHERE plan_id=?";
+        let result = sqlx::query(query_string)
+            .bind(plan_id)
+            .fetch_all(&self.pool)
+            .await;
+
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+
+        for row in result {
+            autoscaling_history.push(AutoscalingHistoryDefinition {
+                id: row.get("id"),
+                plan_db_id: row.get("plan_db_id"),
+                plan_id: row.get("plan_id"),
+                plan_item_json: row.get("plan_item_json"),
+                metric_values_json: row.get("metric_values_json"),
+                metadata_values_json: row.get("metadata_values_json"),
+                fail_message: row.get("fail_message"),
+                created_at: row.get("created_at"),
+            });
+        }
+        Ok(autoscaling_history)
+    }
 }

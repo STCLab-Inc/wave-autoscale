@@ -7,6 +7,5 @@ CREATE TABLE autoscaling_history (
   metric_values_json TEXT,
   metadata_values_json TEXT,
   fail_message TEXT,
-  created_at TEXT,
-  FOREIGN KEY (plan_db_id) REFERENCES plan (db_id)
+  created_at TEXT
 );
