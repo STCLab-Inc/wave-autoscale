@@ -153,7 +153,7 @@ mod data_layer {
             plan_item_json: "".to_string(),
             metric_values_json: "".to_string(),
             metadata_values_json: "".to_string(),
-            fail_message: "".to_string(),
+            fail_message: Some(String::from("fail_message")),
             created_at: Utc::now(),
         };
         let add_autoscaling_history_result = data_layer
