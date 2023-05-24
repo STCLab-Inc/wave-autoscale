@@ -2,9 +2,9 @@ use super::ScalingComponent;
 use crate::util::aws_region::get_aws_region_static_str;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_autoscaling::{config::Credentials, Client};
+use aws_sdk_autoscaling::{config::Credentials, error::ProvideErrorMetadata, Client};
 use data_layer::ScalingComponentDefinition;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 
 // This is a metric adapter for prometheus.
@@ -72,7 +72,18 @@ impl ScalingComponent for EC2AutoScalingComponent {
 
             let result = result.send().await;
 
-            println!("{:?}", result);
+            if result.is_err() {
+                let error = result.err().unwrap();
+                // error.
+                let meta = error.meta();
+                // meta.ex
+                let json = json!({
+                    "message": meta.message(),
+                    "code": meta.code(),
+                    "extras": meta.to_string()
+                });
+                return Err(anyhow::anyhow!(json));
+            }
             Ok(())
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
