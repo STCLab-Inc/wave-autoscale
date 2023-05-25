@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@nivo/core": "^0.83.0",
+    "@nivo/heatmap": "^0.83.0",
     "@reactflow/background": "^11.2.0",
     "@types/node": "18.15.11",
     "@types/react": "18.0.37",
