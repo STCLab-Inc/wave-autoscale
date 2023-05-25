@@ -10,7 +10,6 @@ export function renderKeyValuePairs(
       let value = keyValuePairs[key];
       if (value != null && typeof value === 'object') {
         value = renderKeyValuePairs(value, 1);
-        console.log({ value });
       }
       if (!value) {
         return null;
@@ -18,11 +17,12 @@ export function renderKeyValuePairs(
       return (
         <div
           key={key}
-          className={classNames('break-all max-w-sm', {
+          className={classNames('max-w-sm break-all', {
             'ml-4': depth > 0,
           })}
         >
-          <span className="font-bold">{key}</span>: <span className="break-all">{value}</span>
+          <span className="font-bold">{key}</span>:{' '}
+          <span className="break-all">{value}</span>
         </div>
       );
     });
@@ -31,7 +31,6 @@ export function renderKeyValuePairs(
 export function renderKeyValuePairsWithJson(jsonString: string) {
   try {
     const keyValuePairs = JSON.parse(jsonString);
-    // console.log({ keyValuePairs });
     return renderKeyValuePairs(keyValuePairs);
   } catch (error) {
     console.log({ error });
