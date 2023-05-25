@@ -2,7 +2,13 @@ use chrono::serde::ts_seconds;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
+use ts_rs::TS;
 
+#[derive(TS)]
+#[ts(
+    export,
+    export_to = "../web-app/src/types/bindings/autoscaling-history-definition.ts"
+)]
 #[derive(Debug, Serialize, Deserialize, Validate, Clone)]
 pub struct AutoscalingHistoryDefinition {
     #[serde(default)]
@@ -13,6 +19,7 @@ pub struct AutoscalingHistoryDefinition {
     pub metric_values_json: String,
     pub metadata_values_json: String,
     pub fail_message: Option<String>,
+    #[ts(type = "number")]
     #[serde(with = "ts_seconds")]
     pub created_at: chrono::DateTime<Utc>,
 }
