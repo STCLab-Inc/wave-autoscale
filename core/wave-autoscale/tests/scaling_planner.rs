@@ -1,9 +1,13 @@
 #[cfg(test)]
 mod scaling_planner_test {
-    use std::time::Duration;
+    use std::{sync::Arc, time::Duration};
 
     use anyhow::Result;
-    use data_layer::reader::yaml_reader::read_yaml_file;
+    use data_layer::{
+        data_layer::{DataLayer, DataLayerNewParam},
+        reader::yaml_reader::read_yaml_file,
+        types::scaling_plan_definition,
+    };
 
     use tokio::time::sleep;
     use wave_autoscale::{
@@ -37,6 +41,19 @@ mod scaling_planner_test {
             let mut cloned_scaling_component_manager = cloned.write().await;
             cloned_scaling_component_manager.add_definitions(result.scaling_component_definitions);
         }
+
+        // Delete the test db if it exists
+        let TEST_DB = "sqlite://tests/temp/test.db";
+        let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
+        let _ = std::fs::remove_file(path);
+        // create data layer
+        let data_layer = DataLayer::new(DataLayerNewParam {
+            sql_url: TEST_DB.to_string(),
+        })
+        .await;
+        let data_layer = Arc::new(data_layer);
+
+        // create scaling planner
         let scaling_planners: Vec<ScalingPlanner> = result
             .scaling_plan_definitions
             .iter()
@@ -45,14 +62,27 @@ mod scaling_planner_test {
                     definition.clone(),
                     metric_store.clone(),
                     scaling_component_manager.clone(),
+                    Arc::clone(&data_layer),
                 )
             })
             .collect();
 
+        // run scaling planner
         if let Some(scaling_planner) = scaling_planners.get(0) {
             scaling_planner.run().await;
         }
+        // Give some time for the scaling planner to run plans
         sleep(Duration::from_millis(5000)).await;
+
+        // check data layer
+        let history = data_layer
+            .get_autoscaling_history_by_plan_id(result.scaling_plan_definitions[0].id.clone())
+            .await;
+        assert!(history.is_ok());
+        let history = history.unwrap();
+        assert_eq!(history.len(), 1);
+        let history = history[0].clone();
+        assert_eq!(history.plan_id, result.scaling_plan_definitions[0].id);
 
         Ok(())
     }

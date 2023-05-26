@@ -33,6 +33,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .configure(controller::init_metric_controller)
             .configure(controller::init_scaling_component_controller)
             .configure(controller::init_plan_controller)
+            .configure(controller::init_autoscaling_history_controller)
     })
     .bind((ip_address.clone(), port));
 
