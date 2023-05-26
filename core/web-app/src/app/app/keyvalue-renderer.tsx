@@ -17,12 +17,12 @@ export function renderKeyValuePairs(
       return (
         <div
           key={key}
-          className={classNames('max-w-sm break-all', {
+          className={classNames('mb-2', {
             'ml-4': depth > 0,
           })}
         >
-          <span className="font-bold">{key}</span>:{' '}
-          <span className="break-all">{value}</span>
+          <div className="whitespace-normal break-all font-bold">{key}</div>
+          <div className="whitespace-normal break-all ">{value}</div>
         </div>
       );
     });

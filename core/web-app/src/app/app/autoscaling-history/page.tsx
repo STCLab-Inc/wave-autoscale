@@ -6,7 +6,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 import HistoryHeatmap from './history-heatmap';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -30,11 +30,10 @@ export default function AutoscalingHistoryPage({}) {
   const [history, setHistory] = useState<AutoscalingHistoryDefinition[]>([]);
   const router = useRouter();
 
-  console.log(fromDayjs, toDayjs);
   useEffect(() => {
     const fetchHistory = async () => {
       const history = await getHistory(fromDayjs, toDayjs);
-      setHistory(history);
+      setHistory([ ...history, ...history, ...history, ...history, ...history]);
     };
     fetchHistory();
   }, [fromDayjs, toDayjs]);
@@ -80,32 +79,28 @@ export default function AutoscalingHistoryPage({}) {
           </div>
         }
       />
-      <div className="w-full overflow-x-auto">
+      <div className="w-full">
         <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
-        <table className="table-compact table w-full">
+        <table className="table-compact table w-full table-fixed">
           {/* head */}
           <thead>
             <tr>
-              <th>
+              <th className="w-10">
                 <label>
                   <input type="checkbox" className="checkbox" />
                 </label>
               </th>
-              <th>Plan ID</th>
-              <th>Plan Item</th>
-              <th>Metric Values</th>
-              <th>Metadata Values</th>
-              <th>Fail Message</th>
-              <th>Status</th>
-              <th>Date</th>
+              <th className="w-32">Plan ID</th>
+              <th className="w-40">Plan Item</th>
+              <th className="w-40">Metric Values</th>
+              <th className="w-40">Metadata Values</th>
+              <th className="w-40">Fail Message</th>
+              <th className="w-14">Status</th>
+              <th className="w-24">Date</th>
             </tr>
           </thead>
           <tbody>
             {history.map((historyItem: AutoscalingHistoryDefinition) => {
-              // console.log({
-              //   date: historyItem.created_at,
-              //   type: typeof historyItem.created_at,
-              // });
               return (
                 <tr key={historyItem.id}>
                   <th>
