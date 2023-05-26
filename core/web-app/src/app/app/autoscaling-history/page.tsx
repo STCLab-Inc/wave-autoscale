@@ -33,7 +33,8 @@ export default function AutoscalingHistoryPage({}) {
   useEffect(() => {
     const fetchHistory = async () => {
       const history = await getHistory(fromDayjs, toDayjs);
-      setHistory([ ...history, ...history, ...history, ...history, ...history]);
+      // setHistory([ ...history, ...history, ...history, ...history, ...history]);
+      setHistory(history);
     };
     fetchHistory();
   }, [fromDayjs, toDayjs]);

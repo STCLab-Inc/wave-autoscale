@@ -15,26 +15,30 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
     if (!history) {
       return [];
     }
-    const grouped = groupBy(history, (historyItem) => {
+    const groupedByDate = groupBy(history, (historyItem) => {
       return dayjs.unix(historyItem.created_at).format('YYYY-MM-DD');
     });
 
+    // Fill in missing dates
     let current = from;
-    while (current.isBefore(to)) {
+    while (current.isBefore(to) || current.isSame(to)) {
       const date = current.format('YYYY-MM-DD');
-      if (!grouped[date]) {
-        grouped[date] = [];
+      if (!groupedByDate[date]) {
+        groupedByDate[date] = [];
       }
       current = current.add(1, 'day');
     }
 
-    const data = Object.entries(grouped)
-      .sort((a, b) => (a[0] < b[0] ? 0 : 1))
+    const data = Object.entries(groupedByDate)
+      .sort(([dateA], [dateB]) => {
+        return dateA < dateB ? -1 : 1;
+      })
       .map(([date, historyItems]) => {
         const groupedByHour = groupBy(historyItems, (historyItem) => {
           return dayjs.unix(historyItem.created_at).format('HH');
         });
 
+        // Fill in missing hours
         for (let i = 0; i < 24; i++) {
           const hour = i.toString().padStart(2, '0');
           if (!groupedByHour[hour]) {
@@ -45,7 +49,7 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
         return {
           id: date,
           data: Object.entries(groupedByHour)
-            .sort((a, b) => (a[0] < b[0] ? 0 : 1))
+            .sort(([hourA], [hourB]) => (hourA < hourB ? -1 : 1))
             .map(([hour, historyItems]) => {
               return {
                 x: hour,
@@ -57,56 +61,54 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
     return data;
   }, [history, from, to]);
 
-  console.dir({ dataForHeatmap }, { depth: null });
+  const maxValue = useMemo(() => {
+    let maxValue = 0;
+    dataForHeatmap.forEach((dataByDate) => {
+      dataByDate.data.forEach((dataByHour) => {
+        if (dataByHour.y > maxValue) {
+          maxValue = dataByHour.y;
+        }
+      });
+    });
+    return maxValue || 1;
+  }, [dataForHeatmap]);
+
   return (
     <div className="h-80 w-full">
       <ResponsiveHeatMapCanvas
+        // forceSquare={true}
         data={dataForHeatmap}
-        margin={{ top: 70, right: 60, bottom: 20, left: 80 }}
+        xInnerPadding={0.1}
+        yInnerPadding={0.1}
+        margin={{ top: 70, right: 80, bottom: 20, left: 120 }}
         axisTop={{
-          tickSize: 5,
-          tickPadding: 5,
-          tickRotation: -90,
-          legend: '',
-          legendOffset: 46,
-        }}
-        axisRight={{
-          tickSize: 5,
-          tickPadding: 5,
-          tickRotation: 0,
-          legend: 'Date',
+          tickSize: 0,
+          tickPadding: 10,
+          // tickRotation: -90,
+          legend: 'Time',
+          legendOffset: -40,
           legendPosition: 'middle',
-          legendOffset: 40,
         }}
-        axisLeft={null}
+        axisLeft={{
+          tickSize: 0,
+          tickPadding: 20,
+          tickRotation: 0,
+        }}
         colors={{
-          type: 'sequential',
-          scheme: 'red_yellow_blue',
+          type: 'diverging',
+          divergeAt: 0.4,
+          scheme: 'greens',
           minValue: 0,
-          maxValue: 1,
+          maxValue,
         }}
-        emptyColor="#555555"
-        borderWidth={1}
+        emptyColor="#EBEBEB"
+        borderWidth={0}
         borderColor="#000000"
         enableLabels={true}
-        legends={[
-          {
-            anchor: 'left',
-            translateX: -50,
-            translateY: 0,
-            length: 200,
-            thickness: 10,
-            direction: 'column',
-            tickPosition: 'after',
-            tickSize: 3,
-            tickSpacing: 4,
-            tickOverlap: false,
-            tickFormat: '>-.2s',
-            title: 'Value →',
-            titleAlign: 'start',
-            titleOffset: 4,
-          },
-        ]}
+        labelTextColor={{
+          from: 'color',
+          modifiers: [['brighter', 2]],
+        }}
         annotations={[]}
       />
     </div>
