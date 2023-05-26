@@ -26,6 +26,15 @@ export default function Menu() {
     >
       <li className="my-4 lg:my-0 lg:pr-2" data-te-nav-item-ref>
         <Link
+          className={getMenuClassNames(pathname, '/app/autoscaling-history')}
+          href="/app/autoscaling-history"
+          data-te-nav-link-ref
+        >
+          Autoscaling History
+        </Link>
+      </li>
+      <li className="my-4 lg:my-0 lg:pr-2" data-te-nav-item-ref>
+        <Link
           className={getMenuClassNames(pathname, '/app/planning')}
           href="/app/planning"
           data-te-nav-link-ref
