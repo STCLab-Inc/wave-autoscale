@@ -45,37 +45,43 @@ export default function AutoscalingHistoryPage({}) {
         title="Autoscaling History"
         right={
           <div className="flex items-center">
-            <div className="flex items-center">
-              <div className="mr-2">From</div>
-              <input
-                type="date"
-                className="input-bordered input"
-                defaultValue={fromDayjs?.format('YYYY-MM-DD')}
-                onChange={(e) => {
-                  const from = dayjs(e.target.value);
-                  router.push(
-                    `/app/autoscaling-history?from=${from.format(
-                      'YYYY-MM-DD'
-                    )}&to=${toDayjs?.format('YYYY-MM-DD')}`
-                  );
-                }}
-              />
+            <div className="form-control">
+              <label className="input-group-sm input-group">
+                <span>From</span>
+                <input
+                  type="date"
+                  className="input-bordered input input-sm"
+                  max={toDayjs?.format('YYYY-MM-DD')}
+                  defaultValue={fromDayjs?.format('YYYY-MM-DD')}
+                  onChange={(e) => {
+                    const from = dayjs(e.target.value);
+                    router.push(
+                      `/app/autoscaling-history?from=${from.format(
+                        'YYYY-MM-DD'
+                      )}&to=${toDayjs?.format('YYYY-MM-DD')}`
+                    );
+                  }}
+                />
+              </label>
             </div>
-            <div className="flex items-center">
-              <div className="mr-2">To</div>
-              <input
-                type="date"
-                className="input-bordered input"
-                defaultValue={toDayjs?.format('YYYY-MM-DD')}
-                onChange={(e) => {
-                  const to = dayjs(e.target.value);
-                  router.push(
-                    `/app/autoscaling-history?from=${fromDayjs?.format(
-                      'YYYY-MM-DD'
-                    )}&to=${to.format('YYYY-MM-DD')}`
-                  );
-                }}
-              />
+            <div className="form-control ml-4">
+              <label className="input-group-sm input-group">
+                <span>To</span>
+                <input
+                  type="date"
+                  className="input-bordered input input-sm"
+                  min={fromDayjs?.format('YYYY-MM-DD')}
+                  defaultValue={toDayjs?.format('YYYY-MM-DD')}
+                  onChange={(e) => {
+                    const to = dayjs(e.target.value);
+                    router.push(
+                      `/app/autoscaling-history?from=${fromDayjs?.format(
+                        'YYYY-MM-DD'
+                      )}&to=${to.format('YYYY-MM-DD')}`
+                    );
+                  }}
+                />
+              </label>
             </div>
           </div>
         }
