@@ -1,0 +1,9 @@
+language: 'typescript'
+type: 'application'
+
+tasks:
+  run:
+    command: 'next dev --turbo'
+    inputs:
+      - '@globs(sources)'
+      - 'tsconfig.json'

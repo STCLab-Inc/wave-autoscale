@@ -1,0 +1,8 @@
+language: "rust"
+type: "application"
+
+tasks:
+  run:
+    command: "cargo run"
+    inputs:
+      - "@globs(sources)"
