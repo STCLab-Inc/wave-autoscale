@@ -1,7 +1,7 @@
 use crate::{metric_store::MetricStore, scaling_component::ScalingComponentManager};
-use ::data_layer::data_layer::DataLayer;
 use anyhow::Result;
 use data_layer::{
+    data_layer::DataLayer,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition,
@@ -10,7 +10,7 @@ use data_layer::{
 };
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{sync::RwLock, time};
+use tokio::{sync::RwLock, task::JoinHandle, time};
 
 // Get a context with the metric store values set as global variables
 fn get_context_with_metric_store(
@@ -69,7 +69,6 @@ async fn apply_scaling_components(
     let mut scaling_results: Vec<Result<()>> = Vec::new();
     for metadata in scaling_components_metadata.iter() {
         let scaling_component_id = metadata["component_id"].as_str().unwrap();
-        let shared_scaling_component_manager = shared_scaling_component_manager.read().await;
 
         let params = metadata
             .as_object()
@@ -78,10 +77,13 @@ async fn apply_scaling_components(
             .map(|(key, value)| (key.to_string(), value.clone()))
             .collect::<HashMap<String, Value>>();
 
-        let result = shared_scaling_component_manager
-            .apply_to(scaling_component_id, params)
-            .await;
-        scaling_results.push(result);
+        {
+            let shared_scaling_component_manager = shared_scaling_component_manager.read().await;
+            let result = shared_scaling_component_manager
+                .apply_to(scaling_component_id, params)
+                .await;
+            scaling_results.push(result);
+        }
     }
     scaling_results
 }
@@ -114,7 +116,7 @@ impl<'a> ScalingPlanner {
         plans.sort_by(|a, b| a.priority.cmp(&b.priority).reverse());
         plans
     }
-    pub async fn run(&self) {
+    pub fn run(&self) -> JoinHandle<()> {
         let plans = self.sort_plan_by_priority();
         // TODO: Make this configurable
         let polling_interval: u64 = 1000;
@@ -127,63 +129,69 @@ impl<'a> ScalingPlanner {
 
         tokio::spawn(async move {
             loop {
-                // Get variables from the metric store
-                let shared_metric_store: tokio::sync::RwLockReadGuard<HashMap<String, Value>> =
-                    shared_metric_store.read().await;
+                // // Get variables from the metric store
+                {
+                    let shared_metric_store = shared_metric_store.try_read();
+                    if shared_metric_store.is_err() {
+                        continue;
+                    }
+                    let shared_metric_store = shared_metric_store.unwrap();
+                    // Get the first plan that matches the expression
+                    if let Some(plan) = get_matching_scaling_plan(&plans, &shared_metric_store) {
+                        let scaling_plan_id = plan.id.clone();
+                        // Check if the plan has already been executed
+                        let shared_last_run_read = shared_last_run.read().await;
+                        if *shared_last_run_read.clone() != scaling_plan_id {
+                            // // Take it back to write to it(RwLock)
+                            drop(shared_last_run_read);
 
-                // Get the first plan that matches the expression
-                if let Some(plan) = get_matching_scaling_plan(&plans, &shared_metric_store) {
-                    let scaling_plan_id = plan.id.clone();
-                    // Check if the plan has already been executed
-                    let shared_last_run_read = shared_last_run.read().await;
-                    if *shared_last_run_read.clone() != scaling_plan_id {
-                        // Take it back to write to it(RwLock)
-                        drop(shared_last_run_read);
+                            let scaling_components_metadata = &plan.scaling_components;
+                            // Apply the scaling components
+                            let results = apply_scaling_components(
+                                scaling_components_metadata,
+                                &shared_scaling_component_manager,
+                            )
+                            .await;
+                            println!("results - {:?}", results);
+                            // Update the last run
+                            let mut shared_last_run = shared_last_run.write().await;
+                            *shared_last_run = scaling_plan_id.clone();
+                            println!("Applied scaling plan: {}", scaling_plan_id);
 
-                        let scaling_components_metadata = &plan.scaling_components;
-                        // Apply the scaling components
-                        let results = apply_scaling_components(
-                            scaling_components_metadata,
-                            &shared_scaling_component_manager,
-                        )
-                        .await;
-                        println!("results - {:?}", results);
-                        // Update the last run
-                        let mut shared_last_run = shared_last_run.write().await;
-                        *shared_last_run = scaling_plan_id.clone();
-                        println!("Applied scaling plan: {}", scaling_plan_id);
-
-                        // Add the result of the scaling plan to the history
-                        for (index, result) in results.iter().enumerate() {
-                            let fail_message: Option<String> = match result {
-                                Ok(_) => None,
-                                Err(error) => Some(error.to_string()),
-                            };
-                            let autoscaling_history: AutoscalingHistoryDefinition =
-                                AutoscalingHistoryDefinition::new(
-                                    scaling_plan_definition.db_id.clone(),
-                                    scaling_plan_definition.id.clone(),
-                                    json!(plan).to_string(),
-                                    json!(shared_metric_store.clone()).to_string(),
-                                    json!(scaling_components_metadata[index].clone()).to_string(),
-                                    fail_message,
-                                );
-                            println!("autoscaling_history - {:?}", autoscaling_history);
-                            let result = data_layer
-                                .add_autoscaling_history(autoscaling_history)
-                                .await;
-                            println!("result - {:?}", result);
+                            // Add the result of the scaling plan to the history
+                            for (index, result) in results.iter().enumerate() {
+                                let fail_message: Option<String> = match result {
+                                    Ok(_) => None,
+                                    Err(error) => Some(error.to_string()),
+                                };
+                                let autoscaling_history: AutoscalingHistoryDefinition =
+                                    AutoscalingHistoryDefinition::new(
+                                        scaling_plan_definition.db_id.clone(),
+                                        scaling_plan_definition.id.clone(),
+                                        json!(plan).to_string(),
+                                        json!(shared_metric_store.clone()).to_string(),
+                                        json!(scaling_components_metadata[index].clone())
+                                            .to_string(),
+                                        fail_message,
+                                    );
+                                println!("autoscaling_history - {:?}", autoscaling_history);
+                                let result = data_layer
+                                    .add_autoscaling_history(autoscaling_history)
+                                    .await;
+                                println!("result - {:?}", result);
+                            }
+                        } else {
+                            println!("Already executed");
                         }
                     } else {
-                        println!("Already executed");
+                        println!("No scaling components found");
                     }
-                } else {
-                    println!("No scaling components found");
                 }
+
                 println!("----------------------------------");
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
+        })
     }
 }

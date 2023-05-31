@@ -1,14 +1,8 @@
 use super::MetricAdapter;
-use crate::{
-    metric_store::MetricStore,
-    util::{aws_region::get_aws_region_static_str, string::make_ascii_titlecase},
-};
+use crate::{metric_store::MetricStore, util::aws_region::get_aws_region_static_str};
 use async_trait::async_trait;
 use aws_config::SdkConfig;
-use aws_sdk_cloudwatch::{
-    types::{Dimension, StandardUnit, Statistic},
-    Client as CloudWatchClient,
-};
+use aws_sdk_cloudwatch::Client as CloudWatchClient;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use chrono::Utc;
@@ -46,7 +40,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -146,7 +140,9 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 interval.tick().await;
             }
         });
-        self.task = Some(task);
+        // self.task = Some(task);
+
+        task
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

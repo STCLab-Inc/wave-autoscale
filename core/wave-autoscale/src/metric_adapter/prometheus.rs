@@ -6,6 +6,8 @@ use serde_json::Value;
 use std::time::Duration;
 use tokio::{task::JoinHandle, time};
 
+use log::{error, info};
+
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
     task: Option<JoinHandle<()>>,
@@ -36,7 +38,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -61,6 +63,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
                     let client = reqwest::Client::new();
                     let params = vec![("query", query)];
 
+                    info!("Calling prometheus: {}", url);
                     let response = client.get(url).query(&params).send().await;
 
                     // Update the shared value.
@@ -70,32 +73,38 @@ impl MetricAdapter for PrometheusMetricAdapter {
                             match json {
                                 Ok(json) => {
                                     // Update the metric store.
-                                    let mut shared_metric_store = shared_metric_store.write().await;
                                     let value = json["data"]["result"].as_array();
-
                                     if let Some(value) = value {
                                         let value = &value[0]["value"][1];
-                                        shared_metric_store
-                                            .insert(metric_id.clone(), value.clone());
+                                        let mut shared_metric_store =
+                                            shared_metric_store.try_write();
+                                        if let Ok(mut shared_metric_store) = shared_metric_store {
+                                            shared_metric_store
+                                                .insert(metric_id.clone(), value.clone());
+                                        } else {
+                                            error!("Error: failed to lock metric store.");
+                                        }
                                     }
                                 }
                                 Err(e) => {
-                                    println!("Error: {:?}", e);
+                                    error!("Error: {:?}", e);
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("Error: {:?}", e);
+                            error!("Error: {:?}", e);
                         }
                     }
+                    info!("done");
                 } else {
-                    println!("Error: missing endpoint or query in metadata.");
+                    error!("Error: missing endpoint or query in metadata.");
                 }
                 // Wait for the next interval.
                 interval.tick().await;
             }
         });
-        self.task = Some(task);
+        task
+        // self.task = Some(task);
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

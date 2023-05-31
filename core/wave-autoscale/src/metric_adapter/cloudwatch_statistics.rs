@@ -46,7 +46,7 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -169,7 +169,9 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
                 interval.tick().await;
             }
         });
-        self.task = Some(task);
+        // self.task = Some(task);
+
+        task
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

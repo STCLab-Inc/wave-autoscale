@@ -7,6 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::collections::HashMap;
+use tokio::task::JoinHandle;
 
 pub mod cloudwatch_data;
 pub mod cloudwatch_statistics;
@@ -39,7 +40,7 @@ pub fn create_metric_adapter(
 
 #[async_trait]
 pub trait MetricAdapter {
-    async fn run(&mut self);
+    fn run(&mut self) -> JoinHandle<()>;
     fn stop(&mut self);
     fn get_id(&self) -> &str;
     fn get_metric_kind(&self) -> &str;
@@ -79,10 +80,13 @@ impl MetricAdapterManager {
             .insert(metric_adapter.get_id().to_string(), metric_adapter);
     }
 
-    pub async fn run(&mut self) {
+    pub fn run(&mut self) -> Vec<JoinHandle<()>> {
+        let mut tasks = Vec::new();
         for metric_adapter in self.metric_adapters.values_mut() {
-            metric_adapter.run().await;
+            let task = metric_adapter.run();
+            tasks.push(task);
         }
+        tasks
     }
 
     pub fn stop(&mut self) {
