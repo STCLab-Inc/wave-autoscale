@@ -6,7 +6,7 @@ dependsOn:
 
 tasks:
   lint:
-    command: "cargo clippy --fix"
+    command: "cargo clippy --fix --allow-dirty"
     inputs:
       - "@globs(sources)"
     env:

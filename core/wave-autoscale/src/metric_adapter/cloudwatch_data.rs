@@ -56,7 +56,10 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
 
         // println!("CloudWatchDataMetricAdapter::run() - shared_config: {:?}", shared_config);
 
-        let task = tokio::spawn(async move {
+        
+        // self.task = Some(task);
+
+        tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
             if let (
                 Some(Value::String(access_key)),
@@ -89,7 +92,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 let mut metric_data_builder = cw_client.get_metric_data();
                 if let Some(Value::String(expression)) = metadata.get("expression") {
                     // id must be unique
-                    let mut uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+                    let mut uuid = uuid::Uuid::new_v4().to_string().replace('-', "");
                     // CloudWatch requires the first character of the ID to be a letter.
                     uuid.insert(0, 'i');
                     let mut metric_data_query =
@@ -139,10 +142,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        // self.task = Some(task);
-
-        task
+        })
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

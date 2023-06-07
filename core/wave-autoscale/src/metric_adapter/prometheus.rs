@@ -51,7 +51,8 @@ impl MetricAdapter for PrometheusMetricAdapter {
         // Concurrency
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
-        let task = tokio::spawn(async move {
+        
+        tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
                 // Generate a url to call a prometheus query.
@@ -76,7 +77,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
                                     let value = json["data"]["result"].as_array();
                                     if let Some(value) = value {
                                         let value = &value[0]["value"][1];
-                                        let mut shared_metric_store =
+                                        let shared_metric_store =
                                             shared_metric_store.try_write();
                                         if let Ok(mut shared_metric_store) = shared_metric_store {
                                             shared_metric_store
@@ -102,8 +103,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        task
+        })
         // self.task = Some(task);
     }
     fn stop(&mut self) {

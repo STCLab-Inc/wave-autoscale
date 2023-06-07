@@ -24,7 +24,7 @@ mod metric_adapter_test {
         metric_adapter_manager.add_definitions(result.metric_definitions);
 
         // run metric adapters and wait for them to start
-        metric_adapter_manager.run().await;
+        metric_adapter_manager.run();
 
         sleep(Duration::from_millis(2000)).await;
 
@@ -52,7 +52,7 @@ mod metric_adapter_test {
         metric_adapter_manager.add_definitions(result.metric_definitions);
 
         // run metric adapters and wait for them to start
-        metric_adapter_manager.run().await;
+        metric_adapter_manager.run();
 
         sleep(Duration::from_millis(2000)).await;
 

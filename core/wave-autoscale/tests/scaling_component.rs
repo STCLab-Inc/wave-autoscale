@@ -65,9 +65,9 @@ mod scaling_component_test {
         // run scaling trigger
         let mut options: HashMap<String, Value> = HashMap::new();
         options.insert("replicas".to_string(), json!(5));
-        let result = scaling_component_manager
+        
+        scaling_component_manager
             .apply_to("k8s_deployment", options)
-            .await;
-        return result;
+            .await
     }
 }

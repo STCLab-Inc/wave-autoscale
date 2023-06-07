@@ -10,7 +10,7 @@ use data_layer::{
     },
 };
 use scaling_planner::ScalingPlanner;
-use tokio::{sync::futures, task::JoinHandle};
+use tokio::{task::JoinHandle};
 mod args;
 mod metric_adapter;
 mod metric_store;

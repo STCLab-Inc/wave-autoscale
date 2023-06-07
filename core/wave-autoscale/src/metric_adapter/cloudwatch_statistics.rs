@@ -62,7 +62,10 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
 
         // println!("CloudWatchStatisticsMetricAdapter::run() - shared_config: {:?}", shared_config);
 
-        let task = tokio::spawn(async move {
+        
+        // self.task = Some(task);
+
+        tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
             if let (
                 Some(Value::String(access_key)),
@@ -168,10 +171,7 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        // self.task = Some(task);
-
-        task
+        })
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

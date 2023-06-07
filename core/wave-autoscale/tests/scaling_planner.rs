@@ -6,7 +6,6 @@ mod scaling_planner_test {
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
         reader::yaml_reader::read_yaml_file,
-        types::scaling_plan_definition,
     };
 
     use tokio::time::sleep;
@@ -29,7 +28,7 @@ mod scaling_planner_test {
         let metric_store: MetricStore = new_metric_store();
         let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
         metric_adapter_manager.add_definitions(result.metric_definitions);
-        metric_adapter_manager.run().await;
+        metric_adapter_manager.run();
 
         // Give some time for the metric adapters to collect metrics
         sleep(Duration::from_millis(2000)).await;
