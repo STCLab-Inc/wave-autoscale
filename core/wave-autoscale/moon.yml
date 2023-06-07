@@ -11,10 +11,22 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: info
+  audit:
+    command: "cargo audit"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
+  test:
+    command: "cargo test"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
   run:
-    command: "cargo watch -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
+    command: "cargo watch -c -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
     deps:
-      - 'lint'
+      - "lint"
     inputs:
       - "@globs(sources)"
     env:
