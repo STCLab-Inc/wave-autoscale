@@ -7,7 +7,7 @@ mod scaling_component_test {
     use serde_json::{json, Value};
     use wave_autoscale::scaling_component::{
         aws_ec2_autoscaling::EC2AutoScalingComponent,
-        k8s_deployment::K8sDeploymentScalingComponent, ScalingComponentManagerInner,
+        k8s_deployment::K8sDeploymentScalingComponent, ScalingComponentManager,
     };
 
     const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/component_ec2_autoscaling.yaml";
@@ -19,7 +19,7 @@ mod scaling_component_test {
         let result = read_yaml_file(EC2_AUTOSCALING_FILE_PATH)?;
 
         // create metric adapter
-        let mut scaling_component_manager = ScalingComponentManagerInner::new();
+        let mut scaling_component_manager = ScalingComponentManager::new();
         scaling_component_manager.add_definitions(result.scaling_component_definitions);
 
         if let Some(scaling_component) =
@@ -47,7 +47,7 @@ mod scaling_component_test {
         // read yaml file
         let result = read_yaml_file("./tests/yaml/component_k8s_deployment.yaml")?;
         // create metric adapter
-        let mut scaling_component_manager = ScalingComponentManagerInner::new();
+        let mut scaling_component_manager = ScalingComponentManager::new();
         scaling_component_manager.add_definitions(result.scaling_component_definitions);
 
         if let Some(scaling_component) =
@@ -65,7 +65,7 @@ mod scaling_component_test {
         // run scaling trigger
         let mut options: HashMap<String, Value> = HashMap::new();
         options.insert("replicas".to_string(), json!(5));
-        
+
         scaling_component_manager
             .apply_to("k8s_deployment", options)
             .await

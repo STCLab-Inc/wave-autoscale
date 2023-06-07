@@ -21,19 +21,20 @@ pub trait ScalingComponent: Send + Sync {
 //
 // ScalingComponentManager
 //
-pub type ScalingComponentManager = Arc<RwLock<ScalingComponentManagerInner>>;
+pub type SharedScalingComponentManager = Arc<RwLock<ScalingComponentManager>>;
 
-pub fn new_scaling_component_manager() -> ScalingComponentManager {
-    Arc::new(RwLock::new(ScalingComponentManagerInner::new()))
+pub fn new_shared_scaling_component_manager() -> SharedScalingComponentManager {
+    Arc::new(RwLock::new(ScalingComponentManager::new()))
 }
 
-pub struct ScalingComponentManagerInner {
+#[derive(Default)]
+pub struct ScalingComponentManager {
     scaling_components: HashMap<String, Box<dyn ScalingComponent>>,
 }
 
-impl ScalingComponentManagerInner {
+impl ScalingComponentManager {
     pub fn new() -> Self {
-        ScalingComponentManagerInner {
+        ScalingComponentManager {
             scaling_components: HashMap::new(),
         }
     }

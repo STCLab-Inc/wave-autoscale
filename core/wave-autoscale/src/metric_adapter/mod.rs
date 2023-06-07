@@ -2,7 +2,7 @@ use self::{
     cloudwatch_data::CloudWatchDataMetricAdapter,
     cloudwatch_statistics::CloudWatchStatisticsMetricAdapter, prometheus::PrometheusMetricAdapter,
 };
-use crate::metric_store::MetricStore;
+use crate::metric_store::SharedMetricStore;
 use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
@@ -16,7 +16,7 @@ pub mod prometheus;
 // Factory method to create a metric adapter
 pub fn create_metric_adapter(
     definition: &MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 ) -> Result<Box<dyn MetricAdapter>> {
     // Get a value of metric and clone it.
     let cloned_definition = definition.clone();
@@ -51,11 +51,11 @@ pub trait MetricAdapter {
 //
 pub struct MetricAdapterManager {
     metric_adapters: HashMap<String, Box<dyn MetricAdapter>>,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl MetricAdapterManager {
-    pub fn new(metric_store: MetricStore) -> Self {
+    pub fn new(metric_store: SharedMetricStore) -> Self {
         MetricAdapterManager {
             metric_adapters: HashMap::new(),
             metric_store,
@@ -89,17 +89,18 @@ impl MetricAdapterManager {
         tasks
     }
 
-    pub fn stop(&mut self) {
-        for metric_adapter in self.metric_adapters.values_mut() {
-            metric_adapter.stop();
-        }
-    }
+    // TODO: For now, we don't need to stop metric adapters
+    // pub fn stop(&mut self) {
+    //     for metric_adapter in self.metric_adapters.values_mut() {
+    //         metric_adapter.stop();
+    //     }
+    // }
 
-    pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
-        self.metric_adapters.get(id)
-    }
+    // pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
+    //     self.metric_adapters.get(id)
+    // }
 
-    pub fn get_metric_store(&self) -> MetricStore {
-        self.metric_store.clone()
-    }
+    // pub fn get_metric_store(&self) -> MetricStore {
+    //     self.metric_store.clone()
+    // }
 }

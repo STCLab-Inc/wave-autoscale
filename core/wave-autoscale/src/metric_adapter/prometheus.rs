@@ -1,5 +1,5 @@
 use super::MetricAdapter;
-use crate::metric_store::MetricStore;
+use crate::metric_store::SharedMetricStore;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use serde_json::Value;
@@ -12,14 +12,14 @@ use log::{error, info};
 pub struct PrometheusMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl PrometheusMetricAdapter {
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
-    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: SharedMetricStore) -> Self {
         PrometheusMetricAdapter {
             task: None,
             metric,
@@ -51,7 +51,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
         // Concurrency
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
-        
+
         tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
@@ -77,8 +77,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
                                     let value = json["data"]["result"].as_array();
                                     if let Some(value) = value {
                                         let value = &value[0]["value"][1];
-                                        let shared_metric_store =
-                                            shared_metric_store.try_write();
+                                        let shared_metric_store = shared_metric_store.try_write();
                                         if let Ok(mut shared_metric_store) = shared_metric_store {
                                             shared_metric_store
                                                 .insert(metric_id.clone(), value.clone());

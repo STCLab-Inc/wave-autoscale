@@ -1,4 +1,4 @@
-use crate::{metric_store::MetricStore, scaling_component::ScalingComponentManager};
+use crate::{metric_store::SharedMetricStore, scaling_component::SharedScalingComponentManager};
 use anyhow::Result;
 use data_layer::{
     data_layer::DataLayer,
@@ -64,7 +64,7 @@ fn get_matching_scaling_plan<'a>(
 
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
-    shared_scaling_component_manager: &ScalingComponentManager,
+    shared_scaling_component_manager: &SharedScalingComponentManager,
 ) -> Vec<Result<()>> {
     let mut scaling_results: Vec<Result<()>> = Vec::new();
     for metadata in scaling_components_metadata.iter() {
@@ -90,8 +90,8 @@ async fn apply_scaling_components(
 
 pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
-    metric_store: MetricStore,
-    scaling_component_manager: ScalingComponentManager,
+    metric_store: SharedMetricStore,
+    scaling_component_manager: SharedScalingComponentManager,
     last_plan_id: Arc<RwLock<String>>,
     data_layer: Arc<DataLayer>,
 }
@@ -99,8 +99,8 @@ pub struct ScalingPlanner {
 impl<'a> ScalingPlanner {
     pub fn new(
         definition: ScalingPlanDefinition,
-        metric_store: MetricStore,
-        scaling_component_manager: ScalingComponentManager,
+        metric_store: SharedMetricStore,
+        scaling_component_manager: SharedScalingComponentManager,
         data_layer: Arc<DataLayer>,
     ) -> Self {
         ScalingPlanner {

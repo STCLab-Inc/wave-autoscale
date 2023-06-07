@@ -1,5 +1,37 @@
-use std::sync::Arc;
+/**
+* Wave Autoscale
+*
+* This is the main entry point of the Wave Autoscale program.
+* It is responsible for parsing command line arguments, reading configuration files, and
+* starting the metric adapters, scaling components, and scaling planners.
+*
+* The config file is responsible for configuring the program.
+* The plans file is responsible for defining the metric definitions, scaling component
+*
+* The SharedMetricStore is responsible for storing the metrics.(shared between metric adapters and scaling planners)
+* The MetricAdapterManager is responsible for managing the metric adapters.
+*
+* The SharedScalingComponentManager is responsible for managing the scaling components.(shared in the scaling planners)
+*
+* The DataLayer is responsible for storing the scaling actions and the scaling events.
 
+* The metric adapters are responsible for collecting metrics from the metric sources.
+* The scaling components are responsible for scaling the target resources.
+* The scaling planners are responsible for planning the scaling actions.
+
+
+* The metric sources are responsible for providing the metrics.
+* The metric definitions are responsible for defining the metrics.
+* The scaling component definitions are responsible for defining the scaling components.
+* The scaling plan definitions are responsible for defining the scaling plans.
+* The slo definitions are responsible for defining the service level objectives.
+definitions, scaling plan definitions, and slo definitions.
+* The command line arguments are responsible for configuring the program.
+* The logger is responsible for logging.
+* The util is responsible for providing utility functions.
+
+* The scaling component manager is responsible for managing the scaling components.
+*/
 use args::Args;
 use clap::Parser;
 use data_layer::{
@@ -10,7 +42,8 @@ use data_layer::{
     },
 };
 use scaling_planner::ScalingPlanner;
-use tokio::{task::JoinHandle};
+use std::sync::Arc;
+use tokio::task::JoinHandle;
 mod args;
 mod metric_adapter;
 mod metric_store;
@@ -25,21 +58,18 @@ const DEFAULT_PLAN_FILE: &str = "./plans.yaml";
 const DEFAULT_CONFIG_FILE: &str = "./config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
-struct Config {
-    db_url: String,
-}
-
 #[tokio::main]
 async fn main() {
     // Initialize logger
     env_logger::init();
 
-    // Initialize async handles
-    let mut handles: Vec<JoinHandle<()>> = vec![];
+    // Initialize the array of handles to contain the handles of the spawned threads
+    let mut async_handles: Vec<JoinHandle<()>> = vec![];
 
     // Parse command line arguments
     let args = Args::parse();
 
+    // Read plans file that might not exist
     let plans_file: String;
     if args.plans.is_none() {
         info!(
@@ -51,13 +81,13 @@ async fn main() {
         plans_file = args.plans.unwrap();
         info!("Using plans file: {:?}", &plans_file);
     }
-    // read yaml file
+
     let plans_file_result = read_yaml_file(plans_file);
     if plans_file_result.is_err() {
         let error = plans_file_result.as_ref().err().unwrap();
         error!("Error reading plans file: {}", error);
     } else {
-        info!("Successfully read config file");
+        info!("Successfully read plans file");
     }
     let plans_file_result = match plans_file_result {
         Ok(plans_file_result) => plans_file_result,
@@ -69,38 +99,50 @@ async fn main() {
         },
     };
 
-    // create metric adapter manager
-    let metric_store = metric_store::new_metric_store();
+    // Create MetricStore(Arc<RwLock<HashMap<String, Value>>>)
+    let shared_metric_store = metric_store::new_shared_metric_store();
+
+    // Create MetricAdapterManager
     let mut metric_adapter_manager =
-        metric_adapter::MetricAdapterManager::new(metric_store.clone());
-    let metric_definitions = plans_file_result.metric_definitions;
+        metric_adapter::MetricAdapterManager::new(shared_metric_store.clone());
+
+    // Add metric definitions to MetricAdapterManager
+    let metric_definitions = plans_file_result.metric_definitions.clone();
     let metric_adapter_result = metric_adapter_manager.add_definitions(metric_definitions);
     if metric_adapter_result.is_err() {
-        let error = metric_adapter_result.as_ref().err().unwrap();
+        let error = metric_adapter_result.err().unwrap();
         error!("Error adding metric definitions: {}", error);
     } else {
-        info!("Successfully added metric definitions");
+        info!(
+            "Successfully added metric definitions: {}",
+            plans_file_result.metric_definitions.len()
+        );
     }
-    let metric_handles = metric_adapter_manager.run();
-    handles.extend(metric_handles);
-    info!("Metric adapter manager started");
+    let metric_async_handles = metric_adapter_manager.run();
+    async_handles.extend(metric_async_handles);
+    info!("MetricAdapterManager started");
 
-    // create scaling component manager
-    let scaling_component_manager = scaling_component::new_scaling_component_manager();
+    // Create ScalingComponentManager
+    let shared_scaling_component_manager =
+        scaling_component::new_shared_scaling_component_manager();
+
     // If the writer of the scaling component manager is not released as soon as possible, the others will not be able to acquire the reader lock
     {
-        let cloned = scaling_component_manager.clone();
-        let mut cloned_scaling_component_manager = cloned.write().await;
-        let scaling_component_result = cloned_scaling_component_manager
-            .add_definitions(plans_file_result.scaling_component_definitions);
+        // let cloned = shared_scaling_component_manager.clone();
+        // let mut cloned_scaling_component_manager = cloned.write().await;
+        let mut shared_scaling_component_manager_writer =
+            shared_scaling_component_manager.write().await;
+        let scaling_component_result = shared_scaling_component_manager_writer
+            .add_definitions(plans_file_result.scaling_component_definitions.clone());
         if scaling_component_result.is_err() {
-            let error = scaling_component_result.as_ref().err().unwrap();
+            let error = scaling_component_result.err().unwrap();
             error!("Error adding scaling component definitions: {}", error);
         } else {
             info!("Successfully added scaling component definitions");
         }
     }
 
+    // Read config file
     let config_file: String;
     if args.config.is_none() {
         info!("No config file specified, using default config file: ./config.yaml");
@@ -109,11 +151,12 @@ async fn main() {
         config_file = args.config.unwrap();
         info!("Using config file: {:?}", &config_file);
     }
-    // read config file
+
     let config_file = read_config_file(config_file);
+
     let mut db_url: String = String::new();
     if config_file.is_err() {
-        let error = config_file.as_ref().err().unwrap();
+        let error = config_file.err().unwrap();
         error!("Error reading config file: {}", error);
     } else {
         info!("Successfully read config file");
@@ -127,40 +170,43 @@ async fn main() {
         }
     }
 
-    // db_url in config
+    // If db_url is empty, use default db_url
     if db_url.is_empty() {
         db_url = DEFAULT_DB_URL.to_string();
         info!("Using default db_url: {}", &db_url);
     }
 
-    // create data layer
+    // Create DataLayer
     let data_layer = DataLayer::new(DataLayerNewParam {
         sql_url: db_url.clone(),
     })
     .await;
-    let data_layer = Arc::new(data_layer);
+    let shared_data_layer = Arc::new(data_layer);
 
-    // create scaling planner
+    // Create ScalingPlanner array
     let scaling_planners: Vec<ScalingPlanner> = plans_file_result
         .scaling_plan_definitions
         .iter()
         .map(|definition| {
             ScalingPlanner::new(
                 definition.clone(),
-                metric_store.clone(),
-                scaling_component_manager.clone(),
-                Arc::clone(&data_layer),
+                shared_metric_store.clone(),
+                shared_scaling_component_manager.clone(),
+                shared_data_layer.clone(),
             )
         })
         .collect();
-    // run scaling planners
+
+    let number_of_scaling_planners = scaling_planners.len();
+    // Run ScalingPlanners
     for scaling_planner in scaling_planners {
         let handle = scaling_planner.run();
-        handles.push(handle);
+        async_handles.push(handle);
     }
-    info!("Scaling planners started");
+    info!("ScalingPlanners started: {}", number_of_scaling_planners);
+
     // Keep this main thread alive until the program is terminated
-    for handle in handles {
+    for handle in async_handles {
         handle.await.expect("Failed to join metric adapter manager");
     }
 }

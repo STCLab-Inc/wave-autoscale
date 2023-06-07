@@ -1,5 +1,5 @@
 use super::MetricAdapter;
-use crate::{metric_store::MetricStore, util::aws_region::get_aws_region_static_str};
+use crate::{metric_store::SharedMetricStore, util::aws_region::get_aws_region_static_str};
 use async_trait::async_trait;
 use aws_config::SdkConfig;
 use aws_sdk_cloudwatch::Client as CloudWatchClient;
@@ -14,14 +14,14 @@ use tokio::{task::JoinHandle, time};
 pub struct CloudWatchDataMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl CloudWatchDataMetricAdapter {
     pub const METRIC_KIND: &'static str = "cloudwatch-data";
 
     // Functions
-    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: SharedMetricStore) -> Self {
         CloudWatchDataMetricAdapter {
             task: None,
             metric,
@@ -56,7 +56,6 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
 
         // println!("CloudWatchDataMetricAdapter::run() - shared_config: {:?}", shared_config);
 
-        
         // self.task = Some(task);
 
         tokio::spawn(async move {
