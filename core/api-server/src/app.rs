@@ -1,11 +1,21 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 
 use crate::{
-    app_state::{get_app_state, AppState, GetAppStateParam},
+    app_state::{get_app_state, GetAppStateParam},
     controller,
 };
+
+async fn ping() -> String {
+    let time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    time.to_string()
+}
 
 #[tokio::main]
 pub async fn run_server() -> std::io::Result<()> {
@@ -30,6 +40,7 @@ pub async fn run_server() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(app_state.clone())
+            .route("/ping", actix_web::web::get().to(ping))
             .configure(controller::init_metric_controller)
             .configure(controller::init_scaling_component_controller)
             .configure(controller::init_plan_controller)
