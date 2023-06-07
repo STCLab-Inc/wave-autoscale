@@ -4,8 +4,13 @@ import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 async function getMetrics() {
-  const metrics = await MetricService.getMetrics();
-  return metrics;
+  try {
+    const metrics = await MetricService.getMetrics();
+    return metrics;
+  } catch (e) {
+    console.error(e);
+  }
+  return [];
 }
 
 export default async function MetricsLayout({
