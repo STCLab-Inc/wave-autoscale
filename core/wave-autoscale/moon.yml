@@ -5,8 +5,16 @@ dependsOn:
   - "data-layer"
 
 tasks:
+  lint:
+    command: "cargo clippy --fix"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
   run:
     command: "cargo watch -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
+    deps:
+      - 'lint'
     inputs:
       - "@globs(sources)"
     env:
