@@ -26,19 +26,16 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      // "@metrics/*": [
-      //   "../data-layer/bindings/*"
-      // ]
-    }
+      ]
+    },
+    "outDir": "../../.moon/cache/types/core/web-app"
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     "**/*.d.ts",
-    ".next/types/**/*.ts",
-    // "../data-layer/bindings/*.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

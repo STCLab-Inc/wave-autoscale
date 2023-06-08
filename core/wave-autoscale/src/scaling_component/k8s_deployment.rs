@@ -38,9 +38,9 @@ impl K8sDeploymentScalingComponent {
 
     async fn get_client(
         &self,
-        api_server_endpoint: &String,
-        ca_cert: &String,
-        namespace: &String,
+        _api_server_endpoint: &String,
+        _ca_cert: &String,
+        _namespace: &String,
     ) -> Result<kube::Client> {
         // TODO: Use the metadata to create a Kubernetes Client
         // Infer the runtime environment and try to create a Kubernetes Client
@@ -83,7 +83,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             }
             let client = client.unwrap();
 
-            let deployment_api: Api<Deployment> = Api::namespaced(client, &namespace);
+            let deployment_api: Api<Deployment> = Api::namespaced(client, namespace);
             // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#deployment-v1-apps
             let patch = json!({
                 "apiVersion": "apps/v1",
@@ -96,7 +96,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             let patch_params = PatchParams::apply("wave-autoscale");
 
             let result = deployment_api
-                .patch(&name, &patch_params, &Patch::Apply(patch))
+                .patch(name, &patch_params, &Patch::Apply(patch))
                 .await;
 
             println!("{:#?}", result);

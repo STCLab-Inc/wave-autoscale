@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  swcMinify: true,
+  output: 'standalone',
   experimental: {
     appDir: true,
+    esmExternals: 'loose',
   },
   async redirects() {
     return [

@@ -23,6 +23,10 @@ args = ["test", "data_layer::test_data_layer_sqlite", "--", "--nocapture"]
 # 
 
 # Metric Adapters Test
+[tasks.run-controller]
+command = "cargo"
+args = ["run", "-p", "wave-autoscale", "--", "--help"]
+
 [tasks.test-controller-metric]
 command = "cargo"
 args = ["test", "metric_adapter_test", "--", "--nocapture"]

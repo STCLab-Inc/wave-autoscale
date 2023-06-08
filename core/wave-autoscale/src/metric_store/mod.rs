@@ -1,10 +1,16 @@
-use std::{sync::Arc, collections::HashMap};
-
+/**
+ * MetricStore
+ *
+ * The metric store is a hashmap that stores the latest metric values for each metric.
+ * The metric store is shared between the metric adapters and the scaling components.
+ * So it's defined with an Arc and a RwLock.
+ */
 use serde_json::Value;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
-pub type MetricStore = Arc<RwLock<HashMap<String, Value>>>;
+pub type SharedMetricStore = Arc<RwLock<HashMap<String, Value>>>;
 
-pub fn new_metric_store() -> MetricStore {
+pub fn new_shared_metric_store() -> SharedMetricStore {
     Arc::new(RwLock::new(HashMap::new()))
 }

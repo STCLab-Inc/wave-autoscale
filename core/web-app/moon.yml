@@ -1,0 +1,24 @@
+language: 'typescript'
+type: 'application'
+
+tasks:
+  lint:
+    command: 'next lint'
+    inputs:
+      - '@globs(sources)'
+  run:
+    command: 'next dev --turbo'
+    inputs:
+      - '@globs(sources)'
+      - 'tsconfig.json'
+  build:
+    command: 'next build'
+    inputs:
+      - '@globs(sources)'
+      - 'tsconfig.json'
+      - 'next.config.js'
+  start-standalone:
+    command: 'node .next/standalone/server.js'
+    inputs:
+      - '@globs(sources)'
+      - 'tsconfig.json'
