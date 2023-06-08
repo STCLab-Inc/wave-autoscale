@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["Wave Autoscale Team at STCLab"]
 description = "Wave Autoscale is a powerful and versatile autoscaling solution designed to meet the unique business requirements of organizations across all sizes."
 
+[[bin]]
+name = "wave-controller"
+path = "src/main.rs"
+
 [profile.release]
 # Tell `rustc` to optimize for small code size. https://nnethercote.github.io/perf-book/build-configuration.html#link-time-optimization
 lto = true

@@ -23,6 +23,14 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: info
+  run-with-empty:
+    command: "cargo watch -c -x 'run'"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
   run:
     command: "cargo watch -c -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
     deps:
@@ -59,3 +67,5 @@ tasks:
     command: "cargo build --release --target aarch64-apple-darwin"
     inputs:
       - "@globs(sources)"
+    outputs:
+      - "/target/aarch64-apple-darwin/release/wave-controller"

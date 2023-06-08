@@ -54,7 +54,7 @@ mod util;
 #[macro_use]
 extern crate log;
 
-const DEFAULT_PLAN_FILE: &str = "./plans.yaml";
+const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
 const DEFAULT_CONFIG_FILE: &str = "./config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
@@ -71,14 +71,14 @@ async fn main() {
 
     // Read plans file that might not exist
     let plans_file: String;
-    if args.plans.is_none() {
+    if args.plan.is_none() {
         info!(
             "No plans file specified, using default plans file: {}",
             DEFAULT_PLAN_FILE
         );
         plans_file = DEFAULT_PLAN_FILE.to_string();
     } else {
-        plans_file = args.plans.unwrap();
+        plans_file = args.plan.unwrap();
         info!("Using plans file: {:?}", &plans_file);
     }
 
@@ -205,8 +205,13 @@ async fn main() {
     }
     info!("ScalingPlanners started: {}", number_of_scaling_planners);
 
+    let async_handles_length = async_handles.len();
     // Keep this main thread alive until the program is terminated
     for handle in async_handles {
         handle.await.expect("Failed to join metric adapter manager");
+    }
+    println!("async_handles: {}", async_handles_length);
+    if async_handles_length == 0 {
+        info!("There is no plan to run");
     }
 }

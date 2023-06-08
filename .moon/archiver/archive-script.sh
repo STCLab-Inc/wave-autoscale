@@ -12,8 +12,8 @@ mkdir -p archive/wave-autoscale-$VERSION
 mkdir -p archive/wave-autoscale-$VERSION-$PLATFORM
 
 # Copy the binaries
-cp -r target/$PLATFORM/release/wave-autoscale archive/wave-autoscale-$VERSION-$PLATFORM
-cp -r target/$PLATFORM/release/api-server archive/wave-autoscale-$VERSION-$PLATFORM
+cp -r target/$PLATFORM/release/wave-controller archive/wave-autoscale-$VERSION-$PLATFORM
+cp -r target/$PLATFORM/release/wave-api-server archive/wave-autoscale-$VERSION-$PLATFORM
 
 # Archive the binaries
 tar -C archive -czvf ./archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM.tar.gz wave-autoscale-$VERSION-$PLATFORM

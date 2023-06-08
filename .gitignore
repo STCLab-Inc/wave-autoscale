@@ -21,6 +21,8 @@ temp/
 .moon/cache
 .moon/docker
 archive/
+core/wave-cli/wave-api-server
+core/wave-cli/wave-controller
 
 # Test Files
 wave.db
