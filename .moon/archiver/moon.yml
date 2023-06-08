@@ -1,0 +1,13 @@
+language: "bash"
+
+tasks:
+  archive-aarch64-apple-darwin:
+    command: "./archive-script.sh"
+    platform: "system"
+    inputs:
+      - "**/*"
+    deps:
+      - "api-server:build-aarch64-apple-darwin"
+      - "controller:build-aarch64-apple-darwin"
+    env:
+      PLATFORM: "aarch64-apple-darwin"

@@ -31,9 +31,31 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: info
-  build:
-    command: "cargo build --release"
+
+  # Build for Production
+  # Linux
+  build-aarch64-unknown-linux-gnu:
+    command: "cargo build --release --target aarch64-unknown-linux-gnu"
     inputs:
       - "@globs(sources)"
-    # env:
-    #   RUST_LOG: info
+  build-aarch64-unknown-linux-musl:
+    command: "cargo build --release --target aarch64-unknown-linux-musl"
+    inputs:
+      - "@globs(sources)"
+  build-x86_64-unknown-linux-gnu:
+    command: "cargo build --release --target x86_64-unknown-linux-gnu"
+    inputs:
+      - "@globs(sources)"
+  build-x86_64-unknown-linux-musl:
+    command: "cargo build --release --target x86_64-unknown-linux-musl"
+    inputs:
+      - "@globs(sources)"
+  # Mac
+  build-x86_64-apple-darwin:
+    command: "cargo build --release --target x86_64-apple-darwin"
+    inputs:
+      - "@globs(sources)"
+  build-aarch64-apple-darwin:
+    command: "cargo build --release --target aarch64-apple-darwin"
+    inputs:
+      - "@globs(sources)"

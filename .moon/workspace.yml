@@ -16,6 +16,7 @@ projects:
   web-app: "core/web-app"
   data-layer: "core/data-layer"
   api-server: "core/api-server"
+  archiver: ".moon/archiver"
 
 # Configures the version control system to utilize within the workspace. A VCS
 # is required for determining touched (added, modified, etc) files, calculating file hashes,

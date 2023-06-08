@@ -20,6 +20,7 @@ temp/
 # moon
 .moon/cache
 .moon/docker
+archive/
 
 # Test Files
 wave.db
