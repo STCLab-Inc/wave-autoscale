@@ -23,6 +23,7 @@ temp/
 archive/
 core/wave-cli/wave-api-server
 core/wave-cli/wave-controller
+core/wave-cli/wave-web-app/
 
 # Test Files
 wave.db

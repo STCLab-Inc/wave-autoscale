@@ -35,7 +35,7 @@ tasks:
     env:
       RUST_LOG: info
   run:
-    command: "cargo watch -c -x 'run'"
+    command: "cargo watch -c -x 'run -- --run-web-app'"
     deps:
       - "lint"
       - "controller:build-aarch64-apple-darwin"
