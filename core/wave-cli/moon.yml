@@ -74,3 +74,5 @@ tasks:
     command: "cargo build --release --target aarch64-apple-darwin"
     inputs:
       - "@globs(sources)"
+    outputs:
+      - "/target/aarch64-apple-darwin/release/wave-cli"

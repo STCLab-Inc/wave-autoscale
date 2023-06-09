@@ -9,6 +9,7 @@ tasks:
     deps:
       - "api-server:build-aarch64-apple-darwin"
       - "controller:build-aarch64-apple-darwin"
+      - "cli:build-aarch64-apple-darwin"
       - "web-app:build"
     env:
       PLATFORM: "aarch64-apple-darwin"
