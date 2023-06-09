@@ -77,10 +77,22 @@ fn main() -> Result<()> {
         }
     }
 
+    let mut args_for_controller: Vec<String> = Vec::new();
+
+    if let Some(plan) = _args.plan {
+        args_for_controller.push("--plan".to_string());
+        args_for_controller.push(plan);
+    }
+
+    if let Some(config) = _args.config {
+        args_for_controller.push("--config".to_string());
+        args_for_controller.push(config);
+    }
+
     apps.push(App {
         name: "wave-controller".to_string(),
         command: "./wave-controller".to_string(),
-        args: Vec::new(),
+        args: args_for_controller,
     });
 
     if !except_api_server {
