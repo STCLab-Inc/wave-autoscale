@@ -3,8 +3,15 @@ name = "api-server"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "wave-api-server"
+path = "src/main.rs"
 
+[profile.release]
+# Tell `rustc` to optimize for small code size. https://nnethercote.github.io/perf-book/build-configuration.html#link-time-optimization
+lto = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 actix-web = "4.3.1"
 dotenv = "0.15.0"

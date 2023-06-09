@@ -1,14 +1,8 @@
 use super::MetricAdapter;
-use crate::{
-    metric_store::MetricStore,
-    util::{aws_region::get_aws_region_static_str, string::make_ascii_titlecase},
-};
+use crate::{metric_store::SharedMetricStore, util::aws_region::get_aws_region_static_str};
 use async_trait::async_trait;
 use aws_config::SdkConfig;
-use aws_sdk_cloudwatch::{
-    types::{Dimension, StandardUnit, Statistic},
-    Client as CloudWatchClient,
-};
+use aws_sdk_cloudwatch::Client as CloudWatchClient;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use chrono::Utc;
@@ -20,14 +14,14 @@ use tokio::{task::JoinHandle, time};
 pub struct CloudWatchDataMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl CloudWatchDataMetricAdapter {
     pub const METRIC_KIND: &'static str = "cloudwatch-data";
 
     // Functions
-    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: SharedMetricStore) -> Self {
         CloudWatchDataMetricAdapter {
             task: None,
             metric,
@@ -46,7 +40,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -62,7 +56,9 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
 
         // println!("CloudWatchDataMetricAdapter::run() - shared_config: {:?}", shared_config);
 
-        let task = tokio::spawn(async move {
+        // self.task = Some(task);
+
+        tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
             if let (
                 Some(Value::String(access_key)),
@@ -95,7 +91,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 let mut metric_data_builder = cw_client.get_metric_data();
                 if let Some(Value::String(expression)) = metadata.get("expression") {
                     // id must be unique
-                    let mut uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+                    let mut uuid = uuid::Uuid::new_v4().to_string().replace('-', "");
                     // CloudWatch requires the first character of the ID to be a letter.
                     uuid.insert(0, 'i');
                     let mut metric_data_query =
@@ -145,8 +141,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        self.task = Some(task);
+        })
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

@@ -1,0 +1,6 @@
+fileGroups:
+  sources:
+    - "src/**/*"
+    - "Cargo.toml"
+  tests:
+    - "tests/**/*.test.*"

@@ -1,6 +1,6 @@
 use super::MetricAdapter;
 use crate::{
-    metric_store::MetricStore,
+    metric_store::SharedMetricStore,
     util::{aws_region::get_aws_region_static_str, string::make_ascii_titlecase},
 };
 use async_trait::async_trait;
@@ -20,14 +20,14 @@ use tokio::{task::JoinHandle, time};
 pub struct CloudWatchStatisticsMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl CloudWatchStatisticsMetricAdapter {
     pub const METRIC_KIND: &'static str = "cloudwatch-statistics";
 
     // Functions
-    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: SharedMetricStore) -> Self {
         CloudWatchStatisticsMetricAdapter {
             task: None,
             metric,
@@ -46,7 +46,7 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -62,7 +62,9 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
 
         // println!("CloudWatchStatisticsMetricAdapter::run() - shared_config: {:?}", shared_config);
 
-        let task = tokio::spawn(async move {
+        // self.task = Some(task);
+
+        tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
             if let (
                 Some(Value::String(access_key)),
@@ -168,8 +170,7 @@ impl MetricAdapter for CloudWatchStatisticsMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        self.task = Some(task);
+        })
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

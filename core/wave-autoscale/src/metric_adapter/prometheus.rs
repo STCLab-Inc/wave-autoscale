@@ -1,23 +1,25 @@
 use super::MetricAdapter;
-use crate::metric_store::MetricStore;
+use crate::metric_store::SharedMetricStore;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use serde_json::Value;
 use std::time::Duration;
 use tokio::{task::JoinHandle, time};
 
+use log::{error, info};
+
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
     task: Option<JoinHandle<()>>,
     metric: MetricDefinition,
-    metric_store: MetricStore,
+    metric_store: SharedMetricStore,
 }
 
 impl PrometheusMetricAdapter {
     pub const METRIC_KIND: &'static str = "prometheus";
 
     // Functions
-    pub fn new(metric: MetricDefinition, metric_store: MetricStore) -> Self {
+    pub fn new(metric: MetricDefinition, metric_store: SharedMetricStore) -> Self {
         PrometheusMetricAdapter {
             task: None,
             metric,
@@ -36,7 +38,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    async fn run(&mut self) {
+    fn run(&mut self) -> JoinHandle<()> {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -49,7 +51,8 @@ impl MetricAdapter for PrometheusMetricAdapter {
         // Concurrency
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
-        let task = tokio::spawn(async move {
+
+        tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
                 // Generate a url to call a prometheus query.
@@ -61,6 +64,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
                     let client = reqwest::Client::new();
                     let params = vec![("query", query)];
 
+                    info!("Calling prometheus: {}", url);
                     let response = client.get(url).query(&params).send().await;
 
                     // Update the shared value.
@@ -70,32 +74,36 @@ impl MetricAdapter for PrometheusMetricAdapter {
                             match json {
                                 Ok(json) => {
                                     // Update the metric store.
-                                    let mut shared_metric_store = shared_metric_store.write().await;
                                     let value = json["data"]["result"].as_array();
-
                                     if let Some(value) = value {
                                         let value = &value[0]["value"][1];
-                                        shared_metric_store
-                                            .insert(metric_id.clone(), value.clone());
+                                        let shared_metric_store = shared_metric_store.try_write();
+                                        if let Ok(mut shared_metric_store) = shared_metric_store {
+                                            shared_metric_store
+                                                .insert(metric_id.clone(), value.clone());
+                                        } else {
+                                            error!("Error: failed to lock metric store.");
+                                        }
                                     }
                                 }
                                 Err(e) => {
-                                    println!("Error: {:?}", e);
+                                    error!("Error: {:?}", e);
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("Error: {:?}", e);
+                            error!("Error: {:?}", e);
                         }
                     }
+                    info!("done");
                 } else {
-                    println!("Error: missing endpoint or query in metadata.");
+                    error!("Error: missing endpoint or query in metadata.");
                 }
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        });
-        self.task = Some(task);
+        })
+        // self.task = Some(task);
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

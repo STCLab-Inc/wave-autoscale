@@ -4,8 +4,13 @@ import ScalingComponentService from '@/services/scaling-component';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 
 async function getScalingComponents() {
-  const components = await ScalingComponentService.getScalingComponents();
-  return components;
+  try {
+    const components = await ScalingComponentService.getScalingComponents();
+    return components;
+  } catch (e) {
+    console.error(e);
+  }
+  return [];
 }
 
 export default async function ScalingComponentsLayout({
