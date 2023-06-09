@@ -17,6 +17,8 @@ tasks:
       - '@globs(sources)'
       - 'tsconfig.json'
       - 'next.config.js'
+    outputs:
+      - '.next/standalone/*'
   start-standalone:
     command: 'node .next/standalone/server.js'
     inputs:
