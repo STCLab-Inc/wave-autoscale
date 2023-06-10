@@ -1,6 +1,6 @@
 <!-- ![drawing](https://docs.google.com/presentation/d/1mE9LXq-Z780BNVzUUA4eizlbridFnDp11PQD6tCqapw/export/png) -->
 
-![headline](https://docs.google.com/presentation/d/1RrznySF0Yzu5nNPdzQECfGHhZxAeBeBJUlMCi3kB-pg/export/png)
+![drawing](https://docs.google.com/presentation/d/1RrznySF0Yzu5nNPdzQECfGHhZxAeBeBJUlMCi3kB-pg/export/png)
 
 # Wave Autoscale
 **Proactive and Reactive Event Driven Autoscaling for EC2, Kubernetes, Serverless, and more.**
