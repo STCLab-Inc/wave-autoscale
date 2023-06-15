@@ -34,6 +34,14 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: info
+  run-help:
+    command: "cargo watch -c -x 'run -- --help'"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
   run:
     command: "cargo watch -c -x 'run -- --run-web-app'"
     deps:
