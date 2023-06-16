@@ -2,6 +2,12 @@ language: "rust"
 type: "library"
 
 tasks:
+  lint:
+    command: "cargo clippy --fix --allow-dirty"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
   build:
     command: "cargo build"
     inputs:
