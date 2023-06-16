@@ -55,7 +55,7 @@ mod util;
 extern crate log;
 
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
-const DEFAULT_CONFIG_FILE: &str = "./config.yaml";
+const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
 #[tokio::main]

@@ -29,7 +29,7 @@ impl DataLayer {
             pool: DataLayer::get_pool(&params.sql_url).await,
         };
         data_layer.migrate().await;
-        return data_layer;
+        data_layer
     }
     async fn get_pool(sql_url: &str) -> AnyPool {
         const SQLITE_PROTOCOL: &str = "sqlite://";
@@ -41,15 +41,15 @@ impl DataLayer {
             }
             // Create the SQLite file if it doesn't exist
             if !path.exists() {
-                std::fs::File::create(&path).unwrap();
+                std::fs::File::create(path).unwrap();
             }
         }
-        let pool = AnyPoolOptions::new()
+        
+        AnyPoolOptions::new()
             .max_connections(5)
             .connect(sql_url)
             .await
-            .unwrap();
-        return pool;
+            .unwrap()
     }
     async fn migrate(&self) {
         match &self.pool.any_kind() {
