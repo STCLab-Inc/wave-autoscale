@@ -23,6 +23,7 @@ pub struct DataLayer {
 pub struct DataLayerNewParam {
     pub sql_url: String,
 }
+
 impl DataLayer {
     pub async fn new(params: DataLayerNewParam) -> Self {
         let data_layer = DataLayer {
@@ -44,7 +45,7 @@ impl DataLayer {
                 std::fs::File::create(path).unwrap();
             }
         }
-        
+
         AnyPoolOptions::new()
             .max_connections(5)
             .connect(sql_url)
@@ -79,14 +80,16 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, metric_kind, metadata) VALUES (?,?,?,?)";
+                "INSERT INTO metric (db_id, id, metric_kind, metadata) VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metric_kind, metadata) = (?,?)";
             let db_id = Uuid::new_v4().to_string();
 
             let result = sqlx::query(query_string)
                 .bind(db_id)
                 .bind(metric.id.to_lowercase())
                 .bind(metric.metric_kind.to_lowercase())
-                .bind(metadata_string)
+                .bind(metadata_string.clone())
+                .bind(metric.metric_kind.to_lowercase())
+                .bind(metadata_string.clone())
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -189,14 +192,15 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata) VALUES (?,?,?,?)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata) VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metadata) = (?)";
             let id = Uuid::new_v4().to_string();
 
             let result = sqlx::query(query_string)
                 .bind(id)
                 .bind(scaling_component.id)
                 .bind(scaling_component.component_kind)
-                .bind(metadata_string)
+                .bind(metadata_string.clone())
+                .bind(metadata_string.clone())
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -303,14 +307,16 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, title, plans) VALUES (?,?,?,?)";
+            let query_string = "INSERT INTO plan (db_id, id, title, plans) VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans) = (?,?)";
             let id = Uuid::new_v4().to_string();
 
             let result = sqlx::query(query_string)
                 .bind(id)
                 .bind(plan.id)
-                .bind(plan.title)
-                .bind(plans_string)
+                .bind(plan.title.clone())
+                .bind(plans_string.clone())
+                .bind(plan.title.clone())
+                .bind(plans_string.clone())
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
