@@ -81,6 +81,10 @@ impl ScalingComponentManager {
             .insert(scaling_component.get_id().to_string(), scaling_component);
     }
 
+    pub fn remove_all(&mut self) {
+        self.scaling_components.clear();
+    }
+
     pub fn get_scaling_component(&self, id: &str) -> Option<&Box<dyn ScalingComponent>> {
         self.scaling_components.get(id)
     }

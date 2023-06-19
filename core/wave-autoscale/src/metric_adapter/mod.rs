@@ -75,6 +75,10 @@ impl MetricAdapterManager {
         Ok(())
     }
 
+    pub fn remove_all_definitions(&mut self) {
+        self.metric_adapters.clear();
+    }
+
     pub fn add_metric_adapter(&mut self, metric_adapter: Box<dyn MetricAdapter>) {
         self.metric_adapters
             .insert(metric_adapter.get_id().to_string(), metric_adapter);
@@ -89,18 +93,13 @@ impl MetricAdapterManager {
         tasks
     }
 
-    // TODO: For now, we don't need to stop metric adapters
-    // pub fn stop(&mut self) {
-    //     for metric_adapter in self.metric_adapters.values_mut() {
-    //         metric_adapter.stop();
-    //     }
-    // }
+    pub fn stop(&mut self) {
+        for metric_adapter in self.metric_adapters.values_mut() {
+            metric_adapter.stop();
+        }
+    }
 
-    // pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
-    //     self.metric_adapters.get(id)
-    // }
-
-    // pub fn get_metric_store(&self) -> MetricStore {
-    //     self.metric_store.clone()
-    // }
+    pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
+        self.metric_adapters.get(id)
+    }
 }

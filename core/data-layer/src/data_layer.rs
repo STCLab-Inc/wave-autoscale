@@ -10,8 +10,8 @@ use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
     AnyPool, Row,
 };
-use std::{path::Path, sync::Arc};
-use tokio::sync::{watch, Mutex};
+use std::path::Path;
+use tokio::sync::watch;
 use uuid::Uuid;
 
 const WATCH_DURATION: u64 = 5;
