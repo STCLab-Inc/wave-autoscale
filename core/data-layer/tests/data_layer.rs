@@ -6,15 +6,27 @@
 
 #[cfg(test)]
 mod data_layer {
+    use std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    };
+
     use anyhow::Result;
     use chrono::Utc;
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
         reader::yaml_reader::{read_yaml_file, ParserResult},
-        types::autoscaling_history_definition::AutoscalingHistoryDefinition,
+        types::{
+            autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        },
+        MetricDefinition, ScalingComponentDefinition,
     };
     use rand::Rng;
     use serde_json::json;
+    use tokio::sync::Mutex;
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 1;
@@ -40,6 +52,65 @@ mod data_layer {
         })
         .await;
         Ok(data_layer)
+    }
+
+    #[tokio::test]
+    async fn test_run_watch() -> Result<()> {
+        let data_layer = get_data_layer().await?;
+
+        let mut watch_receiver = data_layer.watch();
+        let verification = Arc::new(AtomicBool::new(false));
+        let verification_clone = verification.clone();
+
+        tokio::spawn(async move {
+            println!("Waiting for watch result");
+            if watch_receiver.changed().await.is_ok() {
+                println!("Received watch result");
+                let result = watch_receiver.borrow();
+                println!("Received watch result: {:?}", result);
+                verification_clone.store(true, Ordering::Release);
+            }
+        });
+        // sleep
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        data_layer
+            .add_metrics(vec![MetricDefinition {
+                id: "test".to_string(),
+                db_id: "test".to_string(),
+                kind: ObjectKind::Metric,
+                metric_kind: "test".to_string(),
+                metadata: HashMap::new(),
+            }])
+            .await?;
+        println!("changed values - 1");
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+        data_layer
+            .add_scaling_components(vec![ScalingComponentDefinition {
+                id: "test".to_string(),
+                db_id: "test".to_string(),
+                component_kind: "test".to_string(),
+                kind: ObjectKind::ScalingComponent,
+                metadata: HashMap::new(),
+            }])
+            .await?;
+        println!("changed values - 2");
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+        data_layer
+            .add_scaling_components(vec![ScalingComponentDefinition {
+                id: "test2".to_string(),
+                db_id: "test2".to_string(),
+                component_kind: "test".to_string(),
+                kind: ObjectKind::ScalingComponent,
+                metadata: HashMap::new(),
+            }])
+            .await?;
+        println!("changed values - 3");
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+        assert!(verification.load(Ordering::Acquire));
+        Ok(())
     }
 
     #[tokio::test]

@@ -3,4 +3,4 @@ fileGroups:
     - "src/**/*"
     - "Cargo.toml"
   tests:
-    - "tests/**/*.test.*"
+    - "tests/**/*"
