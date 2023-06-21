@@ -4,5 +4,7 @@ CREATE TABLE
     id TEXT UNIQUE,
     title TEXT,
     priority INTEGER,
-    plans TEXT
+    plans TEXT,
+    created_at TEXT,
+    updated_at TEXT
   );

@@ -8,6 +8,20 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: info
+  test:
+    command: "cargo test --test data_layer -- --test-threads=1"
+    inputs: 
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: info
+  test-watch:
+    command: "cargo test test_run_watch -- --test-threads=1 --nocapture"
+    inputs: 
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: info
   build:
     command: "cargo build"
     inputs:

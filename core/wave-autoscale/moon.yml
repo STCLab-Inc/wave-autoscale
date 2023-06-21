@@ -21,8 +21,18 @@ tasks:
     command: "cargo test"
     inputs:
       - "@globs(sources)"
+      - "@globs(tests)"
     env:
       RUST_LOG: info
+  test-app:
+    command: "cargo test -p wave-autoscale --test app -- --nocapture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=info
   run-with-empty:
     command: "cargo watch -c -x 'run'"
     deps:

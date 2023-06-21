@@ -11,6 +11,6 @@ use tokio::sync::RwLock;
 
 pub type SharedMetricStore = Arc<RwLock<HashMap<String, Value>>>;
 
-pub fn new_shared_metric_store() -> SharedMetricStore {
+pub fn new_shared() -> SharedMetricStore {
     Arc::new(RwLock::new(HashMap::new()))
 }
