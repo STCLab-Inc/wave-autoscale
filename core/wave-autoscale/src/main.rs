@@ -1,9 +1,6 @@
-use args::Args;
-use clap::Parser;
-
 /**
-* Wave Autoscale
-*/
+ * Wave Autoscale
+ */
 mod app;
 mod args;
 mod metric_adapter;
@@ -12,8 +9,8 @@ mod scaling_component;
 mod scaling_planner;
 mod util;
 
-#[macro_use]
-extern crate log;
+use args::Args;
+use clap::Parser;
 
 #[tokio::main]
 async fn main() {
@@ -21,6 +18,9 @@ async fn main() {
     env_logger::init();
 
     // Parse command line arguments
+    // Separate function to allow for unit testing
     let args = Args::parse();
+
+    // Run the main application
     app::run(&args).await;
 }

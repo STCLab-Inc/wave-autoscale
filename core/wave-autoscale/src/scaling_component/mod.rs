@@ -23,7 +23,7 @@ pub trait ScalingComponent: Send + Sync {
 //
 pub type SharedScalingComponentManager = Arc<RwLock<ScalingComponentManager>>;
 
-pub fn new_shared_scaling_component_manager() -> SharedScalingComponentManager {
+pub fn new_shared() -> SharedScalingComponentManager {
     Arc::new(RwLock::new(ScalingComponentManager::new()))
 }
 
