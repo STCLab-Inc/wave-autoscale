@@ -14,11 +14,12 @@ mod app_test {
     #[tokio::test]
     async fn test_run() -> Result<()> {
         init();
-        app::run(&Args {
+        let mut app = app::App::new(Args {
             plan: Some("tests/yaml/plan_prometheus_ec2.yaml".to_string()),
             config: None,
         })
         .await;
+        app.run().await;
         Ok(())
     }
 }

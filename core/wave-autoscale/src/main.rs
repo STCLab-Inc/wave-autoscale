@@ -22,5 +22,6 @@ async fn main() {
     let args = Args::parse();
 
     // Run the main application
-    app::run(&args).await;
+    let mut app = app::App::new(args).await;
+    app.run().await;
 }
