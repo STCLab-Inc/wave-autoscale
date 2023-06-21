@@ -1,3 +1,4 @@
+pub mod scaling_planner_manager;
 use crate::{metric_store::SharedMetricStore, scaling_component::SharedScalingComponentManager};
 use anyhow::Result;
 use data_layer::{
@@ -94,6 +95,7 @@ pub struct ScalingPlanner {
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_id: Arc<RwLock<String>>,
     data_layer: Arc<DataLayer>,
+    task: Option<JoinHandle<()>>,
 }
 
 impl<'a> ScalingPlanner {
@@ -109,6 +111,7 @@ impl<'a> ScalingPlanner {
             scaling_component_manager,
             last_plan_id: Arc::new(RwLock::new(String::new())),
             data_layer,
+            task: None,
         }
     }
     fn sort_plan_by_priority(&self) -> Vec<PlanItemDefinition> {
@@ -116,7 +119,12 @@ impl<'a> ScalingPlanner {
         plans.sort_by(|a, b| a.priority.cmp(&b.priority).reverse());
         plans
     }
-    pub fn run(&self) -> JoinHandle<()> {
+
+    pub fn get_id(&self) -> String {
+        self.definition.id.clone()
+    }
+
+    pub fn run(&mut self) {
         let plans = self.sort_plan_by_priority();
         // TODO: Make this configurable
         let polling_interval: u64 = 1000;
@@ -127,7 +135,7 @@ impl<'a> ScalingPlanner {
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
 
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             loop {
                 // // Get variables from the metric store
                 {
@@ -192,6 +200,13 @@ impl<'a> ScalingPlanner {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        })
+        });
+        self.task = Some(task);
+    }
+    pub fn stop(&mut self) {
+        if let Some(task) = &self.task {
+            task.abort();
+            self.task = None;
+        }
     }
 }

@@ -32,7 +32,10 @@ definitions, scaling plan definitions, and slo definitions.
 
 * The scaling component manager is responsible for managing the scaling components.
 */
-use crate::{args, metric_adapter, metric_store, scaling_component, scaling_planner};
+use crate::{
+    args, metric_adapter, metric_store, scaling_component::ScalingComponentManager,
+    scaling_planner::scaling_planner_manager::ScalingPlannerManager,
+};
 use args::Args;
 use data_layer::{
     data_layer::{DataLayer, DataLayerNewParam},
@@ -42,7 +45,6 @@ use data_layer::{
     },
 };
 use log::{error, info};
-use scaling_planner::ScalingPlanner;
 use std::sync::Arc;
 
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
@@ -175,7 +177,10 @@ pub async fn run(args: &Args) {
         metric_adapter::MetricAdapterManager::new(shared_metric_store.clone());
 
     // Create ScalingComponentManager
-    let shared_scaling_component_manager = scaling_component::new_shared();
+    let shared_scaling_component_manager = ScalingComponentManager::new_shared();
+
+    // Create ScalingPlanManager
+    let shared_scaling_plan_manager = ScalingPlannerManager::new_shared();
 
     let mut watch_receiver = shared_data_layer.watch();
 
@@ -245,25 +250,27 @@ pub async fn run(args: &Args) {
         let plan_definitions = shared_data_layer.get_all_plans().await;
         if plan_definitions.is_ok() {
             let plan_definitions = plan_definitions.unwrap();
-            let scaling_planners: Vec<ScalingPlanner> = plan_definitions
-                .iter()
-                .map(|definition| {
-                    ScalingPlanner::new(
-                        definition.clone(),
-                        shared_metric_store.clone(),
-                        shared_scaling_component_manager.clone(),
-                        shared_data_layer.clone(),
-                    )
-                })
-                .collect();
-
-            let number_of_scaling_planners = scaling_planners.len();
-            // Run ScalingPlanners
-            for scaling_planner in scaling_planners {
-                let handle = scaling_planner.run();
-                // async_handles.push(handle);
+            let number_of_plans = plan_definitions.len();
+            // Scope for shared_scaling_plan_manager_writer(RwLock)
+            {
+                let mut shared_scaling_plan_manager_writer =
+                    shared_scaling_plan_manager.write().await;
+                shared_scaling_plan_manager_writer.remove_all();
+                let scaling_plan_result = shared_scaling_plan_manager_writer.add_definitions(
+                    plan_definitions,
+                    shared_metric_store.clone(),
+                    shared_scaling_component_manager.clone(),
+                    shared_data_layer.clone(),
+                );
+                if scaling_plan_result.is_err() {
+                    let error = scaling_plan_result.err().unwrap();
+                    error!("Error adding scaling plan definitions: {}", error);
+                } else {
+                    info!("Successfully added scaling plan definitions");
+                    shared_scaling_plan_manager_writer.run();
+                }
             }
-            info!("ScalingPlanners started: {}", number_of_scaling_planners);
+            info!("ScalingPlanners started: {}", number_of_plans);
         } else {
             let error = plan_definitions.err().unwrap();
             error!("Error getting scaling plan definitions: {}", error);

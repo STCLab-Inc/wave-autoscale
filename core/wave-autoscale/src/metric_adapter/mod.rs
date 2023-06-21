@@ -40,7 +40,7 @@ pub fn create_metric_adapter(
 
 #[async_trait]
 pub trait MetricAdapter {
-    fn run(&mut self) -> JoinHandle<()>;
+    fn run(&mut self);
     fn stop(&mut self);
     fn get_id(&self) -> &str;
     fn get_metric_kind(&self) -> &str;
@@ -84,13 +84,10 @@ impl MetricAdapterManager {
             .insert(metric_adapter.get_id().to_string(), metric_adapter);
     }
 
-    pub fn run(&mut self) -> Vec<JoinHandle<()>> {
-        let mut tasks = Vec::new();
+    pub fn run(&mut self) {
         for metric_adapter in self.metric_adapters.values_mut() {
-            let task = metric_adapter.run();
-            tasks.push(task);
+            metric_adapter.run();
         }
-        tasks
     }
 
     pub fn stop(&mut self) {
