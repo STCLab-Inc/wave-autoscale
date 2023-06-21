@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate log;
-
 #[cfg(test)]
 mod app_test {
     use anyhow::Result;
