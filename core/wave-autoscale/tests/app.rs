@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod app_test {
+    use std::time::Duration;
+
     use anyhow::Result;
+    use tokio::time::sleep;
     use wave_autoscale::{app, args::Args};
 
     fn init() {
@@ -17,6 +20,8 @@ mod app_test {
         })
         .await;
         app.run().await;
+
+        sleep(Duration::from_secs(10)).await;
         Ok(())
     }
 }

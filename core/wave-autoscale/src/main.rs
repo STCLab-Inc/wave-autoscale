@@ -23,5 +23,5 @@ async fn main() {
 
     // Run the main application
     let mut app = app::App::new(args).await;
-    app.run().await;
+    app.run_with_watching().await;
 }
