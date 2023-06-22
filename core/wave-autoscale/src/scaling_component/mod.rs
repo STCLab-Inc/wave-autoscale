@@ -80,6 +80,10 @@ impl ScalingComponentManager {
             .insert(scaling_component.get_id().to_string(), scaling_component);
     }
 
+    pub fn get_scaling_components(&self) -> &HashMap<String, Box<dyn ScalingComponent>> {
+        &self.scaling_components
+    }
+
     pub fn remove_all(&mut self) {
         self.scaling_components.clear();
     }

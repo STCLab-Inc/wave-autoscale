@@ -14,22 +14,24 @@ use std::path::Path;
 use tokio::sync::watch;
 use uuid::Uuid;
 
-const WATCH_DURATION: u64 = 5;
-
 #[derive(Debug)]
 pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
+    watch_duration: u64,
 }
 
 pub struct DataLayerNewParam {
     pub sql_url: String,
+    // seconds to wait before checking for new data
+    pub watch_duration: u64,
 }
 
 impl DataLayer {
     pub async fn new(params: DataLayerNewParam) -> Self {
         let data_layer = DataLayer {
             pool: DataLayer::get_pool(&params.sql_url).await,
+            watch_duration: params.watch_duration,
         };
         data_layer.migrate().await;
         data_layer
@@ -79,6 +81,7 @@ impl DataLayer {
     pub fn watch(&self) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
+        let watch_duration = self.watch_duration;
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
             loop {
@@ -109,7 +112,7 @@ impl DataLayer {
                     println!("Updated at hash changed");
                 }
                 // 1 second
-                tokio::time::sleep(tokio::time::Duration::from_secs(WATCH_DURATION)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(watch_duration)).await;
             }
         });
         notify_receiver

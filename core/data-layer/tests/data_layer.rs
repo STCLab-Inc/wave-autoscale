@@ -49,6 +49,7 @@ mod data_layer {
         }
         let data_layer = DataLayer::new(DataLayerNewParam {
             sql_url: TEST_DB.to_string(),
+            watch_duration: 1,
         })
         .await;
         Ok(data_layer)

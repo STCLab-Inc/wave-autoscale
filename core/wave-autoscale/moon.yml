@@ -32,7 +32,7 @@ tasks:
       - "@globs(sources)"
       - "@globs(tests)"
     env:
-      RUST_LOG: wave_autoscale=info
+      RUST_LOG: wave_autoscale=debug
   run-with-empty:
     command: "cargo watch -c -x 'run'"
     deps:
