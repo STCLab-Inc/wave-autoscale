@@ -75,6 +75,10 @@ impl MetricAdapterManager {
         Ok(())
     }
 
+    pub fn get_metric_adapters(&self) -> &HashMap<String, Box<dyn MetricAdapter>> {
+        &self.metric_adapters
+    }
+
     pub fn remove_all_definitions(&mut self) {
         self.metric_adapters.clear();
     }

@@ -49,7 +49,7 @@ use data_layer::{
         yaml_reader::{read_yaml_file, ParserResult},
     },
 };
-use log::{error, info};
+use log::{debug, error, info};
 use std::sync::Arc;
 
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
@@ -70,6 +70,7 @@ impl App {
         // Read command line arguments
         let plan = args.plan.clone();
         let config = args.config.clone();
+        let watch_duration = args.watch_duration;
 
         // Read plans file that might not exist
         let plan_file = App::get_plan_file_path(plan);
@@ -84,21 +85,22 @@ impl App {
 
         let config_db_url = config_result.get("db_url");
         if config_db_url.is_none() {
-            error!("No db_url specified in config file");
+            debug!("No db_url specified in config file");
         } else {
             db_url = config_db_url.unwrap().as_str().unwrap().to_string();
-            info!("Using db_url: {}", &db_url);
+            debug!("Using db_url: {}", &db_url);
         }
 
         // If db_url is empty, use default db_url
         if db_url.is_empty() {
             db_url = DEFAULT_DB_URL.to_string();
-            info!("Using default db_url: {}", &db_url);
+            debug!("Using default db_url: {}", &db_url);
         }
 
         // Create DataLayer
         let data_layer = DataLayer::new(DataLayerNewParam {
             sql_url: db_url.clone(),
+            watch_duration,
         })
         .await;
         let shared_data_layer = Arc::new(data_layer);
@@ -165,14 +167,14 @@ impl App {
     fn get_plan_file_path(plan: Option<String>) -> String {
         let plan_file: String;
         if plan.is_none() {
-            info!(
+            debug!(
                 "No plans file specified, using default plans file: {}",
                 DEFAULT_PLAN_FILE
             );
             plan_file = DEFAULT_PLAN_FILE.to_string();
         } else {
             plan_file = plan.unwrap();
-            info!("Using plans file: {:?}", &plan_file);
+            debug!("Using plans file: {:?}", &plan_file);
         }
         plan_file
     }
@@ -182,9 +184,9 @@ impl App {
         let parse_result = read_yaml_file(plan_file);
         if parse_result.is_err() {
             let error = parse_result.as_ref().err().unwrap();
-            error!("Error reading plans file: {}", error);
+            debug!("Error reading plans file: {}", error);
         } else {
-            info!("Successfully read plans file");
+            debug!("Successfully read plans file");
         }
 
         match parse_result {
@@ -201,11 +203,11 @@ impl App {
     fn get_config_file_path(config: Option<String>) -> String {
         let config_file: String;
         if config.is_none() {
-            info!("No config file specified, using default config file: ./config.yaml");
+            debug!("No config file specified, using default config file: ./config.yaml");
             config_file = DEFAULT_CONFIG_FILE.to_string();
         } else {
             config_file = config.unwrap();
-            info!("Using config file: {:?}", &config_file);
+            debug!("Using config file: {:?}", &config_file);
         }
         config_file
     }
@@ -216,7 +218,7 @@ impl App {
         if metric_definitions.is_ok() {
             let metric_definitions = metric_definitions.unwrap();
             let number_of_metric_definitions = metric_definitions.len();
-            info!("metric_definitions: {:?}", metric_definitions);
+            debug!("metric_definitions: {:?}", metric_definitions);
             self.metric_adapter_manager.stop();
             self.metric_adapter_manager.remove_all_definitions();
 
@@ -227,7 +229,7 @@ impl App {
                 let error = metric_adapter_result.err().unwrap();
                 error!("Error adding metric definitions: {}", error);
             } else {
-                info!(
+                debug!(
                     "Successfully added metric definitions: {}",
                     number_of_metric_definitions
                 );
@@ -257,7 +259,7 @@ impl App {
                     let error = scaling_component_result.err().unwrap();
                     error!("Error adding scaling component definitions: {}", error);
                 } else {
-                    info!("Successfully added scaling component definitions");
+                    debug!("Successfully added scaling component definitions");
                 }
             } else {
                 let error = scaling_component_definitions.err().unwrap();
@@ -286,11 +288,11 @@ impl App {
                     let error = scaling_plan_result.err().unwrap();
                     error!("Error adding scaling plan definitions: {}", error);
                 } else {
-                    info!("Successfully added scaling plan definitions");
+                    debug!("Successfully added scaling plan definitions");
                     shared_scaling_plan_manager_writer.run();
                 }
             }
-            info!("ScalingPlanners started: {}", number_of_plans);
+            debug!("ScalingPlanners started: {}", number_of_plans);
         } else {
             let error = plan_definitions.err().unwrap();
             error!("Error getting scaling plan definitions: {}", error);
@@ -299,17 +301,32 @@ impl App {
 
     pub async fn run_with_watching(&mut self) {
         let mut watch_receiver = self.shared_data_layer.watch();
-
         // Run this loop at once and then wait for changes
         let mut once = false;
         while !once || watch_receiver.changed().await.is_ok() {
             if once {
                 let change = watch_receiver.borrow();
-                info!("DataLayer changed: {:?}", change);
+                debug!("DataLayer changed: {:?}", change);
             } else {
                 once = true;
             }
             self.run().await;
         }
+    }
+
+    pub fn get_data_layer(&self) -> Arc<DataLayer> {
+        self.shared_data_layer.clone()
+    }
+
+    pub fn get_metric_adapter_manager(&self) -> &MetricAdapterManager {
+        &self.metric_adapter_manager
+    }
+
+    pub fn get_scaling_component_manager(&self) -> SharedScalingComponentManager {
+        self.shared_scaling_component_manager.clone()
+    }
+
+    pub fn get_scaling_planner_manager(&self) -> SharedScalingPlannerManager {
+        self.shared_scaling_planner_manager.clone()
     }
 }

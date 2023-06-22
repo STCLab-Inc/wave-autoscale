@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::time::Duration;
 use tokio::{task::JoinHandle, time};
 
-use log::{error, info};
+use log::{debug, error, info};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
@@ -42,7 +42,9 @@ impl MetricAdapter for PrometheusMetricAdapter {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
-
+        debug!("metric: {:?}", self.metric);
+        debug!("metadata: {:?}", metadata);
+        // TODO: validate metadata.
         let polling_interval: u64 = metadata["polling_interval"]
             .as_u64()
             .unwrap_or(DEFAULT_POLLING_INTERVAL);

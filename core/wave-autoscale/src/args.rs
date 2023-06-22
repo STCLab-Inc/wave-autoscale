@@ -12,4 +12,6 @@ pub struct Args {
     pub plan: Option<String>,
     #[arg(short, long)]
     pub config: Option<String>,
+    #[arg(short, long, default_value_t = 5)]
+    pub watch_duration: u64,
 }

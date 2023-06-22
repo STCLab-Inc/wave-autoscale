@@ -65,12 +65,12 @@ impl ScalingPlannerManager {
             .insert(scaling_planner.get_id().to_string(), scaling_planner);
     }
 
-    pub fn remove_all(&mut self) {
-        self.scaling_planners.clear();
+    pub fn get_scaling_planners(&self) -> &HashMap<String, ScalingPlanner> {
+        &self.scaling_planners
     }
 
-    pub fn get_scaling_component(&self, id: &str) -> Option<&ScalingPlanner> {
-        self.scaling_planners.get(id)
+    pub fn remove_all(&mut self) {
+        self.scaling_planners.clear();
     }
 
     pub fn run(&mut self) {
