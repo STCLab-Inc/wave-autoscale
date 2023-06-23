@@ -45,6 +45,3 @@ hyper-rustls = "0.24.0"
 clap = { version = "4.3.0", features = ["derive"] }
 log = { version = "0.4.18" }
 env_logger = { version = "0.10.0" }
-
-[dev-dependencies]
-env_logger = "0.10.0"

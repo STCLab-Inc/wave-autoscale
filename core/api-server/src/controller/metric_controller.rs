@@ -1,5 +1,6 @@
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use data_layer::MetricDefinition;
+use log::debug;
 use serde::Deserialize;
 use validator::Validate;
 
@@ -68,7 +69,6 @@ async fn put_metric_by_id(
 ) -> impl Responder {
     let mut metric = request.into_inner();
     metric.db_id = db_id.into_inner();
-
     let result = app_state.data_layer.update_metric(metric).await;
     if result.is_err() {
         return HttpResponse::InternalServerError().body(format!("{:?}", result));

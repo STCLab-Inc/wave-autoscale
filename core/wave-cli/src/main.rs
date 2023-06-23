@@ -1,20 +1,17 @@
+use crate::args::Args;
+use anyhow::Result;
+use clap::Parser;
+use data_layer::reader::config_reader::read_config_file;
+use log::{debug, error, info};
+use notify::{Config, PollWatcher, RecursiveMode, Watcher};
+use regex::Regex;
 use std::{
     collections::HashMap,
     path::Path,
     process::{Child, Command},
     time::Duration,
 };
-
-use crate::args::Args;
-use anyhow::Result;
-use clap::Parser;
-use notify::{Config, PollWatcher, RecursiveMode, Watcher};
-use regex::Regex;
-
 mod args;
-
-#[macro_use]
-extern crate log;
 
 const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
@@ -27,13 +24,22 @@ struct App {
     name: String,
     command: String,
     args: Vec<String>,
+    envs: Option<HashMap<String, String>>,
 }
 
 fn run_app(app: &App) -> Child {
-    Command::new(&app.command)
-        .args(&app.args)
-        .spawn()
-        .expect("Failed to start the application.")
+    let mut command = Command::new(&app.command);
+    let command = if !app.args.is_empty() {
+        command.args(&app.args)
+    } else {
+        &mut command
+    };
+    let command = if let Some(envs) = &app.envs {
+        command.envs(envs)
+    } else {
+        command
+    };
+    command.spawn().unwrap()
 }
 
 fn is_node_installed() -> bool {
@@ -76,8 +82,6 @@ fn main() -> Result<()> {
     let except_api_server = args.except_api_server;
     let run_web_app = args.run_web_app;
 
-    let mut confirmed_config_file: String = String::new();
-    let mut confirmed_plan_file: String = String::new();
     // Create a channel to receive the events.
     let (watcher_tx, watcher_rx) = std::sync::mpsc::channel();
 
@@ -90,38 +94,32 @@ fn main() -> Result<()> {
     let mut plan_file_watcher = PollWatcher::new(watcher_tx, watcher_config)?;
 
     // Check config file exists
-    if let Some(config) = config {
-        let config_path = std::path::Path::new(&config);
-        if !config_path.exists() {
-            error!("{} does not exist", config);
-        } else {
-            confirmed_config_file = config;
+    let config_file = match config {
+        Some(config) => {
+            let config_path = std::path::Path::new(&config);
+            if !config_path.exists() {
+                error!("{} does not exist", config);
+                DEFAULT_CONFIG_FILE.to_string()
+            } else {
+                config
+            }
         }
-    } else {
-        let config_path = std::path::Path::new(DEFAULT_CONFIG_FILE);
-        if !config_path.exists() {
-            error!("{} does not exist", DEFAULT_CONFIG_FILE);
-        } else {
-            confirmed_config_file = DEFAULT_CONFIG_FILE.to_string();
-        }
-    }
+        None => DEFAULT_CONFIG_FILE.to_string(),
+    };
 
     // Check plan file exists
-    if let Some(plan) = plan {
-        let plan_path = std::path::Path::new(&plan);
-        if !plan_path.exists() {
-            error!("{} does not exist", plan);
-        } else {
-            confirmed_plan_file = plan;
+    let plan_file = match plan {
+        Some(plan) => {
+            let plan_path = std::path::Path::new(&plan);
+            if !plan_path.exists() {
+                error!("{} does not exist", plan);
+                DEFAULT_PLAN_FILE.to_string()
+            } else {
+                plan
+            }
         }
-    } else {
-        let plan_path = std::path::Path::new(DEFAULT_PLAN_FILE);
-        if !plan_path.exists() {
-            error!("{} does not exist", DEFAULT_PLAN_FILE);
-        } else {
-            confirmed_plan_file = DEFAULT_PLAN_FILE.to_string();
-        }
-    }
+        None => DEFAULT_PLAN_FILE.to_string(),
+    };
 
     // Check bin files exist
     let wave_autoscale_path = format!("./{}", WAVE_CONTROLLER);
@@ -159,19 +157,20 @@ fn main() -> Result<()> {
 
     let mut args_for_controller: Vec<String> = Vec::new();
 
-    if !confirmed_config_file.is_empty() {
+    let config_file_for_controller = config_file.clone();
+    if !config_file_for_controller.is_empty() {
         args_for_controller.push("--config".to_string());
-        args_for_controller.push(confirmed_config_file);
+        args_for_controller.push(config_file_for_controller);
     }
 
-    if !confirmed_plan_file.is_empty() {
+    if !plan_file.clone().is_empty() {
         args_for_controller.push("--plan".to_string());
-        args_for_controller.push(confirmed_plan_file.clone());
+        args_for_controller.push(plan_file.clone());
 
         // Watch plan file
         if watch_plan {
-            plan_file_watcher.watch(Path::new(&confirmed_plan_file), RecursiveMode::Recursive)?;
-            info!("Watching plan file: {}", &confirmed_plan_file);
+            plan_file_watcher.watch(Path::new(&plan_file), RecursiveMode::Recursive)?;
+            info!("Watching plan file: {}", &plan_file);
         }
     }
 
@@ -180,23 +179,65 @@ fn main() -> Result<()> {
         name: WAVE_CONTROLLER.to_string(),
         command: wave_controller_command,
         args: args_for_controller,
+        envs: None,
     });
 
     let wave_api_server_command = format!("./{}", WAVE_API_SERVER);
     if !except_api_server {
+        let mut envs: HashMap<String, String> = HashMap::new();
+        let config_file_for_api_server = config_file.clone();
+        if !config_file_for_api_server.is_empty() {
+            let config = read_config_file(Some(config_file_for_api_server));
+            if let Some(common_config) = config.get("COMMON").and_then(|v| v.as_mapping()) {
+                if let Some(db_url) = common_config.get("DB_URL").and_then(|v| v.as_str()) {
+                    envs.insert("DATABASE_URL".to_string(), db_url.to_string());
+                }
+            }
+
+            if let Some(web_app_config) = config.get("API_SERVER").and_then(|v| v.as_mapping()) {
+                debug!("api_server_config: {:?}", web_app_config);
+                if let Some(port) = web_app_config.get("PORT").and_then(|v| v.as_u64()) {
+                    envs.insert("PORT".to_string(), port.to_string());
+                }
+                if let Some(host) = web_app_config.get("HOST").and_then(|v| v.as_str()) {
+                    envs.insert("HOST".to_string(), host.to_string());
+                }
+            }
+        }
+
+        debug!("envs: {:?}", envs);
+
         apps.push(App {
             name: WAVE_API_SERVER.to_string(),
             command: wave_api_server_command,
             args: Vec::new(),
+            envs: Some(envs),
         });
     }
 
     if run_web_app {
-        let web_app_arg = format!("./{}/server.js", WAVE_WEB_APP);
+        let mut envs: HashMap<String, String> = HashMap::new();
+        let config_file_for_web_app = config_file;
+        if !config_file_for_web_app.is_empty() {
+            let config = read_config_file(Some(config_file_for_web_app));
+            if let Some(web_app_config) = config.get("WEB_APP").and_then(|v| v.as_mapping()) {
+                debug!("web_app_config: {:?}", web_app_config);
+                if let Some(port) = web_app_config.get("PORT").and_then(|v| v.as_u64()) {
+                    envs.insert("PORT".to_string(), port.to_string());
+                }
+                if let Some(host) = web_app_config.get("HOST").and_then(|v| v.as_str()) {
+                    envs.insert("HOSTNAME".to_string(), host.to_string());
+                }
+            }
+        }
+
+        debug!("envs: {:?}", envs);
+        let args = vec![format!("./{}/server.js", WAVE_WEB_APP)];
         apps.push(App {
             name: WAVE_WEB_APP.to_string(),
             command: "node".to_string(),
-            args: vec![web_app_arg],
+            args,
+            envs: Some(envs),
         });
     }
 
