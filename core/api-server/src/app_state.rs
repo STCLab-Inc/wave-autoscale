@@ -16,6 +16,7 @@ pub async fn get_app_state(params: GetAppStateParam) -> web::Data<AppState> {
         counter: Mutex::new(0),
         data_layer: DataLayer::new(DataLayerNewParam {
             sql_url: params.sql_url,
+            watch_duration: 5,
         })
         .await,
     })

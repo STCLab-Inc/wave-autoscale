@@ -1,13 +1,11 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use actix_cors::Cors;
-use actix_web::{App, HttpServer};
-use dotenv::dotenv;
-
 use crate::{
     app_state::{get_app_state, GetAppStateParam},
     controller,
 };
+use actix_cors::Cors;
+use actix_web::{App, HttpServer};
+use dotenv::dotenv;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 async fn ping() -> String {
     let time = SystemTime::now()
@@ -21,8 +19,8 @@ async fn ping() -> String {
 pub async fn run_server() -> std::io::Result<()> {
     dotenv().ok();
 
-    // get the ip_address from env
-    let ip_address = std::env::var("IP_ADDRESS").expect("IP_ADDRESS must be set");
+    // get the HOST from env
+    let host = std::env::var("HOST").expect("HOST must be set");
 
     // get the port from env and parse it to u16
     let port = std::env::var("PORT")
@@ -46,7 +44,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .configure(controller::init_plan_controller)
             .configure(controller::init_autoscaling_history_controller)
     })
-    .bind((ip_address.clone(), port));
+    .bind((host.clone(), port));
 
     // Server structure implements Future.
     let server = match http_server {
@@ -56,6 +54,6 @@ pub async fn run_server() -> std::io::Result<()> {
         }
     };
 
-    println!("It's up! {}:{}", ip_address, port);
+    println!("It's up! {}:{}", host, port);
     server.await
 }

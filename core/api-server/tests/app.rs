@@ -1,24 +1,34 @@
 #[cfg(test)]
 mod api_server {
-    use actix_web::{test, App};
+    use actix_web::{test, web, App};
     use api_server::{
-        app_state::{get_app_state, GetAppStateParam},
+        app_state::{get_app_state, AppState, GetAppStateParam},
         controller,
     };
     use data_layer::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition};
     use serde_json::json;
 
-    #[tokio::test]
-    async fn test_api_server_metric() {
-        const TEST_DB: &str = "sqlite://./tests/data-layer/test.db";
+    const TEST_DB: &str = "sqlite://./tests/temp/test.db";
+
+    fn init() {
+        // Initialize logger
+        let _ = env_logger::builder().is_test(true).try_init();
         // Delete the test db if it exists
         let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
         let _ = std::fs::remove_file(path);
+    }
 
-        let app_state = get_app_state(GetAppStateParam {
+    async fn get_app_state_with_param() -> web::Data<AppState> {
+        get_app_state(GetAppStateParam {
             sql_url: TEST_DB.to_owned(),
         })
-        .await;
+        .await
+    }
+
+    #[tokio::test]
+    async fn test_api_server_metric() {
+        init();
+        let app_state = get_app_state_with_param().await;
 
         let app = test::init_service(
             App::new()
@@ -58,14 +68,15 @@ mod api_server {
 
         // Add metrics
         let post_metrics = test::TestRequest::post()
-            .uri("/metrics")
+            .uri("/api/metrics")
             .set_json(payload)
             .to_request();
         let resp = test::call_service(&app, post_metrics).await;
         println!("resp: {:?}", resp);
         assert!(resp.status().is_success(), "Response status is not success");
 
-        let get_metrics = test::TestRequest::get().uri("/metrics").to_request();
+        // Get metrics
+        let get_metrics = test::TestRequest::get().uri("/api/metrics").to_request();
         let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, get_metrics).await;
         println!("resp: {:?}", resp);
         assert!(resp.len() == 2, "Response status is not success");
@@ -74,16 +85,18 @@ mod api_server {
         let mut metric = resp[0].clone();
         metric.metric_kind = "new_prometheus".to_owned();
         let update_metric = test::TestRequest::put()
-            .uri(&format!("/metrics/{}", metric.db_id))
+            .uri(&format!("/api/metrics/{}", metric.db_id))
             .set_json(&metric)
             .to_request();
         let resp = test::call_service(&app, update_metric).await;
-        println!("resp: {:?}", resp);
-        assert!(resp.status().is_success(), "Response status is not success");
+        let status = resp.status();
+        let body = resp.into_body();
+        println!("resp of put: {:?}", body);
+        assert!(status.is_success(), "Response status is not success");
 
         // Delete a metric
         let delete_metric = test::TestRequest::delete()
-            .uri(&format!("/metrics/{}", metric.db_id))
+            .uri(&format!("/api/metrics/{}", metric.db_id))
             .to_request();
         let resp = test::call_service(&app, delete_metric).await;
         println!("resp: {:?}", resp);
@@ -92,15 +105,8 @@ mod api_server {
 
     #[tokio::test]
     async fn test_api_server_scaling_component() {
-        const TEST_DB: &str = "sqlite://./tests/data-layer/test.db";
-        // Delete the test db if it exists
-        let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
-        let _ = std::fs::remove_file(path);
-
-        let app_state = get_app_state(GetAppStateParam {
-            sql_url: TEST_DB.to_owned(),
-        })
-        .await;
+        init();
+        let app_state = get_app_state_with_param().await;
 
         let app = test::init_service(
             App::new()
@@ -174,15 +180,8 @@ mod api_server {
 
     #[tokio::test]
     async fn test_api_server_plan() {
-        const TEST_DB: &str = "sqlite://./tests/data-layer/test.db";
-        // Delete the test db if it exists
-        let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
-        let _ = std::fs::remove_file(path);
-
-        let app_state = get_app_state(GetAppStateParam {
-            sql_url: TEST_DB.to_owned(),
-        })
-        .await;
+        init();
+        let app_state = get_app_state_with_param().await;
 
         let app = test::init_service(
             App::new()
