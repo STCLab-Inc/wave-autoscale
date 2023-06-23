@@ -49,11 +49,10 @@ use data_layer::{
         yaml_reader::{read_yaml_file, ParserResult},
     },
 };
-use log::{debug, error, info};
+use log::{debug, error};
 use std::sync::Arc;
 
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
-const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
 pub struct App {
@@ -77,13 +76,12 @@ impl App {
         let parse_result = App::parse_plan_file(&plan_file);
 
         // Read config file
-        let config_file = App::get_config_file_path(config);
-        let config_result = read_config_file(config_file);
+        let config_result = read_config_file(config);
 
         // DB_URL from config file
         let mut db_url: String = String::new();
 
-        let config_db_url = config_result.get("db_url");
+        let config_db_url = config_result.get("DB_URL");
         if config_db_url.is_none() {
             debug!("No db_url specified in config file");
         } else {
@@ -198,18 +196,6 @@ impl App {
                 slo_definitions: vec![],
             },
         }
-    }
-
-    fn get_config_file_path(config: Option<String>) -> String {
-        let config_file: String;
-        if config.is_none() {
-            debug!("No config file specified, using default config file: ./config.yaml");
-            config_file = DEFAULT_CONFIG_FILE.to_string();
-        } else {
-            config_file = config.unwrap();
-            debug!("Using config file: {:?}", &config_file);
-        }
-        config_file
     }
 
     pub async fn run(&mut self) {
