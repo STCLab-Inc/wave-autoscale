@@ -29,6 +29,7 @@ pub struct DataLayerNewParam {
 
 impl DataLayer {
     pub async fn new(params: DataLayerNewParam) -> Self {
+        debug!("sql_url: {}", params.sql_url);
         let data_layer = DataLayer {
             pool: DataLayer::get_pool(&params.sql_url).await,
             watch_duration: params.watch_duration,
@@ -220,11 +221,13 @@ impl DataLayer {
             "UPDATE metric SET id=?, metric_kind=?, metadata=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(metric.id)
             .bind(metric.metric_kind)
             .bind(metadata_string)
-            .bind(metric.db_id)
             .bind(updated_at)
+            // WHERE
+            .bind(metric.db_id)
             .execute(&self.pool)
             .await;
         if result.is_err() {
@@ -347,11 +350,13 @@ impl DataLayer {
             "UPDATE scaling_component SET id=?, component_kind=?, metadata=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(scaling_component.id)
             .bind(scaling_component.component_kind)
             .bind(metadata_string)
-            .bind(scaling_component.db_id)
             .bind(updated_at)
+            // WHERE
+            .bind(scaling_component.db_id)
             .execute(&self.pool)
             .await;
         if result.is_err() {
@@ -462,11 +467,13 @@ impl DataLayer {
         let query_string = "UPDATE plan SET id=?, title=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(plan.id)
             .bind(plan.title)
             .bind(plans_string)
-            .bind(plan.db_id)
             .bind(updated_at)
+            // WHERE
+            .bind(plan.db_id)
             .execute(&self.pool)
             .await;
         if result.is_err() {
@@ -486,6 +493,7 @@ impl DataLayer {
         let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at) VALUES (?,?,?,?,?,?,?,?)";
         let id = Uuid::new_v4().to_string();
         let result = sqlx::query(query_string)
+            // INTO
             .bind(id)
             .bind(autoscaling_history.plan_db_id)
             .bind(autoscaling_history.plan_id)
