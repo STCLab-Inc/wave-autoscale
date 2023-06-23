@@ -5,6 +5,7 @@ use crate::{
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
+use log::{debug, info};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 async fn ping() -> String {
@@ -30,6 +31,7 @@ pub async fn run_server() -> std::io::Result<()> {
 
     // get the sql_url from env
     let sql_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    debug!("sql_url: {}", sql_url);
     let app_state = get_app_state(GetAppStateParam { sql_url }).await;
 
     let http_server = HttpServer::new(move || {
@@ -38,6 +40,7 @@ pub async fn run_server() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(app_state.clone())
+            .route("/", actix_web::web::get().to(ping))
             .route("/ping", actix_web::web::get().to(ping))
             .configure(controller::init_metric_controller)
             .configure(controller::init_scaling_component_controller)
@@ -54,6 +57,6 @@ pub async fn run_server() -> std::io::Result<()> {
         }
     };
 
-    println!("It's up! {}:{}", host, port);
+    info!("It's up! {}:{}", host, port);
     server.await
 }
