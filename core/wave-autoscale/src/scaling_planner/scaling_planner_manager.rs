@@ -4,7 +4,7 @@ use super::ScalingPlanner;
 use anyhow::Result;
 use data_layer::{data_layer::DataLayer, ScalingPlanDefinition};
 use std::{collections::HashMap, sync::Arc};
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::{sync::RwLock};
 //
 // PlannerManager
 //
@@ -62,7 +62,7 @@ impl ScalingPlannerManager {
 
     pub fn add_scaling_component(&mut self, scaling_planner: ScalingPlanner) {
         self.scaling_planners
-            .insert(scaling_planner.get_id().to_string(), scaling_planner);
+            .insert(scaling_planner.get_id(), scaling_planner);
     }
 
     pub fn get_scaling_planners(&self) -> &HashMap<String, ScalingPlanner> {

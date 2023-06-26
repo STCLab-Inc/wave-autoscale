@@ -11,8 +11,8 @@ mod scaling_planner_test {
     use tokio::time::sleep;
     use wave_autoscale::{
         metric_adapter::MetricAdapterManager,
-        metric_store::{new_shared_metric_store, SharedMetricStore},
-        scaling_component::new_shared_scaling_component_manager,
+        metric_store::{new_shared, SharedMetricStore},
+        scaling_component::ScalingComponentManager,
         scaling_planner::ScalingPlanner,
     };
 
@@ -25,7 +25,7 @@ mod scaling_planner_test {
         let result = read_yaml_file(PLAN_PROMETHEUS_EC2)?;
 
         // create metric adapter manager
-        let metric_store: SharedMetricStore = new_shared_metric_store();
+        let metric_store: SharedMetricStore = new_shared();
         let mut metric_adapter_manager = MetricAdapterManager::new(metric_store.clone());
         metric_adapter_manager.add_definitions(result.metric_definitions);
         metric_adapter_manager.run();
@@ -33,7 +33,7 @@ mod scaling_planner_test {
         // Give some time for the metric adapters to collect metrics
         sleep(Duration::from_millis(2000)).await;
 
-        let scaling_component_manager = new_shared_scaling_component_manager();
+        let scaling_component_manager = ScalingComponentManager::new_shared();
         // use {} to avoid the error: cannot move out of `result.scaling_component_definitions` which is behind a shared reference
         {
             let cloned = scaling_component_manager.clone();
@@ -48,12 +48,13 @@ mod scaling_planner_test {
         // create data layer
         let data_layer = DataLayer::new(DataLayerNewParam {
             sql_url: TEST_DB.to_string(),
+            watch_duration: 1,
         })
         .await;
         let data_layer = Arc::new(data_layer);
 
         // create scaling planner
-        let scaling_planners: Vec<ScalingPlanner> = result
+        let mut scaling_planners: Vec<ScalingPlanner> = result
             .scaling_plan_definitions
             .iter()
             .map(|definition| {
@@ -67,8 +68,8 @@ mod scaling_planner_test {
             .collect();
 
         // run scaling planner
-        if let Some(scaling_planner) = scaling_planners.get(0) {
-            scaling_planner.run().await;
+        if let Some(scaling_planner) = scaling_planners.get_mut(0) {
+            scaling_planner.run();
         }
         // Give some time for the scaling planner to run plans
         sleep(Duration::from_millis(5000)).await;

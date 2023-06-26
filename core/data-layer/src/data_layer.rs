@@ -574,4 +574,16 @@ impl DataLayer {
         }
         Ok(autoscaling_history)
     }
+    // Remove the old AutoscalingHistory from the database
+    pub async fn remove_old_autoscaling_history(&self, to_date: DateTime<Utc>) -> Result<()> {
+        let query_string = "DELETE FROM autoscaling_history WHERE created_at < ?";
+        let result = sqlx::query(query_string)
+            .bind(to_date)
+            .execute(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        Ok(())
+    }
 }
