@@ -42,6 +42,7 @@ use crate::{
     },
 };
 use args::Args;
+
 use data_layer::{
     data_layer::{DataLayer, DataLayerNewParam},
     reader::{
@@ -51,6 +52,7 @@ use data_layer::{
 };
 use log::{debug, error};
 use std::sync::Arc;
+use tokio::time::sleep;
 
 const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
@@ -62,6 +64,7 @@ pub struct App {
     metric_adapter_manager: MetricAdapterManager,
     shared_scaling_component_manager: SharedScalingComponentManager,
     shared_scaling_planner_manager: SharedScalingPlannerManager,
+    autoscaling_history_remover_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl App {
@@ -132,6 +135,7 @@ impl App {
             metric_adapter_manager,
             shared_scaling_component_manager,
             shared_scaling_planner_manager,
+            autoscaling_history_remover_handle: None,
         }
     }
     async fn save_parser_result_into_data_layer(
@@ -195,6 +199,46 @@ impl App {
                 scaling_plan_definitions: vec![],
                 slo_definitions: vec![],
             },
+        }
+    }
+
+    // Run the cron job to remove the old Autoscaling History
+    pub fn run_autoscaling_history_cron_job(&mut self, duration_string: String) {
+        self.stop_autoscaling_history_cron_job();
+        debug!("Starting autoscaling history cron job: {}", duration_string);
+        let duration = duration_str::parse(&duration_string);
+        if duration.is_err() {
+            error!("Error parsing duration string: {}", duration_string);
+            return;
+        }
+        let duration = duration.unwrap();
+        let duration = chrono::Duration::from_std(duration);
+        if duration.is_err() {
+            error!("Error converting duration: {}", duration_string);
+            return;
+        }
+        let duration = duration.unwrap();
+        let to_date = chrono::Utc::now() - duration;
+        let data_layer = self.shared_data_layer.clone();
+        let handle = tokio::spawn(async move {
+            let result = data_layer.remove_old_autoscaling_history(to_date).await;
+            if result.is_err() {
+                let error = result.err().unwrap();
+                error!("Error removing old autoscaling history: {}", error);
+            }
+
+            sleep(std::time::Duration::from_secs(60)).await;
+        });
+        self.autoscaling_history_remover_handle = Some(handle);
+    }
+
+    // Stop the cron job to remove the old Autoscaling History
+    pub fn stop_autoscaling_history_cron_job(&mut self) {
+        if self.autoscaling_history_remover_handle.is_some() {
+            if let Some(handle) = self.autoscaling_history_remover_handle.take() {
+                handle.abort();
+                self.autoscaling_history_remover_handle = None;
+            }
         }
     }
 
@@ -286,6 +330,20 @@ impl App {
     }
 
     pub async fn run_with_watching(&mut self) {
+        debug!("run_with_watching");
+        // Start the cron job to remove the old Autoscaling History
+        let remove_autoscaling_history_duration = self.args.autoscaling_history_retention.clone();
+
+        debug!(
+            "remove_autoscaling_history_duration: {:?}",
+            remove_autoscaling_history_duration
+        );
+        match remove_autoscaling_history_duration {
+            Some(duration_string) if !duration_string.is_empty() => {
+                self.run_autoscaling_history_cron_job(duration_string);
+            }
+            _ => {}
+        }
         let mut watch_receiver = self.shared_data_layer.watch();
         // Run this loop at once and then wait for changes
         let mut once = false;

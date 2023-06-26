@@ -7,7 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::collections::HashMap;
-use tokio::task::JoinHandle;
+
 
 pub mod cloudwatch_data;
 pub mod cloudwatch_statistics;
