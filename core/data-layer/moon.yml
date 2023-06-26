@@ -10,14 +10,21 @@ tasks:
       RUST_LOG: info
   test:
     command: "cargo test --test data_layer -- --test-threads=1"
-    inputs: 
+    inputs:
       - "@globs(sources)"
       - "@globs(tests)"
     env:
       RUST_LOG: info
+  test-history:
+    command: "cargo test --test data_layer test_autoscaling_history -- --nocapture"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: data_layer=debug
   test-watch:
     command: "cargo test test_run_watch -- --test-threads=1 --nocapture"
-    inputs: 
+    inputs:
       - "@globs(sources)"
       - "@globs(tests)"
     env:

@@ -6,16 +6,8 @@
 
 #[cfg(test)]
 mod data_layer {
-    use std::{
-        collections::HashMap,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc,
-        },
-    };
-
     use anyhow::Result;
-    use chrono::Utc;
+    use chrono::{Duration, Utc};
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
         reader::yaml_reader::{read_yaml_file, ParserResult},
@@ -26,7 +18,13 @@ mod data_layer {
     };
     use rand::Rng;
     use serde_json::json;
-    use tokio::sync::Mutex;
+    use std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    };
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 1;
@@ -333,8 +331,7 @@ mod data_layer {
         let data_layer = get_data_layer().await?;
 
         // Add a AutoscalingHistory
-        // let scaling_plan = scaling_plans_result[0].clone();
-        // let plan_db_id = scaling_plan.db_id.clone();
+        let created_at = Utc::now() - Duration::days(2);
         let autoscaling_history = AutoscalingHistoryDefinition {
             id: "".to_string(),
             plan_db_id: "".to_string(),
@@ -343,7 +340,7 @@ mod data_layer {
             metric_values_json: "".to_string(),
             metadata_values_json: "".to_string(),
             fail_message: Some(String::from("fail_message")),
-            created_at: Utc::now(),
+            created_at,
         };
         let add_autoscaling_history_result = data_layer
             .add_autoscaling_history(autoscaling_history.clone())
@@ -351,6 +348,29 @@ mod data_layer {
         if add_autoscaling_history_result.is_err() {
             panic!("Unexpected error: {:?}", add_autoscaling_history_result);
         }
+
+        // Remove the old AutoscalingHistory
+        let to_date = Utc::now() - Duration::days(1);
+        let remove_autoscaling_history_result =
+            data_layer.remove_old_autoscaling_history(to_date).await;
+
+        if remove_autoscaling_history_result.is_err() {
+            panic!("Unexpected error: {:?}", remove_autoscaling_history_result);
+        }
+
+        // Check that the AutoscalingHistory was removed
+        let autoscaling_history_result = data_layer
+            .get_autoscaling_history_by_date(created_at, to_date)
+            .await;
+        if autoscaling_history_result.is_err() {
+            panic!("Unexpected error: {:?}", autoscaling_history_result);
+        }
+        let autoscaling_history_result = autoscaling_history_result.unwrap();
+        assert_eq!(
+            autoscaling_history_result.len(),
+            0,
+            "Unexpected AutoscalingHistory count"
+        );
 
         Ok(())
     }
