@@ -23,29 +23,61 @@ tasks:
   copy-wave-controller:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-controller ./wave-controller"
     platform: "system"
+    deps:
+      - "controller:build-aarch64-apple-darwin"
     inputs:
       - "@globs(sources)"
+    outputs:
+      - "wave-controller"
     env:
       RUST_LOG: info
   copy-wave-api-server:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-api-server ./wave-api-server"
     platform: "system"
+    deps:
+      - "api-server:build-aarch64-apple-darwin"
+    inputs:
+      - "@globs(sources)"
+    outputs:
+      - "wave-api-server"
+    env:
+      RUST_LOG: info
+  run-help:
+    command: "cargo watch -c -x 'run -- --help'"
+    deps:
+      - "lint"
     inputs:
       - "@globs(sources)"
     env:
       RUST_LOG: info
   run:
-    command: "cargo watch -c -x 'run -- --run-web-app'"
+    command: 'cargo watch -c -x ''run -- --run-web-app --config="./wave-config.yaml"'''
     deps:
       - "lint"
-      - "controller:build-aarch64-apple-darwin"
-      - "api-server:build-aarch64-apple-darwin"
+      # TODO: Build web-app
       - "copy-wave-controller"
       - "copy-wave-api-server"
     inputs:
       - "@globs(sources)"
     env:
-      RUST_LOG: info
+      RUST_LOG: wave_cli=debug
+  run-once:
+    command: 'cargo run -- --run-web-app --watch-plan --config="./wave-config.yaml"'
+    deps:
+      - "lint"
+      # TODO: Build web-app
+      - "copy-wave-controller"
+      - "copy-wave-api-server"
+    inputs:
+      - "@globs(sources)"
+      - "plan.yaml"
+      - "wave-config.yaml"
+    outputs:
+      - "wave-controller"
+      - "wave-api-server"
+      - "wave-web-app/**/*"
+    env:
+      RUST_LOG: debug
 
   # Build for Production
   # Linux

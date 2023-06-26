@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::time::Duration;
 use tokio::{task::JoinHandle, time};
 
-use log::{error, info};
+use log::{debug, error, info};
 
 // This is a metric adapter for prometheus.
 pub struct PrometheusMetricAdapter {
@@ -38,11 +38,13 @@ impl MetricAdapter for PrometheusMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    fn run(&mut self) -> JoinHandle<()> {
+    fn run(&mut self) {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
-
+        debug!("metric: {:?}", self.metric);
+        debug!("metadata: {:?}", metadata);
+        // TODO: validate metadata.
         let polling_interval: u64 = metadata["polling_interval"]
             .as_u64()
             .unwrap_or(DEFAULT_POLLING_INTERVAL);
@@ -52,7 +54,7 @@ impl MetricAdapter for PrometheusMetricAdapter {
         let shared_metric_store = self.metric_store.clone();
         let metric_id = self.get_id().to_string();
 
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             loop {
                 // Every 1 second, get the metric value from prometheus using reqwest.
                 // Generate a url to call a prometheus query.
@@ -102,8 +104,8 @@ impl MetricAdapter for PrometheusMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        })
-        // self.task = Some(task);
+        });
+        self.task = Some(task);
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {

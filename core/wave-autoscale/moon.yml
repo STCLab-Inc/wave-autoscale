@@ -21,8 +21,35 @@ tasks:
     command: "cargo test"
     inputs:
       - "@globs(sources)"
+      - "@globs(tests)"
     env:
       RUST_LOG: info
+  test-app:
+    command: "cargo test -p wave-autoscale --test app -- --nocapture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=debug
+  run-help:
+    command: "cargo watch -c -x 'run -- --help'"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: debug
+  run-autoscaling-history-retention:
+    # command: "cargo watch -c -x 'run -- --autoscaling-history-retention=1d'"
+    command: "cargo run -- --autoscaling-history-retention=1d"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: wave_controller=debug
   run-with-empty:
     command: "cargo watch -c -x 'run'"
     deps:
@@ -30,7 +57,7 @@ tasks:
     inputs:
       - "@globs(sources)"
     env:
-      RUST_LOG: info
+      RUST_LOG: debug
   run:
     command: "cargo watch -c -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
     deps:
@@ -38,7 +65,7 @@ tasks:
     inputs:
       - "@globs(sources)"
     env:
-      RUST_LOG: info
+      RUST_LOG: debug
 
   # Build for Production
   # Linux

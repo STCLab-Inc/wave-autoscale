@@ -1,0 +1,13 @@
+# Common configuration for wave-controller, wave-api-server, wave-web-app
+COMMON:
+  DB_URL: sqlite://./wave.db
+
+# wave-api-server configuration
+API_SERVER:
+  PORT: 8081
+  HOST: localhost
+
+# wave-web-app configuration
+WEB_APP:
+  PORT: 3005
+  HOST: localhost

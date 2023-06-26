@@ -12,4 +12,9 @@ pub struct Args {
     pub plan: Option<String>,
     #[arg(short, long)]
     pub config: Option<String>,
+    #[arg(short, long, default_value_t = 5)]
+    pub watch_duration: u64,
+    /// Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
+    #[arg(long)]
+    pub autoscaling_history_retention: Option<String>,
 }

@@ -23,10 +23,6 @@ pub trait ScalingComponent: Send + Sync {
 //
 pub type SharedScalingComponentManager = Arc<RwLock<ScalingComponentManager>>;
 
-pub fn new_shared_scaling_component_manager() -> SharedScalingComponentManager {
-    Arc::new(RwLock::new(ScalingComponentManager::new()))
-}
-
 #[derive(Default)]
 pub struct ScalingComponentManager {
     scaling_components: HashMap<String, Box<dyn ScalingComponent>>,
@@ -37,6 +33,9 @@ impl ScalingComponentManager {
         ScalingComponentManager {
             scaling_components: HashMap::new(),
         }
+    }
+    pub fn new_shared() -> SharedScalingComponentManager {
+        Arc::new(RwLock::new(ScalingComponentManager::new()))
     }
 
     // Factory method to create a scaling component.
@@ -79,6 +78,14 @@ impl ScalingComponentManager {
     pub fn add_scaling_component(&mut self, scaling_component: Box<dyn ScalingComponent>) {
         self.scaling_components
             .insert(scaling_component.get_id().to_string(), scaling_component);
+    }
+
+    pub fn get_scaling_components(&self) -> &HashMap<String, Box<dyn ScalingComponent>> {
+        &self.scaling_components
+    }
+
+    pub fn remove_all(&mut self) {
+        self.scaling_components.clear();
     }
 
     pub fn get_scaling_component(&self, id: &str) -> Option<&Box<dyn ScalingComponent>> {

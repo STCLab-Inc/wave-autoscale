@@ -20,11 +20,11 @@ where
     // Read the file of the path
     let file = File::open(path)?;
     // Make a deserializer to iterate the yaml that could have multiple documents
-    let mut deserializer = Deserializer::from_reader(file);
+    let deserializer = Deserializer::from_reader(file);
     // For result
     let mut result = ParserResult::default();
     // Each document
-    while let Some(document) = deserializer.next() {
+    for document in deserializer {
         let value = Value::deserialize(document)?;
         // The "kind" tells the document type like Metric, ScalingPlan
         if let Some(kind) = value.get("kind").and_then(Value::as_str) {

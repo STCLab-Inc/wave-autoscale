@@ -1,13 +1,12 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use actix_cors::Cors;
-use actix_web::{App, HttpServer};
-use dotenv::dotenv;
-
 use crate::{
     app_state::{get_app_state, GetAppStateParam},
     controller,
 };
+use actix_cors::Cors;
+use actix_web::{App, HttpServer};
+use dotenv::dotenv;
+use log::{debug, info};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 async fn ping() -> String {
     let time = SystemTime::now()
@@ -21,8 +20,8 @@ async fn ping() -> String {
 pub async fn run_server() -> std::io::Result<()> {
     dotenv().ok();
 
-    // get the ip_address from env
-    let ip_address = std::env::var("IP_ADDRESS").expect("IP_ADDRESS must be set");
+    // get the HOST from env
+    let host = std::env::var("HOST").expect("HOST must be set");
 
     // get the port from env and parse it to u16
     let port = std::env::var("PORT")
@@ -32,6 +31,7 @@ pub async fn run_server() -> std::io::Result<()> {
 
     // get the sql_url from env
     let sql_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    debug!("sql_url: {}", sql_url);
     let app_state = get_app_state(GetAppStateParam { sql_url }).await;
 
     let http_server = HttpServer::new(move || {
@@ -40,13 +40,14 @@ pub async fn run_server() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(app_state.clone())
+            .route("/", actix_web::web::get().to(ping))
             .route("/ping", actix_web::web::get().to(ping))
             .configure(controller::init_metric_controller)
             .configure(controller::init_scaling_component_controller)
             .configure(controller::init_plan_controller)
             .configure(controller::init_autoscaling_history_controller)
     })
-    .bind((ip_address.clone(), port));
+    .bind((host.clone(), port));
 
     // Server structure implements Future.
     let server = match http_server {
@@ -56,6 +57,6 @@ pub async fn run_server() -> std::io::Result<()> {
         }
     };
 
-    println!("It's up! {}:{}", ip_address, port);
+    info!("It's up! {}:{}", host, port);
     server.await
 }

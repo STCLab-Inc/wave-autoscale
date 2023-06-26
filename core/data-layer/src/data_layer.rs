@@ -1,3 +1,9 @@
+use crate::{
+    types::{
+        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+    },
+    MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
+};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use sqlx::{
@@ -5,31 +11,31 @@ use sqlx::{
     AnyPool, Row,
 };
 use std::path::Path;
+use tokio::sync::watch;
 use uuid::Uuid;
-
-use crate::{
-    types::{
-        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
-    },
-    MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
-};
 
 #[derive(Debug)]
 pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
+    watch_duration: u64,
 }
 
 pub struct DataLayerNewParam {
     pub sql_url: String,
+    // seconds to wait before checking for new data
+    pub watch_duration: u64,
 }
+
 impl DataLayer {
     pub async fn new(params: DataLayerNewParam) -> Self {
+        debug!("sql_url: {}", params.sql_url);
         let data_layer = DataLayer {
             pool: DataLayer::get_pool(&params.sql_url).await,
+            watch_duration: params.watch_duration,
         };
         data_layer.migrate().await;
-        return data_layer;
+        data_layer
     }
     async fn get_pool(sql_url: &str) -> AnyPool {
         const SQLITE_PROTOCOL: &str = "sqlite://";
@@ -41,15 +47,15 @@ impl DataLayer {
             }
             // Create the SQLite file if it doesn't exist
             if !path.exists() {
-                std::fs::File::create(&path).unwrap();
+                std::fs::File::create(path).unwrap();
             }
         }
-        let pool = AnyPoolOptions::new()
+
+        AnyPoolOptions::new()
             .max_connections(5)
             .connect(sql_url)
             .await
-            .unwrap();
-        return pool;
+            .unwrap()
     }
     async fn migrate(&self) {
         match &self.pool.any_kind() {
@@ -73,20 +79,68 @@ impl DataLayer {
             }
         }
     }
+    pub fn watch(&self) -> watch::Receiver<String> {
+        let (notify_sender, notify_receiver) = watch::channel(String::new());
+        let pool = self.pool.clone();
+        let watch_duration = self.watch_duration;
+        tokio::spawn(async move {
+            let mut lastest_updated_at_hash: String = String::new();
+            loop {
+                println!("Watching...");
+                let query_string =
+                    "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;";
+                let result_string = sqlx::query(query_string).fetch_all(&pool).await.unwrap();
+                let mut updated_at_hash_string: String = String::new();
+                for row in &result_string {
+                    let updated_at: String = row.get(0);
+                    println!("{:?}", updated_at);
+                    updated_at_hash_string.push_str(&updated_at);
+                }
+                if lastest_updated_at_hash != updated_at_hash_string {
+                    // Send signals after the first time
+                    if !lastest_updated_at_hash.is_empty() {
+                        println!("is not empty");
+                        let timestamp = Utc::now().to_rfc3339();
+                        let result = notify_sender.send(timestamp);
+                        if result.is_err() {
+                            error!(
+                                "Failed to send notify signal: {}",
+                                result.err().unwrap().to_string()
+                            );
+                        }
+                    }
+                    lastest_updated_at_hash = updated_at_hash_string;
+                    println!("Updated at hash changed");
+                }
+                // 1 second
+                tokio::time::sleep(tokio::time::Duration::from_secs(watch_duration)).await;
+            }
+        });
+        notify_receiver
+    }
+
     // Add multiple metrics to the database
     pub async fn add_metrics(&self, metrics: Vec<MetricDefinition>) -> Result<()> {
         // Define a pool variable that is a trait to pass to the execute function
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, metric_kind, metadata) VALUES (?,?,?,?)";
+                "INSERT INTO metric (db_id, id, metric_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metric_kind, metadata, updated_at) = (?,?,?)";
             let db_id = Uuid::new_v4().to_string();
-
+            let updated_at = Utc::now();
             let result = sqlx::query(query_string)
+                // Values for insert
                 .bind(db_id)
                 .bind(metric.id.to_lowercase())
                 .bind(metric.metric_kind.to_lowercase())
-                .bind(metadata_string)
+                .bind(metadata_string.clone())
+                .bind(updated_at)
+                .bind(updated_at)
+                // Values for update
+                .bind(metric.metric_kind.to_lowercase())
+                .bind(metadata_string.clone())
+                .bind(updated_at)
+                // Run
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -163,11 +217,16 @@ impl DataLayer {
     // Update a metric in the database
     pub async fn update_metric(&self, metric: MetricDefinition) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
-        let query_string = "UPDATE metric SET id=?, metric_kind=?, metadata=? WHERE db_id=?";
+        let query_string =
+            "UPDATE metric SET id=?, metric_kind=?, metadata=?, updated_at=? WHERE db_id=?";
+        let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(metric.id)
             .bind(metric.metric_kind)
             .bind(metadata_string)
+            .bind(updated_at)
+            // WHERE
             .bind(metric.db_id)
             .execute(&self.pool)
             .await;
@@ -189,14 +248,21 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata) VALUES (?,?,?,?)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = (?,?)";
             let id = Uuid::new_v4().to_string();
-
+            let updated_at = Utc::now();
             let result = sqlx::query(query_string)
+                // Values for insert
                 .bind(id)
                 .bind(scaling_component.id)
                 .bind(scaling_component.component_kind)
-                .bind(metadata_string)
+                .bind(metadata_string.clone())
+                .bind(updated_at)
+                .bind(updated_at)
+                // Values for update
+                .bind(metadata_string.clone())
+                .bind(updated_at)
+                // Run
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -281,11 +347,15 @@ impl DataLayer {
     ) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
         let query_string =
-            "UPDATE scaling_component SET id=?, component_kind=?, metadata=? WHERE db_id=?";
+            "UPDATE scaling_component SET id=?, component_kind=?, metadata=?, updated_at=? WHERE db_id=?";
+        let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(scaling_component.id)
             .bind(scaling_component.component_kind)
             .bind(metadata_string)
+            .bind(updated_at)
+            // WHERE
             .bind(scaling_component.db_id)
             .execute(&self.pool)
             .await;
@@ -303,14 +373,21 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, title, plans) VALUES (?,?,?,?)";
+            let query_string = "INSERT INTO plan (db_id, id, title, plans, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
-
+            let updated_at = Utc::now();
             let result = sqlx::query(query_string)
+                // Values for insert
                 .bind(id)
                 .bind(plan.id)
-                .bind(plan.title)
-                .bind(plans_string)
+                .bind(plan.title.clone())
+                .bind(plans_string.clone())
+                .bind(updated_at)
+                .bind(updated_at)
+                // Values for update
+                .bind(plan.title.clone())
+                .bind(plans_string.clone())
+                .bind(updated_at)
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -387,11 +464,15 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
-        let query_string = "UPDATE plan SET id=?, title=?, plans=? WHERE db_id=?";
+        let query_string = "UPDATE plan SET id=?, title=?, plans=?, updated_at=? WHERE db_id=?";
+        let updated_at = Utc::now();
         let result = sqlx::query(query_string)
+            // SET
             .bind(plan.id)
             .bind(plan.title)
             .bind(plans_string)
+            .bind(updated_at)
+            // WHERE
             .bind(plan.db_id)
             .execute(&self.pool)
             .await;
@@ -412,6 +493,7 @@ impl DataLayer {
         let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at) VALUES (?,?,?,?,?,?,?,?)";
         let id = Uuid::new_v4().to_string();
         let result = sqlx::query(query_string)
+            // INTO
             .bind(id)
             .bind(autoscaling_history.plan_db_id)
             .bind(autoscaling_history.plan_id)
@@ -491,5 +573,17 @@ impl DataLayer {
             });
         }
         Ok(autoscaling_history)
+    }
+    // Remove the old AutoscalingHistory from the database
+    pub async fn remove_old_autoscaling_history(&self, to_date: DateTime<Utc>) -> Result<()> {
+        let query_string = "DELETE FROM autoscaling_history WHERE created_at < ?";
+        let result = sqlx::query(query_string)
+            .bind(to_date)
+            .execute(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        Ok(())
     }
 }

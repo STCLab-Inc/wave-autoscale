@@ -7,7 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use data_layer::MetricDefinition;
 use std::collections::HashMap;
-use tokio::task::JoinHandle;
+
 
 pub mod cloudwatch_data;
 pub mod cloudwatch_statistics;
@@ -40,7 +40,7 @@ pub fn create_metric_adapter(
 
 #[async_trait]
 pub trait MetricAdapter {
-    fn run(&mut self) -> JoinHandle<()>;
+    fn run(&mut self);
     fn stop(&mut self);
     fn get_id(&self) -> &str;
     fn get_metric_kind(&self) -> &str;
@@ -75,32 +75,32 @@ impl MetricAdapterManager {
         Ok(())
     }
 
+    pub fn get_metric_adapters(&self) -> &HashMap<String, Box<dyn MetricAdapter>> {
+        &self.metric_adapters
+    }
+
+    pub fn remove_all_definitions(&mut self) {
+        self.metric_adapters.clear();
+    }
+
     pub fn add_metric_adapter(&mut self, metric_adapter: Box<dyn MetricAdapter>) {
         self.metric_adapters
             .insert(metric_adapter.get_id().to_string(), metric_adapter);
     }
 
-    pub fn run(&mut self) -> Vec<JoinHandle<()>> {
-        let mut tasks = Vec::new();
+    pub fn run(&mut self) {
         for metric_adapter in self.metric_adapters.values_mut() {
-            let task = metric_adapter.run();
-            tasks.push(task);
+            metric_adapter.run();
         }
-        tasks
     }
 
-    // TODO: For now, we don't need to stop metric adapters
-    // pub fn stop(&mut self) {
-    //     for metric_adapter in self.metric_adapters.values_mut() {
-    //         metric_adapter.stop();
-    //     }
-    // }
+    pub fn stop(&mut self) {
+        for metric_adapter in self.metric_adapters.values_mut() {
+            metric_adapter.stop();
+        }
+    }
 
-    // pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
-    //     self.metric_adapters.get(id)
-    // }
-
-    // pub fn get_metric_store(&self) -> MetricStore {
-    //     self.metric_store.clone()
-    // }
+    pub fn get_metric_adapter(&self, id: &str) -> Option<&Box<dyn MetricAdapter>> {
+        self.metric_adapters.get(id)
+    }
 }

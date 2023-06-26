@@ -40,7 +40,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
     fn get_id(&self) -> &str {
         &self.metric.id
     }
-    fn run(&mut self) -> JoinHandle<()> {
+    fn run(&mut self) {
         self.stop();
 
         let metadata = self.metric.metadata.clone();
@@ -58,7 +58,7 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
 
         // self.task = Some(task);
 
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             let mut shared_config: SdkConfig = aws_config::from_env().load().await;
             if let (
                 Some(Value::String(access_key)),
@@ -141,7 +141,8 @@ impl MetricAdapter for CloudWatchDataMetricAdapter {
                 // Wait for the next interval.
                 interval.tick().await;
             }
-        })
+        });
+        self.task = Some(task);
     }
     fn stop(&mut self) {
         if let Some(task) = &self.task {
