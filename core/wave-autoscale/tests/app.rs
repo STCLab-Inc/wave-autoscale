@@ -28,6 +28,7 @@ mod app_test {
             plan: Some(plan_path),
             config: None,
             watch_duration: 1,
+            autoscaling_history_retention: None,
         })
         .await;
         app.run().await;
