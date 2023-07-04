@@ -1,0 +1,14 @@
+---
+kind: Metric
+id: metric_id
+collector: vector
+metric_kind: prometheus
+metadata:
+  user_key: user_value
+---
+kind: Metric
+id: metric_id_2
+collector: telegraf
+metric_kind: prometheus
+metadata:
+  user_key: user_value

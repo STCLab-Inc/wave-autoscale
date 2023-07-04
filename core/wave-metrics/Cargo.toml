@@ -14,3 +14,16 @@ lto = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "4.3.0", features = ["derive"] }
+env_logger = { version = "0.10.0" }
+log = { version = "0.4.18" }
+anyhow = "1.0.70"
+data-layer = { path = "../data-layer" }
+serde = { version = "1.0.157", features = ["derive"] }
+serde_yaml = "0.9.19"
+reqwest = { version = "0.11.15", features = ["json", "stream"] }
+futures-util = "0.3.14"
+tokio = { version = "1.27.0", features = ["full"] }
+flate2 = { version = "1.0.26" }
+tar = { version = "0.4.38" }
+walkdir = { version = "2.3.3" }
