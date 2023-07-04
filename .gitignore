@@ -30,3 +30,10 @@ core/wave-cli/wave-api-server
 core/wave-cli/wave-controller
 core/wave-cli/wave-web-app/
 core/wave-cli/plan.yaml
+
+# core/wave-metrics
+core/wave-metrics/telegraf*
+core/wave-metrics/vector*
+
+# VSCode
+.vscode/
