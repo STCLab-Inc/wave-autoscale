@@ -1,7 +1,7 @@
 ---
 kind: ScalingComponent
 id: aws_ecs_ec2_service_scaling_server
-component_kind: aws-ecs-service-scaling
+component_kind: amazon-ecs
 metadata:
   region: ap-northeast-3
   access_key: AKIA5TOD4EBPND6KWUE6
@@ -11,7 +11,7 @@ metadata:
 ---
 kind: ScalingComponent
 id: aws_ecs_fargate_service_scaling_server
-component_kind: aws-ecs-service-scaling
+component_kind: amazon-ecs
 metadata:
   region: ap-northeast-3
   access_key: AKIA5TOD4EBPND6KWUE6
