@@ -1,7 +1,7 @@
 use crate::args::Args;
 use anyhow::Result;
 use clap::Parser;
-use data_layer::reader::config_reader::read_wave_config_file;
+use data_layer::reader::wave_config_reader::read_wave_config_file;
 use log::{debug, error, info};
 use notify::{Config, PollWatcher, RecursiveMode, Watcher};
 use regex::Regex;

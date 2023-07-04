@@ -46,7 +46,7 @@ use args::Args;
 use data_layer::{
     data_layer::{DataLayer, DataLayerNewParam},
     reader::{
-        config_reader::read_wave_config_file,
+        wave_config_reader::read_wave_config_file,
         yaml_reader::{read_yaml_file, ParserResult},
     },
 };
