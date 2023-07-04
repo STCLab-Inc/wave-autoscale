@@ -47,7 +47,7 @@ use data_layer::{
     data_layer::{DataLayer, DataLayerNewParam},
     reader::{
         wave_config_reader::read_wave_config_file,
-        yaml_reader::{read_yaml_file, ParserResult},
+        wave_definition_reader::{read_definition_yaml_file, ParserResult},
     },
 };
 use log::{debug, error};
@@ -183,7 +183,7 @@ impl App {
 
     fn parse_plan_file(plan_file: &String) -> ParserResult {
         // Parse the plan_file
-        let parse_result = read_yaml_file(plan_file);
+        let parse_result = read_definition_yaml_file(plan_file);
         if parse_result.is_err() {
             let error = parse_result.as_ref().err().unwrap();
             debug!("Error reading plans file: {}", error);

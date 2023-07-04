@@ -7,7 +7,7 @@
 #[cfg(test)]
 mod reader {
     use anyhow::Result;
-    use data_layer::reader::yaml_reader::{read_yaml_file, ParserResult};
+    use data_layer::reader::wave_definition_reader::{read_definition_yaml_file, ParserResult};
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 1;
@@ -15,7 +15,7 @@ mod reader {
 
     fn read_example_yaml_file() -> Result<ParserResult> {
         let yaml_file_path = EXAMPLE_FILE_PATH;
-        read_yaml_file(yaml_file_path)
+        read_definition_yaml_file(yaml_file_path)
     }
 
     #[test]

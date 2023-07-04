@@ -3,7 +3,7 @@ mod scaling_component_test {
     use std::collections::HashMap;
 
     use anyhow::Result;
-    use data_layer::reader::yaml_reader::read_yaml_file;
+    use data_layer::reader::wave_definition_reader::read_definition_yaml_file;
     use serde_json::{json, Value};
     use wave_autoscale::scaling_component::{
         aws_ec2_autoscaling::EC2AutoScalingComponent,
@@ -16,7 +16,7 @@ mod scaling_component_test {
     #[tokio::test]
     async fn ec2_autoscaling() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file(EC2_AUTOSCALING_FILE_PATH)?;
+        let result = read_definition_yaml_file(EC2_AUTOSCALING_FILE_PATH)?;
 
         // create metric adapter
         let mut scaling_component_manager = ScalingComponentManager::new();
@@ -45,7 +45,7 @@ mod scaling_component_test {
     #[tokio::test]
     async fn k8s_deployment_autoscaling() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file("./tests/yaml/component_k8s_deployment.yaml")?;
+        let result = read_definition_yaml_file("./tests/yaml/component_k8s_deployment.yaml")?;
         // create metric adapter
         let mut scaling_component_manager = ScalingComponentManager::new();
         scaling_component_manager.add_definitions(result.scaling_component_definitions);
