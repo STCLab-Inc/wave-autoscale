@@ -77,6 +77,7 @@ mod data_layer {
                 id: "test".to_string(),
                 db_id: "test".to_string(),
                 kind: ObjectKind::Metric,
+                collector: "vector".to_string(),
                 metric_kind: "test".to_string(),
                 metadata: HashMap::new(),
             }])

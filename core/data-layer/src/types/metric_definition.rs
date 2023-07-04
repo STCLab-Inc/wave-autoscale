@@ -23,6 +23,10 @@ pub struct MetricDefinition {
     #[validate(custom(validate_id_regex))]
     #[validate(min_length = 2)]
     pub id: String,
+    // Example: "vector", "telegraf", "fluentbit"
+    #[serde(default)]
+    pub collector: String,
+    // Example: "prometheus", "cloudwatch-statistics"
     pub metric_kind: String,
     #[ts(type = "object")]
     pub metadata: HashMap<String, Value>,
