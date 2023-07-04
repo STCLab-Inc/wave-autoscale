@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde_yaml::{Deserializer, Mapping, Value};
 use std::fs::File;
 
-pub fn read_config_file(config: Option<String>) -> Mapping {
+pub fn read_wave_config_file(config: Option<String>) -> Mapping {
     const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
 
     let config_file: String;

@@ -46,7 +46,7 @@ use args::Args;
 use data_layer::{
     data_layer::{DataLayer, DataLayerNewParam},
     reader::{
-        config_reader::read_config_file,
+        config_reader::read_wave_config_file,
         yaml_reader::{read_yaml_file, ParserResult},
     },
 };
@@ -79,7 +79,7 @@ impl App {
         let parse_result = App::parse_plan_file(&plan_file);
 
         // Read config file
-        let config_result = read_config_file(config);
+        let config_result = read_wave_config_file(config);
 
         // DB_URL from config file
         let mut db_url: String = String::new();
