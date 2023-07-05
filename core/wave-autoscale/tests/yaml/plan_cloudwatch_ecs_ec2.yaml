@@ -11,7 +11,7 @@ metadata:
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
   expression: "SELECT MAX(CPUUtilization) FROM SCHEMA(\"AWS/ECS\", ClusterName) WHERE ClusterName = 'wave-test-cluster10'"
   period: 5
-  duration_seconds: 60
+  duration_seconds: 120
   # TODO: support MetricStat
 ---
 kind: ScalingComponent
@@ -31,13 +31,13 @@ plans:
   - id: scale-out-plan-1
     description: "Scale out if CPU usage is greater than 2%."
     # JavaScript expression that returns a boolean value.
-    expression: "cloudwatch_cpu_max >= 2"
+    expression: "cloudwatch_cpu_max >= 3"
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
       - component_id: aws_ecs_ec2_service_scaling_server
         # JavaScript expression that returns an integer.
-        desired: "Math.floor(3)"
+        desired: 2
   - id: scale-out-plan-2
     description: "Scale out if CPU usage is greater than 80%."
     expression: "cloudwatch_cpu_max >= 80"

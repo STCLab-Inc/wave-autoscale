@@ -32,8 +32,6 @@ impl ScalingComponent for ECSServiceScalingComponent {
     }
     async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
         let metadata: HashMap<String, Value> = self.definition.metadata.clone();
-        println!(" [SEE] ECSServiceScalingComponent apply - metadata = {:?}", metadata);
-        println!(" [SEE] ECSServiceScalingComponent apply - params = {:?}", params);
         if let (
             Some(Value::String(access_key)),
             Some(Value::String(secret_key)),
@@ -72,26 +70,48 @@ impl ScalingComponent for ECSServiceScalingComponent {
 
             if result.is_err() {
                 let error = result.err().unwrap();
-                // error.
                 let meta = error.meta();
-                // meta.ex
                 let json = json!({
                     "message": meta.message(),
                     "code": meta.code(),
                     "extras": meta.to_string()
                 });
-                println!(" [SEE] ECSServiceScalingComponent apply - ERROR json = {:?}", json);
+
                 return Err(anyhow::anyhow!(json));
             }
-            println!(" [SEE] ECSServiceScalingComponent apply - result = {:?}", result);
+
             Ok(())
         } else {
-            println!(" [SEE] ECSServiceScalingComponent apply - ERROR!!!!");
             Err(anyhow::anyhow!("Invalid metadata"))
         }
 
+    }
+
+}
 
 
+#[cfg(test)]
+mod test {
+    use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
+    use crate::scaling_component::ScalingComponent;
+    use super::ECSServiceScalingComponent;
+
+
+    #[tokio::test]
+    async fn apply_test() {
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-ecs"),
+            metadata: HashMap::new()
+        };
+
+        let params = HashMap::new();
+        let ecs_service_scaling_component = ECSServiceScalingComponent::new(scaling_definition).apply(params).await;
+        assert!(ecs_service_scaling_component.is_err());
     }
 
 }
