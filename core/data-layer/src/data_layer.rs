@@ -1,4 +1,5 @@
 use crate::{
+    reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
     },
@@ -14,29 +15,86 @@ use std::path::Path;
 use tokio::sync::watch;
 use uuid::Uuid;
 
+const DEFAULT_DEFINITION_PATH: &str = "./plan.yaml";
+const DEFAULT_DB_URL: &str = "sqlite://wave.db";
+
 #[derive(Debug)]
 pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
-    watch_duration: u64,
-}
-
-pub struct DataLayerNewParam {
-    pub sql_url: String,
-    // seconds to wait before checking for new data
-    pub watch_duration: u64,
 }
 
 impl DataLayer {
-    pub async fn new(params: DataLayerNewParam) -> Self {
-        debug!("sql_url: {}", params.sql_url);
+    pub async fn new(sql_url: &str, definition_path: &str) -> Self {
+        let sql_url = if sql_url.is_empty() {
+            DEFAULT_DB_URL
+        } else {
+            sql_url
+        };
+
         let data_layer = DataLayer {
-            pool: DataLayer::get_pool(&params.sql_url).await,
-            watch_duration: params.watch_duration,
+            pool: DataLayer::get_pool(sql_url).await,
         };
         data_layer.migrate().await;
+
+        // TODO: Validate the definition file before loading it into the database
+        if data_layer
+            .load_definition_file_into_database(definition_path)
+            .await
+            .is_err()
+        {
+            // If DataLayer fails to load the definition file, it's not safe to continue. So we panic here
+            panic!("Failed to load definition file into database");
+        }
         data_layer
     }
+
+    async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
+        // Get the definition path not
+        let definition_path = if definition_path.is_empty() {
+            DEFAULT_DEFINITION_PATH
+        } else {
+            definition_path
+        };
+        // Parse the plan_file
+        let parser_result = read_definition_yaml_file(definition_path);
+        if parser_result.is_err() {
+            return Err(anyhow!(
+                "Failed to parse the definition file: {:?}",
+                parser_result
+            ));
+        }
+        let parser_result = parser_result.unwrap();
+
+        // Save definitions into DataLayer
+        let metric_definitions = parser_result.metric_definitions.clone();
+        let metric_definitions_result = self.add_metrics(metric_definitions).await;
+        if metric_definitions_result.is_err() {
+            return Err(anyhow!("Failed to save metric definitions into DataLayer"));
+        }
+
+        // Save definitions into DataLayer
+        let scaling_component_definitions = parser_result.scaling_component_definitions.clone();
+        let scaling_component_definitions_result = self
+            .add_scaling_components(scaling_component_definitions)
+            .await;
+        if scaling_component_definitions_result.is_err() {
+            return Err(anyhow!(
+                "Failed to save scaling component definitions into DataLayer"
+            ));
+        }
+
+        // Save definitions into DataLayer
+        let scaling_plan_definitions = parser_result.scaling_plan_definitions.clone();
+        let scaling_plan_definitions_result = self.add_plans(scaling_plan_definitions).await;
+        if scaling_plan_definitions_result.is_err() {
+            return Err(anyhow!(
+                "Failed to save scaling plan definitions into DataLayer"
+            ));
+        }
+        Ok(())
+    }
+
     async fn get_pool(sql_url: &str) -> AnyPool {
         const SQLITE_PROTOCOL: &str = "sqlite://";
         if sql_url.contains(SQLITE_PROTOCOL) {
@@ -79,10 +137,9 @@ impl DataLayer {
             }
         }
     }
-    pub fn watch(&self) -> watch::Receiver<String> {
+    pub fn watch(&self, watch_duration: u64) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
-        let watch_duration = self.watch_duration;
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
             loop {
@@ -125,18 +182,20 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, metric_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metric_kind, metadata, updated_at) = (?,?,?)";
+                "INSERT INTO metric (db_id, id, collector, metric_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (collector, metric_kind, metadata, updated_at) = (?,?,?,?)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(db_id)
                 .bind(metric.id.to_lowercase())
+                .bind(metric.collector.to_lowercase())
                 .bind(metric.metric_kind.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
+                .bind(metric.collector.to_lowercase())
                 .bind(metric.metric_kind.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(updated_at)
@@ -221,11 +280,12 @@ impl DataLayer {
     pub async fn update_metric(&self, metric: MetricDefinition) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
-            "UPDATE metric SET id=?, metric_kind=?, metadata=?, updated_at=? WHERE db_id=?";
+            "UPDATE metric SET id=?, collector=?, metric_kind=?, metadata=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
             .bind(metric.id)
+            .bind(metric.collector)
             .bind(metric.metric_kind)
             .bind(metadata_string)
             .bind(updated_at)

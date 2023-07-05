@@ -42,20 +42,10 @@ use crate::{
     },
 };
 use args::Args;
-
-use data_layer::{
-    data_layer::{DataLayer, DataLayerNewParam},
-    reader::{
-        wave_config_reader::read_wave_config_file,
-        wave_definition_reader::{read_definition_yaml_file, ParserResult},
-    },
-};
+use data_layer::{data_layer::DataLayer, reader::wave_config_reader::parse_wave_config_file};
 use log::{debug, error};
 use std::sync::Arc;
 use tokio::time::sleep;
-
-const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
-const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
 pub struct App {
     args: Args,
@@ -69,53 +59,26 @@ pub struct App {
 
 impl App {
     pub async fn new(args: Args) -> Self {
-        // Read command line arguments
-        let plan = args.plan.clone();
-        let config = args.config.clone();
-        let watch_duration = args.watch_duration;
-
-        // Read plans file that might not exist
-        let plan_file = App::get_plan_file_path(plan);
-        let parse_result = App::parse_plan_file(&plan_file);
+        // Read arguments
+        let definition = args.definition.clone().unwrap_or_default();
+        let config = args.config.clone().unwrap_or_default();
 
         // Read config file
-        let config_result = read_wave_config_file(config);
+        let config_result = parse_wave_config_file(config.as_str());
 
         // DB_URL from config file
-        let mut db_url: String = String::new();
-
-        let config_db_url = config_result.get("DB_URL");
-        if config_db_url.is_none() {
-            debug!("No db_url specified in config file");
-        } else {
-            db_url = config_db_url.unwrap().as_str().unwrap().to_string();
-            debug!("Using db_url: {}", &db_url);
-        }
-
-        // If db_url is empty, use default db_url
-        if db_url.is_empty() {
-            db_url = DEFAULT_DB_URL.to_string();
-            debug!("Using default db_url: {}", &db_url);
-        }
+        let db_url = config_result
+            .get("COMMON")
+            .and_then(|common| common.get("DB_URL"))
+            .and_then(|db_url| db_url.as_str())
+            .unwrap_or_default();
 
         // Create DataLayer
-        let data_layer = DataLayer::new(DataLayerNewParam {
-            sql_url: db_url.clone(),
-            watch_duration,
-        })
-        .await;
+        let data_layer = DataLayer::new(db_url, definition.as_str()).await;
         let shared_data_layer = Arc::new(data_layer);
 
-        // Save definitions into DataLayer
-        {
-            let shared_data_layer = shared_data_layer.clone();
-            App::save_parser_result_into_data_layer(&parse_result, &shared_data_layer).await;
-        }
-
         // Create MetricStore(Arc<RwLock<HashMap<String, Value>>>)
-        let shared_metric_store: Arc<
-            tokio::sync::RwLock<std::collections::HashMap<String, serde_json::Value>>,
-        > = metric_store::new_shared();
+        let shared_metric_store: SharedMetricStore = metric_store::new_shared();
 
         // Create MetricAdapterManager
         let metric_adapter_manager =
@@ -136,69 +99,6 @@ impl App {
             shared_scaling_component_manager,
             shared_scaling_planner_manager,
             autoscaling_history_remover_handle: None,
-        }
-    }
-    async fn save_parser_result_into_data_layer(
-        parser_result: &ParserResult,
-        data_layer: &DataLayer,
-    ) {
-        // Save definitions into DataLayer
-        let metric_definitions = parser_result.metric_definitions.clone();
-        let metric_definitions_result = data_layer.add_metrics(metric_definitions).await;
-        if metric_definitions_result.is_err() {
-            error!("Failed to save metric definitions into DataLayer");
-        }
-
-        // Save definitions into DataLayer
-        let scaling_component_definitions = parser_result.scaling_component_definitions.clone();
-        let scaling_component_definitions_result = data_layer
-            .add_scaling_components(scaling_component_definitions)
-            .await;
-        if scaling_component_definitions_result.is_err() {
-            error!("Failed to save scaling component definitions into DataLayer");
-        }
-
-        // Save definitions into DataLayer
-        let scaling_plan_definitions = parser_result.scaling_plan_definitions.clone();
-        let scaling_plan_definitions_result = data_layer.add_plans(scaling_plan_definitions).await;
-        if scaling_plan_definitions_result.is_err() {
-            error!("Failed to save scaling plan definitions into DataLayer");
-        }
-    }
-
-    fn get_plan_file_path(plan: Option<String>) -> String {
-        let plan_file: String;
-        if plan.is_none() {
-            debug!(
-                "No plans file specified, using default plans file: {}",
-                DEFAULT_PLAN_FILE
-            );
-            plan_file = DEFAULT_PLAN_FILE.to_string();
-        } else {
-            plan_file = plan.unwrap();
-            debug!("Using plans file: {:?}", &plan_file);
-        }
-        plan_file
-    }
-
-    fn parse_plan_file(plan_file: &String) -> ParserResult {
-        // Parse the plan_file
-        let parse_result = read_definition_yaml_file(plan_file);
-        if parse_result.is_err() {
-            let error = parse_result.as_ref().err().unwrap();
-            debug!("Error reading plans file: {}", error);
-        } else {
-            debug!("Successfully read plans file");
-        }
-
-        match parse_result {
-            Ok(plans_file_result) => plans_file_result,
-            Err(_) => ParserResult {
-                metric_definitions: vec![],
-                scaling_component_definitions: vec![],
-                scaling_plan_definitions: vec![],
-                slo_definitions: vec![],
-            },
         }
     }
 
@@ -344,7 +244,9 @@ impl App {
             }
             _ => {}
         }
-        let mut watch_receiver = self.shared_data_layer.watch();
+
+        let watch_duration = self.args.watch_duration;
+        let mut watch_receiver = self.shared_data_layer.watch(watch_duration);
         // Run this loop at once and then wait for changes
         let mut once = false;
         while !once || watch_receiver.changed().await.is_ok() {
