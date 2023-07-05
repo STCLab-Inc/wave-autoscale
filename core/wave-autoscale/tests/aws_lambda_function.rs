@@ -6,8 +6,7 @@ mod aws_lambda_function_test {
   use data_layer::reader::yaml_reader::read_yaml_file;
   use serde_json::{json, Value};
   
-  use aws_sdk_lambda::{config::Credentials, error::ProvideErrorMetadata};
-  use aws_sdk_lambda::Client;
+  use aws_sdk_lambda::{config::Credentials, error::ProvideErrorMetadata, Client};
   
   const LAMBDA_FUNCTION_FILE_PATH: &str = "./tests/yaml/component_lambda_function.yaml";  
   static STATIC_REGION: &str = "ap-northeast-3";
@@ -28,15 +27,15 @@ mod aws_lambda_function_test {
     for scaling_component_definition in parse_result.scaling_component_definitions.clone() {      
       let metadata: HashMap<String, Value> = scaling_component_definition.metadata;
       
-      if let (
-        Some(Value::String(_region)),
+      if let (        
         Some(Value::String(access_key)),
         Some(Value::String(secret_key)),
+        Some(Value::String(_region)),
         Some(Value::String(function_name)),
-      ) = (
-        metadata.get("region"),
+      ) = (        
         metadata.get("access_key"),
         metadata.get("secret_key"),
+        metadata.get("region"),
         metadata.get("function_name"),
       ) {
         let provider_name = "wave-autoscale";
