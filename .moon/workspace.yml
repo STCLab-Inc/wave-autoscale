@@ -18,6 +18,7 @@ projects:
   api-server: "core/api-server"
   web-app: "core/web-app"
   cli: "core/wave-cli"
+  utils: "core/utils"
   archiver: ".moon/archiver"
 
 # Configures the version control system to utilize within the workspace. A VCS
