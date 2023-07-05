@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct TargetUrlDefinition {
+struct DownloadUrlDefinition {
     macos_x86_64: String,
     macos_aarch64: String,
     linux_x86_64: String,
@@ -11,8 +11,8 @@ struct TargetUrlDefinition {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CollectorDefinition {
-    vector: TargetUrlDefinition,
-    telegraf: TargetUrlDefinition,
+    vector: DownloadUrlDefinition,
+    telegraf: DownloadUrlDefinition,
 }
 
 impl CollectorDefinition {

@@ -8,7 +8,10 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Read definitions from a yaml file.
     #[arg(short, long)]
     pub definition: Option<String>,
+    #[arg(short, long)]
+    pub config: Option<String>,
+    #[arg(short, long, default_value_t = 5)]
+    pub watch_duration: u64,
 }

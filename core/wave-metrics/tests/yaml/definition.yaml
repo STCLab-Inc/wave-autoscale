@@ -5,6 +5,7 @@ collector: vector
 metric_kind: prometheus
 metadata:
   user_key: user_value
+  number: 11
 ---
 kind: Metric
 id: metric_id_2

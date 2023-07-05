@@ -2,25 +2,25 @@ use self::collector_definition::CollectorDefinition;
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
-use log::{error, info};
+use log::{debug, error, info};
 use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
 use tar::Archive;
+use utils::process::{run_processes, AppInfo};
 mod collector_definition;
-
-pub struct MetricCollector {
-    metric_definitions: Vec<MetricDefinition>,
+pub struct MetricCollectorManager {
     collector_definition: CollectorDefinition,
+    output_socket_address: String,
 }
 
-impl MetricCollector {
-    pub fn new(metric_definitions: Vec<MetricDefinition>, collectors_file: &str) -> Self {
+impl MetricCollectorManager {
+    pub fn new(collectors_file: &str, output_socket_address: &str) -> Self {
         let file = std::fs::File::open(collectors_file).unwrap();
         let collector_definition: CollectorDefinition = serde_yaml::from_reader(file).unwrap();
         Self {
-            metric_definitions,
             collector_definition,
+            output_socket_address: output_socket_address.to_string(),
         }
     }
     // Get the info of the OS and architecture - e.g. linux_x86_64
@@ -66,10 +66,10 @@ impl MetricCollector {
         return Ok(());
     }
     // Download the collector binary if it doesn't exist
-    pub async fn prepare_collector_binaries(&self) {
+    pub async fn prepare_collector_binaries(&self, metric_definitions: &Vec<MetricDefinition>) {
         // Get the collector in MetricDefinition uniquely
         let mut collector_names: Vec<String> = Vec::new();
-        for metric_definition in &self.metric_definitions {
+        for metric_definition in metric_definitions {
             if !collector_names.contains(&metric_definition.collector) {
                 collector_names.push(metric_definition.collector.clone());
             }
@@ -150,9 +150,6 @@ impl MetricCollector {
             // let target_file = format!("./{}/{}", collector_str, collector_str);
         }
     }
-    pub fn run(&self) {
-        println!("Running metric collector");
-    }
     fn decompress_file(source: &str, target: &str) -> Result<(), String> {
         let tar_gz = File::open(source);
         if tar_gz.is_err() {
@@ -167,5 +164,100 @@ impl MetricCollector {
         }
 
         Ok(())
+    }
+    pub fn save_metric_definitions_to_vector_config(
+        &self,
+        metric_definitions: &Vec<&MetricDefinition>,
+        config_path: &str,
+    ) {
+        // Create a TOML value representing your data structure
+        let mut data = toml::value::Table::new();
+        let mut sources = toml::value::Table::new();
+
+        // Create a TOML array representing the metric definitions
+        for metric_definition in metric_definitions {
+            let mut metric_definition_table = toml::value::Table::new();
+            metric_definition_table.insert(
+                "type".to_string(),
+                toml::Value::String(metric_definition.metric_kind.to_string()),
+            );
+            for (key, value) in &metric_definition.metadata {
+                let value = serde_json::from_str(value.to_string().as_str());
+                if let Ok(value) = value {
+                    metric_definition_table.insert(key.to_string(), value);
+                }
+            }
+            // let table_name = format!("sources.{}", metric_definition.id);
+            sources.insert(
+                metric_definition.id.clone(),
+                toml::Value::Table(metric_definition_table),
+            );
+        }
+        data.insert("sources".to_string(), toml::Value::Table(sources));
+
+        let mut sink = toml::value::Table::new();
+        let mut output = toml::value::Table::new();
+
+        output.insert(
+            "type".to_string(),
+            toml::Value::String("socket".to_string()),
+        );
+        output.insert(
+            "inputs".to_string(),
+            toml::Value::Array(
+                metric_definitions
+                    .iter()
+                    .map(|metric_definition| toml::Value::String(metric_definition.id.clone()))
+                    .collect(),
+            ),
+        );
+        output.insert(
+            "address".to_string(),
+            toml::Value::String(self.output_socket_address.clone()),
+        );
+        let mut encoding = toml::value::Table::new();
+        encoding.insert("codec".to_string(), toml::Value::String("json".to_string()));
+        output.insert("encoding".to_string(), toml::Value::Table(encoding));
+        output.insert("mode".to_string(), toml::Value::String("tcp".to_string()));
+
+        sink.insert("output".to_string(), toml::Value::Table(output));
+        data.insert("sinks".to_string(), toml::Value::Table(sink));
+
+        // Serialize it to a TOML string
+        let toml = toml::to_string(&data).unwrap();
+        debug!("Vector config:\n{}", toml);
+
+        // Write the string to a file
+        std::fs::write(config_path, toml).unwrap();
+    }
+    pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
+        // Prepare the collector binaries
+        self.prepare_collector_binaries(metric_definitions).await;
+
+        // Find the metric definitions that use Vector collector
+        let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
+        for metric_definition in metric_definitions {
+            if metric_definition.collector == "vector" {
+                vector_metric_definitions.push(metric_definition);
+            }
+        }
+        let os_arch = self.get_os_arch();
+        let vector_dir_path = format!("./vector_{}", os_arch);
+        let vector_config_path = format!("{}/vector.toml", vector_dir_path);
+        self.save_metric_definitions_to_vector_config(
+            &vector_metric_definitions,
+            vector_config_path.as_str(),
+        );
+
+        // Run the collector binaries
+        let mut collector_processes: Vec<AppInfo> = Vec::new();
+        let vector_app_info = AppInfo {
+            name: "vector".to_string(),
+            command: format!("{}/vector", vector_dir_path),
+            args: Some(vec!["--config-toml".to_string(), vector_config_path]),
+            envs: None,
+        };
+        collector_processes.push(vector_app_info);
+        run_processes(&collector_processes);
     }
 }
