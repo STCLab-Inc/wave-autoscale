@@ -51,7 +51,7 @@ mod aws_lambda_function_test {
             let error = result.err().unwrap();
             let meta = error.meta();
             let json = json!({
-              "message": meta.message(),
+              "message": meta.message().unwrap_or(&error.to_string()),
               "code": meta.code(),
               "extras": meta.to_string()
             });
@@ -70,7 +70,7 @@ mod aws_lambda_function_test {
             let error = result.err().unwrap();
             let meta = error.meta();
             let json = json!({
-              "message": meta.message(),
+              "message": meta.message().unwrap_or(&error.to_string()),
               "code": meta.code(),
               "extras": meta.to_string()
             });
