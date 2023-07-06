@@ -1,5 +1,5 @@
 use crate::{
-    reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
+    reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
     },
@@ -43,8 +43,7 @@ impl DataLayer {
             .await
             .is_err()
         {
-            // If DataLayer fails to load the definition file, it's not safe to continue. So we panic here
-            panic!("Failed to load definition file into database");
+            error!("Failed to load definition file into database");
         }
         data_layer
     }
