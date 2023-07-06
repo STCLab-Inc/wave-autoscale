@@ -15,9 +15,9 @@ use tokio::{sync::RwLock, task::JoinHandle, time};
 
 // Get a context with the metric store values set as global variables
 fn get_context_with_metric_store(
+    context: Result<quick_js::Context, quick_js::ContextError>,
     metric_store: &HashMap<String, Value>,
 ) -> Result<quick_js::Context> {
-    let context = quick_js::Context::new();
     match context {
         Ok(context) => {
             for (key, value) in metric_store.iter() {
@@ -55,7 +55,9 @@ fn get_matching_scaling_plan<'a>(
 ) -> Option<&'a PlanItemDefinition> {
     for plan in plans.iter() {
         let expression = &plan.expression;
-        let context = get_context_with_metric_store(shared_metric_store).unwrap();
+        let context = quick_js::Context::new();
+        let context = get_context_with_metric_store(context, shared_metric_store).unwrap();
+
         if context.eval_as::<bool>(expression).unwrap_or(false) {
             return Some(plan);
         }

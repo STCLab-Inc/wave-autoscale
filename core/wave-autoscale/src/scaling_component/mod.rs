@@ -4,9 +4,12 @@ use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 pub mod aws_ec2_autoscaling;
+pub mod aws_ecs_service_scaling;
 pub mod k8s_deployment;
 use self::{
-    aws_ec2_autoscaling::EC2AutoScalingComponent, k8s_deployment::K8sDeploymentScalingComponent,
+    aws_ec2_autoscaling::EC2AutoScalingComponent,
+    aws_ecs_service_scaling::ECSServiceScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent,
 };
 use anyhow::Result;
 
@@ -49,6 +52,9 @@ impl ScalingComponentManager {
             EC2AutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(EC2AutoScalingComponent::new(cloned_defintion)))
             }
+            ECSServiceScalingComponent::SCALING_KIND => Ok(Box::new(
+                ECSServiceScalingComponent::new(cloned_defintion),
+            )),
             K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
                 K8sDeploymentScalingComponent::new(cloned_defintion),
             )),
