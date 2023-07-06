@@ -98,6 +98,7 @@ mod test {
     use super::ECSServiceScalingComponent;
 
 
+    // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]
     async fn apply_test() {
 
