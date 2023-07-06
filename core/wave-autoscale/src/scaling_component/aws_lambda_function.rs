@@ -116,3 +116,29 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
+    use crate::scaling_component::ScalingComponent;
+    use super::LambdaFunctionScalingComponent;
+
+    // Purpose of the test is call apply function and fail test. just consists of test forms only.
+    #[tokio::test]
+    async fn apply_test() {
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("aws-lambda"),
+            metadata: HashMap::new()
+        };
+
+        let params = HashMap::new();
+        let lambda_function_scaling_component = LambdaFunctionScalingComponent::new(scaling_definition).apply(params).await;
+        assert!(lambda_function_scaling_component.is_err());
+    }
+
+}
