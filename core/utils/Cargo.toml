@@ -9,3 +9,5 @@ edition = "2021"
 env_logger = { version = "0.10.0" }
 log = { version = "0.4.18" }
 anyhow = "1.0.70"
+serde = { version = "1.0.157", features = ["derive"] }
+serde_yaml = "0.9.19"
