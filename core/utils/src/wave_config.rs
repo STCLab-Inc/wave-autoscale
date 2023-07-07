@@ -23,12 +23,22 @@ pub struct WaveMetricsOutputConfig {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default)]
+pub struct WaveApiServerConfig {
+    #[serde(default)]
+    pub host: String,
+    #[serde(default)]
+    pub port: u16,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Default)]
 pub struct WaveConfig {
     // pub config: Mapping,
     #[serde(default)]
     pub common: CommonConfig,
     #[serde(default)]
     pub wave_metrics: WaveMetricsConfig,
+    #[serde(default)]
+    pub wave_api_server: WaveApiServerConfig,
 }
 
 impl WaveConfig {
@@ -58,13 +68,24 @@ impl WaveConfig {
 mod tests {
     use super::*;
 
+    fn get_wave_config() -> WaveConfig {
+        WaveConfig::new("./tests/yaml/wave-config.yaml")
+    }
+
     #[test]
-    fn test_wave_config() {
-        let wave_config = WaveConfig::new("./tests/yaml/wave-config.yaml");
+    fn test_wave_metrics() {
+        let wave_config = get_wave_config();
         assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
         assert_eq!(
             wave_config.wave_metrics.output.url,
             "http://localhost:8081/api/metrics-collector"
         );
+    }
+
+    #[test]
+    fn test_wave_api_server() {
+        let wave_config = get_wave_config();
+        assert_eq!(wave_config.wave_api_server.host, "localhost");
+        assert_eq!(wave_config.wave_api_server.port, 8081);
     }
 }
