@@ -3,7 +3,7 @@ common:
 
 wave_metrics:
   output:
-    url: http://localhost:8081/api/metrics-collector
+    url: http://localhost:8081/api/metrics-receiver
 
 wave_api_server:
   host: localhost

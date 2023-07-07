@@ -206,7 +206,7 @@ impl MetricCollectorManager {
          * inputs = ["metric_id_1"]
          * compression = "gzip"
          * method = "post"
-         * uri = "http://localhost:8080/api/metrics-collector?metric_id=metric_id_1&collector=vector"
+         * uri = "http://localhost:8080/api/metrics-receiver?metric_id=metric_id_1&collector=vector"
          * payload_prefix = '{"metrics": ['
          * payload_suffix = ']}'
          *
@@ -252,7 +252,7 @@ impl MetricCollectorManager {
             sinks_metric.insert(
                 "uri".to_string(),
                 toml::Value::String(format!(
-                    "{}/api/metrics-collector?metric_id={}&collector=vector",
+                    "{}/api/metrics-receiver?metric_id={}&collector=vector",
                     self.output_url, metric_definition.id
                 )),
             );
@@ -340,7 +340,7 @@ mod tests {
 
         MetricCollectorManager::new(
             "./tests/yaml/collectors.yaml",
-            "http://localhost:8081/api/metrics-collector",
+            "http://localhost:8081/api/metrics-receiver",
         )
     }
 

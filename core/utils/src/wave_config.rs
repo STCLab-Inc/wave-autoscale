@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
         assert_eq!(
             wave_config.wave_metrics.output.url,
-            "http://localhost:8081/api/metrics-collector"
+            "http://localhost:8081/api/metrics-receiver"
         );
     }
 

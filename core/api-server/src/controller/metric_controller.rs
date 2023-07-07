@@ -1,6 +1,6 @@
 use actix_web::{
     delete, get, post, put,
-    web::{self, Bytes},
+    web::{self},
     HttpResponse, Responder,
 };
 use data_layer::MetricDefinition;
@@ -14,8 +14,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(get_metric_by_id)
         .service(post_metrics)
         .service(put_metric_by_id)
-        .service(delete_metric_by_id)
-        .service(post_metrics_collector);
+        .service(delete_metric_by_id);
 }
 
 #[get("/api/metrics")]
@@ -97,23 +96,6 @@ async fn delete_metric_by_id(
     HttpResponse::Ok().body("ok")
 }
 
-// [POST] /api/metrics-collector
-// #[derive(Deserialize, Validate)]
-// struct PostMetricsCollectorRequest {
-//     metrics: Vec<MetricDefinition>,
-// }
-
-#[post("/api/metrics-collector")]
-async fn post_metrics_collector(bytes: Bytes) -> impl Responder {
-    match String::from_utf8(bytes.to_vec()) {
-        Ok(text) => {
-            println!("text: {}", text);
-            HttpResponse::Ok().body(text)
-        }
-        Err(_) => HttpResponse::InternalServerError().body("Failed to parse body"),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::init;
@@ -121,7 +103,7 @@ mod tests {
     use actix_web::{http::StatusCode, test, web, App};
     use data_layer::{data_layer::DataLayer, MetricDefinition};
     use serde_json::json;
-    use std::{collections::HashMap, error::Error, rc::Rc};
+    use std::{collections::HashMap, error::Error};
 
     // Utility functions
 

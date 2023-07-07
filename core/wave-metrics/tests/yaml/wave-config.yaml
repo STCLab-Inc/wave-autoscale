@@ -3,7 +3,7 @@ common:
 
 wave_metrics:
   output:
-    url: http://localhost:8081/api/metrics-collector
+    url: http://localhost:8081/api/metrics-receiver
 
 WAVE-API-SERVER:
   PORT: 8081
