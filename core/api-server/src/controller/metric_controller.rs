@@ -1,6 +1,9 @@
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web::{
+    delete, get, post, put,
+    web::{self, Bytes},
+    HttpResponse, Responder,
+};
 use data_layer::MetricDefinition;
-use log::debug;
 use serde::Deserialize;
 use validator::Validate;
 
@@ -11,7 +14,8 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(get_metric_by_id)
         .service(post_metrics)
         .service(put_metric_by_id)
-        .service(delete_metric_by_id);
+        .service(delete_metric_by_id)
+        .service(post_metrics_collector);
 }
 
 #[get("/api/metrics")]
@@ -35,7 +39,12 @@ async fn get_metric_by_id(
         .get_metric_by_id(db_id.into_inner())
         .await;
     if metric.is_err() {
-        return HttpResponse::InternalServerError().body(format!("{:?}", metric));
+        let error_message = format!("{:?}", metric);
+        return HttpResponse::InternalServerError().body(error_message);
+    }
+    let metric = metric.unwrap();
+    if metric.is_none() {
+        return HttpResponse::NotFound().body("Metric not found");
     }
     HttpResponse::Ok().json(metric.unwrap())
 }
@@ -88,66 +97,186 @@ async fn delete_metric_by_id(
     HttpResponse::Ok().body("ok")
 }
 
-// use validator::ValidationError;
-// fn validate_username(username: &str) -> Result<(), ValidationError> {
-//     // todo: use regex for robust
-//     if first_char_is_number(username) {
-//         return Err(ValidationError::new(
-//             "terrible_username: first char is number",
-//         ));
-//     }
-
-//     if username.contains("@") {
-//         // the value of the username will automatically be added later
-//         return Err(ValidationError::new("terrible_username: contains @"));
-//     }
-
-//     Ok(())
-// }
-
-// pub fn first_char_is_number(s: &str) -> bool {
-//     s.get(0..1).and_then(|c| c.parse::<u8>().ok()).is_some()
-// }
-
-// // [GET] /users
-// #[get("/users")]
-// async fn get_users(app_state: web::Data<AppState>) -> impl Responder {
-//     let result = UserRepository::get_users(&app_state.db_context).await;
-//     match result {
-//         Ok(users) => HttpResponse::Ok().json(users),
-//         Err(error) => HttpResponse::InternalServerError().body(format!("{:?}", error)),
-//     }
-// }
-
-// // [POST] /users
+// [POST] /api/metrics-collector
 // #[derive(Deserialize, Validate)]
-// struct RegisterForm {
-//     #[validate(length(min = 3, max = 33), custom = "validate_username")]
-//     username: String,
-//     name: String,
-//     #[validate(email)]
-//     email: String,
-//     password: String,
+// struct PostMetricsCollectorRequest {
+//     metrics: Vec<MetricDefinition>,
 // }
 
-// #[post("/users")]
-// async fn add_users(
-//     form: web::Json<RegisterForm>,
-//     app_state: web::Data<AppState>,
-// ) -> impl Responder {
-//     let form = form.into_inner();
-//     if let Err(error) = form.validate() {
-//         return HttpResponse::BadRequest().body(error.to_string());
-//     }
-//     let user = User {
-//         id: Uuid::new_v4(),
-//         name: form.name,
-//         username: form.username,
-//         email: form.email,
-//     };
-//     let result = UserRepository::create_user(&app_state.db_context, &user).await;
-//     match result {
-//         Ok(_) => HttpResponse::Ok().body(format!("{:?}", user)),
-//         Err(error) => HttpResponse::InternalServerError().body(format!("{:?}", error)),
-//     }
-// }
+#[post("/api/metrics-collector")]
+async fn post_metrics_collector(bytes: Bytes) -> impl Responder {
+    match String::from_utf8(bytes.to_vec()) {
+        Ok(text) => {
+            println!("text: {}", text);
+            HttpResponse::Ok().body(text)
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Failed to parse body"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::init;
+    use crate::app_state::get_app_state;
+    use actix_web::{http::StatusCode, test, web, App};
+    use data_layer::{data_layer::DataLayer, MetricDefinition};
+    use serde_json::json;
+    use std::{collections::HashMap, error::Error, rc::Rc};
+
+    // Utility functions
+
+    async fn get_app_state_for_test() -> web::Data<super::AppState> {
+        get_app_state("sqlite://:memory:").await
+    }
+
+    async fn add_metrics_for_test(data_layer: &DataLayer) {
+        let _ = data_layer
+            .add_metrics(vec![
+                data_layer::MetricDefinition {
+                    db_id: "".to_string(),
+                    kind: data_layer::types::object_kind::ObjectKind::Metric,
+                    id: "metric_id_1".to_string(),
+                    collector: "vector".to_string(),
+                    metric_kind: "counter".to_string(),
+                    metadata: HashMap::new(),
+                },
+                data_layer::MetricDefinition {
+                    db_id: "".to_string(),
+                    kind: data_layer::types::object_kind::ObjectKind::Metric,
+                    id: "metric_id_2".to_string(),
+                    collector: "vector".to_string(),
+                    metric_kind: "counter".to_string(),
+                    metadata: HashMap::new(),
+                },
+            ])
+            .await;
+    }
+
+    async fn get_metrics_for_test(data_layer: &DataLayer) -> Vec<MetricDefinition> {
+        data_layer.get_all_metrics().await.unwrap()
+    }
+
+    // [GET] /api/metrics
+
+    #[actix_web::test]
+    async fn test_get_metrics() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get().uri("/api/metrics").to_request();
+        let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+    }
+
+    // [GET] /api/metrics/{db_id}
+
+    #[actix_web::test]
+    async fn test_get_metric_by_id() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+
+        let metrics = get_metrics_for_test(&app_state.data_layer).await;
+
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get()
+            .uri(format!("/api/metrics/{}", metrics[0].db_id).as_str())
+            .to_request();
+        let resp: Result<MetricDefinition, Box<dyn Error>> =
+            test::try_call_and_read_body_json(&app, req).await;
+        let resp = resp.unwrap();
+        assert_eq!(resp.id, "metric_id_1");
+    }
+
+    #[actix_web::test]
+    async fn test_get_metric_by_id_failed() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get()
+            .uri(format!("/api/metrics/{}", "random_id_to_fail").as_str())
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    // [POST] /api/metrics
+    #[actix_web::test]
+    async fn test_post_metrics() {
+        let app_state = get_app_state_for_test().await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/metrics")
+            .set_json(json!(
+                { "metrics": [{
+                    "id": "metric_id_1",
+                    "collector": "vector",
+                    "metric_kind": "counter",
+                    "metadata": {}
+                },
+                {
+                    "id": "metric_id_2",
+                    "collector": "vector",
+                    "metric_kind": "counter",
+                    "metadata": {}
+                }]}
+            ))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        // Check if metrics are added
+        let req = test::TestRequest::get().uri("/api/metrics").to_request();
+        let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+    }
+
+    // [DELETE] /api/metrics/{db_id}
+    #[actix_web::test]
+    async fn test_delete_metric_by_id() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+
+        let metrics = get_metrics_for_test(&app_state.data_layer).await;
+
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::delete()
+            .uri(format!("/api/metrics/{}", metrics[0].db_id).as_str())
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        // Check if metrics are deleted
+        let req = test::TestRequest::get().uri("/api/metrics").to_request();
+        let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 1);
+    }
+
+    // [PUT] /api/metrics/{db_id}
+    #[actix_web::test]
+    async fn test_put_metric_by_id() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+
+        let metrics = get_metrics_for_test(&app_state.data_layer).await;
+
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let new_metric = json!(
+            {
+                "id": "metric_id_3",
+                "collector": "telegraf",
+                "metric_kind": "counter",
+                "metadata": {}
+            }
+        );
+        let req = test::TestRequest::put()
+            .uri(format!("/api/metrics/{}", metrics[0].db_id).as_str())
+            .set_json(&new_metric)
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        // Check if metrics are updated
+        let req = test::TestRequest::get().uri("/api/metrics").to_request();
+        let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+        assert_eq!(resp[0].id, "metric_id_3");
+    }
+}
