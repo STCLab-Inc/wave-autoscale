@@ -24,6 +24,7 @@ archive/
 
 # Test Files
 wave.db
+:memory:
 
 # core/wave-cli
 core/wave-cli/wave-api-server
