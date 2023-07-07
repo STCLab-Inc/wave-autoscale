@@ -229,26 +229,30 @@ impl DataLayer {
         Ok(metrics)
     }
     // Get a metric from the database
-    pub async fn get_metric_by_id(&self, db_id: String) -> Result<MetricDefinition> {
+    pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
         let query_string =
             "SELECT db_id, id, collector, metric_kind, metadata FROM metric WHERE db_id=?";
         let result = sqlx::query(query_string)
             .bind(db_id)
-            .fetch_one(&self.pool)
+            // Do not use fetch_one because it expects exact one result. If not, it will return an error
+            .fetch_all(&self.pool)
             .await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
-        let metric = MetricDefinition {
+        if result.is_empty() {
+            return Ok(None);
+        }
+        let result = result.get(0).map(|row| MetricDefinition {
             kind: ObjectKind::Metric,
-            db_id: result.get("db_id"),
-            id: result.get("id"),
-            collector: result.get("collector"),
-            metric_kind: result.get("metric_kind"),
-            metadata: serde_json::from_str(result.get("metadata")).unwrap(),
-        };
-        Ok(metric)
+            db_id: row.get("db_id"),
+            id: row.get("id"),
+            collector: row.get("collector"),
+            metric_kind: row.get("metric_kind"),
+            metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+        });
+        Ok(result)
     }
     // Delete all metrics from the database
     pub async fn delete_all_metrics(&self) -> Result<()> {
