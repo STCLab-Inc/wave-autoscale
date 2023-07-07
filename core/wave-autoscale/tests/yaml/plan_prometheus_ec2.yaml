@@ -25,7 +25,11 @@ plans:
   - id: scale-out-plan-1
     description: "Scale out if CPU usage is greater than 30%."
     # JavaScript expression that returns a boolean value.
-    expression: "prometheus_api_server_cpu_average_total >= 30"
+    expression: >
+      get({
+        name: 'prometheus_api_server_cpu_average_total',
+        tags: 'hostname:ip-172-31-11-11.ap-northeast-2.compute.internal',
+      }) > 30
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
