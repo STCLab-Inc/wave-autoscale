@@ -1,13 +1,20 @@
+/**
+ * Main entry point for wave-metrics
+ *
+ * This program is responsible for:
+ * 1. Reading the metric definitions from the database
+ * 2. Downloading the collector binaries(Vector, Telegraf)
+ * 3. Running the collectors and they will send the metrics to Wave API Server
+ */
 use anyhow::{Ok, Result};
 use args::Args;
 use clap::Parser;
-use data_layer::{data_layer::DataLayer, reader::wave_config_reader::parse_wave_config_file};
+use data_layer::data_layer::DataLayer;
 use log::{debug, error};
 use metric_collector_manager::MetricCollectorManager;
+use utils::wave_config::WaveConfig;
 mod args;
 mod metric_collector_manager;
-
-const COLLECTORS_CONFIG_PATH: &str = "./collectors.yaml";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -20,28 +27,17 @@ async fn main() -> Result<()> {
     // Read arguments
     let definition = args.definition.clone().unwrap_or_default();
     let config = args.config.clone().unwrap_or_default();
+    let collectors_info = args.collectors_info.clone().unwrap_or_default();
     let watch_duration = args.watch_duration;
 
-    // Read config file
-    let config_result = parse_wave_config_file(config.as_str());
-
-    // DB_URL from config file
-    let db_url = config_result
-        .get("COMMON")
-        .and_then(|common| common.get("DB_URL"))
-        .and_then(|db_url| db_url.as_str())
-        .unwrap_or_default();
+    let wave_config = WaveConfig::new(config.as_str());
+    let db_url = wave_config.common.db_url;
 
     // TCP_SOCKET_ADDRESS from config file
-    let tcp_socket_address = config_result
-        .get("WAVE-METRICS")
-        .and_then(|wave_metrics| wave_metrics.get("OUTPUT"))
-        .and_then(|output| output.get("TCP_SOCKET_ADDRESS"))
-        .and_then(|tcp_socket_address| tcp_socket_address.as_str())
-        .unwrap_or_default();
+    let output_url = wave_config.wave_metrics.output.url;
 
     // Create DataLayer
-    let data_layer = DataLayer::new(db_url, definition.as_str()).await;
+    let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
 
     // Process
     // 1. Read definition file and identify which kind of collector needed
@@ -49,8 +45,7 @@ async fn main() -> Result<()> {
     // 3. Transform the metric definition into a collector configuration
     // 4. Run the collector
 
-    let metric_collector_manager =
-        MetricCollectorManager::new(COLLECTORS_CONFIG_PATH, tcp_socket_address);
+    let metric_collector_manager = MetricCollectorManager::new(&collectors_info, &output_url);
 
     let mut watch_receiver = data_layer.watch(watch_duration);
     // Run this loop at once and then wait for changes

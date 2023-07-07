@@ -1,7 +1,0 @@
-COMMON:
-  DB_URL: sqlite://./wave.db
-
-WAVE-METRICS:
-  OUTPUT:
-    TCP_SOCKET_ADDRESS: "localhost:7876"
-    

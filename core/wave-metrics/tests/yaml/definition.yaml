@@ -1,15 +1,7 @@
 ---
 kind: Metric
-id: metric_id
+id: metric_id_1
 collector: vector
-metric_kind: prometheus
+metric_kind: host_metrics
 metadata:
-  user_key: user_value
-  number: 11
----
-kind: Metric
-id: metric_id_2
-collector: telegraf
-metric_kind: prometheus
-metadata:
-  user_key: user_value
+  scrape_interval_secs: 1
