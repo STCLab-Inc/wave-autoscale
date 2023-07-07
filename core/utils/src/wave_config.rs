@@ -53,3 +53,18 @@ impl WaveConfig {
         wave_config.unwrap()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wave_config() {
+        let wave_config = WaveConfig::new("./tests/yaml/wave-config.yaml");
+        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
+        assert_eq!(
+            wave_config.wave_metrics.output.url,
+            "http://localhost:8081/api/metrics-collector"
+        );
+    }
+}

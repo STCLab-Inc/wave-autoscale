@@ -1,0 +1,16 @@
+common:
+  db_url: sqlite://./wave.db
+
+wave_metrics:
+  output:
+    url: http://localhost:8081/api/metrics-collector
+
+WAVE-API-SERVER:
+  PORT: 8081
+  HOST: localhost
+  TCP_PORT: 8082
+  TCP_HOST: localhost
+
+WAVE-WEB-APP:
+  PORT: 3005
+  HOST: localhost
