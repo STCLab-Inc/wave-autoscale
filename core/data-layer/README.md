@@ -5,4 +5,6 @@
 ## Database Schema
 * metrics
 * scaling_components
-* plans
+* **plans**
+
+https://github.com/launchbadge/sqlx/blob/main/sqlx-cli/README.md

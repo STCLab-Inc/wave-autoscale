@@ -2,6 +2,7 @@ use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        source_metrics::SourceMetrics,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -13,6 +14,7 @@ use sqlx::{
 };
 use std::path::Path;
 use tokio::sync::watch;
+use ulid::Ulid;
 use uuid::Uuid;
 
 const DEFAULT_DEFINITION_PATH: &str = "./plan.yaml";
@@ -651,5 +653,60 @@ impl DataLayer {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         Ok(())
+    }
+
+    // Source Metrics
+    // Add a SourceMetric to the database
+    pub async fn add_source_metric(
+        &self,
+        collector: &str,
+        metric_id: &str,
+        json_value: &str,
+    ) -> Result<()> {
+        let query_string =
+            "INSERT INTO source_metrics (id, collector, metric_id, json_value) VALUES (?,?,?,?)";
+        // ULID as id instead of UUID because of the time based sorting
+        let id = Ulid::new().to_string();
+        let result = sqlx::query(query_string)
+            // VALUE
+            .bind(id)
+            .bind(collector)
+            .bind(metric_id)
+            .bind(json_value)
+            .execute(&self.pool)
+            .await;
+        if result.is_err() {
+            let error_message = result.err().unwrap().to_string();
+            error!("Error: {}", error_message);
+            return Err(anyhow!(error_message));
+        }
+        Ok(())
+    }
+    // Get a latest metrics by collector and metric_id from the database
+    pub async fn get_latest_source_metric(
+        &self,
+        collector: &str,
+        metric_id: &str,
+    ) -> Result<Option<SourceMetrics>> {
+        let query_string = "SELECT id, collector, metric_id, json_value FROM source_metrics WHERE collector=? AND metric_id=? ORDER BY id DESC LIMIT 1";
+        let result = sqlx::query(query_string)
+            .bind(collector)
+            .bind(metric_id)
+            .fetch_optional(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        if result.is_none() {
+            return Ok(None);
+        }
+        let result = result.unwrap();
+        Ok(Some(SourceMetrics {
+            id: result.get("id"),
+            collector: result.get("collector"),
+            metric_id: result.get("metric_id"),
+            json_value: result.get("json_value"),
+        }))
     }
 }
