@@ -33,6 +33,24 @@ tasks:
       - "@globs(tests)"
     env:
       RUST_LOG: wave_autoscale=debug
+  test-aws-ecs-service-scaling:
+    command: "cargo test -p wave-autoscale --test aws_ecs_service_scaling -- --nocapture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=debug
+  test-aws-lambda-function:
+    command: "cargo test -p wave-autoscale --test aws_lambda_function -- --nocapture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=debug
   run-help:
     command: "cargo watch -c -x 'run -- --help'"
     deps:

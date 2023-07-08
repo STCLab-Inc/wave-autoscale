@@ -1,0 +1,50 @@
+---
+kind: Metric
+id: cloudwatch_concurrent_executions_cnt
+metric_kind: cloudwatch-data
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPANTGF4XJ
+  secret_key: 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
+  polling_interval: 30000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
+  expression: "SELECT COUNT(Invocations) FROM SCHEMA(\"AWS/Lambda\", FunctionName) WHERE FunctionName = 'test-lambda-function'"
+  period: 5
+  duration_seconds: 60
+---
+kind: ScalingComponent
+id: scaling_component_lambda_function
+component_kind: aws-lambda
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPANTGF4XJ
+  secret_key: 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
+  function_name: test-lambda-function
+  qualifier: latest
+---
+kind: ScalingPlan
+id: scaling_plan_lambda_function
+title: "Scaling Plan for Lambda Function"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if concurrent executions value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_lambda_function
+        # JavaScript expression that returns an integer.
+        reserved_concurrency: 10
+        provisioned_concurrency: 10
+  - id: scale-out-plan-2
+    description: "Scale out if concurrent executions value is greater than 2."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 2"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_lambda_function
+        # JavaScript expression that returns an integer.
+        reserved_concurrency: 2
+        provisioned_concurrency: 2

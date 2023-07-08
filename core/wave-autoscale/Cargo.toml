@@ -23,6 +23,7 @@ serde = { version = "1.0.158", features = ["derive"] }
 serde_json = { version = "1.0.94" }
 aws-config = "0.55.0"
 aws-sdk-autoscaling = "0.25.1"
+aws-sdk-lambda = "0.25.1"
 aws-sdk-cloudwatch = "0.25.1"
 quick-js = { version = "0.4.1" }
 chrono = "0.4.24"
@@ -46,3 +47,4 @@ clap = { version = "4.3.0", features = ["derive"] }
 log = { version = "0.4.18" }
 env_logger = { version = "0.10.0" }
 duration-str = { version = "0.5.1" }
+aws-sdk-ecs = "0.25.1"
