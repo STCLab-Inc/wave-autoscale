@@ -97,4 +97,39 @@ async fn post_metrics_receiver(
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+    use crate::app_state::get_app_state;
+    use actix_web::{http, test, web, App};
+
+    async fn get_app_state_for_test() -> web::Data<super::AppState> {
+        get_app_state("sqlite://:memory:").await
+    }
+
+    #[actix_web::test]
+    async fn test_post_metrics_receiver() {
+        let app_state = get_app_state_for_test().await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/metrics-receiver?collector=vector&metric_id=metric1")
+            .set_payload(
+                r#"{
+                    "metrics": [
+                        {
+                            "name": "metric1",
+                            "tags": {
+                                "tag1": "value1"
+                            },
+                            "counter": {
+                                "value": 1
+                            }
+                        }
+                    ]
+                }"#,
+            )
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+}
