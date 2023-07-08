@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod metric_adapter_test {
     use anyhow::Result;
-    use data_layer::reader::yaml_reader::read_yaml_file;
+    use data_layer::reader::wave_definition_reader::read_definition_yaml_file;
     use serde_json::Value;
     use std::time::Duration;
     use tokio::time::sleep;
@@ -16,7 +16,7 @@ mod metric_adapter_test {
     #[tokio::test]
     async fn prometheus() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file(EXAMPLE_FILE_PATH)?;
+        let result = read_definition_yaml_file(EXAMPLE_FILE_PATH)?;
 
         // create metric adapter manager
         let metric_store: SharedMetricStore = new_shared();
@@ -44,7 +44,7 @@ mod metric_adapter_test {
     #[tokio::test]
     async fn cloudwatch_statistics() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file("./tests/yaml/metric_cloudwatch_statistics.yaml")?;
+        let result = read_definition_yaml_file("./tests/yaml/metric_cloudwatch_statistics.yaml")?;
 
         // create metric adapter manager
         let metric_store: SharedMetricStore = new_shared();
@@ -72,7 +72,7 @@ mod metric_adapter_test {
     #[tokio::test]
     async fn cloudwatch_data() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file("./tests/yaml/metric_cloudwatch_data.yaml")?;
+        let result = read_definition_yaml_file("./tests/yaml/metric_cloudwatch_data.yaml")?;
 
         // create metric adapter manager
         let metric_store: SharedMetricStore = new_shared();

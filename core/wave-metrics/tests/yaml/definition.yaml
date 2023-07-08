@@ -1,0 +1,7 @@
+---
+kind: Metric
+id: metric_id_1
+collector: vector
+metric_kind: host_metrics
+metadata:
+  scrape_interval_secs: 1

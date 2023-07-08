@@ -1,12 +1,11 @@
-use crate::{
-    app_state::{get_app_state, GetAppStateParam},
-    controller,
-};
+use crate::{app_state::get_app_state, args::Args, controller};
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
+use clap::Parser;
 use dotenv::dotenv;
-use log::{debug, info};
+use log::info;
 use std::time::{SystemTime, UNIX_EPOCH};
+use utils::wave_config::WaveConfig;
 
 async fn ping() -> String {
     let time = SystemTime::now()
@@ -20,19 +19,18 @@ async fn ping() -> String {
 pub async fn run_server() -> std::io::Result<()> {
     dotenv().ok();
 
-    // get the HOST from env
-    let host = std::env::var("HOST").expect("HOST must be set");
+    // Parse command line arguments
+    let args: Args = Args::parse();
 
-    // get the port from env and parse it to u16
-    let port = std::env::var("PORT")
-        .expect("PORT must be set")
-        .parse::<u16>()
-        .expect("PORT must be a number");
+    // Read arguments
+    let config = args.config.clone().unwrap_or_default();
+    let wave_config = WaveConfig::new(config.as_str());
+    let host = wave_config.wave_api_server.host;
+    let port = wave_config.wave_api_server.port;
+    let db_url = wave_config.common.db_url;
 
-    // get the sql_url from env
-    let sql_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    debug!("sql_url: {}", sql_url);
-    let app_state = get_app_state(GetAppStateParam { sql_url }).await;
+    // Run HTTP Server
+    let app_state = get_app_state(db_url.as_str()).await;
 
     let http_server = HttpServer::new(move || {
         let cors = Cors::permissive().max_age(3600);
@@ -46,6 +44,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .configure(controller::init_scaling_component_controller)
             .configure(controller::init_plan_controller)
             .configure(controller::init_autoscaling_history_controller)
+            .configure(controller::init_metrics_receiver_controller)
     })
     .bind((host.clone(), port));
 

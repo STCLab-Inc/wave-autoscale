@@ -1,0 +1,90 @@
+language: "rust"
+type: "application"
+
+dependsOn:
+  - "data-layer"
+  - "utils"
+
+tasks:
+  lint:
+    command: "cargo clippy --fix --allow-dirty"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
+  audit:
+    command: "cargo audit"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
+  # Test - Integration + Unit
+  test:
+    command: "cargo test -- --nocapture --test-threads 1"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: debug
+  # Test - Unit
+  test-metric-collector-manager:
+    command: "cargo test -p wave-metrics metric_collector_manager:: -- --nocapture --test-threads 1"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: debug
+  run:
+    command: "cargo watch -c -x 'run -- -d ./tests/yaml/definition.yaml -c ./tests/yaml/wave-config.yaml --collectors-info ./tests/yaml/collectors.yaml'"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    env:
+      RUST_LOG: info
+
+  # Build for Production
+  # Linux
+  build-aarch64-unknown-linux-gnu:
+    command: "cargo build --release --target aarch64-unknown-linux-gnu"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+  build-aarch64-unknown-linux-musl:
+    command: "cargo build --release --target aarch64-unknown-linux-musl"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+  build-x86_64-unknown-linux-gnu:
+    command: "cargo build --release --target x86_64-unknown-linux-gnu"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+  build-x86_64-unknown-linux-musl:
+    command: "cargo build --release --target x86_64-unknown-linux-musl"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+  # Mac
+  build-x86_64-apple-darwin:
+    command: "cargo build --release --target x86_64-apple-darwin"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+  build-aarch64-apple-darwin:
+    command: "cargo build --release --target aarch64-apple-darwin"
+    deps:
+      - "lint"
+    inputs:
+      - "@globs(sources)"
+    outputs:
+      - "/target/aarch64-apple-darwin/release/wave-api-server"

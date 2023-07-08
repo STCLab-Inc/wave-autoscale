@@ -1,7 +1,7 @@
 use crate::args::Args;
 use anyhow::Result;
 use clap::Parser;
-use data_layer::reader::config_reader::read_config_file;
+use data_layer::reader::wave_config_reader::parse_wave_config_file;
 use log::{debug, error, info};
 use notify::{Config, PollWatcher, RecursiveMode, Watcher};
 use regex::Regex;
@@ -187,7 +187,7 @@ fn main() -> Result<()> {
         let mut envs: HashMap<String, String> = HashMap::new();
         let config_file_for_api_server = config_file.clone();
         if !config_file_for_api_server.is_empty() {
-            let config = read_config_file(Some(config_file_for_api_server));
+            let config = parse_wave_config_file(Some(config_file_for_api_server));
             if let Some(common_config) = config.get("COMMON").and_then(|v| v.as_mapping()) {
                 if let Some(db_url) = common_config.get("DB_URL").and_then(|v| v.as_str()) {
                     envs.insert("DATABASE_URL".to_string(), db_url.to_string());
@@ -219,7 +219,7 @@ fn main() -> Result<()> {
         let mut envs: HashMap<String, String> = HashMap::new();
         let config_file_for_web_app = config_file;
         if !config_file_for_web_app.is_empty() {
-            let config = read_config_file(Some(config_file_for_web_app));
+            let config = parse_wave_config_file(Some(config_file_for_web_app));
             if let Some(web_app_config) = config.get("WEB_APP").and_then(|v| v.as_mapping()) {
                 debug!("web_app_config: {:?}", web_app_config);
                 if let Some(port) = web_app_config.get("PORT").and_then(|v| v.as_u64()) {

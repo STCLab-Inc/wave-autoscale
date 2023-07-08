@@ -2,20 +2,17 @@ use serde::Deserialize;
 use serde_yaml::{Deserializer, Mapping, Value};
 use std::fs::File;
 
-pub fn read_config_file(config: Option<String>) -> Mapping {
-    const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
+const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
 
-    let config_file: String;
-    if config.is_none() {
-        debug!("No config file specified, using default config file: ./config.yaml");
-        config_file = DEFAULT_CONFIG_FILE.to_string();
+pub fn parse_wave_config_file(config_path: &str) -> Mapping {
+    let config_path = if config_path.is_empty() {
+        DEFAULT_CONFIG_PATH
     } else {
-        config_file = config.unwrap();
-        debug!("Using config file: {:?}", &config_file);
-    }
+        config_path
+    };
 
     // Read the file of the path
-    let file = File::open(config_file);
+    let file = File::open(config_path);
     if file.is_err() {
         error!("Error reading config file: {}", file.err().unwrap());
         return Mapping::new();

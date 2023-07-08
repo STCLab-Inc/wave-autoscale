@@ -5,7 +5,7 @@ mod scaling_planner_test {
     use anyhow::Result;
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
-        reader::yaml_reader::read_yaml_file,
+        reader::wave_definition_reader::read_definition_yaml_file,
     };
 
     use tokio::time::sleep;
@@ -22,7 +22,7 @@ mod scaling_planner_test {
     #[tokio::test]
     async fn planner_prometheus_ec2() -> Result<()> {
         // read yaml file
-        let result = read_yaml_file(PLAN_PROMETHEUS_EC2)?;
+        let result = read_definition_yaml_file(PLAN_PROMETHEUS_EC2)?;
 
         // create metric adapter manager
         let metric_store: SharedMetricStore = new_shared();

@@ -13,7 +13,7 @@ pub struct ParserResult {
     pub scaling_component_definitions: Vec<ScalingComponentDefinition>,
 }
 
-pub fn read_yaml_file<P>(path: P) -> Result<ParserResult>
+pub fn read_definition_yaml_file<P>(path: P) -> Result<ParserResult>
 where
     P: AsRef<Path>,
 {

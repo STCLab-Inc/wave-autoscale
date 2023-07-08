@@ -10,7 +10,7 @@ mod data_layer {
     use chrono::{Duration, Utc};
     use data_layer::{
         data_layer::{DataLayer, DataLayerNewParam},
-        reader::yaml_reader::{read_yaml_file, ParserResult},
+        reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
         types::{
             autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
         },
@@ -34,7 +34,7 @@ mod data_layer {
     // Common function to read the example yaml file
     fn read_example_yaml_file() -> Result<ParserResult> {
         let yaml_file_path = EXAMPLE_FILE_PATH;
-        read_yaml_file(yaml_file_path)
+        read_definition_yaml_file(yaml_file_path)
     }
 
     async fn get_data_layer() -> Result<DataLayer> {
@@ -77,6 +77,7 @@ mod data_layer {
                 id: "test".to_string(),
                 db_id: "test".to_string(),
                 kind: ObjectKind::Metric,
+                collector: "vector".to_string(),
                 metric_kind: "test".to_string(),
                 metadata: HashMap::new(),
             }])

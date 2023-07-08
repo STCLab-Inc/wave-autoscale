@@ -13,10 +13,12 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 # and cannot reference projects located outside the workspace boundary.
 projects:
   controller: "core/wave-autoscale"
-  web-app: "core/web-app"
+  wave-metrics: "core/wave-metrics"
   data-layer: "core/data-layer"
   api-server: "core/api-server"
+  web-app: "core/web-app"
   cli: "core/wave-cli"
+  utils: "core/utils"
   archiver: ".moon/archiver"
 
 # Configures the version control system to utilize within the workspace. A VCS
