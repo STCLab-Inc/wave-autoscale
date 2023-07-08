@@ -1,4 +1,4 @@
-use log::error;
+use log::{debug, error};
 use serde::Deserialize;
 use std::fs::File;
 
@@ -48,6 +48,8 @@ impl WaveConfig {
         } else {
             config_path
         };
+
+        debug!("Reading config file: {}", config_path);
         // Read the file of the path
         let file = File::open(config_path);
         if file.is_err() {
@@ -60,7 +62,9 @@ impl WaveConfig {
             error!("Error parsing config file: {}", wave_config.err().unwrap());
             return WaveConfig::default();
         }
-        wave_config.unwrap()
+        let wave_config = wave_config.unwrap();
+        debug!("Config file parsed: {:?}", wave_config);
+        wave_config
     }
 }
 
