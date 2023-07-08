@@ -44,6 +44,7 @@ pub async fn run_server() -> std::io::Result<()> {
             .configure(controller::init_scaling_component_controller)
             .configure(controller::init_plan_controller)
             .configure(controller::init_autoscaling_history_controller)
+            .configure(controller::init_metrics_receiver_controller)
     })
     .bind((host.clone(), port));
 
