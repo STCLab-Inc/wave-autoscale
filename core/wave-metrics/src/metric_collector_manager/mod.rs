@@ -252,7 +252,7 @@ impl MetricCollectorManager {
             sinks_metric.insert(
                 "uri".to_string(),
                 toml::Value::String(format!(
-                    "{}/api/metrics-receiver?metric_id={}&collector=vector",
+                    "{}?metric_id={}&collector=vector",
                     self.output_url, metric_definition.id
                 )),
             );
@@ -266,11 +266,11 @@ impl MetricCollectorManager {
             );
             sinks_metric.insert(
                 "payload_prefix".to_string(),
-                toml::Value::String("{\"metrics\": [".to_string()),
+                toml::Value::String("{\"metrics\": ".to_string()),
             );
             sinks_metric.insert(
                 "payload_suffix".to_string(),
-                toml::Value::String("]}".to_string()),
+                toml::Value::String("}".to_string()),
             );
             let mut encoding = toml::value::Table::new();
             encoding.insert("codec".to_string(), toml::Value::String("json".to_string()));
