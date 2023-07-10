@@ -46,6 +46,7 @@ use data_layer::{data_layer::DataLayer, reader::wave_config_reader::parse_wave_c
 use log::{debug, error};
 use std::sync::Arc;
 use tokio::time::sleep;
+use utils::wave_config::WaveConfig;
 
 pub struct App {
     args: Args,
@@ -64,17 +65,11 @@ impl App {
         let config = args.config.clone().unwrap_or_default();
 
         // Read config file
-        let config_result = parse_wave_config_file(config.as_str());
-
-        // DB_URL from config file
-        let db_url = config_result
-            .get("COMMON")
-            .and_then(|common| common.get("DB_URL"))
-            .and_then(|db_url| db_url.as_str())
-            .unwrap_or_default();
+        let config_result = WaveConfig::new(config.as_str());
+        let db_url = config_result.common.db_url.clone();
 
         // Create DataLayer
-        let data_layer = DataLayer::new(db_url, definition.as_str()).await;
+        let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
         let shared_data_layer = Arc::new(data_layer);
 
         // Create MetricStore(Arc<RwLock<HashMap<String, Value>>>)
