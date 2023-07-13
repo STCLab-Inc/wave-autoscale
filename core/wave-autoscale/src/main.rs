@@ -3,12 +3,10 @@
  */
 mod app;
 mod args;
-mod metric_adapter;
-mod metric_store;
+mod metric_updater;
 mod scaling_component;
 mod scaling_planner;
 mod util;
-
 use args::Args;
 use clap::Parser;
 

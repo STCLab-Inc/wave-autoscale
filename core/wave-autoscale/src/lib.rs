@@ -1,7 +1,6 @@
 pub mod app;
 pub mod args;
-pub mod metric_adapter;
-pub mod metric_store;
+pub mod metric_updater;
 pub mod scaling_component;
 pub mod scaling_planner;
 pub mod util;
