@@ -1,60 +1,65 @@
-use crate::{metric_store::SharedMetricStore, scaling_component::SharedScalingComponentManager};
+use crate::{
+    metric_updater::SharedMetricUpdater, scaling_component::SharedScalingComponentManager,
+};
 
 use super::ScalingPlanner;
 use anyhow::Result;
 use data_layer::{data_layer::DataLayer, ScalingPlanDefinition};
 use std::{collections::HashMap, sync::Arc};
-use tokio::{sync::RwLock};
+use tokio::sync::RwLock;
 //
 // PlannerManager
 //
 pub type SharedScalingPlannerManager = Arc<RwLock<ScalingPlannerManager>>;
 
-#[derive(Default)]
 pub struct ScalingPlannerManager {
     scaling_planners: HashMap<String, ScalingPlanner>,
+    data_layer: Arc<DataLayer>,
+    metric_updater: SharedMetricUpdater,
+    scaling_component_manager: SharedScalingComponentManager,
 }
 
 impl ScalingPlannerManager {
-    pub fn new() -> Self {
+    pub fn new(
+        data_layer: Arc<DataLayer>,
+        metric_updater: SharedMetricUpdater,
+        scaling_component_manager: SharedScalingComponentManager,
+    ) -> Self {
         ScalingPlannerManager {
             scaling_planners: HashMap::new(),
+            data_layer,
+            metric_updater,
+            scaling_component_manager,
         }
     }
-    pub fn new_shared() -> SharedScalingPlannerManager {
-        Arc::new(RwLock::new(ScalingPlannerManager::new()))
+    pub fn new_shared(
+        data_layer: Arc<DataLayer>,
+        metric_updater: SharedMetricUpdater,
+        scaling_component_manager: SharedScalingComponentManager,
+    ) -> SharedScalingPlannerManager {
+        Arc::new(RwLock::new(ScalingPlannerManager::new(
+            data_layer,
+            metric_updater,
+            scaling_component_manager,
+        )))
     }
 
     // Factory method to create a scaling component.
-    fn create_scaling_planner(
-        &self,
-        definition: ScalingPlanDefinition,
-        metric_store: SharedMetricStore,
-        scaling_component_manager: SharedScalingComponentManager,
-        data_layer: Arc<DataLayer>,
-    ) -> Result<ScalingPlanner> {
+    fn create_scaling_planner(&self, definition: ScalingPlanDefinition) -> Result<ScalingPlanner> {
         Ok(ScalingPlanner::new(
             definition,
-            metric_store,
-            scaling_component_manager,
-            data_layer,
+            self.metric_updater.clone(),
+            self.scaling_component_manager.clone(),
+            self.data_layer.clone(),
         ))
     }
 
     pub fn add_definitions(
         &mut self,
         scaling_plan_definitions: Vec<ScalingPlanDefinition>,
-        metric_store: SharedMetricStore,
-        scaling_component_manager: SharedScalingComponentManager,
-        data_layer: Arc<DataLayer>,
     ) -> Result<()> {
         for scaling_plan_definition in scaling_plan_definitions {
-            let scaling_component = self.create_scaling_planner(
-                scaling_plan_definition,
-                metric_store.clone(),
-                scaling_component_manager.clone(),
-                data_layer.clone(),
-            )?;
+            let scaling_component = self.create_scaling_planner(scaling_plan_definition)?;
             self.add_scaling_component(scaling_component);
         }
         Ok(())

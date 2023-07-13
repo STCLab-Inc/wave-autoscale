@@ -2,17 +2,21 @@ use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
-        source_metrics::SourceMetrics,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
+use serde_json::json;
 use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
     AnyPool, Row,
 };
-use std::path::Path;
+use std::{
+    collections::HashMap,
+    path::Path,
+    time::{Duration, SystemTime},
+};
 use tokio::sync::watch;
 use ulid::Ulid;
 use uuid::Uuid;
@@ -683,30 +687,42 @@ impl DataLayer {
         Ok(())
     }
     // Get a latest metrics by collector and metric_id from the database
-    pub async fn get_latest_source_metric(
+    pub async fn get_source_metrics_values(
         &self,
-        collector: &str,
-        metric_id: &str,
-    ) -> Result<Option<SourceMetrics>> {
-        let query_string = "SELECT id, collector, metric_id, json_value FROM source_metrics WHERE collector=? AND metric_id=? ORDER BY id DESC LIMIT 1";
+        metric_ids: Vec<String>,
+        polling_interval: u64,
+    ) -> Result<HashMap<String, serde_json::Value>> {
+        // Subtract the duration from the current time
+        let past_time = SystemTime::now() - Duration::from_millis(polling_interval);
+        let ulid = Ulid::from_datetime(past_time);
+        let query_string =
+            "SELECT DISTINCT metric_id, id, json_value FROM source_metrics WHERE id >= ? and metric_id in (?) ORDER BY id DESC";
+        let metric_ids = metric_ids.join(",");
         let result = sqlx::query(query_string)
-            .bind(collector)
-            .bind(metric_id)
-            .fetch_optional(&self.pool)
+            .bind(ulid.to_string())
+            .bind(metric_ids)
+            .fetch_all(&self.pool)
             .await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
-        if result.is_none() {
-            return Ok(None);
+        // if result.is_none() {
+        //     return Err(anyhow!("No value found"));
+        // }
+        // let result = result.unwrap();
+        let mut metric_values: HashMap<String, serde_json::Value> = HashMap::new();
+        for row in result {
+            let metric_id: String = row.get("metric_id");
+            let json_value: String = row.get("json_value");
+            let json_value = json!(json_value);
+            metric_values.insert(metric_id, json_value);
         }
-        let result = result.unwrap();
-        Ok(Some(SourceMetrics {
-            id: result.get("id"),
-            collector: result.get("collector"),
-            metric_id: result.get("metric_id"),
-            json_value: result.get("json_value"),
-        }))
+        Ok(metric_values)
+
+        // let json_value: String = result.get("json_value");
+
+        // let json_value = json!(json_value);
+        // Ok(json_value)
     }
 }

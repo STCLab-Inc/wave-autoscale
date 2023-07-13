@@ -34,24 +34,23 @@ definitions, scaling plan definitions, and slo definitions.
 */
 use crate::{
     args,
-    metric_adapter::{self, MetricAdapterManager},
-    metric_store::{self, SharedMetricStore},
+    metric_updater::{MetricUpdater, SharedMetricUpdater},
     scaling_component::{ScalingComponentManager, SharedScalingComponentManager},
     scaling_planner::scaling_planner_manager::{
         ScalingPlannerManager, SharedScalingPlannerManager,
     },
 };
 use args::Args;
-use data_layer::{data_layer::DataLayer, reader::wave_config_reader::parse_wave_config_file};
+use data_layer::data_layer::DataLayer;
 use log::{debug, error};
 use std::sync::Arc;
 use tokio::time::sleep;
+use utils::wave_config::WaveConfig;
 
 pub struct App {
     args: Args,
     shared_data_layer: Arc<DataLayer>,
-    shared_metric_store: SharedMetricStore,
-    metric_adapter_manager: MetricAdapterManager,
+    shared_metric_updater: SharedMetricUpdater,
     shared_scaling_component_manager: SharedScalingComponentManager,
     shared_scaling_planner_manager: SharedScalingPlannerManager,
     autoscaling_history_remover_handle: Option<tokio::task::JoinHandle<()>>,
@@ -64,42 +63,146 @@ impl App {
         let config = args.config.clone().unwrap_or_default();
 
         // Read config file
-        let config_result = parse_wave_config_file(config.as_str());
-
-        // DB_URL from config file
-        let db_url = config_result
-            .get("COMMON")
-            .and_then(|common| common.get("DB_URL"))
-            .and_then(|db_url| db_url.as_str())
-            .unwrap_or_default();
+        let config_result = WaveConfig::new(config.as_str());
+        let db_url = config_result.common.db_url.clone();
 
         // Create DataLayer
-        let data_layer = DataLayer::new(db_url, definition.as_str()).await;
+        let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
+        // Do not need RwLock or Mutex because the DataLayer is read-only.
         let shared_data_layer = Arc::new(data_layer);
 
-        // Create MetricStore(Arc<RwLock<HashMap<String, Value>>>)
-        let shared_metric_store: SharedMetricStore = metric_store::new_shared();
+        // Create MetricUpdater
+        let shared_metric_updater = MetricUpdater::new_shared(shared_data_layer.clone(), 1000);
 
         // Create MetricAdapterManager
-        let metric_adapter_manager =
-            metric_adapter::MetricAdapterManager::new(shared_metric_store.clone());
+        // let shared_metric_adapter_manager =
+        //     metric_ad
 
         // Create ScalingComponentManager
         let shared_scaling_component_manager = ScalingComponentManager::new_shared();
 
         // Create ScalingPlanManager
-        let shared_scaling_planner_manager = ScalingPlannerManager::new_shared();
+        let shared_scaling_planner_manager = ScalingPlannerManager::new_shared(
+            shared_data_layer.clone(),
+            shared_metric_updater.clone(),
+            shared_scaling_component_manager.clone(),
+        );
 
         // Create App
         App {
             args,
             shared_data_layer,
-            shared_metric_store,
-            metric_adapter_manager,
+            shared_metric_updater,
             shared_scaling_component_manager,
             shared_scaling_planner_manager,
             autoscaling_history_remover_handle: None,
         }
+    }
+
+    pub async fn run(&mut self) {
+        // Scaling Component Manager
+        // Scope for shared_scaling_component_manager_writer(RwLock)
+        {
+            // Reload scaling component definitions from DataLayer
+            let scaling_component_definitions =
+                self.shared_data_layer.get_all_scaling_components().await;
+
+            // If there is an error, log it and return
+            if scaling_component_definitions.is_err() {
+                let error = scaling_component_definitions.err().unwrap();
+                error!("Error getting scaling component definitions: {}", error);
+                return;
+            }
+
+            let scaling_component_definitions = scaling_component_definitions.unwrap();
+            let mut manager_writer = self.shared_scaling_component_manager.write().await;
+            // TODO: Compare the number of scaling components before and after reloading.
+            manager_writer.remove_all();
+            let scaling_component_result =
+                manager_writer.add_definitions(scaling_component_definitions);
+
+            if scaling_component_result.is_err() {
+                let error = scaling_component_result.err().unwrap();
+                error!("Error adding scaling component definitions: {}", error);
+                return;
+            }
+            debug!("Successfully added scaling component definitions");
+        }
+
+        // Metric Updater
+        // Scope for shared_metric_updater_writer(RwLock)
+        {
+            let mut updater_writer = self.shared_metric_updater.write().await;
+            updater_writer.run().await;
+        }
+
+        // Scaling Planner(managed by Vec)
+        // Reload scaling plan definitions from DataLayer
+        let plan_definitions = self.shared_data_layer.get_all_plans().await;
+        if plan_definitions.is_err() {
+            let error = plan_definitions.err().unwrap();
+            error!("Error getting scaling plan definitions: {}", error);
+            return;
+        }
+        let plan_definitions = plan_definitions.unwrap();
+        let number_of_plans = plan_definitions.len();
+        // Scope for shared_scaling_plan_manager_writer(RwLock)
+        {
+            let mut manager_writer = self.shared_scaling_planner_manager.write().await;
+            manager_writer.remove_all();
+            let scaling_plan_result = manager_writer.add_definitions(plan_definitions);
+            if scaling_plan_result.is_err() {
+                let error = scaling_plan_result.err().unwrap();
+                error!("Error adding scaling plan definitions: {}", error);
+                return;
+            }
+            debug!("Successfully added scaling plan definitions");
+            manager_writer.run();
+        }
+        debug!("ScalingPlanners started: {}", number_of_plans);
+    }
+
+    pub async fn run_with_watching(&mut self) {
+        debug!("run_with_watching");
+        // Start the cron job to remove the old Autoscaling History
+        let remove_autoscaling_history_duration = self.args.autoscaling_history_retention.clone();
+
+        debug!(
+            "remove_autoscaling_history_duration: {:?}",
+            remove_autoscaling_history_duration
+        );
+        match remove_autoscaling_history_duration {
+            Some(duration_string) if !duration_string.is_empty() => {
+                self.run_autoscaling_history_cron_job(duration_string);
+            }
+            _ => {}
+        }
+
+        let watch_duration = self.args.watch_duration;
+        let mut watch_receiver = self.shared_data_layer.watch(watch_duration);
+        // Run this loop at once and then wait for changes
+        let mut once = false;
+        while !once || watch_receiver.changed().await.is_ok() {
+            if once {
+                let change = watch_receiver.borrow();
+                debug!("DataLayer changed: {:?}", change);
+            } else {
+                once = true;
+            }
+            self.run().await;
+        }
+    }
+
+    pub fn get_data_layer(&self) -> Arc<DataLayer> {
+        self.shared_data_layer.clone()
+    }
+
+    pub fn get_scaling_component_manager(&self) -> SharedScalingComponentManager {
+        self.shared_scaling_component_manager.clone()
+    }
+
+    pub fn get_scaling_planner_manager(&self) -> SharedScalingPlannerManager {
+        self.shared_scaling_planner_manager.clone()
     }
 
     // Run the cron job to remove the old Autoscaling History
@@ -140,139 +243,5 @@ impl App {
                 self.autoscaling_history_remover_handle = None;
             }
         }
-    }
-
-    pub async fn run(&mut self) {
-        // Reload metric definitions from DataLayer
-        let metric_definitions = self.shared_data_layer.get_all_metrics().await;
-        if metric_definitions.is_ok() {
-            let metric_definitions = metric_definitions.unwrap();
-            let number_of_metric_definitions = metric_definitions.len();
-            debug!("metric_definitions: {:?}", metric_definitions);
-            self.metric_adapter_manager.stop();
-            self.metric_adapter_manager.remove_all_definitions();
-
-            let metric_adapter_result = self
-                .metric_adapter_manager
-                .add_definitions(metric_definitions);
-            if metric_adapter_result.is_err() {
-                let error = metric_adapter_result.err().unwrap();
-                error!("Error adding metric definitions: {}", error);
-            } else {
-                debug!(
-                    "Successfully added metric definitions: {}",
-                    number_of_metric_definitions
-                );
-                self.metric_adapter_manager.run();
-            }
-        } else {
-            let error = metric_definitions.err().unwrap();
-            error!("Error getting metric definitions: {}", error);
-        }
-
-        // Scaling Component Manager
-        // Scope for shared_scaling_component_manager_writer(RwLock)
-        {
-            // Reload scaling component definitions from DataLayer
-            let scaling_component_definitions =
-                self.shared_data_layer.get_all_scaling_components().await;
-            if scaling_component_definitions.is_ok() {
-                let scaling_component_definitions = scaling_component_definitions.unwrap();
-
-                let mut shared_scaling_component_manager_writer =
-                    self.shared_scaling_component_manager.write().await;
-                shared_scaling_component_manager_writer.remove_all();
-                let scaling_component_result = shared_scaling_component_manager_writer
-                    .add_definitions(scaling_component_definitions);
-
-                if scaling_component_result.is_err() {
-                    let error = scaling_component_result.err().unwrap();
-                    error!("Error adding scaling component definitions: {}", error);
-                } else {
-                    debug!("Successfully added scaling component definitions");
-                }
-            } else {
-                let error = scaling_component_definitions.err().unwrap();
-                error!("Error getting scaling component definitions: {}", error);
-            }
-        }
-
-        // Scaling Planner(managed by Vec)
-        // Reload scaling plan definitions from DataLayer
-        let plan_definitions = self.shared_data_layer.get_all_plans().await;
-        if plan_definitions.is_ok() {
-            let plan_definitions = plan_definitions.unwrap();
-            let number_of_plans = plan_definitions.len();
-            // Scope for shared_scaling_plan_manager_writer(RwLock)
-            {
-                let mut shared_scaling_plan_manager_writer =
-                    self.shared_scaling_planner_manager.write().await;
-                shared_scaling_plan_manager_writer.remove_all();
-                let scaling_plan_result = shared_scaling_plan_manager_writer.add_definitions(
-                    plan_definitions,
-                    self.shared_metric_store.clone(),
-                    self.shared_scaling_component_manager.clone(),
-                    self.shared_data_layer.clone(),
-                );
-                if scaling_plan_result.is_err() {
-                    let error = scaling_plan_result.err().unwrap();
-                    error!("Error adding scaling plan definitions: {}", error);
-                } else {
-                    debug!("Successfully added scaling plan definitions");
-                    shared_scaling_plan_manager_writer.run();
-                }
-            }
-            debug!("ScalingPlanners started: {}", number_of_plans);
-        } else {
-            let error = plan_definitions.err().unwrap();
-            error!("Error getting scaling plan definitions: {}", error);
-        }
-    }
-
-    pub async fn run_with_watching(&mut self) {
-        debug!("run_with_watching");
-        // Start the cron job to remove the old Autoscaling History
-        let remove_autoscaling_history_duration = self.args.autoscaling_history_retention.clone();
-
-        debug!(
-            "remove_autoscaling_history_duration: {:?}",
-            remove_autoscaling_history_duration
-        );
-        match remove_autoscaling_history_duration {
-            Some(duration_string) if !duration_string.is_empty() => {
-                self.run_autoscaling_history_cron_job(duration_string);
-            }
-            _ => {}
-        }
-
-        let watch_duration = self.args.watch_duration;
-        let mut watch_receiver = self.shared_data_layer.watch(watch_duration);
-        // Run this loop at once and then wait for changes
-        let mut once = false;
-        while !once || watch_receiver.changed().await.is_ok() {
-            if once {
-                let change = watch_receiver.borrow();
-                debug!("DataLayer changed: {:?}", change);
-            } else {
-                once = true;
-            }
-            self.run().await;
-        }
-    }
-
-    pub fn get_data_layer(&self) -> Arc<DataLayer> {
-        self.shared_data_layer.clone()
-    }
-
-    pub fn get_metric_adapter_manager(&self) -> &MetricAdapterManager {
-        &self.metric_adapter_manager
-    }
-
-    pub fn get_scaling_component_manager(&self) -> SharedScalingComponentManager {
-        self.shared_scaling_component_manager.clone()
-    }
-
-    pub fn get_scaling_planner_manager(&self) -> SharedScalingPlannerManager {
-        self.shared_scaling_planner_manager.clone()
     }
 }

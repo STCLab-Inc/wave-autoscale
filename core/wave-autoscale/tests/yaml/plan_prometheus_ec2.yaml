@@ -52,3 +52,11 @@ plans:
     scaling_components:
       - component_id: ec2_autoscaling_api_server
         desired: 1
+  # TODO: Support Python expression
+  # - id: scale-in-plan-1
+  #   description: "Scale in if CPU usage is less than 30%."
+  #   expression_python: "prometheus_api_server_cpu_average_total >= 80"
+  #   priority: 3
+  #   scaling_components:
+  #     - component_id: ec2_autoscaling_api_server
+  #       desired: 1
