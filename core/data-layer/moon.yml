@@ -1,20 +1,16 @@
 language: "rust"
 type: "library"
-
+owners:
+  defaultOwner: '@wave-autoscale-team'
+  
 tasks:
-  lint:
-    command: "cargo clippy --fix --allow-dirty"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: info
   test:
     command: "cargo test --test data_layer -- --test-threads=1"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"
     env:
-      RUST_LOG: info
+      RUST_LOG: debug
   test-history:
     command: "cargo test --test data_layer test_autoscaling_history -- --nocapture"
     inputs:

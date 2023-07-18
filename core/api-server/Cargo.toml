@@ -14,7 +14,7 @@ lto = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 actix-web = "4.3.1"
-dotenv = "0.15.0"
+dotenvy = { version = "0.15.7" }
 tokio = { version = "1.27.0", features = ["full"] }
 data-layer = { path = "../data-layer" }
 serde = { version = "1.0.160", features = ["derive"] }
@@ -27,7 +27,10 @@ uuid = { version = "1.3.0", features = [
   "serde",
 ] }
 actix-cors = "0.6.4"
-chrono = { version = "0.4.24", features = ["serde"] }
+chrono = { version = "0.4.26", default-features = false, features = [
+  "clock",
+  "serde",
+] }
 env_logger = { version = "0.10.0" }
 log = { version = "0.4.18" }
 clap = { version = "4.3.0", features = ["derive"] }

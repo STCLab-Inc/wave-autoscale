@@ -469,7 +469,7 @@ mod tests {
         let vector_config_path = format!("{}/vector.toml", vector_dir_path);
         // Remove the existing vector directory
         if std::path::Path::new(&vector_dir_path).exists() {
-            std::fs::remove_dir_all(&vector_dir_path).unwrap();
+            let _ = std::fs::remove_dir_all(&vector_dir_path);
         }
 
         // Create the vector directory

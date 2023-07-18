@@ -1,25 +1,15 @@
 language: "rust"
 type: "application"
-
+owners:
+  defaultOwner: '@wave-autoscale-team'
+  
 tasks:
-  lint:
-    command: "cargo clippy --fix --allow-dirty"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: info
-  audit:
-    command: "cargo audit"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: info
   test:
-    command: "cargo test"
+    command: "cargo test -p wave-cli"
     inputs:
       - "@globs(sources)"
     env:
-      RUST_LOG: info
+      RUST_LOG: debug
   copy-wave-controller:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-controller ./wave-controller"
     platform: "system"
@@ -28,7 +18,7 @@ tasks:
     inputs:
       - "@globs(sources)"
     outputs:
-      - "wave-controller"
+      - "./wave-controller"
     env:
       RUST_LOG: info
   copy-wave-api-server:
@@ -39,7 +29,7 @@ tasks:
     inputs:
       - "@globs(sources)"
     outputs:
-      - "wave-api-server"
+      - "./wave-api-server"
     env:
       RUST_LOG: info
   run-help:

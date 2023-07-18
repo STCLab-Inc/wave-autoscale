@@ -4,7 +4,6 @@
  * You can add more test functions in a similar manner to test other aspects of the ParserResult.
  */
 
-#[cfg(test)]
 mod reader {
     use anyhow::Result;
     use data_layer::reader::wave_definition_reader::{read_definition_yaml_file, ParserResult};

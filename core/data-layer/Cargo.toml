@@ -13,7 +13,10 @@ sqlx = { version = "0.6.3", features = [
   "any",
   "chrono",
 ] }
-chrono = { version = "0.4.24", features = ["serde"] }
+chrono = { version = "0.4.26", default-features = false, features = [
+  "clock",
+  "serde",
+] }
 anyhow = "1.0.70"
 serde = { version = "1.0.157", features = ["derive"] }
 serde_yaml = "0.9.19"
