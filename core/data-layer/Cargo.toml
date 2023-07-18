@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sqlx = { version = "0.6.3", features = [
+sqlx = { version = "0.7.1", features = [
   "postgres",
   "mysql",
   "sqlite",
@@ -13,7 +13,11 @@ sqlx = { version = "0.6.3", features = [
   "any",
   "chrono",
 ] }
-chrono = { version = "0.4.24", features = ["serde"] }
+chrono = { version = "0.4.26", default-features = false, features = [
+  "clock",
+  "std",
+  "serde",
+] }
 anyhow = "1.0.70"
 serde = { version = "1.0.157", features = ["derive"] }
 serde_yaml = "0.9.19"
