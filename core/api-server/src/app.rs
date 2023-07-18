@@ -2,7 +2,7 @@ use crate::{app_state::get_app_state, args::Args, controller};
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 use clap::Parser;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use log::info;
 use std::time::{SystemTime, UNIX_EPOCH};
 use utils::wave_config::WaveConfig;
