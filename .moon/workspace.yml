@@ -2,7 +2,7 @@
 $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 # Require a specific version of moon while running commands, otherwise fail.
-# versionConstraint: '>=1.0.0'
+versionConstraint: ">=1.10.1"
 
 # Extend and inherit an external configuration file. Must be a valid HTTPS URL or file system path.
 # extends: './shared/workspace.yml'
@@ -12,15 +12,23 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 # path to the project folder as the map value. File paths are relative from the workspace root,
 # and cannot reference projects located outside the workspace boundary.
 projects:
+  # Rust based
   controller: "core/wave-autoscale"
   wave-metrics: "core/wave-metrics"
   data-layer: "core/data-layer"
   api-server: "core/api-server"
-  web-app: "core/web-app"
   cli: "core/wave-cli"
   utils: "core/utils"
+  # Node based
+  web-app: "core/web-app"
+  # For building
   archiver: ".moon/archiver"
 
+codeowners:
+  syncOnRun: true
+  globalPaths:
+    # All files
+    "*": ["@wave-autoscale-team"]
 # Configures the version control system to utilize within the workspace. A VCS
 # is required for determining touched (added, modified, etc) files, calculating file hashes,
 # computing affected files, and much more.
@@ -28,8 +36,21 @@ vcs:
   # The manager/binary to use when managing the repository.
   # Accepts "git", or "svn". Defaults to "git".
   manager: "git"
-
+  provider: "github"
   # The default branch (master/main/trunk) in the repository for comparing the
   # local branch against. For git, this is is typically "master" or "main",
   # and must include the remote prefix (before /). For svn, this should always be "trunk".
-  defaultBranch: "develop"
+  defaultBranch: "main"
+  syncHooks: true
+  hooks:
+    pre-commit:
+      - "moon sync projects"
+      # TODO: Add back in when we have a fix for 
+      - "cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071"
+      - "moon run :lint"
+    pre-push:
+      - "moon sync projects"
+      # TODO: Add back in when we have a fix for 
+      - "cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071"
+      - "moon run :lint"
+      - "moon run :test"

@@ -23,6 +23,7 @@ temp/
 archive/
 
 # Test Files
+db/
 wave.db
 :memory:
 

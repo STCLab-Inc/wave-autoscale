@@ -4,4 +4,12 @@ id: metric_id_1
 collector: vector
 metric_kind: host_metrics
 metadata:
+  namespace: host
+  scrape_interval_secs: 15
+---
+kind: Metric
+id: metric_id_2
+collector: telegraf
+metric_kind: cloudwatch
+metadata:
   scrape_interval_secs: 1

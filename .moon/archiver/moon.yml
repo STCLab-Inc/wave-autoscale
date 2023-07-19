@@ -1,6 +1,10 @@
 language: "bash"
 
 tasks:
+  lint:
+    command: "echo archiver"
+  test:
+    command: "echo archiver"
   archive-aarch64-apple-darwin:
     command: "./archive-script.sh"
     platform: "system"

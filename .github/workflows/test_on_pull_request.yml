@@ -1,0 +1,64 @@
+name: test_on_pull_request
+run-name: ${{ github.actor }} has created a pull request
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+  
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          ~/.cargo/advisory-db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
+    - name: Set up moon cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.moon/
+          .moon/cache/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: ${{ runner.os }}-cargo-
+        
+#     - name: Install Rust Toolchain
+#       uses: actions-rs/toolchain@v1
+#       with:
+#         profile: minimal
+#         toolchain: stable
+#         override: true
+#         components: rustfmt, clippy
+  
+    - name: Install Moonrepo
+      uses: moonrepo/setup-moon-action@v1
+  
+    - name: Check versions
+      run: rustc --version
+    
+    - name: Run audit
+      run: cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071
+      
+    - name: Run lint
+      run: moon run :lint -f
+      
+    - name: Run test
+      run: moon run :test -f

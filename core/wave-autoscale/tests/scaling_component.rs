@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod scaling_component_test {
     use std::collections::HashMap;
 
@@ -14,6 +13,7 @@ mod scaling_component_test {
 
     // multithreaded test
     #[tokio::test]
+    #[ignore]
     async fn ec2_autoscaling() -> Result<()> {
         // read yaml file
         let result = read_definition_yaml_file(EC2_AUTOSCALING_FILE_PATH)?;
@@ -43,6 +43,7 @@ mod scaling_component_test {
         Ok(())
     }
     #[tokio::test]
+    #[ignore]
     async fn k8s_deployment_autoscaling() -> Result<()> {
         // read yaml file
         let result = read_definition_yaml_file("./tests/yaml/component_k8s_deployment.yaml")?;

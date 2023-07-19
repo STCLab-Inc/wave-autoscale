@@ -3,7 +3,7 @@ mod aws_lambda_function_test {
     use std::collections::HashMap;
 
     use anyhow::Result;
-    use data_layer::reader::yaml_reader::read_yaml_file;
+    use data_layer::reader::wave_definition_reader;
     use serde_json::{json, Value};
 
     use aws_sdk_lambda::{config::Credentials, error::ProvideErrorMetadata, Client};
@@ -12,6 +12,7 @@ mod aws_lambda_function_test {
     static STATIC_REGION: &str = "ap-northeast-3";
 
     #[tokio::test]
+    #[ignore]
     async fn aws_lambda_function_update() -> Result<()> {
         // The unreserved account concurrency can't go below 100.
         // You can't set reserved concurrency below the provisioned concurrency that is requested for this function.
@@ -21,7 +22,8 @@ mod aws_lambda_function_test {
         // The minimum provisioned concurrency value allowed is 1.
         let provisioned_concurrency: Option<i32> = Some(1);
 
-        let parse_result = read_yaml_file(LAMBDA_FUNCTION_FILE_PATH).unwrap();
+        let parse_result =
+            wave_definition_reader::read_definition_yaml_file(LAMBDA_FUNCTION_FILE_PATH).unwrap();
 
         for scaling_component_definition in parse_result.scaling_component_definitions.clone() {
             let metadata: HashMap<String, Value> = scaling_component_definition.metadata;

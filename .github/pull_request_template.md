@@ -8,11 +8,13 @@
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Refactoring (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to change)
+- [ ] DevOps process (non-breaking change which improves efficiency and reliability for CI/CD)
 - [ ] Documentation only
 
 ## What this PR does / why we need it:
 <!--- Why is this change required? What problem does it solve? -->
 <!--- If it fixes an open issue, please link to the issue here. -->
+
 
 ## Which issue/s this PR fixes
 <!--
@@ -21,10 +23,12 @@
 fixes #
 -->
 
+
 ## How Has This Been Tested?
 <!--- Please describe in detail how you tested your changes. -->
 <!--- Include details of your testing environment, and the tests you ran to -->
 <!--- see how your change affects other areas of the code, etc. -->
+
 
 ## Checklist:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
