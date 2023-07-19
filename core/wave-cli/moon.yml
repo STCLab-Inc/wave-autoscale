@@ -1,8 +1,8 @@
 language: "rust"
 type: "application"
 owners:
-  defaultOwner: '@wave-autoscale-team'
-  
+  defaultOwner: "@wave-autoscale-team"
+
 tasks:
   test:
     command: "cargo test -p wave-cli"
