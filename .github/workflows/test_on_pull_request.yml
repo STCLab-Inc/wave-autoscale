@@ -50,7 +50,7 @@ jobs:
       run: cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071
       
     - name: Run lint
-      run: moon run :lint
+      run: moon run :lint -f
       
     - name: Run test
-      run: moon run :test
+      run: moon run :test -f
