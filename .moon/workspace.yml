@@ -45,12 +45,9 @@ vcs:
   hooks:
     pre-commit:
       - "moon sync projects"
-      # TODO: Add back in when we have a fix for 
-      - "cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071"
-      - "moon run :lint"
+      - "moon run archiver:audit :lint"
     pre-push:
       - "moon sync projects"
       # TODO: Add back in when we have a fix for 
-      - "cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071"
-      - "moon run :lint"
+      - "moon run archiver:audit :lint"
       - "moon run :test"

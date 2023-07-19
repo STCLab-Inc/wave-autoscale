@@ -5,6 +5,5 @@ set -eo pipefail
 # https://moonrepo.dev/docs/guides/vcs-hooks
 
 moon sync projects
-cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071
-moon run :lint
+moon run archiver:audit :lint
 moon run :test
