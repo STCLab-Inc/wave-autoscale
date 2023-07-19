@@ -8,7 +8,7 @@ dependsOn:
 
 tasks:
   test:
-    command: "cargo nextest run -p wave-autoscale"
+    command: "cargo nextest run -p wave-autoscale --test-threads=1"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"
