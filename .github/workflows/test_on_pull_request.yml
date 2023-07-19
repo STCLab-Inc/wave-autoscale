@@ -1,63 +1,56 @@
 name: test_on_pull_request
 run-name: ${{ github.actor }} has created a pull request
 on:
-#   pull_request:
-#     branches: [ "main" ]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
-  
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test-on-pull-request:
     runs-on: wave-autoscale-runner
+    timeout-minutes: 20
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          ~/.cargo/advisory-db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        timeout-minutes: 1
 
-    - name: Set up moon cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          .moon/cache/
-        key: ${{ runner.os }}-moon-${{ hashFiles('.moon/CACHEDIR.TAG') }}
-        restore-keys: ${{ runner.os }}-moon
-        
-#     - name: Install Rust Toolchain
-#       uses: actions-rs/toolchain@v1
-#       with:
-#         profile: minimal
-#         toolchain: stable
-#         override: true
-#         components: rustfmt, clippy
-  
-    - name: Install Moonrepo
-      uses: moonrepo/setup-moon-action@v1
-  
-#     - name: Check versions
-#       run: rustc --version
-    
-    - name: Run audit
-      run: moon run archiver:audit -f
-      
-    - name: Run lint
-      run: moon run :lint -f
-      
-    - name: Run test
-      run: moon run :test -f
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        timeout-minutes: 5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.cargo/advisory-db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Set up moon cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        timeout-minutes: 5
+        with:
+          path: |
+            .moon/cache/
+          key: ${{ runner.os }}-moon-${{ hashFiles('**/moon.yml','.moon/**/*') }}
+          restore-keys: ${{ runner.os }}-moon
+
+      - name: Install Moonrepo
+        uses: moonrepo/setup-moon-action@v1
+
+      - name: Run audit
+        run: moon run archiver:audit -f
+
+      - name: Run lint
+        run: moon run :lint -f
+
+      - name: Run test
+        run: moon run :test -f
