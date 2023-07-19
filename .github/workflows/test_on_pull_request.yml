@@ -32,7 +32,10 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
-          target/            
+          ~/.cargo/advisory-db/
+          target/
+          ~/.moon/
+          .moon/cache/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
       
@@ -49,6 +52,12 @@ jobs:
   
     - name: Check versions
       run: rustc --version
+    
+    - name: Run audit
+      run: cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071
       
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Run lint
+      run: moon run :lint
+      
+    - name: Run test
+      run: moon run :test
