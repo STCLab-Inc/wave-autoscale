@@ -3,6 +3,14 @@ run-name: ${{ github.actor }} has created a pull request
 on:
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags'
 
 env:
   CARGO_TERM_COLOR: always
