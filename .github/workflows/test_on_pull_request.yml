@@ -40,13 +40,13 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/package-lock.json') }}
         restore-keys: ${{ runner.os }}-cargo-
         
-    - name: Install Rust Toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
+#     - name: Install Rust Toolchain
+#       uses: actions-rs/toolchain@v1
+#       with:
+#         profile: minimal
+#         toolchain: stable
+#         override: true
+#         components: rustfmt, clippy
   
     - name: Install Moonrepo
       uses: moonrepo/setup-moon-action@v1
