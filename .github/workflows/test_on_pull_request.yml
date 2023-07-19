@@ -9,8 +9,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-on-pull-request:
+    runs-on: wave-autoscale-runner
 
     steps:
     - name: Checkout repository
