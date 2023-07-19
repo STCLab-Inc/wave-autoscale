@@ -1,8 +1,8 @@
 name: test_on_pull_request
 run-name: ${{ github.actor }} has created a pull request
 on:
-  pull_request:
-    branches: [ "main" ]
+#   pull_request:
+#     branches: [ "main" ]
   workflow_dispatch:
   
 env:
