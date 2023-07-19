@@ -30,15 +30,15 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
-    - name: Set up moon cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.moon/
-          .moon/cache/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: ${{ runner.os }}-cargo-
+    # - name: Set up moon cache
+    #   uses: actions/cache@v3
+    #   continue-on-error: false
+    #   with:
+    #     path: |
+    #       ~/.moon/
+    #       .moon/cache/
+    #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/package-lock.json') }}
+    #     restore-keys: ${{ runner.os }}-cargo-
         
 #     - name: Install Rust Toolchain
 #       uses: actions-rs/toolchain@v1
