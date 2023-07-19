@@ -51,11 +51,11 @@ jobs:
     - name: Install Moonrepo
       uses: moonrepo/setup-moon-action@v1
   
-    - name: Check versions
-      run: rustc --version
+#     - name: Check versions
+#       run: rustc --version
     
     - name: Run audit
-      run: cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071
+      run: moon run archiver:audit
       
     - name: Run lint
       run: moon run :lint -f
