@@ -55,7 +55,7 @@ jobs:
 #       run: rustc --version
     
     - name: Run audit
-      run: moon run archiver:audit
+      run: moon run archiver:audit -f
       
     - name: Run lint
       run: moon run :lint -f
