@@ -1,28 +1,25 @@
+use super::super::util::google_cloud::gcp_managed_instance_gorup::{
+    call_gcp_patch_autoscaler, call_gcp_patch_instance_group_manager,
+    call_gcp_post_instance_group_manager_resize, GcpMigAreaKind, GcpMigSetting,
+};
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
-use serde_json::{json, Value, Map, Number};
+use log::error;
+use reqwest::StatusCode;
+use serde_json::{json, Map, Number, Value};
 use std::collections::HashMap;
-use super::super::util::google_cloud::gcp_managed_instance_gorup::{
-    call_gcp_patch_instance_group_manager,
-    call_gcp_patch_autoscaler,
-    call_gcp_post_instance_group_manager_resize,
-    GcpMigAreaKind, GcpMigSetting};
-use log::{error};
 
 pub struct MIGAutoScalingComponent {
     definition: ScalingComponentDefinition,
 }
 
 impl MIGAutoScalingComponent {
-
     pub const SCALING_KIND: &'static str = "gcp-compute-engine-mig";
 
     pub fn new(definition: ScalingComponentDefinition) -> Self {
-        MIGAutoScalingComponent {
-            definition
-        }
+        MIGAutoScalingComponent { definition }
     }
 }
 
@@ -50,13 +47,12 @@ impl ScalingComponent for MIGAutoScalingComponent {
             metadata.get("group_name"),
             params.get("resize").and_then(Value::as_i64),
         ) {
-
             let gcp_mig_setting_common = GcpMigSetting {
                 project: project.to_string(),
                 area_kind: match area_kind.to_string() {
                     s if s.to_lowercase() == "zone" => GcpMigAreaKind::Zone,
                     s if s.to_lowercase() == "region" => GcpMigAreaKind::Region,
-                    _ => GcpMigAreaKind::Region
+                    _ => GcpMigAreaKind::Region,
                 },
                 area_name: area_name.to_string(),
                 group_name: group_name.to_string(),
@@ -66,47 +62,49 @@ impl ScalingComponent for MIGAutoScalingComponent {
 
             match area_kind.to_string() {
                 s if s == "zone" => {
-                    let integrate_all_response = integrate_call_gcp_mig_zone_resize(params.get("min_num_replicas").and_then(Value::as_i64)
-                                        ,params.get("max_num_replicas").and_then(Value::as_i64)
-                                        , resize
-                                        , gcp_mig_setting_common).await;
-                    return integrate_all_response
+                    let integrate_all_response = integrate_call_gcp_mig_zone_resize(
+                        params.get("min_num_replicas").and_then(Value::as_i64),
+                        params.get("max_num_replicas").and_then(Value::as_i64),
+                        resize,
+                        gcp_mig_setting_common,
+                    )
+                    .await;
+                    return integrate_all_response;
                 }
                 s if s == "region" => {
-                    let integrate_all_response = integrate_call_gcp_mig_region_resize(params.get("min_num_replicas").and_then(Value::as_i64)
-                                        ,params.get("max_num_replicas").and_then(Value::as_i64)
-                                        , resize
-                                        , gcp_mig_setting_common).await;
-                    return integrate_all_response
-                },
+                    let integrate_all_response = integrate_call_gcp_mig_region_resize(
+                        params.get("min_num_replicas").and_then(Value::as_i64),
+                        params.get("max_num_replicas").and_then(Value::as_i64),
+                        resize,
+                        gcp_mig_setting_common,
+                    )
+                    .await;
+                    return integrate_all_response;
+                }
                 _ => {
                     return Err(anyhow::anyhow!("Invalid area_kind"));
                 }
             }
-            
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
-
     }
-
 }
-
 
 /*
  * GcpMigAreaKind::Region
  * precondition
- *  - min/max
- *    => Target Distribution Shape: `Even`
- *    => instance Redistribution Type: `PROACTIVE`
- *    => Autoscaler Mode: OFF
- *  - resize
- *    => Autoscaler Mode: OFF
- *  - The resource(instance group) is ready
- *    => resource is not ready -> fail
+ *  => Target Distribution Shape: `Even`
+ *  => instance Redistribution Type: `PROACTIVE`
+ *  => Autoscaler Mode: OFF
+ *  => The resource(instance group) is ready (resource is not ready -> fail)
  */
-async fn integrate_call_gcp_mig_region_resize(min_num_replicas: Option<i64>, max_num_replicas: Option<i64>, resize: i64
-                                    , gcp_mig_setting_common: GcpMigSetting) -> Result<()> {
+async fn integrate_call_gcp_mig_region_resize(
+    min_num_replicas: Option<i64>,
+    max_num_replicas: Option<i64>,
+    resize: i64,
+    gcp_mig_setting_common: GcpMigSetting,
+) -> Result<()> {
     // TODO API rollback?
     let mut gcp_mig_setting = gcp_mig_setting_common.clone();
 
@@ -120,80 +118,58 @@ async fn integrate_call_gcp_mig_region_resize(min_num_replicas: Option<i64>, max
             "instanceRedistributionType": "PROACTIVE",
         }
     }));
-    gcp_mig_setting.query = Some(vec![("autoscaler".to_string(), gcp_mig_setting.group_name.clone())]);
-    let precondition_instance_group_manager_response = call_gcp_patch_instance_group_manager(gcp_mig_setting).await.unwrap();
-    let precondition_instance_group_manager_response_status_code = precondition_instance_group_manager_response.status();
-    let precondition_instance_group_manager_response_body = precondition_instance_group_manager_response.text().await.unwrap();
-
+    gcp_mig_setting.query = Some(vec![(
+        "autoscaler".to_string(),
+        gcp_mig_setting.group_name.clone(),
+    )]);
+    let precondition_instance_group_manager_response =
+        call_gcp_patch_instance_group_manager(gcp_mig_setting)
+            .await
+            .unwrap();
+    let precondition_instance_group_manager_response_status_code =
+        precondition_instance_group_manager_response.status();
+    let precondition_instance_group_manager_response_body =
+        precondition_instance_group_manager_response
+            .text()
+            .await
+            .unwrap();
     if precondition_instance_group_manager_response_status_code.is_success() {
-        // precondition & min/max call - autoscaler patch: autoscaling mod `OFF` & replicas min/max
-        let mut gcp_mig_setting = gcp_mig_setting_common.clone();
-        let mut payload_map = Map::new();
-        let mut autoscaling_policy_map = Map::new();
-        if min_num_replicas.is_some() {
-            autoscaling_policy_map.insert("minNumReplicas".to_string(), Value::Number(Number::from(min_num_replicas.unwrap())));
-        }
-        if max_num_replicas.is_some() {
-            autoscaling_policy_map.insert("maxNumReplicas".to_string(), Value::Number(Number::from(max_num_replicas.unwrap())));
-        }
-        autoscaling_policy_map.insert("mode".to_string(), Value::String("OFF".to_string()));
-        payload_map.insert("autoscalingPolicy".to_string(), Value::Object(autoscaling_policy_map));
-        gcp_mig_setting.payload = Some(json!(payload_map));
-        gcp_mig_setting.query = Some(vec![("autoscaler".to_string(), gcp_mig_setting.group_name.clone())]);
-        let precondition_autoscaler_response = call_gcp_patch_autoscaler(gcp_mig_setting).await.unwrap();
-        let precondition_autoscaler_response_status_code = precondition_autoscaler_response.status();
-        let precondition_autoscaler_response_body = precondition_autoscaler_response.text().await.unwrap();
-
-        if precondition_autoscaler_response_status_code.is_success() {
-            // call resize
-            let mut gcp_mig_setting = gcp_mig_setting_common.clone();
-            gcp_mig_setting.payload = None;
-            gcp_mig_setting.query = Some(vec![(String::from("size"), String::from(resize.to_string()))]);
-            let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting).await.unwrap();
-            let resize_response_status_code = resize_response.status();
-            let resize_response_body = resize_response.text().await.unwrap();
-
-            if resize_response_status_code.is_success() {
-                Ok(())
-            } else {
-                error!("GCP API Call Error - resize_response: {:?}", resize_response_body);
-                println!("GCP API Call Error - resize_response: {:?}", resize_response_body);
-                let json = json!({
-                    "message": "GCP API Call Error - resize",
-                    "code": resize_response_status_code.as_str(),
-                    "extras": resize_response_body
-                });
-                return Err(anyhow::anyhow!(json));
-            }
-        } else {
-            error!("GCP API Call Error - precondition_autoscaler_response: {:?}", precondition_autoscaler_response_body);
-            println!("GCP API Call Error - precondition_autoscaler_response: {:?}", precondition_autoscaler_response_body);
-            let json = json!({
-                "message": "GCP API Call Error - autoscaler",
-                "code": precondition_autoscaler_response_status_code.as_str(),
-                "extras": precondition_autoscaler_response_body
-            });
-            return Err(anyhow::anyhow!(json));
-        }
+        let gcp_mig_setting = gcp_mig_setting_common.clone();
+        integrate_call_gcp_mig_zone_resize(
+            min_num_replicas,
+            max_num_replicas,
+            resize,
+            gcp_mig_setting,
+        )
+        .await
     } else {
-        error!("GCP API Call Error - precondition_instance_group_manager_response: {:?}", precondition_instance_group_manager_response_body);
-        println!("GCP API Call Error - precondition_instance_group_manager_response: {:?}", precondition_instance_group_manager_response_body);
+        error!(
+            "GCP API Call Error - precondition_instance_group_manager_response: {:?}",
+            precondition_instance_group_manager_response_body
+        );
+        println!(
+            "GCP API Call Error - precondition_instance_group_manager_response: {:?}",
+            precondition_instance_group_manager_response_body
+        );
         let json = json!({
             "message": "GCP API Call Error - instance group manager",
             "code": precondition_instance_group_manager_response_status_code.as_str(),
             "extras": precondition_instance_group_manager_response_body
         });
-        return Err(anyhow::anyhow!(json));
+        Err(anyhow::anyhow!(json))
     }
 }
-
 
 /*
  * GcpMigAreaKind::Zone
  * precondition - None
  */
-async fn integrate_call_gcp_mig_zone_resize(min_num_replicas: Option<i64>, max_num_replicas: Option<i64>, resize: i64
-                                        , gcp_mig_setting_common: GcpMigSetting) -> Result<()> {
+async fn integrate_call_gcp_mig_zone_resize(
+    min_num_replicas: Option<i64>,
+    max_num_replicas: Option<i64>,
+    resize: i64,
+    gcp_mig_setting_common: GcpMigSetting,
+) -> Result<()> {
     // TODO API rollback?
 
     // min/max call - autoscaler patch: autoscaling mod `OFF` & replicas min/max
@@ -201,15 +177,30 @@ async fn integrate_call_gcp_mig_zone_resize(min_num_replicas: Option<i64>, max_n
     let mut payload_map = Map::new();
     let mut autoscaling_policy_map = Map::new();
     if min_num_replicas.is_some() {
-        autoscaling_policy_map.insert("minNumReplicas".to_string(), Value::Number(Number::from(min_num_replicas.unwrap())));
+        autoscaling_policy_map.insert(
+            "minNumReplicas".to_string(),
+            Value::Number(Number::from(min_num_replicas.unwrap())),
+        );
     }
     if max_num_replicas.is_some() {
-        autoscaling_policy_map.insert("maxNumReplicas".to_string(), Value::Number(Number::from(max_num_replicas.unwrap())));
+        autoscaling_policy_map.insert(
+            "maxNumReplicas".to_string(),
+            Value::Number(Number::from(max_num_replicas.unwrap())),
+        );
     }
-    // autoscaling_policy_map.insert("mode".to_string(), Value::String("OFF".to_string()));
-    payload_map.insert("autoscalingPolicy".to_string(), Value::Object(autoscaling_policy_map));
+    // region precondition
+    if gcp_mig_setting.area_kind.to_string() == GcpMigAreaKind::Region.to_string() {
+        autoscaling_policy_map.insert("mode".to_string(), Value::String("OFF".to_string()));
+    }
+    payload_map.insert(
+        "autoscalingPolicy".to_string(),
+        Value::Object(autoscaling_policy_map),
+    );
     gcp_mig_setting.payload = Some(json!(payload_map));
-    gcp_mig_setting.query = Some(vec![("autoscaler".to_string(), gcp_mig_setting.group_name.clone())]);
+    gcp_mig_setting.query = Some(vec![(
+        "autoscaler".to_string(),
+        gcp_mig_setting.group_name.clone(),
+    )]);
     let autoscaler_response = call_gcp_patch_autoscaler(gcp_mig_setting).await.unwrap();
     let autoscaler_response_status_code = autoscaler_response.status();
     let autoscaler_response_body = autoscaler_response.text().await.unwrap();
@@ -218,16 +209,24 @@ async fn integrate_call_gcp_mig_zone_resize(min_num_replicas: Option<i64>, max_n
         // call resize
         let mut gcp_mig_setting = gcp_mig_setting_common.clone();
         gcp_mig_setting.payload = None;
-        gcp_mig_setting.query = Some(vec![(String::from("size"), String::from(resize.to_string()))]);
-        let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting).await.unwrap();
+        gcp_mig_setting.query = Some(vec![(String::from("size"), resize.to_string())]);
+        let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting)
+            .await
+            .unwrap();
         let resize_response_status_code = resize_response.status();
         let resize_response_body = resize_response.text().await.unwrap();
 
         if resize_response_status_code.is_success() {
             Ok(())
         } else {
-            error!("GCP API Call Error - resize_response: {:?}", resize_response_body);
-            println!("GCP API Call Error - resize_response: {:?}", resize_response_body);
+            error!(
+                "GCP API Call Error - resize_response: {:?}",
+                resize_response_body
+            );
+            println!(
+                "GCP API Call Error - resize_response: {:?}",
+                resize_response_body
+            );
             let json = json!({
                 "message": "GCP API Call Error - resize",
                 "code": resize_response_status_code.as_str(),
@@ -236,8 +235,14 @@ async fn integrate_call_gcp_mig_zone_resize(min_num_replicas: Option<i64>, max_n
             return Err(anyhow::anyhow!(json));
         }
     } else {
-        error!("GCP API Call Error - autoscaler_response: {:?}", autoscaler_response_body);
-        println!("GCP API Call Error - autoscaler_response: {:?}", autoscaler_response_body);
+        error!(
+            "GCP API Call Error - autoscaler_response: {:?}",
+            autoscaler_response_body
+        );
+        println!(
+            "GCP API Call Error - autoscaler_response: {:?}",
+            autoscaler_response_body
+        );
         let json = json!({
             "message": "GCP API Call Error - autoscaler",
             "code": autoscaler_response_status_code.as_str(),
@@ -247,13 +252,14 @@ async fn integrate_call_gcp_mig_zone_resize(min_num_replicas: Option<i64>, max_n
     }
 }
 
-
 #[cfg(test)]
 mod test {
+    use super::super::super::util::google_cloud::gcp_managed_instance_gorup::{
+        GcpMigAreaKind, GcpMigSetting,
+    };
     use super::{integrate_call_gcp_mig_region_resize, integrate_call_gcp_mig_zone_resize};
-    use super::super::super::util::google_cloud::gcp_managed_instance_gorup::{GcpMigAreaKind, GcpMigSetting};
 
-    #[ignore]
+    //#[ignore]
     #[tokio::test]
     async fn test_gcp_mig_region() {
         let gcp_mig_setting_common = GcpMigSetting {
@@ -265,11 +271,12 @@ mod test {
             query: None,
         };
 
-        let integrate_all_response = integrate_call_gcp_mig_region_resize(Some(2), Some(11), 2, gcp_mig_setting_common).await;
+        let integrate_all_response =
+            integrate_call_gcp_mig_region_resize(None, None, 2, gcp_mig_setting_common).await;
         assert_eq!(integrate_all_response.is_ok(), true);
     }
 
-    //#[ignore]
+    #[ignore]
     #[tokio::test]
     async fn test_gcp_mig_zone() {
         let gcp_mig_setting_common = GcpMigSetting {
@@ -281,9 +288,8 @@ mod test {
             query: None,
         };
 
-        let integrate_all_response = integrate_call_gcp_mig_zone_resize(Some(2), Some(11), 2, gcp_mig_setting_common).await;
+        let integrate_all_response =
+            integrate_call_gcp_mig_zone_resize(Some(2), Some(11), 2, gcp_mig_setting_common).await;
         assert_eq!(integrate_all_response.is_ok(), true);
     }
-
 }
-
