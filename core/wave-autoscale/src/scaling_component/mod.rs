@@ -7,11 +7,13 @@ pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
 pub mod k8s_deployment;
+pub mod gcp_mig_autoscaling;
 use self::{
     aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent,
+    gcp_mig_autoscaling::MIGAutoScalingComponent,
 };
 use anyhow::Result;
 
@@ -63,6 +65,9 @@ impl ScalingComponentManager {
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
             )),
+            MIGAutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(MIGAutoScalingComponent::new(cloned_defintion)))
+            }
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
