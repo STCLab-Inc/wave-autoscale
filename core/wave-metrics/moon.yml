@@ -9,7 +9,7 @@ dependsOn:
 
 tasks:
   test:
-    command: "cargo test -p wave-metrics -- --nocapture --test-threads 1"
+    command: "cargo nextest run -p wave-metrics --test-threads 1"
     deps:
       - "lint"
     inputs:

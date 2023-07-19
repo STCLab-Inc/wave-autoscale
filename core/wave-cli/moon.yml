@@ -5,7 +5,7 @@ owners:
 
 tasks:
   test:
-    command: "cargo test -p wave-cli"
+    command: "cargo nextest run -p wave-cli"
     inputs:
       - "@globs(sources)"
     env:
