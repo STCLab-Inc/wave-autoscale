@@ -4,12 +4,3 @@ fileGroups:
     - "Cargo.toml"
   tests:
     - "tests/**/*"
-
-tasks:
-  lint:
-    command: "cargo clippy --fix --allow-dirty --allow-staged"
-    inputs:
-      - "@globs(sources)"
-  # Unit, Integration Testing
-  test:
-    command: ":test"

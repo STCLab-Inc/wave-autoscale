@@ -6,7 +6,7 @@ owners:
 tasks:
   # Test - Integration + Unit
   test:
-    command: "cargo test -p utils -- --nocapture --test-threads 1"
+    command: "cargo nextest run -p utils --test-threads 1"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"
