@@ -3,9 +3,9 @@ use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use log::{debug, error, info};
-use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
+use std::{cmp::min, collections::HashMap};
 use tar::Archive;
 use utils::process::{run_processes, AppInfo};
 mod collector_definition;
@@ -224,6 +224,10 @@ impl MetricCollectorManager {
 
         // Create a TOML array representing the metric definitions
         for metric_definition in metric_definitions {
+            if metric_definition.collector != "vector" {
+                continue;
+            }
+
             // Create a source
             let mut sources_metric = toml::value::Table::new();
             sources_metric.insert(
@@ -290,6 +294,175 @@ impl MetricCollectorManager {
         std::fs::write(config_path, toml).unwrap();
     }
 
+    fn save_metric_definitions_to_telegraf_config(
+        &self,
+        metric_definitions: &Vec<&MetricDefinition>,
+        config_path: &str,
+    ) {
+        /*
+         * Example:
+         *
+         * [global_tags]
+         *
+         * [agent]
+         * interval = "1s"
+         * round_interval = true
+         * metric_batch_size = 1000
+         * metric_buffer_limit = 10000
+         * collection_jitter = "0s"
+         * flush_interval = "1s"
+         * flush_jitter = "0s"
+         * precision = "0s"
+         * debug = false
+         * quite = false
+         *
+         * [[outputs.http]]
+         * namepass = ["metric_id_test"]
+         * url = "http://127.0.0.1:3024/api/metrics-receiver?collector=telegraf&metric_id=metric_id_test"
+         * method = "POST"
+         * data_format = "json"
+         *
+         * [[inputs.cloudwatch]]
+         * namepass = "metric_id_test"
+         * region = "ap-northeast-3"
+         * namespaces = ["AWS/EC2"]
+         * interval = "1m"
+         * period = "1m"
+         * delay = "0s"
+         *
+         * [[inputs.cloudwatch.metrics]]
+         * names = ["CPUUtilization"]
+         *
+         * [[inputs.cloudwatch.metrics.dimensions]]
+         * name = "InstanceId"
+         * value = "i-0b49b58f6c93acf75"
+         *
+         */
+        // Create a TOML value representing your data structure
+        let mut root = toml::value::Table::new();
+
+        // [global_tags]
+        let global_tags = toml::value::Table::new();
+        root.insert("global_tags".to_string(), toml::Value::Table(global_tags));
+
+        // [agent]
+        let mut agent = toml::value::Table::new();
+        agent.insert(
+            "interval".to_string(),
+            toml::Value::String("1s".to_string()),
+        );
+        agent.insert("round_interval".to_string(), toml::Value::Boolean(true));
+        agent.insert("metric_batch_size".to_string(), toml::Value::Integer(1000));
+        agent.insert(
+            "metric_buffer_limit".to_string(),
+            toml::Value::Integer(10000),
+        );
+        agent.insert(
+            "collection_jitter".to_string(),
+            toml::Value::String("0s".to_string()),
+        );
+        agent.insert(
+            "flush_interval".to_string(),
+            toml::Value::String("1s".to_string()),
+        );
+        agent.insert(
+            "flush_jitter".to_string(),
+            toml::Value::String("0s".to_string()),
+        );
+        agent.insert(
+            "precision".to_string(),
+            toml::Value::String("0s".to_string()),
+        );
+        agent.insert("debug".to_string(), toml::Value::Boolean(false));
+        agent.insert("quiet".to_string(), toml::Value::Boolean(false));
+        root.insert("agent".to_string(), toml::Value::Table(agent));
+
+        // [[inputs]]
+        let mut inputs = toml::value::Table::new();
+        let mut inputs_array: HashMap<String, toml::value::Array> = HashMap::new();
+
+        // [[outputs.http]]
+        let mut outputs_http = toml::value::Array::new();
+
+        // Create a TOML array representing the metric definitions
+        for metric_definition in metric_definitions {
+            if metric_definition.collector != "telegraf" {
+                continue;
+            }
+
+            // Create a input
+            let mut input_metric = toml::value::Table::new();
+
+            // namepass = "metric_id"
+            input_metric.insert(
+                "name_override".to_string(),
+                metric_definition.id.clone().into(),
+            );
+
+            // Add metadata to the source
+            for (key, value) in &metric_definition.metadata {
+                let Ok(value) = serde_json::from_str::<toml::Value>(value.to_string().as_str()) else {
+                    continue;
+                };
+                input_metric.insert(key.to_string(), value);
+            }
+
+            // e.g. metric_kind: cloudwatch
+            let kind = metric_definition.metric_kind.to_string();
+            // e.g. [[inputs.cloudwatch]]
+            let inputs_array_metric = match inputs_array.get_mut(&kind) {
+                Some(inputs_array_metric) => inputs_array_metric,
+                None => {
+                    let inputs_metric = toml::value::Array::new();
+                    inputs_array.insert(kind.clone(), inputs_metric);
+                    inputs_array.get_mut(&kind).unwrap()
+                }
+            };
+            inputs_array_metric.push(input_metric.into());
+
+            // Create a output
+            let mut output_metric = toml::value::Table::new();
+            output_metric.insert(
+                "namepass".to_string(),
+                toml::Value::Array(vec![metric_definition.id.clone().into()]),
+            );
+            output_metric.insert(
+                "url".to_string(),
+                toml::Value::String(format!(
+                    "{}?metric_id={}&collector=telegraf",
+                    self.output_url, metric_definition.id
+                )),
+            );
+            output_metric.insert(
+                "method".to_string(),
+                toml::Value::String("POST".to_string()),
+            );
+            output_metric.insert(
+                "data_format".to_string(),
+                toml::Value::String("json".to_string()),
+            );
+            outputs_http.push(toml::Value::Table(output_metric));
+        }
+
+        // Add the inputs and outputs to the root
+        for (kind, inputs_array_metric) in inputs_array {
+            inputs.insert(kind, inputs_array_metric.into());
+        }
+        root.insert("inputs".to_string(), toml::Value::Table(inputs));
+
+        // [[outputs]]
+        let mut outputs = toml::value::Table::new();
+        outputs.insert("http".to_string(), toml::Value::Array(outputs_http));
+        root.insert("outputs".to_string(), toml::Value::Table(outputs));
+
+        // Serialize it to a TOML string
+        let toml = toml::to_string(&root).unwrap();
+        debug!("Telegraf config:\n{}", toml);
+
+        // Write the string to a file
+        std::fs::write(config_path, toml).unwrap();
+    }
+
     pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
 
@@ -313,6 +486,23 @@ impl MetricCollectorManager {
             vector_config_path.as_str(),
         );
 
+        // Find the metric definitions that use Telegraf collector
+        let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
+        for metric_definition in metric_definitions {
+            if metric_definition.collector == "telegraf" {
+                telegraf_metric_definitions.push(metric_definition);
+            }
+        }
+
+        // Save the metric definitions to Telegraf config
+        let os_arch = self.get_os_arch();
+        let telegraf_dir_path = format!("./telegraf_{}", os_arch);
+        let telegraf_config_path = format!("{}/telegraf.conf", telegraf_dir_path);
+        self.save_metric_definitions_to_telegraf_config(
+            &telegraf_metric_definitions,
+            telegraf_config_path.as_str(),
+        );
+
         // Run the collector binaries
         let mut collector_processes: Vec<AppInfo> = Vec::new();
         let vector_app_info = AppInfo {
@@ -322,6 +512,15 @@ impl MetricCollectorManager {
             envs: None,
         };
         collector_processes.push(vector_app_info);
+
+        let telegraf_app_info = AppInfo {
+            name: "telegraf".to_string(),
+            command: format!("{}/telegraf", telegraf_dir_path),
+            args: Some(vec!["--config".to_string(), telegraf_config_path]),
+            envs: None,
+        };
+        collector_processes.push(telegraf_app_info);
+
         run_processes(&collector_processes);
     }
 }
@@ -434,9 +633,9 @@ mod tests {
         );
 
         // Remove the telegraf directory for the next test
-        if std::path::Path::new(&telegraf_dir_path).exists() {
-            std::fs::remove_dir_all(&telegraf_dir_path).unwrap();
-        }
+        // if std::path::Path::new(&telegraf_dir_path).exists() {
+        //     std::fs::remove_dir_all(&telegraf_dir_path).unwrap();
+        // }
     }
 
     // Test whether it saves metric definitions to Vector config correctly
@@ -458,7 +657,7 @@ mod tests {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: "vector".to_string(),
                 metric_kind: "gauge".to_string(),
                 metadata: HashMap::new(),
             },
@@ -510,5 +709,81 @@ mod tests {
         if std::path::Path::new(&vector_dir_path).exists() {
             std::fs::remove_dir_all(&vector_dir_path).unwrap();
         }
+    }
+
+    #[test]
+    fn test_save_metric_definitions_to_telegraf_config() {
+        let manager = get_metric_collector_manager();
+
+        // let mut metadata_example: HashMap<String, serde_json::Value> = HashMap::new();
+        // metadata_example.insert("key".to_string(), json!("value"));
+        // let nested_metadata_example = json!([{}]);
+        // metadata_example.insert("nested_metadata".to_string(), nested_metadata_example);
+
+        let metric_definitions = vec![
+            MetricDefinition {
+                id: "metric_id_1".to_string(),
+                db_id: "db_id_1".to_string(),
+                kind: ObjectKind::Metric,
+                collector: "telegraf".to_string(),
+                metric_kind: "gauge".to_string(),
+                metadata: HashMap::new(),
+            },
+            MetricDefinition {
+                id: "metric_id_2".to_string(),
+                db_id: "db_id_2".to_string(),
+                kind: ObjectKind::Metric,
+                collector: "telegraf".to_string(),
+                metric_kind: "mem".to_string(),
+                metadata: HashMap::new(),
+            },
+        ];
+
+        let os_arch = manager.get_os_arch();
+        let telegraf_dir_path = format!("./telegraf_{}", os_arch);
+        let telegraf_config_path = format!("{}/telegraf.conf", telegraf_dir_path);
+        // Remove the existing vector directory
+        if std::path::Path::new(&telegraf_dir_path).exists() {
+            let _ = std::fs::remove_dir_all(&telegraf_dir_path);
+        }
+
+        // Create the vector directory
+        std::fs::create_dir_all(&telegraf_dir_path).unwrap();
+
+        let metric_definitions: Vec<&MetricDefinition> = metric_definitions.iter().collect();
+        manager.save_metric_definitions_to_telegraf_config(
+            &metric_definitions,
+            telegraf_config_path.as_str(),
+        );
+
+        // Check whether the vector config exists
+        let telegraf_config = std::fs::read_to_string(telegraf_config_path).unwrap();
+        assert!(
+            !telegraf_config.is_empty(),
+            "telegraf config should not be empty"
+        );
+
+        // Check whether the telegraf config contains the metric definitions
+        assert!(
+            telegraf_config.contains("[[inputs.mem]]"),
+            "telegraf config should contain [[inputs.mem]]"
+        );
+        // assert!(
+        //     telegraf_config.contains("[sources.metric_id_2]"),
+        //     "telegraf config should contain metric_id_2"
+        // );
+        // assert!(
+        //     telegraf_config.contains("[sinks.output_metric_id_1]"),
+        //     "telegraf config should contain output_metric_id_1"
+        // );
+        // assert!(
+        //     telegraf_config.contains("[sinks.output_metric_id_2]"),
+        //     "telegraf config should contain output_metric_id_2"
+        // );
+
+        // Remove the vector directory for the next test
+        // if std::path::Path::new(&telegraf_dir_path).exists() {
+        //     std::fs::remove_dir_all(&telegraf_dir_path).unwrap();
+        // }
     }
 }

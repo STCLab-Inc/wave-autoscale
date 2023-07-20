@@ -3,10 +3,10 @@ common:
 
 wave_metrics:
   output:
-    url: http://localhost:8081/api/metrics-receiver
+    url: http://localhost:3024/api/metrics-receiver
 
 wave_api_server:
-  port: 8081
+  port: 3024
   host: localhost
 
 wave_web_app:
