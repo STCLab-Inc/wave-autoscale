@@ -1,6 +1,6 @@
 ---
 kind: Metric
-id: metric_id_1
+id: metric_id_vector
 collector: vector
 metric_kind: host_metrics
 metadata:
@@ -8,8 +8,7 @@ metadata:
   scrape_interval_secs: 15
 ---
 kind: Metric
-id: metric_id_2
+id: metric_id_telegraf
 collector: telegraf
-metric_kind: cloudwatch
+metric_kind: mem
 metadata:
-  scrape_interval_secs: 1

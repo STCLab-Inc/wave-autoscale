@@ -1,8 +1,8 @@
 language: "rust"
 type: "application"
 owners:
-  defaultOwner: '@wave-autoscale-team'
-  
+  defaultOwner: "@wave-autoscale-team"
+
 dependsOn:
   - "data-layer"
   - "utils"
@@ -19,7 +19,7 @@ tasks:
       RUST_LOG: debug
   # Unit testing
   test-metric-collector-manager:
-    command: "cargo test -p wave-metrics metric_collector_manager:: -- --nocapture --test-threads 1"
+    command: "cargo nextest run -p wave-metrics metric_collector_manager:: --test-threads 1"
     deps:
       - "lint"
     inputs:
@@ -28,7 +28,7 @@ tasks:
     env:
       RUST_LOG: debug
   run:
-    command: "cargo watch -c -x 'run -- -d ./tests/yaml/definition.yaml -c ./tests/yaml/wave-config.yaml --collectors-info ./tests/yaml/collectors.yaml'"
+    command: "cargo run -- -d ./tests/yaml/definition.yaml -c ../../tests/yaml/wave-config.yaml --collectors-info ./tests/yaml/collectors.yaml"
     deps:
       - "lint"
     inputs:
