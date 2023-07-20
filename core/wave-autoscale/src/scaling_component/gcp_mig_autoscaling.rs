@@ -231,7 +231,7 @@ async fn integrate_call_gcp_mig_zone_resize(
                 "code": resize_response_status_code.as_str(),
                 "extras": resize_response_body
             });
-            return Err(anyhow::anyhow!(json));
+            Err(anyhow::anyhow!(json))
         }
     } else {
         error!(
@@ -247,7 +247,7 @@ async fn integrate_call_gcp_mig_zone_resize(
             "code": autoscaler_response_status_code.as_str(),
             "extras": autoscaler_response_body
         });
-        return Err(anyhow::anyhow!(json));
+        Err(anyhow::anyhow!(json))
     }
 }
 
@@ -272,7 +272,7 @@ mod test {
 
         let integrate_all_response =
             integrate_call_gcp_mig_region_resize(None, None, 2, gcp_mig_setting_common).await;
-        assert_eq!(integrate_all_response.is_ok(), true);
+        assert!(integrate_all_response.is_ok());
     }
 
     #[ignore]
@@ -289,6 +289,6 @@ mod test {
 
         let integrate_all_response =
             integrate_call_gcp_mig_zone_resize(Some(2), Some(11), 2, gcp_mig_setting_common).await;
-        assert_eq!(integrate_all_response.is_ok(), true);
+        assert!(integrate_all_response.is_ok());
     }
 }

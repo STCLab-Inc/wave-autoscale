@@ -1,0 +1,44 @@
+---
+kind: Metric
+id: cloudwatch_cpu_max
+metric_kind: cloudwatch-data
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPND6KWUE6
+  secret_key: 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
+  polling_interval: 60000
+  expression: "SELECT MAX(CPUUtilization) FROM SCHEMA('AWS/ECS', ClusterName) WHERE ClusterName = 'wave-test-cluster10'"
+  period: 5
+  duration_seconds: 120
+  # TODO: support MetricStat
+---
+kind: ScalingComponent
+id: gcp_mig_region_autoscaling_api_server
+component_kind: gcp-compute-engine-mig
+metadata:
+  project: wave-autoscale-test
+  area_kind: region # area_kind: 'region', 'zone'
+  area_name: asia-northeast2 # region: region name / zone: zone name
+  group_name: test-instance-group-1
+  resize: 5
+  min_num_replicas: 1 # (Optional)
+  max_num_replicas: 10 # (Optional)
+---
+kind: ScalingPlan
+id: scaling_plan_gcp_mig_autoscaling
+title: "Scaling Plan for GCP MIG Autoscaling"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if CPU usage is greater than 30%."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        name: 'cloudwatch_cpu_max',
+        tags: 'cloudwatch',
+      }) > 30
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: gcp_mig_region_autoscaling_api_server
+        # JavaScript expression that returns an integer.
+        desired: 3

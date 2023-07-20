@@ -13,8 +13,8 @@ async fn get_gcp_credential_token() -> Result<Token,Error> {
         return Err(authentication_manager_err);
     }
     let scopes = &["https://www.googleapis.com/auth/compute","https://www.googleapis.com/auth/cloud-platform"];
-    let token_result = authentication_manager.unwrap().get_token(scopes).await;
-    token_result
+    
+    authentication_manager.unwrap().get_token(scopes).await
 }
 
 
@@ -28,11 +28,11 @@ mod test {
         // fail case - 401 error (UNAUTHENTICATED)
         std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", "/test.json");
         let err_token = get_gcp_credential_token();
-        assert_eq!(err_token.await.is_err(), true);
+        assert!(err_token.await.is_err());
 
         std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", "/Users/ari/work/develop/keys/gcp/wave-autoscale-test-510ffb543810.json");
         let token = get_gcp_credential_token();
-        assert_eq!(token.await.is_err(), false);
+        assert!(token.await.is_ok());
 
     }
 
