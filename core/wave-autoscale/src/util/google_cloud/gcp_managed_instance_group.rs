@@ -21,8 +21,8 @@ impl std::fmt::Display for GcpMigAreaKind {
 #[derive(Clone, Debug)]
 pub struct GcpMigSetting {
     pub project: String,
-    pub area_kind: GcpMigAreaKind,
-    pub area_name: String,
+    pub location_kind: GcpMigAreaKind,
+    pub location_name: String,
     pub group_name: String,
     pub payload: Option<Value>,
     pub query: Option<Vec<(String, String)>>,
@@ -41,7 +41,7 @@ pub async fn call_gcp_patch_autoscaler(
 ) -> Result<Response, reqwest::Error> {
     Client::new()
         .patch(format!("https://compute.googleapis.com/compute/v1/projects/{project}/{areaKind}/{region}/autoscalers",
-            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.area_kind.to_string(), region = &gcp_mig_setting.area_name))
+            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(), region = &gcp_mig_setting.location_name))
         .query(&gcp_mig_setting.query)
         .bearer_auth(get_gcp_credential_token().await.unwrap().as_str())
         .json(&gcp_mig_setting.payload)
@@ -56,8 +56,8 @@ pub async fn call_gcp_patch_instance_group_manager(
 ) -> Result<Response, reqwest::Error> {
     Client::new()
         .patch(format!("https://compute.googleapis.com/compute/v1/projects/{project}/{areaKind}/{region}/instanceGroupManagers/{instanceGroupManager}",
-            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.area_kind.to_string(),
-            region = &gcp_mig_setting.area_name, instanceGroupManager = &gcp_mig_setting.group_name))
+            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(),
+            region = &gcp_mig_setting.location_name, instanceGroupManager = &gcp_mig_setting.group_name))
         .query(&gcp_mig_setting.query)
         .bearer_auth(get_gcp_credential_token().await.unwrap().as_str())
         .json(&gcp_mig_setting.payload)
@@ -74,11 +74,24 @@ pub async fn call_gcp_post_instance_group_manager_resize(
 
     Client::new()
         .post(format!("https://compute.googleapis.com/compute/v1/projects/{project}/{areaKind}/{region}/instanceGroupManagers/{instanceGroupManager}/resize",
-            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.area_kind.to_string(),
-            region = &gcp_mig_setting.area_name, instanceGroupManager = &gcp_mig_setting.group_name))
+            project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(),
+            region = &gcp_mig_setting.location_name, instanceGroupManager = &gcp_mig_setting.group_name))
         .bearer_auth(get_gcp_credential_token().await.unwrap().as_str())
         .query(&gcp_mig_setting.query)
         .json(&empty_payload)
+        .send()
+        .await
+}
+
+pub async fn testtest() -> Result<Response, reqwest::Error> {
+    let empty_payload = json!({});
+    let query = vec![(String::from("returnPartialSuccess"), String::from("true"))];
+
+    Client::new()
+        .get("https://compute.googleapis.com/compute/v1/projects/wave-autoscale-test")
+        .bearer_auth(get_gcp_credential_token().await.unwrap().as_str())
+        //.query(&query)
+        //.json(&empty_payload)
         .send()
         .await
 }
@@ -93,8 +106,8 @@ mod test {
     async fn test_call_gcp_patch_instance_group_manager() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            area_kind: GcpMigAreaKind::Region,
-            area_name: "asia-northeast2".to_string(),
+            location_kind: GcpMigAreaKind::Region,
+            location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: Some(json!({
                 "distributionPolicy": {
@@ -123,8 +136,8 @@ mod test {
     async fn test_call_gcp_patch_autoscaler() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            area_kind: GcpMigAreaKind::Region,
-            area_name: "asia-northeast2".to_string(),
+            location_kind: GcpMigAreaKind::Region,
+            location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: Some(json!({
                 "autoscalingPolicy": {
@@ -149,8 +162,8 @@ mod test {
     async fn test_call_gcp_post_instance_group_manager_resize() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            area_kind: GcpMigAreaKind::Region,
-            area_name: "asia-northeast2".to_string(),
+            location_kind: GcpMigAreaKind::Region,
+            location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: None,
             query: Some(vec![(String::from("size"), String::from("3"))]),

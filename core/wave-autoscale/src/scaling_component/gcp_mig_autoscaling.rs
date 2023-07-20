@@ -1,4 +1,4 @@
-use super::super::util::google_cloud::gcp_managed_instance_gorup::{
+use super::super::util::google_cloud::gcp_managed_instance_group::{
     call_gcp_patch_autoscaler, call_gcp_patch_instance_group_manager,
     call_gcp_post_instance_group_manager_resize, GcpMigAreaKind, GcpMigSetting,
 };
@@ -35,31 +35,31 @@ impl ScalingComponent for MIGAutoScalingComponent {
         let metadata: HashMap<String, Value> = self.definition.metadata.clone();
         if let (
             Some(Value::String(project)),
-            Some(area_kind),
-            Some(Value::String(area_name)),
+            Some(location_kind),
+            Some(Value::String(location_name)),
             Some(Value::String(group_name)),
             Some(resize),
         ) = (
             metadata.get("project"),
-            metadata.get("area_kind"),
-            metadata.get("area_name"),
+            metadata.get("location_kind"),
+            metadata.get("location_name"),
             metadata.get("group_name"),
             params.get("resize").and_then(Value::as_i64),
         ) {
             let gcp_mig_setting_common = GcpMigSetting {
                 project: project.to_string(),
-                area_kind: match area_kind {
-                    s if s == "zone" => GcpMigAreaKind::Zone,
+                location_kind: match location_kind {
+                    s if s == "single_zone" => GcpMigAreaKind::Zone,
                     s if s == "region" => GcpMigAreaKind::Region,
-                    _ => return Err(anyhow::anyhow!("Invalid area_kind")),
+                    _ => return Err(anyhow::anyhow!("Invalid location_kind")),
                 },
-                area_name: area_name.to_string(),
+                location_name: location_name.to_string(),
                 group_name: group_name.to_string(),
                 payload: None,
                 query: None,
             };
 
-            match gcp_mig_setting_common.area_kind {
+            match gcp_mig_setting_common.location_kind {
                 GcpMigAreaKind::Zone => {
                     let integrate_all_response = integrate_call_gcp_mig_zone_resize(
                         params.get("min_num_replicas").and_then(Value::as_i64),
@@ -81,7 +81,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
                     return integrate_all_response;
                 }
                 _ => {
-                    return Err(anyhow::anyhow!("Invalid area_kind"));
+                    return Err(anyhow::anyhow!("Invalid location_kind"));
                 }
             }
         } else {
@@ -188,7 +188,7 @@ async fn integrate_call_gcp_mig_zone_resize(
         );
     }
     // region precondition
-    if gcp_mig_setting.area_kind.to_string() == GcpMigAreaKind::Region.to_string() {
+    if gcp_mig_setting.location_kind.to_string() == GcpMigAreaKind::Region.to_string() {
         autoscaling_policy_map.insert("mode".to_string(), Value::String("OFF".to_string()));
     }
     payload_map.insert(
@@ -253,7 +253,7 @@ async fn integrate_call_gcp_mig_zone_resize(
 
 #[cfg(test)]
 mod test {
-    use super::super::super::util::google_cloud::gcp_managed_instance_gorup::{
+    use super::super::super::util::google_cloud::gcp_managed_instance_group::{
         GcpMigAreaKind, GcpMigSetting,
     };
     use super::{integrate_call_gcp_mig_region_resize, integrate_call_gcp_mig_zone_resize};
@@ -263,8 +263,8 @@ mod test {
     async fn test_gcp_mig_region() {
         let gcp_mig_setting_common = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            area_kind: GcpMigAreaKind::Region,
-            area_name: "asia-northeast2".to_string(),
+            location_kind: GcpMigAreaKind::Region,
+            location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: None,
             query: None,
@@ -280,8 +280,8 @@ mod test {
     async fn test_gcp_mig_zone() {
         let gcp_mig_setting_common = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            area_kind: GcpMigAreaKind::Zone,
-            area_name: "asia-northeast2-a".to_string(),
+            location_kind: GcpMigAreaKind::Zone,
+            location_name: "asia-northeast2-a".to_string(),
             group_name: "instance-group-2".to_string(),
             payload: None,
             query: None,

@@ -1,6 +1,6 @@
 use gcp_auth::{AuthenticationManager, Error, Token};
 use log::error;
-pub mod gcp_managed_instance_gorup;
+pub mod gcp_managed_instance_group;
 
 async fn get_gcp_credential_token() -> Result<Token, Error> {
     // Set ENV

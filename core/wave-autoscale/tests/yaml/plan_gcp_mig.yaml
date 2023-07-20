@@ -17,12 +17,9 @@ id: gcp_mig_region_autoscaling_api_server
 component_kind: gcp-compute-engine-mig
 metadata:
   project: wave-autoscale-test
-  area_kind: region # area_kind: 'region', 'zone'
-  area_name: asia-northeast2 # region: region name / zone: zone name
+  location_kind: region # 'single_zone', 'region' (meaning multiple zones)
+  location_name: asia-northeast2 # region name or zone name
   group_name: test-instance-group-1
-  resize: 5
-  min_num_replicas: 1 # (Optional)
-  max_num_replicas: 10 # (Optional)
 ---
 kind: ScalingPlan
 id: scaling_plan_gcp_mig_autoscaling
@@ -41,4 +38,6 @@ plans:
     scaling_components:
       - component_id: gcp_mig_region_autoscaling_api_server
         # JavaScript expression that returns an integer.
-        desired: 3
+        resize: 3
+        min_num_replicas: 1 # (Optional)
+        max_num_replicas: 10 # (Optional)

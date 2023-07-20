@@ -16,24 +16,17 @@ mod test_gcp_mig_scaling {
             "project".to_string(),
             Value::String("wave-autoscale-test".to_string()),
         );
-        scaling_component_metadata
-            .insert("area_kind".to_string(), Value::String("region".to_string()));
         scaling_component_metadata.insert(
-            "area_name".to_string(),
+            "location_kind".to_string(),
+            Value::String("region".to_string()),
+        );
+        scaling_component_metadata.insert(
+            "location_name".to_string(),
             Value::String("asia-northeast2".to_string()),
         );
         scaling_component_metadata.insert(
             "group_name".to_string(),
             Value::String("test-instance-group-1".to_string()),
-        );
-        scaling_component_metadata.insert("resize".to_string(), Value::String("5".to_string()));
-        scaling_component_metadata.insert(
-            "min_num_replicas".to_string(),
-            Value::String("1".to_string()),
-        );
-        scaling_component_metadata.insert(
-            "min_num_replicas".to_string(),
-            Value::String("10".to_string()),
         );
 
         let scaling_component_definitions = vec![ScalingComponentDefinition {
