@@ -22,12 +22,21 @@ pub struct WaveMetricsOutputConfig {
     pub url: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Default)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct WaveApiServerConfig {
     #[serde(default)]
     pub host: String,
     #[serde(default)]
     pub port: u16,
+}
+
+impl Default for WaveApiServerConfig {
+    fn default() -> Self {
+        WaveApiServerConfig {
+            host: "0.0.0.0".to_string(),
+            port: 3024,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default)]
