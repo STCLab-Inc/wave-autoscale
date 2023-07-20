@@ -3,11 +3,13 @@ use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
+pub mod amazon_dynamodb_table;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
 pub mod k8s_deployment;
 use self::{
+    amazon_dynamodb_table::DynamoDbTableScalingComponent,
     aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
@@ -62,6 +64,9 @@ impl ScalingComponentManager {
             )),
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
+            )),
+            DynamoDbTableScalingComponent::SCALING_KIND => Ok(Box::new(
+                DynamoDbTableScalingComponent::new(cloned_defintion),
             )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
