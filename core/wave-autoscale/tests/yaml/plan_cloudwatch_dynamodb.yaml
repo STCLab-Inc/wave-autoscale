@@ -1,0 +1,55 @@
+---
+kind: Metric
+id: cloudwatch_consumed_write_capacity_units_cnt
+metric_kind: cloudwatch-data
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPANTGF4XJ
+  secret_key: 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
+  polling_interval: 30000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
+  expression: 'SELECT COUNT(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName)'
+  period: 5
+  duration_seconds: 60
+---
+kind: ScalingComponent
+id: scaling_component_dynamodb_table
+component_kind: amazon-dynamodb
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPANTGF4XJ
+  secret_key: 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
+  table_name: table-test
+---
+kind: ScalingPlan
+id: scaling_plan_dynamodb_table
+title: "Scaling Plan for DynamoDB Table"
+plans:
+  - id: switch-capacity_mode-to-on-demand
+    description: "Switch capacity mode to on-demand if consumed write capacity units value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_consumed_write_capacity_units_cnt >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PAY_PER_REQUEST
+  - id: switch-capacity_mode-to-provisioned
+    description: "Switch capacity mode to on-demand if consumed write capacity units value is greater than 100."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_consumed_write_capacity_units_cnt >= 100"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PAY_PER_REQUEST
+        autoscaling_mode: "PROVISIONED"
+        capacity_unit: "BOTH"
+        read_min_capacity: 5
+        read_max_capacity: 10
+        read_target_value: 60.0
+        write_min_capacity: 5
+        write_max_capacity: 10
+        write_target_value: 80.0
