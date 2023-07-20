@@ -7,7 +7,6 @@ use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
 use log::error;
-use reqwest::StatusCode;
 use serde_json::{json, Map, Number, Value};
 use std::collections::HashMap;
 
@@ -49,10 +48,10 @@ impl ScalingComponent for MIGAutoScalingComponent {
         ) {
             let gcp_mig_setting_common = GcpMigSetting {
                 project: project.to_string(),
-                area_kind: match area_kind.to_string() {
-                    s if s.to_lowercase() == "zone" => GcpMigAreaKind::Zone,
-                    s if s.to_lowercase() == "region" => GcpMigAreaKind::Region,
-                    _ => GcpMigAreaKind::Region,
+                area_kind: match area_kind {
+                    s if s == "zone" => GcpMigAreaKind::Zone,
+                    s if s == "region" => GcpMigAreaKind::Region,
+                    _ => return Err(anyhow::anyhow!("Invalid area_kind")),
                 },
                 area_name: area_name.to_string(),
                 group_name: group_name.to_string(),
@@ -60,8 +59,8 @@ impl ScalingComponent for MIGAutoScalingComponent {
                 query: None,
             };
 
-            match area_kind.to_string() {
-                s if s == "zone" => {
+            match gcp_mig_setting_common.area_kind {
+                GcpMigAreaKind::Zone => {
                     let integrate_all_response = integrate_call_gcp_mig_zone_resize(
                         params.get("min_num_replicas").and_then(Value::as_i64),
                         params.get("max_num_replicas").and_then(Value::as_i64),
@@ -71,7 +70,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
                     .await;
                     return integrate_all_response;
                 }
-                s if s == "region" => {
+                GcpMigAreaKind::Region => {
                     let integrate_all_response = integrate_call_gcp_mig_region_resize(
                         params.get("min_num_replicas").and_then(Value::as_i64),
                         params.get("max_num_replicas").and_then(Value::as_i64),
@@ -259,7 +258,7 @@ mod test {
     };
     use super::{integrate_call_gcp_mig_region_resize, integrate_call_gcp_mig_zone_resize};
 
-    //#[ignore]
+    #[ignore]
     #[tokio::test]
     async fn test_gcp_mig_region() {
         let gcp_mig_setting_common = GcpMigSetting {
