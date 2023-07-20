@@ -657,7 +657,7 @@ mod tests {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: "vector".to_string(),
                 metric_kind: "gauge".to_string(),
                 metadata: HashMap::new(),
             },
