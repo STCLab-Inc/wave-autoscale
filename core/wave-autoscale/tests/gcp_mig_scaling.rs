@@ -1,24 +1,52 @@
 mod test_gcp_mig_scaling {
     use anyhow::Result;
-    use data_layer::reader::wave_definition_reader::read_definition_yaml_file;
+    use data_layer::types::object_kind::ObjectKind;
+    use data_layer::ScalingComponentDefinition;
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use wave_autoscale::scaling_component::{
         gcp_mig_autoscaling::MIGAutoScalingComponent, ScalingComponentManager,
     };
 
-    const GCP_MIG_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/plan_gcp_mig.yaml";
-
     #[tokio::test]
-    //#[ignore]
+    #[ignore]
     async fn test_gcp_mig_autoscaling() -> Result<()> {
-        //let file = std::fs::File::open(GCP_MIG_AUTOSCALING_FILE_PATH)?;
-        // read yaml file
-        let result = read_definition_yaml_file(GCP_MIG_AUTOSCALING_FILE_PATH)?;
+        let mut scaling_component_metadata = HashMap::new();
+        scaling_component_metadata.insert(
+            "project".to_string(),
+            Value::String("wave-autoscale-test".to_string()),
+        );
+        scaling_component_metadata
+            .insert("area_kind".to_string(), Value::String("region".to_string()));
+        scaling_component_metadata.insert(
+            "area_name".to_string(),
+            Value::String("asia-northeast2".to_string()),
+        );
+        scaling_component_metadata.insert(
+            "group_name".to_string(),
+            Value::String("test-instance-group-1".to_string()),
+        );
+        scaling_component_metadata.insert("resize".to_string(), Value::String("5".to_string()));
+        scaling_component_metadata.insert(
+            "min_num_replicas".to_string(),
+            Value::String("1".to_string()),
+        );
+        scaling_component_metadata.insert(
+            "min_num_replicas".to_string(),
+            Value::String("10".to_string()),
+        );
+
+        let scaling_component_definitions = vec![ScalingComponentDefinition {
+            kind: ObjectKind::ScalingComponent,
+            db_id: "".to_string(),
+            id: "gcp_mig_region_autoscaling_api_server".to_string(),
+            component_kind: "gcp-compute-engine-mig".to_string(),
+            metadata: scaling_component_metadata,
+        }];
 
         // create metric adapter
         let mut scaling_component_manager = ScalingComponentManager::new();
-        scaling_component_manager.add_definitions(result.scaling_component_definitions);
+        scaling_component_manager.add_definitions(scaling_component_definitions);
 
         if let Some(scaling_component) =
             scaling_component_manager.get_scaling_component("gcp_mig_region_autoscaling_api_server")
