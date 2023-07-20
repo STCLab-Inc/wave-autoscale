@@ -7,8 +7,7 @@ mod test_gcp_mig_scaling {
         gcp_mig_autoscaling::MIGAutoScalingComponent, ScalingComponentManager,
     };
 
-    const GCP_MIG_AUTOSCALING_FILE_PATH: &str =
-        "./core/wave-autoscale/tests/yaml/plan_gcp_mig.yaml";
+    const GCP_MIG_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/plan_gcp_mig.yaml";
 
     #[tokio::test]
     //#[ignore]
@@ -33,7 +32,7 @@ mod test_gcp_mig_scaling {
         // run scaling trigger
         let mut options: HashMap<String, Value> = HashMap::new();
         options.insert("resize".to_string(), json!(2));
-        
+
         scaling_component_manager
             .apply_to("gcp_mig_region_autoscaling_api_server", options)
             .await
