@@ -9,7 +9,7 @@ metadata:
   polling_interval: 30000
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
-  expression: 'SELECT COUNT(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName)'
+  expression: "SELECT COUNT(ConsumedWriteCapacityUnits) FROM SCHEMA(\"AWS/DynamoDB\", TableName) WHERE TableName = 'table-test'"
   period: 5
   duration_seconds: 60
 ---
