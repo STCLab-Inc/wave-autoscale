@@ -30,8 +30,8 @@ jobs:
             ~/.cargo/git/db/
             ~/.cargo/advisory-db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.yaml') }}
+          restore-keys: ${{ runner.os }}-cargo
 
       - name: Set up moon cache
         uses: actions/cache@v3
