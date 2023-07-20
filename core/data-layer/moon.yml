@@ -5,7 +5,7 @@ owners:
   
 tasks:
   test:
-    command: "cargo test --test data_layer -- --test-threads=1"
+    command: "cargo nextest run -p data-layer --test-threads=1"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"

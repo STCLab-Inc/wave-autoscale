@@ -8,7 +8,7 @@ dependsOn:
 
 tasks:
   test:
-    command: "cargo test -p api-server -- --nocapture"
+    command: "cargo nextest run -p api-server"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"

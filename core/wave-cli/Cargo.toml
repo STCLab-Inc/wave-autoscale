@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "wave-cli"
+path = "src/main.rs"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size. https://nnethercote.github.io/perf-book/build-configuration.html#link-time-optimization
+lto = true
+
 [dependencies]
 clap = { version = "4.3.0", features = ["derive"] }
 env_logger = { version = "0.10.0" }

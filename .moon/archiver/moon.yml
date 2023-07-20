@@ -1,6 +1,11 @@
 language: "bash"
 
 tasks:
+  # TODO: Add back in when we have a fix for
+  audit:
+    command: "cargo audit --ignore RUSTSEC-2022-0090 --ignore RUSTSEC-2020-0071"
+    options:
+      runFromWorkspaceRoot: true
   lint:
     command: "echo archiver"
   test:

@@ -185,9 +185,9 @@ fn main() -> Result<()> {
     let wave_api_server_command = format!("./{}", WAVE_API_SERVER);
     if !except_api_server {
         let mut envs: HashMap<String, String> = HashMap::new();
-        let config_file_for_api_server = config_file.clone();
-        if !config_file_for_api_server.is_empty() {
-            let config = parse_wave_config_file(config_file_for_api_server.as_str());
+        // let config_file_for_api_server = config_file.clone();
+        if !&config_file.is_empty() {
+            let config = parse_wave_config_file(config_file.as_str());
             if let Some(common_config) = config.get("COMMON").and_then(|v| v.as_mapping()) {
                 if let Some(db_url) = common_config.get("DB_URL").and_then(|v| v.as_str()) {
                     envs.insert("DATABASE_URL".to_string(), db_url.to_string());
@@ -217,9 +217,8 @@ fn main() -> Result<()> {
 
     if run_web_app {
         let mut envs: HashMap<String, String> = HashMap::new();
-        let config_file_for_web_app: String = config_file.clone();
-        if !config_file_for_web_app.is_empty() {
-            let config = parse_wave_config_file(config_file_for_web_app.as_str());
+        if !&config_file.is_empty() {
+            let config = parse_wave_config_file(config_file.as_str());
             if let Some(web_app_config) = config.get("WEB_APP").and_then(|v| v.as_mapping()) {
                 debug!("web_app_config: {:?}", web_app_config);
                 if let Some(port) = web_app_config.get("PORT").and_then(|v| v.as_u64()) {

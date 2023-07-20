@@ -2,13 +2,23 @@ language: 'typescript'
 type: 'application'
 owners:
   defaultOwner: '@wave-autoscale-team'
-  
+
 tasks:
+  install:
+    command: 'npm install'
+    inputs:
+      - './package.json'
+      - './package-lock.json'
+      - './node_modules/**/*'
   # Override the lint, audit task to use the next.js lint command
   lint:
     command: 'next lint'
     inputs:
       - '@globs(sources)'
+    options:
+      mergeArgs: 'replace'
+      mergeDeps: 'replace'
+      mergeInputs: 'replace'
   audit:
     command: 'npm audit'
     inputs:

@@ -1,0 +1,5 @@
+tasks:
+  lint:
+    command: "cargo clippy --fix --allow-dirty --allow-staged"
+    inputs:
+      - "@globs(sources)"
