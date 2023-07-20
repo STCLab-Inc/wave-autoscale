@@ -3,11 +3,19 @@ use serde::Deserialize;
 use std::fs::File;
 
 const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
-
-#[derive(Debug, PartialEq, Deserialize, Default)]
+const DEFAULT_API_PORT: u16 = 3024;
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct CommonConfig {
     #[serde(default)]
     pub db_url: String,
+}
+
+impl Default for CommonConfig {
+    fn default() -> Self {
+        CommonConfig {
+            db_url: "sqlite://./wave.db".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default)]
@@ -16,18 +24,35 @@ pub struct WaveMetricsConfig {
     pub output: WaveMetricsOutputConfig,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Default)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct WaveMetricsOutputConfig {
     #[serde(default)]
     pub url: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Default)]
+impl Default for WaveMetricsOutputConfig {
+    fn default() -> Self {
+        WaveMetricsOutputConfig {
+            url: format!("http://localhost:{}/api/metrics-receiver", DEFAULT_API_PORT),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct WaveApiServerConfig {
     #[serde(default)]
     pub host: String,
     #[serde(default)]
     pub port: u16,
+}
+
+impl Default for WaveApiServerConfig {
+    fn default() -> Self {
+        WaveApiServerConfig {
+            host: "0.0.0.0".to_string(),
+            port: DEFAULT_API_PORT,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default)]
@@ -77,6 +102,12 @@ mod tests {
     }
 
     #[test]
+    fn test_common() {
+        let wave_config = get_wave_config();
+        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
+    }
+
+    #[test]
     fn test_wave_metrics() {
         let wave_config = get_wave_config();
         assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
@@ -91,5 +122,17 @@ mod tests {
         let wave_config = get_wave_config();
         assert_eq!(wave_config.wave_api_server.host, "localhost");
         assert_eq!(wave_config.wave_api_server.port, 8081);
+    }
+
+    #[test]
+    fn test_default() {
+        let wave_config = WaveConfig::new("");
+        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
+        assert_eq!(
+            wave_config.wave_metrics.output.url,
+            "http://localhost:3024/api/metrics-receiver"
+        );
+        assert_eq!(wave_config.wave_api_server.host, "0.0.0.0");
+        assert_eq!(wave_config.wave_api_server.port, 3024);
     }
 }
