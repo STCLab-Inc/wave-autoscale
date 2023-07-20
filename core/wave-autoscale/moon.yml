@@ -1,8 +1,8 @@
 language: "rust"
 type: "application"
 owners:
-  defaultOwner: '@wave-autoscale-team'
-  
+  defaultOwner: "@wave-autoscale-team"
+
 dependsOn:
   - "data-layer"
 
@@ -26,6 +26,16 @@ tasks:
       RUST_LOG: wave_autoscale=debug
   test-aws-lambda-function:
     command: "cargo test -p wave-autoscale --test aws_lambda_function -- --nocapture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=debug
+  test-amazon-dynamodb-table:
+    # command: "cargo nextest run -p wave-autoscale --test amazon_dynamodb_table -- --nocapture"
+    command: "cargo test -p wave-autoscale --test amazon_dynamodb_table -- --nocapture"
     deps:
       - "data-layer:build"
     inputs:
