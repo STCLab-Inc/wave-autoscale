@@ -1,7 +1,7 @@
 use super::*;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum GcpMigAreaKind {
@@ -24,7 +24,7 @@ pub struct GcpMigSetting {
     pub location_kind: GcpMigAreaKind,
     pub location_name: String,
     pub group_name: String,
-    pub payload: Option<Value>,
+    pub payload: Option<serde_json::Value>,
     pub query: Option<Vec<(String, String)>>,
 }
 

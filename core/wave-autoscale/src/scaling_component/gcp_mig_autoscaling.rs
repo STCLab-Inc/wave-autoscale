@@ -7,7 +7,7 @@ use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
 use log::error;
-use serde_json::{json, Map, Number, Value};
+use serde_json::{json, Map};
 use std::collections::HashMap;
 
 pub struct MIGAutoScalingComponent {
@@ -31,20 +31,20 @@ impl ScalingComponent for MIGAutoScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
-        let metadata: HashMap<String, Value> = self.definition.metadata.clone();
+    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+        let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
         if let (
-            Some(Value::String(project)),
+            Some(serde_json::Value::String(project)),
             Some(location_kind),
-            Some(Value::String(location_name)),
-            Some(Value::String(group_name)),
+            Some(serde_json::Value::String(location_name)),
+            Some(serde_json::Value::String(group_name)),
             Some(resize),
         ) = (
             metadata.get("project"),
             metadata.get("location_kind"),
             metadata.get("location_name"),
             metadata.get("group_name"),
-            params.get("resize").and_then(Value::as_i64),
+            params.get("resize").and_then(serde_json::Value::as_i64),
         ) {
             let gcp_mig_setting_common = GcpMigSetting {
                 project: project.to_string(),
@@ -62,8 +62,12 @@ impl ScalingComponent for MIGAutoScalingComponent {
             match gcp_mig_setting_common.location_kind {
                 GcpMigAreaKind::Zone => {
                     let integrate_all_response = integrate_call_gcp_mig_zone_resize(
-                        params.get("min_num_replicas").and_then(Value::as_i64),
-                        params.get("max_num_replicas").and_then(Value::as_i64),
+                        params
+                            .get("min_num_replicas")
+                            .and_then(serde_json::Value::as_i64),
+                        params
+                            .get("max_num_replicas")
+                            .and_then(serde_json::Value::as_i64),
                         resize,
                         gcp_mig_setting_common,
                     )
@@ -72,8 +76,12 @@ impl ScalingComponent for MIGAutoScalingComponent {
                 }
                 GcpMigAreaKind::Region => {
                     let integrate_all_response = integrate_call_gcp_mig_region_resize(
-                        params.get("min_num_replicas").and_then(Value::as_i64),
-                        params.get("max_num_replicas").and_then(Value::as_i64),
+                        params
+                            .get("min_num_replicas")
+                            .and_then(serde_json::Value::as_i64),
+                        params
+                            .get("max_num_replicas")
+                            .and_then(serde_json::Value::as_i64),
                         resize,
                         gcp_mig_setting_common,
                     )
@@ -192,11 +200,14 @@ async fn integrate_call_gcp_mig_zone_resize(
     }
     // region precondition
     if gcp_mig_setting.location_kind.to_string() == GcpMigAreaKind::Region.to_string() {
-        autoscaling_policy_map.insert("mode".to_string(), Value::String("OFF".to_string()));
+        autoscaling_policy_map.insert(
+            "mode".to_string(),
+            serde_json::Value::String("OFF".to_string()),
+        );
     }
     payload_map.insert(
         "autoscalingPolicy".to_string(),
-        Value::Object(autoscaling_policy_map),
+        serde_json::Value::Object(autoscaling_policy_map),
     );
     gcp_mig_setting.payload = Some(json!(payload_map));
     gcp_mig_setting.query = Some(vec![(

@@ -2,7 +2,7 @@ mod test_gcp_mig_scaling {
     use anyhow::Result;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
-    use serde_json::{json, Value};
+    use serde_json::json;
     use std::collections::HashMap;
     use wave_autoscale::scaling_component::{
         gcp_mig_autoscaling::MIGAutoScalingComponent, ScalingComponentManager,
@@ -14,19 +14,19 @@ mod test_gcp_mig_scaling {
         let mut scaling_component_metadata = HashMap::new();
         scaling_component_metadata.insert(
             "project".to_string(),
-            Value::String("wave-autoscale-test".to_string()),
+            serde_json::Value::String("wave-autoscale-test".to_string()),
         );
         scaling_component_metadata.insert(
             "location_kind".to_string(),
-            Value::String("region".to_string()),
+            serde_json::Value::String("region".to_string()),
         );
         scaling_component_metadata.insert(
             "location_name".to_string(),
-            Value::String("asia-northeast2".to_string()),
+            serde_json::Value::String("asia-northeast2".to_string()),
         );
         scaling_component_metadata.insert(
             "group_name".to_string(),
-            Value::String("test-instance-group-1".to_string()),
+            serde_json::Value::String("test-instance-group-1".to_string()),
         );
 
         let scaling_component_definitions = vec![ScalingComponentDefinition {
@@ -51,7 +51,7 @@ mod test_gcp_mig_scaling {
         }
 
         // run scaling trigger
-        let mut options: HashMap<String, Value> = HashMap::new();
+        let mut options: HashMap<String, serde_json::Value> = HashMap::new();
         options.insert("resize".to_string(), json!(2));
 
         scaling_component_manager
