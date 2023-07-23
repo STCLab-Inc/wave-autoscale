@@ -122,9 +122,16 @@ async fn integrate_call_gcp_mig_region_resize(
         gcp_mig_setting.group_name.clone(),
     )]);
     let precondition_instance_group_manager_response =
-        call_gcp_patch_instance_group_manager(gcp_mig_setting)
-            .await
-            .unwrap();
+        call_gcp_patch_instance_group_manager(gcp_mig_setting).await;
+    if precondition_instance_group_manager_response.is_err() {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - instance group manager",
+            "code": "500",
+            "extras": precondition_instance_group_manager_response.unwrap_err().is_body().to_string()
+        })));
+    }
+    let precondition_instance_group_manager_response =
+        precondition_instance_group_manager_response.unwrap();
     let precondition_instance_group_manager_response_status_code =
         precondition_instance_group_manager_response.status();
     let precondition_instance_group_manager_response_body =
@@ -146,12 +153,8 @@ async fn integrate_call_gcp_mig_region_resize(
             "GCP API Call Error - precondition_instance_group_manager_response: {:?}",
             precondition_instance_group_manager_response_body
         );
-        println!(
-            "GCP API Call Error - precondition_instance_group_manager_response: {:?}",
-            precondition_instance_group_manager_response_body
-        );
         let json = json!({
-            "message": "GCP API Call Error - instance group manager",
+            "message": "GCP API Call Error: not success - instance group manager",
             "code": precondition_instance_group_manager_response_status_code.as_str(),
             "extras": precondition_instance_group_manager_response_body
         });
@@ -178,13 +181,13 @@ async fn integrate_call_gcp_mig_zone_resize(
     if min_num_replicas.is_some() {
         autoscaling_policy_map.insert(
             "minNumReplicas".to_string(),
-            Value::Number(Number::from(min_num_replicas.unwrap())),
+            json!(min_num_replicas.unwrap()),
         );
     }
     if max_num_replicas.is_some() {
         autoscaling_policy_map.insert(
             "maxNumReplicas".to_string(),
-            Value::Number(Number::from(max_num_replicas.unwrap())),
+            json!(max_num_replicas.unwrap()),
         );
     }
     // region precondition
@@ -200,7 +203,15 @@ async fn integrate_call_gcp_mig_zone_resize(
         "autoscaler".to_string(),
         gcp_mig_setting.group_name.clone(),
     )]);
-    let autoscaler_response = call_gcp_patch_autoscaler(gcp_mig_setting).await.unwrap();
+    let autoscaler_response = call_gcp_patch_autoscaler(gcp_mig_setting).await;
+    if autoscaler_response.is_err() {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - autoscaler",
+            "code": "500",
+            "extras": autoscaler_response.unwrap_err().is_body().to_string()
+        })));
+    }
+    let autoscaler_response = autoscaler_response.unwrap();
     let autoscaler_response_status_code = autoscaler_response.status();
     let autoscaler_response_body = autoscaler_response.text().await.unwrap();
 
@@ -209,9 +220,15 @@ async fn integrate_call_gcp_mig_zone_resize(
         let mut gcp_mig_setting = gcp_mig_setting_common.clone();
         gcp_mig_setting.payload = None;
         gcp_mig_setting.query = Some(vec![(String::from("size"), resize.to_string())]);
-        let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting)
-            .await
-            .unwrap();
+        let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting).await;
+        if resize_response.is_err() {
+            return Err(anyhow::anyhow!(json!({
+                "message": "GCP API Call Error - resize",
+                "code": "500",
+                "extras": resize_response.unwrap_err().is_body().to_string()
+            })));
+        }
+        let resize_response = resize_response.unwrap();
         let resize_response_status_code = resize_response.status();
         let resize_response_body = resize_response.text().await.unwrap();
 
@@ -222,12 +239,8 @@ async fn integrate_call_gcp_mig_zone_resize(
                 "GCP API Call Error - resize_response: {:?}",
                 resize_response_body
             );
-            println!(
-                "GCP API Call Error - resize_response: {:?}",
-                resize_response_body
-            );
             let json = json!({
-                "message": "GCP API Call Error - resize",
+                "message": "GCP API Call Error: not success - resize",
                 "code": resize_response_status_code.as_str(),
                 "extras": resize_response_body
             });
@@ -238,12 +251,8 @@ async fn integrate_call_gcp_mig_zone_resize(
             "GCP API Call Error - autoscaler_response: {:?}",
             autoscaler_response_body
         );
-        println!(
-            "GCP API Call Error - autoscaler_response: {:?}",
-            autoscaler_response_body
-        );
         let json = json!({
-            "message": "GCP API Call Error - autoscaler",
+            "message": "GCP API Call Error: not success - autoscaler",
             "code": autoscaler_response_status_code.as_str(),
             "extras": autoscaler_response_body
         });
