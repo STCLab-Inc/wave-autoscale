@@ -15,8 +15,9 @@ use aws_sdk_dynamodb::{
 use aws_sdk_applicationautoscaling::{
     operation::describe_scaling_policies::DescribeScalingPoliciesOutput,
     types::{
-        MetricType, PolicyType, PredefinedMetricSpecification, ScalableDimension,
-        ScalableDimension::DynamoDbTableReadCapacityUnits,
+        MetricType, MetricType::DynamoDbReadCapacityUtilization,
+        MetricType::DynamoDbWriteCapacityUtilization, PolicyType, PredefinedMetricSpecification,
+        ScalableDimension, ScalableDimension::DynamoDbTableReadCapacityUnits,
         ScalableDimension::DynamoDbTableWriteCapacityUnits, ServiceNamespace,
         TargetTrackingScalingPolicyConfiguration,
     },
@@ -321,223 +322,203 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                 .credentials_provider(credentials)
                 .load()
                 .await;
-            if let Some(capacity_mode) = capacity_mode {
-                if capacity_mode == "PAY_PER_REQUEST" {
-                    update_table_to_on_demand_mode(&shared_config, table_name).await?;
-                } else if capacity_mode == "PROVISIONED" {
-                    if let Some(autoscaling_mode) = autoscaling_mode {
-                        if autoscaling_mode == "ON" {
-                            if let Some(capacity_unit) = capacity_unit {
-                                if capacity_unit == "READ" {
-                                    if let Some(read_min_capacity) = read_min_capacity {
-                                        if let Some(read_max_capacity) = read_max_capacity {
-                                            if let Some(read_target_value) = read_target_value {
-                                                register_scalable_target_to_table(
-                                                    &shared_config,
-                                                    table_name,
-                                                    read_min_capacity,
-                                                    read_max_capacity,
-                                                    DynamoDbTableReadCapacityUnits,
-                                                )
-                                                .await?;
-                                                put_scaling_policy_to_plan(
-                                                    &shared_config,
-                                                    table_name,
-                                                    DynamoDbTableReadCapacityUnits,
-                                                    read_target_value,
-                                                    MetricType::DynamoDbReadCapacityUtilization,
-                                                )
-                                                .await?;
-                                            } else {
-                                                return Err(anyhow::anyhow!(
-                                                    "Specify read target value"
-                                                ));
-                                            }
-                                        } else {
-                                            return Err(anyhow::anyhow!(
-                                                "Specify read max capacity"
-                                            ));
-                                        }
-                                    } else {
-                                        return Err(anyhow::anyhow!("Specify read min capacity"));
-                                    }
-                                } else if capacity_unit == "WRITE" {
-                                    if let Some(write_min_capacity) = write_min_capacity {
-                                        if let Some(write_max_capacity) = write_max_capacity {
-                                            if let Some(write_target_value) = write_target_value {
-                                                register_scalable_target_to_table(
-                                                    &shared_config,
-                                                    table_name,
-                                                    write_min_capacity,
-                                                    write_max_capacity,
-                                                    DynamoDbTableWriteCapacityUnits,
-                                                )
-                                                .await?;
-                                                put_scaling_policy_to_plan(
-                                                    &shared_config,
-                                                    table_name,
-                                                    DynamoDbTableWriteCapacityUnits,
-                                                    write_target_value,
-                                                    MetricType::DynamoDbWriteCapacityUtilization,
-                                                )
-                                                .await?;
-                                            } else {
-                                                return Err(anyhow::anyhow!(
-                                                    "Specify write target value"
-                                                ));
-                                            }
-                                        } else {
-                                            return Err(anyhow::anyhow!(
-                                                "Specify write max capacity"
-                                            ));
-                                        }
-                                    } else {
-                                        return Err(anyhow::anyhow!("Specify write min capacity"));
-                                    }
-                                } else if capacity_unit == "BOTH" {
-                                    if let Some(read_min_capacity) = read_min_capacity {
-                                        if let Some(read_max_capacity) = read_max_capacity {
-                                            if let Some(read_target_value) = read_target_value {
-                                                register_scalable_target_to_table(
-                                                    &shared_config,
-                                                    table_name,
-                                                    read_min_capacity,
-                                                    read_max_capacity,
-                                                    DynamoDbTableReadCapacityUnits,
-                                                )
-                                                .await?;
-                                                put_scaling_policy_to_plan(
-                                                    &shared_config,
-                                                    table_name,
-                                                    DynamoDbTableReadCapacityUnits,
-                                                    read_target_value,
-                                                    MetricType::DynamoDbReadCapacityUtilization,
-                                                )
-                                                .await?;
-                                            } else {
-                                                return Err(anyhow::anyhow!(
-                                                    "Specify read target value"
-                                                ));
-                                            }
-                                        } else {
-                                            return Err(anyhow::anyhow!(
-                                                "Specify read max capacity"
-                                            ));
-                                        }
-                                    } else {
-                                        return Err(anyhow::anyhow!("Specify read min capacity"));
-                                    }
-
-                                    if let Some(write_min_capacity) = write_min_capacity {
-                                        if let Some(write_max_capacity) = write_max_capacity {
-                                            if let Some(write_target_value) = write_target_value {
-                                                register_scalable_target_to_table(
-                                                    &shared_config,
-                                                    table_name,
-                                                    write_min_capacity,
-                                                    write_max_capacity,
-                                                    DynamoDbTableWriteCapacityUnits,
-                                                )
-                                                .await?;
-                                                put_scaling_policy_to_plan(
-                                                    &shared_config,
-                                                    table_name,
-                                                    DynamoDbTableWriteCapacityUnits,
-                                                    write_target_value,
-                                                    MetricType::DynamoDbWriteCapacityUtilization,
-                                                )
-                                                .await?;
-                                            } else {
-                                                return Err(anyhow::anyhow!(
-                                                    "Specify write target value"
-                                                ));
-                                            }
-                                        } else {
-                                            return Err(anyhow::anyhow!(
-                                                "Specify write max capacity"
-                                            ));
-                                        }
-                                    } else {
-                                        return Err(anyhow::anyhow!("Specify write min capacity"));
-                                    }
-                                } else {
-                                    return Err(anyhow::anyhow!("Invalid capacity unit"));
-                                }
-                            } else {
-                                return Err(anyhow::anyhow!("Specify capacity unit"));
-                            }
-                        } else if autoscaling_mode == "OFF" {
-                            if let Some(capacity_unit) = capacity_unit {
-                                if capacity_unit == "READ" {
-                                    describe_and_delete_scaling_policy(
-                                        &shared_config,
-                                        table_name,
-                                        DynamoDbTableReadCapacityUnits,
-                                    )
-                                    .await?;
-                                    update_table_to_provisioned_mode(
-                                        &shared_config,
-                                        table_name,
-                                        read_capacity_units,
-                                        None,
-                                    )
-                                    .await?;
-                                } else if capacity_unit == "WRITE" {
-                                    describe_and_delete_scaling_policy(
-                                        &shared_config,
-                                        table_name,
-                                        DynamoDbTableWriteCapacityUnits,
-                                    )
-                                    .await?;
-                                    update_table_to_provisioned_mode(
-                                        &shared_config,
-                                        table_name,
-                                        None,
-                                        write_capacity_units,
-                                    )
-                                    .await?;
-                                } else if capacity_unit == "BOTH" {
-                                    describe_and_delete_scaling_policy(
-                                        &shared_config,
-                                        table_name,
-                                        DynamoDbTableReadCapacityUnits,
-                                    )
-                                    .await?;
-                                    describe_and_delete_scaling_policy(
-                                        &shared_config,
-                                        table_name,
-                                        DynamoDbTableWriteCapacityUnits,
-                                    )
-                                    .await?;
-                                    update_table_to_provisioned_mode(
-                                        &shared_config,
-                                        table_name,
-                                        read_capacity_units,
-                                        write_capacity_units,
-                                    )
-                                    .await?;
-                                } else {
-                                    return Err(anyhow::anyhow!("Invalid capacity unit"));
-                                }
-                            } else {
-                                return Err(anyhow::anyhow!("Specify capacity unit"));
-                            }
-                        } else {
-                            return Err(anyhow::anyhow!("Invalid autoscaling mode"));
-                        }
-                    } else {
-                        return Err(anyhow::anyhow!("Specify autoscaling mode"));
-                    }
-                } else {
-                    return Err(anyhow::anyhow!("Invalid capacity mode"));
-                }
-            } else {
+            if capacity_mode.is_none() {
                 return Err(anyhow::anyhow!("Specify capacity mode"));
             }
-            Ok(())
+            let capacity_mode = capacity_mode.unwrap();
+            if capacity_mode == "PAY_PER_REQUEST" {
+                update_table_to_on_demand_mode(&shared_config, table_name).await?;
+            } else if capacity_mode == "PROVISIONED" {
+                if autoscaling_mode.is_none() {
+                    return Err(anyhow::anyhow!("Specify autoscaling mode"));
+                }
+                let autoscaling_mode = autoscaling_mode.unwrap();
+                if autoscaling_mode == "ON" {
+                    if capacity_unit.is_none() {
+                        return Err(anyhow::anyhow!("Specify capacity unit"));
+                    }
+                    let capacity_unit = capacity_unit.unwrap();
+                    match capacity_unit.as_str() {
+                        "READ" => {
+                            if read_min_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify read min capacity"));
+                            }
+                            if read_max_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify read max capacity"));
+                            }
+                            if read_target_value.is_none() {
+                                return Err(anyhow::anyhow!("Specify read target value"));
+                            }
+                            register_scalable_target_to_table(
+                                &shared_config,
+                                table_name,
+                                read_min_capacity.unwrap(),
+                                read_max_capacity.unwrap(),
+                                DynamoDbTableReadCapacityUnits,
+                            )
+                            .await?;
+                            put_scaling_policy_to_plan(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableReadCapacityUnits,
+                                read_target_value.unwrap(),
+                                DynamoDbReadCapacityUtilization,
+                            )
+                            .await?;
+                        }
+                        "WRITE" => {
+                            if write_min_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify write min capacity"));
+                            }
+                            if write_max_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify write max capacity"));
+                            }
+                            if write_target_value.is_none() {
+                                return Err(anyhow::anyhow!("Specify write target value"));
+                            }
+                            register_scalable_target_to_table(
+                                &shared_config,
+                                table_name,
+                                write_min_capacity.unwrap(),
+                                write_max_capacity.unwrap(),
+                                DynamoDbTableWriteCapacityUnits,
+                            )
+                            .await?;
+                            put_scaling_policy_to_plan(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableWriteCapacityUnits,
+                                write_target_value.unwrap(),
+                                DynamoDbWriteCapacityUtilization,
+                            )
+                            .await?;
+                        }
+                        "BOTH" => {
+                            if read_min_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify read min capacity"));
+                            }
+                            if read_max_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify read max capacity"));
+                            }
+                            if read_target_value.is_none() {
+                                return Err(anyhow::anyhow!("Specify read target value"));
+                            }
+                            register_scalable_target_to_table(
+                                &shared_config,
+                                table_name,
+                                read_min_capacity.unwrap(),
+                                read_max_capacity.unwrap(),
+                                DynamoDbTableReadCapacityUnits,
+                            )
+                            .await?;
+                            put_scaling_policy_to_plan(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableReadCapacityUnits,
+                                read_target_value.unwrap(),
+                                DynamoDbReadCapacityUtilization,
+                            )
+                            .await?;
+
+                            if write_min_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify write min capacity"));
+                            }
+                            if write_max_capacity.is_none() {
+                                return Err(anyhow::anyhow!("Specify write max capacity"));
+                            }
+                            if write_target_value.is_none() {
+                                return Err(anyhow::anyhow!("Specify write target value"));
+                            }
+                            register_scalable_target_to_table(
+                                &shared_config,
+                                table_name,
+                                write_min_capacity.unwrap(),
+                                write_max_capacity.unwrap(),
+                                DynamoDbTableWriteCapacityUnits,
+                            )
+                            .await?;
+                            put_scaling_policy_to_plan(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableWriteCapacityUnits,
+                                write_target_value.unwrap(),
+                                DynamoDbWriteCapacityUtilization,
+                            )
+                            .await?;
+                        }
+                        _ => {
+                            return Err(anyhow::anyhow!("Invalid capacity unit"));
+                        }
+                    }
+                } else if autoscaling_mode == "OFF" {
+                    if capacity_unit.is_none() {
+                        return Err(anyhow::anyhow!("Specify capacity unit"));
+                    }
+                    let capacity_unit = capacity_unit.unwrap();
+                    match capacity_unit.as_str() {
+                        "READ" => {
+                            describe_and_delete_scaling_policy(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableReadCapacityUnits,
+                            )
+                            .await?;
+                            update_table_to_provisioned_mode(
+                                &shared_config,
+                                table_name,
+                                read_capacity_units,
+                                None,
+                            )
+                            .await?;
+                        }
+                        "WIRTE" => {
+                            describe_and_delete_scaling_policy(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableWriteCapacityUnits,
+                            )
+                            .await?;
+                            update_table_to_provisioned_mode(
+                                &shared_config,
+                                table_name,
+                                None,
+                                write_capacity_units,
+                            )
+                            .await?;
+                        }
+                        "BOTH" => {
+                            describe_and_delete_scaling_policy(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableReadCapacityUnits,
+                            )
+                            .await?;
+                            describe_and_delete_scaling_policy(
+                                &shared_config,
+                                table_name,
+                                DynamoDbTableWriteCapacityUnits,
+                            )
+                            .await?;
+                            update_table_to_provisioned_mode(
+                                &shared_config,
+                                table_name,
+                                read_capacity_units,
+                                write_capacity_units,
+                            )
+                            .await?;
+                        }
+                        _ => {
+                            return Err(anyhow::anyhow!("Invalid capacity unit"));
+                        }
+                    }
+                }
+            } else {
+                return Err(anyhow::anyhow!("Invalid capacity mode"));
+            }
         } else {
-            Err(anyhow::anyhow!("Invalid metadata"))
+            return Err(anyhow::anyhow!("Invalid metadata"));
         }
+        Ok(())
     }
 }
 
