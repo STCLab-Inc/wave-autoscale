@@ -36,7 +36,7 @@ mod amazon_dynamodb_table_test {
 
         //let capacity_unit = "READ";
         //let capacity_unit = "WRITE";
-        let capacity_unit = "BOTH";
+        let capacity_unit = "READ_WRITE";
 
         /* let autoscaling_mode = "OFF"; */
         let read_capacity_units = 3;
@@ -344,7 +344,7 @@ mod amazon_dynamodb_table_test {
                                 )
                                 .await?;
                             }
-                            "BOTH" => {
+                            "READ_WRITE" => {
                                 register_scalable_target_to_table(
                                     &shared_config,
                                     table_name,
@@ -413,7 +413,7 @@ mod amazon_dynamodb_table_test {
                                 )
                                 .await?;
                             }
-                            "BOTH" => {
+                            "READ_WRITE" => {
                                 describe_and_delete_scaling_policy(
                                     &shared_config,
                                     table_name,
