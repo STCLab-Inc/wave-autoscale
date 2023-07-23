@@ -83,19 +83,6 @@ pub async fn call_gcp_post_instance_group_manager_resize(
         .await
 }
 
-pub async fn testtest() -> Result<Response, reqwest::Error> {
-    let empty_payload = json!({});
-    let query = vec![(String::from("returnPartialSuccess"), String::from("true"))];
-
-    Client::new()
-        .get("https://compute.googleapis.com/compute/v1/projects/wave-autoscale-test")
-        .bearer_auth(get_gcp_credential_token().await.unwrap().as_str())
-        //.query(&query)
-        //.json(&empty_payload)
-        .send()
-        .await
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
