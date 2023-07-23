@@ -22,9 +22,10 @@ tasks:
     env:
       RUST_LOG: api_server=debug
   run:
-    command: "cargo watch -c -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
+    command: "cargo run"
     deps:
       - "lint"
+      - "utils:lint"
     inputs:
       - "@globs(sources)"
     env:
