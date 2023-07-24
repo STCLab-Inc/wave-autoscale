@@ -55,5 +55,3 @@ env_logger = { version = "0.10.0" }
 duration-str = { version = "0.5.1" }
 aws-sdk-ecs = "0.25.1"
 rquickjs = { version = "0.3.1", features = ["full-async", "parallel"] }
-dotenv = { version = "0.15.0" }
-lazy_static = { version = "1.4.0" }

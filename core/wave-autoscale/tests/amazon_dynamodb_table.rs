@@ -1,8 +1,4 @@
 mod amazon_dynamodb_table_test {
-    use dotenv::dotenv;
-    use lazy_static::lazy_static;
-    use std::env;
-
     use std::collections::HashMap;
 
     use anyhow::Result;
@@ -32,6 +28,7 @@ mod amazon_dynamodb_table_test {
     };
 
     const DYNAMODB_TABLE_FILE_PATH: &str = "./tests/yaml/component_dynamodb_table.yaml";
+    static STATIC_REGION: &str = "ap-northeast-3";
 
     #[tokio::test]
     async fn amazon_dynamodb_table_update() -> Result<()> {
@@ -358,25 +355,25 @@ mod amazon_dynamodb_table_test {
         }
 
         for scaling_component_definition in parse_result.scaling_component_definitions.clone() {
-            dotenv().ok();
-            let access_key =
-                env::var("access_key").expect("ERROR: access_key is not defined in .env file");
-            let secret_key =
-                env::var("secret_key").expect("ERROR: secret_key is not defined in .env file");
-            lazy_static! {
-                static ref REGION: String =
-                    env::var("region").expect("ERROR: region is not defined in .env file");
-            }
-
             let metadata: HashMap<String, serde_json::Value> =
                 scaling_component_definition.metadata;
 
-            if let (Some(serde_json::Value::String(table_name)),) = (metadata.get("table_name"),) {
+            if let (
+                Some(serde_json::Value::String(access_key)),
+                Some(serde_json::Value::String(secret_key)),
+                Some(serde_json::Value::String(_region)),
+                Some(serde_json::Value::String(table_name)),
+            ) = (
+                metadata.get("access_key"),
+                metadata.get("secret_key"),
+                metadata.get("region"),
+                metadata.get("table_name"),
+            ) {
                 let credentials =
                     Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
                 // aws_config needs a static region string
                 let shared_config = aws_config::from_env()
-                    .region(REGION.as_str())
+                    .region(STATIC_REGION)
                     .credentials_provider(credentials)
                     .load()
                     .await;
