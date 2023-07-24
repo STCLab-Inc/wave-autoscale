@@ -4,16 +4,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum GcpMigAreaKind {
+pub enum GcpMigLocationKind {
     Region,
     Zone,
 }
 
-impl std::fmt::Display for GcpMigAreaKind {
+impl std::fmt::Display for GcpMigLocationKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            GcpMigAreaKind::Region => write!(f, "regions"),
-            GcpMigAreaKind::Zone => write!(f, "zones"),
+            GcpMigLocationKind::Region => write!(f, "regions"),
+            GcpMigLocationKind::Zone => write!(f, "zones"),
         }
     }
 }
@@ -21,7 +21,7 @@ impl std::fmt::Display for GcpMigAreaKind {
 #[derive(Clone, Debug)]
 pub struct GcpMigSetting {
     pub project: String,
-    pub location_kind: GcpMigAreaKind,
+    pub location_kind: GcpMigLocationKind,
     pub location_name: String,
     pub group_name: String,
     pub payload: Option<serde_json::Value>,
@@ -93,7 +93,7 @@ mod test {
     async fn test_call_gcp_patch_instance_group_manager() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            location_kind: GcpMigAreaKind::Region,
+            location_kind: GcpMigLocationKind::Region,
             location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: Some(json!({
@@ -123,7 +123,7 @@ mod test {
     async fn test_call_gcp_patch_autoscaler() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            location_kind: GcpMigAreaKind::Region,
+            location_kind: GcpMigLocationKind::Region,
             location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: Some(json!({
@@ -149,7 +149,7 @@ mod test {
     async fn test_call_gcp_post_instance_group_manager_resize() {
         let gcp_mig_setting = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            location_kind: GcpMigAreaKind::Region,
+            location_kind: GcpMigLocationKind::Region,
             location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: None,

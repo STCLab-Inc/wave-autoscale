@@ -1,6 +1,6 @@
 use super::super::util::google_cloud::gcp_managed_instance_group::{
     call_gcp_patch_autoscaler, call_gcp_patch_instance_group_manager,
-    call_gcp_post_instance_group_manager_resize, GcpMigAreaKind, GcpMigSetting,
+    call_gcp_post_instance_group_manager_resize, GcpMigLocationKind, GcpMigSetting,
 };
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
@@ -49,8 +49,8 @@ impl ScalingComponent for MIGAutoScalingComponent {
             let gcp_mig_setting_common = GcpMigSetting {
                 project: project.to_string(),
                 location_kind: match location_kind {
-                    s if s == "single_zone" => GcpMigAreaKind::Zone,
-                    s if s == "region" => GcpMigAreaKind::Region,
+                    s if s == "single_zone" => GcpMigLocationKind::Zone,
+                    s if s == "region" => GcpMigLocationKind::Region,
                     _ => return Err(anyhow::anyhow!("Invalid location_kind")),
                 },
                 location_name: location_name.to_string(),
@@ -60,7 +60,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
             };
 
             match gcp_mig_setting_common.location_kind {
-                GcpMigAreaKind::Zone => {
+                GcpMigLocationKind::Zone => {
                     let integrate_all_response = integrate_call_gcp_mig_zone_resize(
                         params
                             .get("min_num_replicas")
@@ -74,7 +74,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
                     .await;
                     return integrate_all_response;
                 }
-                GcpMigAreaKind::Region => {
+                GcpMigLocationKind::Region => {
                     let integrate_all_response = integrate_call_gcp_mig_region_resize(
                         params
                             .get("min_num_replicas")
@@ -99,7 +99,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
 }
 
 /*
- * GcpMigAreaKind::Region
+ * GcpMigLocationKind::Region
  * precondition
  *  => Target Distribution Shape: `Even`
  *  => instance Redistribution Type: `PROACTIVE`
@@ -171,7 +171,7 @@ async fn integrate_call_gcp_mig_region_resize(
 }
 
 /*
- * GcpMigAreaKind::Zone
+ * GcpMigLocationKind::Zone
  * precondition - None
  */
 async fn integrate_call_gcp_mig_zone_resize(
@@ -199,7 +199,7 @@ async fn integrate_call_gcp_mig_zone_resize(
         );
     }
     // region precondition
-    if gcp_mig_setting.location_kind.to_string() == GcpMigAreaKind::Region.to_string() {
+    if gcp_mig_setting.location_kind.to_string() == GcpMigLocationKind::Region.to_string() {
         autoscaling_policy_map.insert(
             "mode".to_string(),
             serde_json::Value::String("OFF".to_string()),
@@ -274,7 +274,7 @@ async fn integrate_call_gcp_mig_zone_resize(
 #[cfg(test)]
 mod test {
     use super::super::super::util::google_cloud::gcp_managed_instance_group::{
-        GcpMigAreaKind, GcpMigSetting,
+        GcpMigLocationKind, GcpMigSetting,
     };
     use super::{integrate_call_gcp_mig_region_resize, integrate_call_gcp_mig_zone_resize};
 
@@ -283,7 +283,7 @@ mod test {
     async fn test_gcp_mig_region() {
         let gcp_mig_setting_common = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            location_kind: GcpMigAreaKind::Region,
+            location_kind: GcpMigLocationKind::Region,
             location_name: "asia-northeast2".to_string(),
             group_name: "test-instance-group-1".to_string(),
             payload: None,
@@ -300,7 +300,7 @@ mod test {
     async fn test_gcp_mig_zone() {
         let gcp_mig_setting_common = GcpMigSetting {
             project: "wave-autoscale-test".to_string(),
-            location_kind: GcpMigAreaKind::Zone,
+            location_kind: GcpMigLocationKind::Zone,
             location_name: "asia-northeast2-a".to_string(),
             group_name: "instance-group-2".to_string(),
             payload: None,
