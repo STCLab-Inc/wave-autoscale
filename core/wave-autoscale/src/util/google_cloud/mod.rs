@@ -1,8 +1,8 @@
-use gcp_auth::{AuthenticationManager, Error, Token};
+use gcp_auth::{AuthenticationManager};
 use log::error;
 pub mod gcp_managed_instance_group;
 
-async fn get_gcp_credential_token() -> Result<Token, Error> {
+async fn get_gcp_credential_token() -> Result<String, anyhow::Error> {
     // Set ENV
     //std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", "/Users/ari/work/develop/keys/gcp/wave-autoscale-test-510ffb543810.json");
     let authentication_manager = AuthenticationManager::new().await;
@@ -12,14 +12,21 @@ async fn get_gcp_credential_token() -> Result<Token, Error> {
             "Failed to get gcp authentication manager: {:?}",
             authentication_manager_err.to_string()
         );
-        return Err(authentication_manager_err);
+        return Err(anyhow::anyhow!(
+            "Failed to get gcp authentication manager - {:?}",
+            authentication_manager_err.to_string()
+        ));
     }
     let scopes = &[
         "https://www.googleapis.com/auth/compute",
         "https://www.googleapis.com/auth/cloud-platform",
     ];
 
-    authentication_manager.unwrap().get_token(scopes).await
+    let Ok(token) = authentication_manager.unwrap().get_token(scopes).await else {
+        error!("Failed to get gcp authentication manager - to str");
+        return Err(anyhow::anyhow!("Failed to get gcp authentication manager - to str"));
+    };
+    Ok(token.as_str().to_string())
 }
 
 #[cfg(test)]
