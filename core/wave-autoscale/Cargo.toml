@@ -25,8 +25,11 @@ reqwest = { version = "0.11.15", features = ["json"] }
 serde = { version = "1.0.158", features = ["derive"] }
 serde_json = { version = "1.0.94" }
 aws-config = "0.55.0"
+aws-credential-types = "=0.55.0"
 aws-sdk-autoscaling = "0.25.1"
 aws-sdk-lambda = "0.25.1"
+aws-sdk-dynamodb = "0.25.1"
+aws-sdk-applicationautoscaling = "0.25.1"
 aws-sdk-cloudwatch = "0.25.1"
 quick-js = { version = "0.4.1" }
 chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
@@ -52,3 +55,5 @@ env_logger = { version = "0.10.0" }
 duration-str = { version = "0.5.1" }
 aws-sdk-ecs = "0.25.1"
 rquickjs = { version = "0.3.1", features = ["full-async", "parallel"] }
+dotenv = { version = "0.15.0" }
+lazy_static = { version = "1.4.0" }
