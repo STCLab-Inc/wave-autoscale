@@ -34,8 +34,7 @@ tasks:
     env:
       RUST_LOG: wave_autoscale=debug
   test-amazon-dynamodb-table:
-    # command: "cargo nextest run -p wave-autoscale --test amazon_dynamodb_table -- --nocapture"
-    command: "cargo test -p wave-autoscale --test amazon_dynamodb_table -- --nocapture"
+    command: "cargo nextest run -p wave-autoscale --test amazon_dynamodb_table --no-capture"
     deps:
       - "data-layer:build"
     inputs:
