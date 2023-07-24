@@ -149,16 +149,7 @@ async fn integrate_call_gcp_mig_region_resize(
             "extras": "not found response text",
         })));
     };
-    if precondition_instance_group_manager_response_status_code.is_success() {
-        let gcp_mig_setting = gcp_mig_setting_common.clone();
-        integrate_call_gcp_mig_zone_resize(
-            min_num_replicas,
-            max_num_replicas,
-            resize,
-            gcp_mig_setting,
-        )
-        .await
-    } else {
+    if !precondition_instance_group_manager_response_status_code.is_success() {
         error!(
             "GCP API Call Error - precondition_instance_group_manager_response: {:?}",
             precondition_instance_group_manager_response_body
@@ -168,8 +159,11 @@ async fn integrate_call_gcp_mig_region_resize(
             "code": precondition_instance_group_manager_response_status_code.as_str(),
             "extras": precondition_instance_group_manager_response_body
         });
-        Err(anyhow::anyhow!(json))
+        return Err(anyhow::anyhow!(json));
     }
+    let gcp_mig_setting = gcp_mig_setting_common.clone();
+    integrate_call_gcp_mig_zone_resize(min_num_replicas, max_num_replicas, resize, gcp_mig_setting)
+        .await
 }
 
 /*
@@ -234,44 +228,7 @@ async fn integrate_call_gcp_mig_zone_resize(
         })));
     };
 
-    if autoscaler_response_status_code.is_success() {
-        // call resize
-        let mut gcp_mig_setting = gcp_mig_setting_common.clone();
-        gcp_mig_setting.payload = None;
-        gcp_mig_setting.query = Some(vec![(String::from("size"), resize.to_string())]);
-        let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting).await;
-        if resize_response.is_err() {
-            return Err(anyhow::anyhow!(json!({
-                "message": "GCP API Call Error - resize",
-                "code": "500",
-                "extras": resize_response.unwrap_err().is_body().to_string()
-            })));
-        }
-        let resize_response = resize_response.unwrap();
-        let resize_response_status_code = resize_response.status();
-        let core::result::Result::Ok(resize_response_body) = resize_response.text().await else {
-            return Err(anyhow::anyhow!(json!({
-                "message": "GCP API Call Error - resize",
-                "code": "500",
-                "extras": "not found response text",
-            })));
-        };
-
-        if resize_response_status_code.is_success() {
-            Ok(())
-        } else {
-            error!(
-                "GCP API Call Error - resize_response: {:?}",
-                resize_response_body
-            );
-            let json = json!({
-                "message": "GCP API Call Error: not success - resize",
-                "code": resize_response_status_code.as_str(),
-                "extras": resize_response_body
-            });
-            Err(anyhow::anyhow!(json))
-        }
-    } else {
+    if !autoscaler_response_status_code.is_success() {
         error!(
             "GCP API Call Error - autoscaler_response: {:?}",
             autoscaler_response_body
@@ -281,8 +238,44 @@ async fn integrate_call_gcp_mig_zone_resize(
             "code": autoscaler_response_status_code.as_str(),
             "extras": autoscaler_response_body
         });
-        Err(anyhow::anyhow!(json))
+        return Err(anyhow::anyhow!(json));
     }
+
+    // call resize
+    let mut gcp_mig_setting = gcp_mig_setting_common.clone();
+    gcp_mig_setting.payload = None;
+    gcp_mig_setting.query = Some(vec![(String::from("size"), resize.to_string())]);
+    let resize_response = call_gcp_post_instance_group_manager_resize(gcp_mig_setting).await;
+    if resize_response.is_err() {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - resize",
+            "code": "500",
+            "extras": resize_response.unwrap_err().is_body().to_string()
+        })));
+    }
+    let resize_response = resize_response.unwrap();
+    let resize_response_status_code = resize_response.status();
+    let core::result::Result::Ok(resize_response_body) = resize_response.text().await else {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - resize",
+            "code": "500",
+            "extras": "not found response text",
+        })));
+    };
+    if !resize_response_status_code.is_success() {
+        error!(
+            "GCP API Call Error - resize_response: {:?}",
+            resize_response_body
+        );
+        let json = json!({
+            "message": "GCP API Call Error: not success - resize",
+            "code": resize_response_status_code.as_str(),
+            "extras": resize_response_body
+        });
+        return Err(anyhow::anyhow!(json));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
