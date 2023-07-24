@@ -142,11 +142,13 @@ async fn integrate_call_gcp_mig_region_resize(
         precondition_instance_group_manager_response.unwrap();
     let precondition_instance_group_manager_response_status_code =
         precondition_instance_group_manager_response.status();
-    let precondition_instance_group_manager_response_body =
-        precondition_instance_group_manager_response
-            .text()
-            .await
-            .unwrap();
+    let core::result::Result::Ok(precondition_instance_group_manager_response_body) = precondition_instance_group_manager_response.text().await else {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - instance group manager",
+            "code": "500",
+            "extras": "not found response text",
+        })));
+    };
     if precondition_instance_group_manager_response_status_code.is_success() {
         let gcp_mig_setting = gcp_mig_setting_common.clone();
         integrate_call_gcp_mig_zone_resize(
@@ -224,7 +226,13 @@ async fn integrate_call_gcp_mig_zone_resize(
     }
     let autoscaler_response = autoscaler_response.unwrap();
     let autoscaler_response_status_code = autoscaler_response.status();
-    let autoscaler_response_body = autoscaler_response.text().await.unwrap();
+    let core::result::Result::Ok(autoscaler_response_body) = autoscaler_response.text().await else {
+        return Err(anyhow::anyhow!(json!({
+            "message": "GCP API Call Error - autoscaler",
+            "code": "500",
+            "extras": "not found response text",
+        })));
+    };
 
     if autoscaler_response_status_code.is_success() {
         // call resize
@@ -241,7 +249,13 @@ async fn integrate_call_gcp_mig_zone_resize(
         }
         let resize_response = resize_response.unwrap();
         let resize_response_status_code = resize_response.status();
-        let resize_response_body = resize_response.text().await.unwrap();
+        let core::result::Result::Ok(resize_response_body) = resize_response.text().await else {
+            return Err(anyhow::anyhow!(json!({
+                "message": "GCP API Call Error - resize",
+                "code": "500",
+                "extras": "not found response text",
+            })));
+        };
 
         if resize_response_status_code.is_success() {
             Ok(())
