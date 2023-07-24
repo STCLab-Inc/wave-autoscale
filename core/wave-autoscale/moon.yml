@@ -69,7 +69,7 @@ tasks:
     env:
       RUST_LOG: debug
   run:
-    command: "cargo watch -c -x 'run -- -p ./tests/yaml/plan_prometheus_ec2.yaml'"
+    command: "cargo watch -c -x 'run -- -d ./tests/yaml/plan_prometheus_ec2.yaml'"
     deps:
       - "lint"
     inputs:
