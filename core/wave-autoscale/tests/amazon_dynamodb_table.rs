@@ -17,7 +17,9 @@ mod amazon_dynamodb_table_test {
     use aws_sdk_applicationautoscaling::{
         operation::describe_scaling_policies::DescribeScalingPoliciesOutput,
         types::{
-            MetricType, PolicyType, PredefinedMetricSpecification, ScalableDimension,
+            MetricType, MetricType::DynamoDbReadCapacityUtilization,
+            MetricType::DynamoDbWriteCapacityUtilization, PolicyType,
+            PredefinedMetricSpecification, ScalableDimension,
             ScalableDimension::DynamoDbTableReadCapacityUnits,
             ScalableDimension::DynamoDbTableWriteCapacityUnits, ServiceNamespace,
             TargetTrackingScalingPolicyConfiguration,
@@ -39,8 +41,8 @@ mod amazon_dynamodb_table_test {
         let capacity_unit = "READ_WRITE";
 
         /* let autoscaling_mode = "OFF"; */
-        let read_capacity_units = 3;
-        let write_capacity_units = 3;
+        let read_capacity_units: Option<i64> = Some(3);
+        let write_capacity_units: Option<i64> = Some(2);
 
         let autoscaling_mode = "ON";
         let read_target_value = 70.5;
@@ -51,6 +53,104 @@ mod amazon_dynamodb_table_test {
         let write_max_capacity = 3;
 
         let parse_result = read_definition_yaml_file(DYNAMODB_TABLE_FILE_PATH).unwrap();
+
+        #[derive(Debug)]
+        enum CapacityMode {
+            PayPerRequest,
+            Provisioned,
+        }
+        impl CapacityMode {
+            fn from_str(capacity_mode: Option<&str>) -> Option<Self> {
+                match capacity_mode.map(|s| s.to_uppercase()).as_deref() {
+                    Some("PAY_PER_REQUEST") => Some(CapacityMode::PayPerRequest),
+                    Some("PROVISIONED") => Some(CapacityMode::Provisioned),
+                    _ => None,
+                }
+            }
+        }
+        #[derive(Debug)]
+        enum AutoscalingMode {
+            On,
+            Off,
+        }
+        impl AutoscalingMode {
+            fn from_str(autoscaling_mode: Option<&str>) -> Option<Self> {
+                match autoscaling_mode.map(|s| s.to_uppercase()).as_deref() {
+                    Some("ON") => Some(AutoscalingMode::On),
+                    Some("OFF") => Some(AutoscalingMode::Off),
+                    _ => None,
+                }
+            }
+        }
+        #[derive(Debug)]
+        enum CapacityUnit {
+            Read,
+            Write,
+            ReadWrite,
+        }
+        impl CapacityUnit {
+            fn from_str(capacity_unit: Option<&str>) -> Option<Self> {
+                match capacity_unit.map(|s| s.to_uppercase()).as_deref() {
+                    Some("READ") => Some(CapacityUnit::Read),
+                    Some("WRITE") => Some(CapacityUnit::Write),
+                    Some("READ_WRITE") => Some(CapacityUnit::ReadWrite),
+                    _ => None,
+                }
+            }
+        }
+        #[derive(Debug)]
+        enum DynamoDbScalingState {
+            PayPerRequest,
+            ProvisionedOnRead,
+            ProvisionedOnWrite,
+            ProvisionedOnReadWrite,
+            ProvisionedOffRead,
+            ProvisionedOffWrite,
+            ProvisionedOffReadWrite,
+        }
+        impl DynamoDbScalingState {
+            fn new(
+                capacity_mode: Option<&str>,
+                autoscaling_mode: Option<&str>,
+                capacity_unit: Option<&str>,
+            ) -> Option<Self> {
+                match CapacityMode::from_str(capacity_mode) {
+                    Some(CapacityMode::PayPerRequest) => Some(DynamoDbScalingState::PayPerRequest),
+                    Some(CapacityMode::Provisioned) => match (
+                        AutoscalingMode::from_str(autoscaling_mode),
+                        CapacityUnit::from_str(capacity_unit),
+                    ) {
+                        (Some(AutoscalingMode::On), Some(CapacityUnit::Read)) => {
+                            Some(DynamoDbScalingState::ProvisionedOnRead)
+                        }
+                        (Some(AutoscalingMode::On), Some(CapacityUnit::Write)) => {
+                            Some(DynamoDbScalingState::ProvisionedOnWrite)
+                        }
+                        (Some(AutoscalingMode::On), Some(CapacityUnit::ReadWrite)) => {
+                            Some(DynamoDbScalingState::ProvisionedOnReadWrite)
+                        }
+                        (Some(AutoscalingMode::Off), Some(CapacityUnit::Read)) => {
+                            Some(DynamoDbScalingState::ProvisionedOffRead)
+                        }
+                        (Some(AutoscalingMode::Off), Some(CapacityUnit::Write)) => {
+                            Some(DynamoDbScalingState::ProvisionedOffWrite)
+                        }
+                        (Some(AutoscalingMode::Off), Some(CapacityUnit::ReadWrite)) => {
+                            Some(DynamoDbScalingState::ProvisionedOffReadWrite)
+                        }
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            }
+        }
+        fn handle_dynamodb_scaling_state(
+            capacity_mode: Option<&str>,
+            autoscaling_mode: Option<&str>,
+            capacity_unit: Option<&str>,
+        ) -> Option<DynamoDbScalingState> {
+            DynamoDbScalingState::new(capacity_mode, autoscaling_mode, capacity_unit)
+        }
 
         async fn update_table_to_on_demand_mode(
             shared_config: &SdkConfig,
@@ -121,30 +221,6 @@ mod amazon_dynamodb_table_test {
             }
             Ok(())
         }
-        /* async fn describe_scalable_targets_from_table(
-            shared_config: &SdkConfig,
-            table_name: &str,
-        ) -> Result<(), anyhow::Error> {
-            let client: ApplicationAutoScalingClient =
-                ApplicationAutoScalingClient::new(shared_config);
-            let result = client
-                .describe_scalable_targets()
-                .service_namespace(ServiceNamespace::Dynamodb)
-                .resource_ids("table/".to_owned() + table_name);
-            let result = result.send().await;
-            if let Err(error) = result {
-                let meta = error.meta();
-                let json = json!({
-                    "message": meta.message(),
-                    "code": meta.code(),
-                    "extras": meta.to_string()
-                });
-                return Err(anyhow::anyhow!(json));
-            } else {
-                println!("{:?}", result);
-            }
-            Ok(())
-        } */
         async fn describe_scaling_policies_from_table(
             shared_config: &SdkConfig,
             table_name: &str,
@@ -293,157 +369,146 @@ mod amazon_dynamodb_table_test {
                 metadata.get("region"),
                 metadata.get("table_name"),
             ) {
-                let provider_name = "wave-autoscale";
                 let credentials =
-                    Credentials::new(access_key, secret_key, None, None, provider_name);
+                    Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
+                // aws_config needs a static region string
                 let shared_config = aws_config::from_env()
                     .region(STATIC_REGION)
                     .credentials_provider(credentials)
                     .load()
                     .await;
-
-                match capacity_mode {
-                    "PAY_PER_REQUEST" => {
+                let handle_dynamodb_scaling_state = handle_dynamodb_scaling_state(
+                    Some(capacity_mode),
+                    Some(autoscaling_mode),
+                    Some(capacity_unit),
+                );
+                match handle_dynamodb_scaling_state {
+                    Some(DynamoDbScalingState::PayPerRequest) => {
                         update_table_to_on_demand_mode(&shared_config, table_name).await?;
                     }
-                    "PROVISIONED" => match autoscaling_mode {
-                        "ON" => match capacity_unit {
-                            "READ" => {
-                                register_scalable_target_to_table(
-                                    &shared_config,
-                                    table_name,
-                                    read_min_capacity,
-                                    read_max_capacity,
-                                    DynamoDbTableReadCapacityUnits,
-                                )
-                                .await?;
-                                put_scaling_policy_to_plan(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableReadCapacityUnits,
-                                    read_target_value,
-                                    MetricType::DynamoDbReadCapacityUtilization,
-                                )
-                                .await?;
-                            }
-                            "WRITE" => {
-                                register_scalable_target_to_table(
-                                    &shared_config,
-                                    table_name,
-                                    write_min_capacity,
-                                    write_max_capacity,
-                                    DynamoDbTableWriteCapacityUnits,
-                                )
-                                .await?;
-                                put_scaling_policy_to_plan(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableWriteCapacityUnits,
-                                    write_target_value,
-                                    MetricType::DynamoDbWriteCapacityUtilization,
-                                )
-                                .await?;
-                            }
-                            "READ_WRITE" => {
-                                register_scalable_target_to_table(
-                                    &shared_config,
-                                    table_name,
-                                    read_min_capacity,
-                                    read_max_capacity,
-                                    DynamoDbTableReadCapacityUnits,
-                                )
-                                .await?;
-                                register_scalable_target_to_table(
-                                    &shared_config,
-                                    table_name,
-                                    write_min_capacity,
-                                    write_max_capacity,
-                                    DynamoDbTableWriteCapacityUnits,
-                                )
-                                .await?;
-                                put_scaling_policy_to_plan(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableReadCapacityUnits,
-                                    read_target_value,
-                                    MetricType::DynamoDbReadCapacityUtilization,
-                                )
-                                .await?;
-                                put_scaling_policy_to_plan(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableWriteCapacityUnits,
-                                    write_target_value,
-                                    MetricType::DynamoDbWriteCapacityUtilization,
-                                )
-                                .await?;
-                            }
-                            _ => {
-                                return Err(anyhow::anyhow!("Invalid capacity unit"));
-                            }
-                        },
-                        "OFF" => match capacity_unit {
-                            "READ" => {
-                                describe_and_delete_scaling_policy(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableReadCapacityUnits,
-                                )
-                                .await?;
-                                update_table_to_provisioned_mode(
-                                    &shared_config,
-                                    table_name,
-                                    Some(read_capacity_units),
-                                    None,
-                                )
-                                .await?;
-                            }
-                            "WRITE" => {
-                                describe_and_delete_scaling_policy(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableWriteCapacityUnits,
-                                )
-                                .await?;
-                                update_table_to_provisioned_mode(
-                                    &shared_config,
-                                    table_name,
-                                    None,
-                                    Some(write_capacity_units),
-                                )
-                                .await?;
-                            }
-                            "READ_WRITE" => {
-                                describe_and_delete_scaling_policy(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableReadCapacityUnits,
-                                )
-                                .await?;
-                                describe_and_delete_scaling_policy(
-                                    &shared_config,
-                                    table_name,
-                                    DynamoDbTableWriteCapacityUnits,
-                                )
-                                .await?;
-                                update_table_to_provisioned_mode(
-                                    &shared_config,
-                                    table_name,
-                                    Some(read_capacity_units),
-                                    Some(write_capacity_units),
-                                )
-                                .await?;
-                            }
-                            _ => {
-                                return Err(anyhow::anyhow!("Invalid capacity unit"));
-                            }
-                        },
-                        _ => {
-                            return Err(anyhow::anyhow!("Invalid autoscaling mode"));
-                        }
-                    },
+                    Some(DynamoDbScalingState::ProvisionedOnRead) => {
+                        register_scalable_target_to_table(
+                            &shared_config,
+                            table_name,
+                            read_min_capacity,
+                            read_max_capacity,
+                            DynamoDbTableReadCapacityUnits,
+                        )
+                        .await?;
+                        put_scaling_policy_to_plan(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableReadCapacityUnits,
+                            read_target_value,
+                            DynamoDbReadCapacityUtilization,
+                        )
+                        .await?;
+                    }
+                    Some(DynamoDbScalingState::ProvisionedOnWrite) => {
+                        register_scalable_target_to_table(
+                            &shared_config,
+                            table_name,
+                            write_min_capacity,
+                            write_max_capacity,
+                            DynamoDbTableWriteCapacityUnits,
+                        )
+                        .await?;
+                        put_scaling_policy_to_plan(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableWriteCapacityUnits,
+                            write_target_value,
+                            DynamoDbWriteCapacityUtilization,
+                        )
+                        .await?;
+                    }
+                    Some(DynamoDbScalingState::ProvisionedOnReadWrite) => {
+                        register_scalable_target_to_table(
+                            &shared_config,
+                            table_name,
+                            read_min_capacity,
+                            read_max_capacity,
+                            DynamoDbTableReadCapacityUnits,
+                        )
+                        .await?;
+                        put_scaling_policy_to_plan(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableReadCapacityUnits,
+                            read_target_value,
+                            DynamoDbReadCapacityUtilization,
+                        )
+                        .await?;
+                        register_scalable_target_to_table(
+                            &shared_config,
+                            table_name,
+                            write_min_capacity,
+                            write_max_capacity,
+                            DynamoDbTableWriteCapacityUnits,
+                        )
+                        .await?;
+                        put_scaling_policy_to_plan(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableWriteCapacityUnits,
+                            write_target_value,
+                            DynamoDbWriteCapacityUtilization,
+                        )
+                        .await?;
+                    }
+                    Some(DynamoDbScalingState::ProvisionedOffRead) => {
+                        describe_and_delete_scaling_policy(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableReadCapacityUnits,
+                        )
+                        .await?;
+                        update_table_to_provisioned_mode(
+                            &shared_config,
+                            table_name,
+                            read_capacity_units,
+                            None,
+                        )
+                        .await?;
+                    }
+                    Some(DynamoDbScalingState::ProvisionedOffWrite) => {
+                        describe_and_delete_scaling_policy(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableWriteCapacityUnits,
+                        )
+                        .await?;
+                        update_table_to_provisioned_mode(
+                            &shared_config,
+                            table_name,
+                            None,
+                            write_capacity_units,
+                        )
+                        .await?;
+                    }
+                    Some(DynamoDbScalingState::ProvisionedOffReadWrite) => {
+                        describe_and_delete_scaling_policy(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableReadCapacityUnits,
+                        )
+                        .await?;
+                        describe_and_delete_scaling_policy(
+                            &shared_config,
+                            table_name,
+                            DynamoDbTableWriteCapacityUnits,
+                        )
+                        .await?;
+                        update_table_to_provisioned_mode(
+                            &shared_config,
+                            table_name,
+                            read_capacity_units,
+                            write_capacity_units,
+                        )
+                        .await?;
+                    }
                     _ => {
-                        return Err(anyhow::anyhow!("Invalid capacity mode"));
+                        return Err(anyhow::anyhow!("Invalid parameter"));
                     }
                 }
             } else {
