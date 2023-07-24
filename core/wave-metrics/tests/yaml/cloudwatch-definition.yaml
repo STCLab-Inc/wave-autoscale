@@ -1,0 +1,60 @@
+# References - Telegraf Cloudwatch Input Plugin
+# https://github.com/influxdata/telegraf/blob/master/plugins/inputs/cloudwatch/README.md
+---
+kind: Metric
+id: cloudwatch_dynamodb_metric
+collector: telegraf
+metric_kind: cloudwatch
+metadata:
+  region: ap-northeast-3
+  # AWS Credentials using the local AWS credentials file(~/.aws/credentials)
+  profile: "default"
+  # Requested CloudWatch aggregation Period (required)
+  # Must be a multiple of 60s.
+  period: "2m"
+  # Collection Delay (required)
+  # Must account for metrics availability via CloudWatch API
+  delay: "2m"
+  # Recommended: use metric 'interval' that is a multiple of 'period' to avoid
+  # gaps or overlap in pulled data
+  interval: "1m"
+  namespaces: ["AWS/DynamoDB"]
+  metrics:
+    - names: ["ConsumedWriteCapacityUnits"]
+      statistic_include: ["sample_count"]
+      dimensions:
+        - name: TableName
+          value: "test-dynamodb-table"
+# Output in the database will be like this:
+# [
+#   {
+#     "name": "cloudwatch_dynamodb_metric_consumed_write_capacity_units_sample_count",
+#     "tags": {
+#       "host": "Hwansoos-Laptop.local",
+#       "region": "ap-northeast-3",
+#       "table_name": "test-dynamodb-table"
+#     },
+#     "value": 2
+#   }
+# ]
+
+# ---
+# kind: ScalingPlan
+# id: dynamodb_scaling_plan
+# title: "Scaling Plan for DynamoDB"
+# plans:
+#   - id: scale-up-plan-1
+#     description: "Scale up the read and write capacity if ConsumedWriteCapacityUnits is greater than 30."
+#     # JavaScript expression that returns a boolean value.
+#     expression: >
+#       get({
+#         name: 'cloudwatch_dynamodb_metric_consumed_write_capacity_units_sample_count'
+#       }) > 30
+#     # Higher priority values will be checked first.
+#     priority: 1
+#     scaling_components:
+#       - component_id: ec2_autoscaling_api_server
+#         # JavaScript expression that returns an integer.
+#         desired: "Math.floor(prometheus_api_server_cpu_average_total / 10)"
+#         # desired: "Math.floor(prometheus_api_server_cpu_average / 10)"
+#         # If the result of desired is 5 but right after it, the result of desired is 3 then the desired capacity will be set to 3.
