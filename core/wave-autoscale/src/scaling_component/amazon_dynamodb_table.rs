@@ -44,13 +44,13 @@ impl DynamoDbTableScalingComponent {
 
 #[derive(Debug)]
 enum CapacityMode {
-    PayPerRequest,
+    OnDemand,
     Provisioned,
 }
 impl CapacityMode {
     fn from_str(capacity_mode: Option<&str>) -> Option<Self> {
         match capacity_mode.map(|s| s.to_uppercase()).as_deref() {
-            Some("PAY_PER_REQUEST") => Some(CapacityMode::PayPerRequest),
+            Some("ON_DEMAND") => Some(CapacityMode::OnDemand),
             Some("PROVISIONED") => Some(CapacityMode::Provisioned),
             _ => None,
         }
@@ -88,7 +88,7 @@ impl CapacityUnit {
 }
 #[derive(Debug)]
 enum DynamoDbScalingState {
-    PayPerRequest,
+    OnDemand,
     ProvisionedOnRead,
     ProvisionedOnWrite,
     ProvisionedOnReadWrite,
@@ -103,7 +103,7 @@ impl DynamoDbScalingState {
         capacity_unit: Option<&str>,
     ) -> Option<Self> {
         match CapacityMode::from_str(capacity_mode) {
-            Some(CapacityMode::PayPerRequest) => Some(DynamoDbScalingState::PayPerRequest),
+            Some(CapacityMode::OnDemand) => Some(DynamoDbScalingState::OnDemand),
             Some(CapacityMode::Provisioned) => match (
                 AutoscalingMode::from_str(autoscaling_mode),
                 CapacityUnit::from_str(capacity_unit),
@@ -423,7 +423,7 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
             let handle_dynamodb_scaling_state =
                 handle_dynamodb_scaling_state(capacity_mode, autoscaling_mode, capacity_unit);
             match handle_dynamodb_scaling_state {
-                Some(DynamoDbScalingState::PayPerRequest) => {
+                Some(DynamoDbScalingState::OnDemand) => {
                     update_table_to_on_demand_mode(&shared_config, table_name).await?;
                 }
                 Some(DynamoDbScalingState::ProvisionedOnRead) => {

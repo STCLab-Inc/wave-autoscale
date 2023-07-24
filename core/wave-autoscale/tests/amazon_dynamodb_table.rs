@@ -32,7 +32,7 @@ mod amazon_dynamodb_table_test {
 
     #[tokio::test]
     async fn amazon_dynamodb_table_update() -> Result<()> {
-        //let capacity_mode = "PAY_PER_REQUEST";
+        //let capacity_mode = "ON_DEMAND";
 
         let capacity_mode = "PROVISIONED";
 
@@ -56,13 +56,13 @@ mod amazon_dynamodb_table_test {
 
         #[derive(Debug)]
         enum CapacityMode {
-            PayPerRequest,
+            OnDemand,
             Provisioned,
         }
         impl CapacityMode {
             fn from_str(capacity_mode: Option<&str>) -> Option<Self> {
                 match capacity_mode.map(|s| s.to_uppercase()).as_deref() {
-                    Some("PAY_PER_REQUEST") => Some(CapacityMode::PayPerRequest),
+                    Some("ON_DEMAND") => Some(CapacityMode::OnDemand),
                     Some("PROVISIONED") => Some(CapacityMode::Provisioned),
                     _ => None,
                 }
@@ -100,7 +100,7 @@ mod amazon_dynamodb_table_test {
         }
         #[derive(Debug)]
         enum DynamoDbScalingState {
-            PayPerRequest,
+            OnDemand,
             ProvisionedOnRead,
             ProvisionedOnWrite,
             ProvisionedOnReadWrite,
@@ -115,7 +115,7 @@ mod amazon_dynamodb_table_test {
                 capacity_unit: Option<&str>,
             ) -> Option<Self> {
                 match CapacityMode::from_str(capacity_mode) {
-                    Some(CapacityMode::PayPerRequest) => Some(DynamoDbScalingState::PayPerRequest),
+                    Some(CapacityMode::OnDemand) => Some(DynamoDbScalingState::OnDemand),
                     Some(CapacityMode::Provisioned) => match (
                         AutoscalingMode::from_str(autoscaling_mode),
                         CapacityUnit::from_str(capacity_unit),
@@ -383,7 +383,7 @@ mod amazon_dynamodb_table_test {
                     Some(capacity_unit),
                 );
                 match handle_dynamodb_scaling_state {
-                    Some(DynamoDbScalingState::PayPerRequest) => {
+                    Some(DynamoDbScalingState::OnDemand) => {
                         update_table_to_on_demand_mode(&shared_config, table_name).await?;
                     }
                     Some(DynamoDbScalingState::ProvisionedOnRead) => {
