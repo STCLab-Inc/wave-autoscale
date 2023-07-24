@@ -355,8 +355,8 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
             Some(serde_json::Value::String(region)),
             Some(serde_json::Value::String(table_name)),
             capacity_mode,
-            capacity_unit,
             autoscaling_mode,
+            capacity_unit,
             read_capacity_units,
             write_capacity_units,
             read_target_value,
@@ -371,15 +371,15 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
             metadata.get("region"),
             metadata.get("table_name"),
             params
-                .get("capacity_unit")
-                .and_then(serde_json::Value::as_str)
-                .map(|s| s as &str),
-            params
-                .get("capacity_unit")
+                .get("capacity_mode")
                 .and_then(serde_json::Value::as_str)
                 .map(|s| s as &str),
             params
                 .get("autoscaling_mode")
+                .and_then(serde_json::Value::as_str)
+                .map(|s| s as &str),
+            params
+                .get("capacity_unit")
                 .and_then(serde_json::Value::as_str)
                 .map(|s| s as &str),
             params
