@@ -1,4 +1,4 @@
-use gcp_auth::{AuthenticationManager};
+use gcp_auth::AuthenticationManager;
 use log::error;
 pub mod gcp_managed_instance_group;
 
@@ -35,17 +35,6 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn test_get_gcp_credential_token_to_test_file_path() {
-        std::env::set_var(
-            "GOOGLE_APPLICATION_CREDENTIALS",
-            "./tests/credentials/wave-autoscale-test-gcp.json",
-        );
-        let token = get_gcp_credential_token();
-        assert!(token.await.is_ok());
-    }
-
-    #[ignore]
-    #[tokio::test]
     async fn test_get_gcp_credential_token() {
         // fail case - 401 error (UNAUTHENTICATED)
         std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", "/test.json");
@@ -54,7 +43,7 @@ mod test {
 
         std::env::set_var(
             "GOOGLE_APPLICATION_CREDENTIALS",
-            "/Users/ari/work/develop/keys/gcp/wave-autoscale-test-510ffb543810.json",
+            "./tests/credentials/wave-autoscale-test-gcp.json",
         );
         let token = get_gcp_credential_token();
         assert!(token.await.is_ok());
