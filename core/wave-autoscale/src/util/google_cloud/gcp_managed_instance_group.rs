@@ -43,7 +43,7 @@ pub async fn call_gcp_patch_autoscaler(
         .patch(format!("https://compute.googleapis.com/compute/v1/projects/{project}/{areaKind}/{region}/autoscalers",
             project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(), region = &gcp_mig_setting.location_name))
         .query(&gcp_mig_setting.query)
-        .bearer_auth(get_gcp_credential_token().await.unwrap())
+        .bearer_auth(get_gcp_credential_token().await.unwrap_or(String::from("")))
         .json(&gcp_mig_setting.payload)
         .send()
         .await
@@ -59,7 +59,7 @@ pub async fn call_gcp_patch_instance_group_manager(
             project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(),
             region = &gcp_mig_setting.location_name, instanceGroupManager = &gcp_mig_setting.group_name))
         .query(&gcp_mig_setting.query)
-        .bearer_auth(get_gcp_credential_token().await.unwrap())
+        .bearer_auth(get_gcp_credential_token().await.unwrap_or(String::from("")))
         .json(&gcp_mig_setting.payload)
         .send()
         .await
@@ -76,7 +76,7 @@ pub async fn call_gcp_post_instance_group_manager_resize(
         .post(format!("https://compute.googleapis.com/compute/v1/projects/{project}/{areaKind}/{region}/instanceGroupManagers/{instanceGroupManager}/resize",
             project = &gcp_mig_setting.project, areaKind = &gcp_mig_setting.location_kind.to_string(),
             region = &gcp_mig_setting.location_name, instanceGroupManager = &gcp_mig_setting.group_name))
-        .bearer_auth(get_gcp_credential_token().await.unwrap())
+        .bearer_auth(get_gcp_credential_token().await.unwrap_or(String::from("")))
         .query(&gcp_mig_setting.query)
         .json(&empty_payload)
         .send()
