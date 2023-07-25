@@ -4,6 +4,7 @@ CREATE TABLE
     id TEXT UNIQUE,
     title TEXT,
     priority INTEGER,
+    interval INTEGER,
     plans TEXT,
     created_at TEXT,
     updated_at TEXT

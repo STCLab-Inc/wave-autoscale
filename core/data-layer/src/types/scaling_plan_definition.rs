@@ -24,6 +24,7 @@ pub struct ScalingPlanDefinition {
     #[validate(custom(validate_id_regex))]
     #[validate(min_length = 2)]
     pub id: String,
+    pub interval: Option<i64>,
     // #[ts(type = "Array<object>")]
     pub plans: Vec<PlanItemDefinition>,
 }
