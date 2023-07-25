@@ -8,6 +8,7 @@ use aws_credential_types::Credentials;
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
 use aws_sdk_dynamodb::{
+    operation::describe_table::DescribeTableOutput,
     types::{BillingMode, ProvisionedThroughput},
     Client as DynamoDbClient,
 };
@@ -169,28 +170,31 @@ async fn update_table_to_provisioned_mode(
     write_capacity_units: Option<i64>,
 ) -> Result<(), anyhow::Error> {
     let client = DynamoDbClient::new(shared_config);
-    let mut result = client.update_table().table_name(table_name);
+    let mut result = client
+        .update_table()
+        .table_name(table_name)
+        .billing_mode(BillingMode::Provisioned);
 
     match (read_capacity_units, write_capacity_units) {
-        (Some(read_capacity), Some(write_capacity)) => {
+        (Some(read_capacity_units), Some(write_capacity_units)) => {
             result = result.provisioned_throughput(
                 ProvisionedThroughput::builder()
-                    .read_capacity_units(read_capacity)
-                    .write_capacity_units(write_capacity)
+                    .read_capacity_units(read_capacity_units)
+                    .write_capacity_units(write_capacity_units)
                     .build(),
             );
         }
-        (Some(read_capacity), None) => {
+        (Some(read_capacity_units), None) => {
             result = result.provisioned_throughput(
                 ProvisionedThroughput::builder()
-                    .read_capacity_units(read_capacity)
+                    .read_capacity_units(read_capacity_units)
                     .build(),
             );
         }
-        (None, Some(write_capacity)) => {
+        (None, Some(write_capacity_units)) => {
             result = result.provisioned_throughput(
                 ProvisionedThroughput::builder()
-                    .write_capacity_units(write_capacity)
+                    .write_capacity_units(write_capacity_units)
                     .build(),
             );
         }
@@ -206,6 +210,95 @@ async fn update_table_to_provisioned_mode(
             "extras": meta.to_string()
         });
         return Err(anyhow::anyhow!(json));
+    }
+    Ok(())
+}
+async fn describe_data_from_table(
+    shared_config: &SdkConfig,
+    table_name: &str,
+) -> Result<DescribeTableOutput, anyhow::Error> {
+    let client = DynamoDbClient::new(shared_config);
+    let result = client.describe_table().table_name(table_name);
+    let result = result.send().await;
+    if let Err(error) = result {
+        let meta = error.meta();
+        let json = json!({
+            "message": meta.message(),
+            "code": meta.code(),
+            "extras": meta.to_string()
+        });
+        Err(anyhow::anyhow!(json))
+    } else {
+        Ok(result?)
+    }
+}
+async fn update_recent_table_to_provisioned_mode(
+    shared_config: &SdkConfig,
+    table_name: &str,
+    read_capacity_units: Option<i64>,
+    write_capacity_units: Option<i64>,
+) -> Result<(), anyhow::Error> {
+    match (read_capacity_units, write_capacity_units) {
+        (Some(read_capacity_units), Some(write_capacity_units)) => {
+            update_table_to_provisioned_mode(
+                shared_config,
+                table_name,
+                Some(read_capacity_units),
+                Some(write_capacity_units),
+            )
+            .await?;
+        }
+        (Some(read_capacity_units), None) => {
+            update_table_to_provisioned_mode(
+                shared_config,
+                table_name,
+                Some(read_capacity_units),
+                describe_data_from_table(shared_config, table_name)
+                    .await?
+                    .table
+                    .unwrap()
+                    .provisioned_throughput()
+                    .unwrap()
+                    .write_capacity_units(),
+            )
+            .await?;
+        }
+        (None, Some(write_capacity_units)) => {
+            update_table_to_provisioned_mode(
+                shared_config,
+                table_name,
+                describe_data_from_table(shared_config, table_name)
+                    .await?
+                    .table
+                    .unwrap()
+                    .provisioned_throughput()
+                    .unwrap()
+                    .read_capacity_units(),
+                Some(write_capacity_units),
+            )
+            .await?;
+        }
+        (None, None) => {
+            update_table_to_provisioned_mode(
+                shared_config,
+                table_name,
+                describe_data_from_table(shared_config, table_name)
+                    .await?
+                    .table
+                    .unwrap()
+                    .provisioned_throughput()
+                    .unwrap()
+                    .read_capacity_units(),
+                describe_data_from_table(shared_config, table_name)
+                    .await?
+                    .table
+                    .unwrap()
+                    .provisioned_throughput()
+                    .unwrap()
+                    .write_capacity_units(),
+            )
+            .await?;
+        }
     }
     Ok(())
 }
@@ -427,6 +520,13 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                     update_table_to_on_demand_mode(&shared_config, table_name).await?;
                 }
                 Some(DynamoDbScalingState::ProvisionedOnRead) => {
+                    update_table_to_provisioned_mode(
+                        &shared_config,
+                        table_name,
+                        read_capacity_units,
+                        None,
+                    )
+                    .await?;
                     register_scalable_target_to_table(
                         &shared_config,
                         table_name,
@@ -445,6 +545,13 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                     .await?;
                 }
                 Some(DynamoDbScalingState::ProvisionedOnWrite) => {
+                    update_table_to_provisioned_mode(
+                        &shared_config,
+                        table_name,
+                        None,
+                        write_capacity_units,
+                    )
+                    .await?;
                     register_scalable_target_to_table(
                         &shared_config,
                         table_name,
@@ -463,6 +570,13 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                     .await?;
                 }
                 Some(DynamoDbScalingState::ProvisionedOnReadWrite) => {
+                    update_table_to_provisioned_mode(
+                        &shared_config,
+                        table_name,
+                        read_capacity_units,
+                        write_capacity_units,
+                    )
+                    .await?;
                     register_scalable_target_to_table(
                         &shared_config,
                         table_name,
@@ -503,7 +617,7 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                         DynamoDbTableReadCapacityUnits,
                     )
                     .await?;
-                    update_table_to_provisioned_mode(
+                    update_recent_table_to_provisioned_mode(
                         &shared_config,
                         table_name,
                         read_capacity_units,
@@ -518,7 +632,7 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                         DynamoDbTableWriteCapacityUnits,
                     )
                     .await?;
-                    update_table_to_provisioned_mode(
+                    update_recent_table_to_provisioned_mode(
                         &shared_config,
                         table_name,
                         None,
@@ -565,19 +679,345 @@ mod test {
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
 
-    // Purpose of the test is to call apply function and fail test. just consists of test forms only.
+    // capacity_mode: ON_DEMAND -> ok
+    #[ignore]
     #[tokio::test]
-    async fn apply_test() {
+    async fn apply_on_demand() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![(
+            String::from("capacity_mode"),
+            serde_json::json!("ON_DEMAND"),
+        )]
+        .into_iter()
+        .collect();
+
         let scaling_definition = ScalingComponentDefinition {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db_id"),
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
-            metadata: HashMap::new(),
+            metadata,
         };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_on_read() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("ON")),
+            (String::from("capacity_unit"), serde_json::json!("READ")),
+            (String::from("read_target_value"), serde_json::json!(70)),
+            (String::from("read_min_capacity"), serde_json::json!(3)),
+            (String::from("read_max_capacity"), serde_json::json!(10)),
+        ]
+        .into_iter()
+        .collect();
 
-        let params = HashMap::new();
-        let dynamodb_table_scaling_component =
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_on_write() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("ON")),
+            (String::from("capacity_unit"), serde_json::json!("WRITE")),
+            (String::from("write_target_value"), serde_json::json!(80)),
+            (String::from("write_min_capacity"), serde_json::json!(2)),
+            (String::from("write_max_capacity"), serde_json::json!(10)),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ_WRITE -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_on_read_write() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("ON")),
+            (
+                String::from("capacity_unit"),
+                serde_json::json!("READ_WRITE"),
+            ),
+            (String::from("read_capacity_units"), serde_json::json!(5)),
+            (String::from("read_target_value"), serde_json::json!(70)),
+            (String::from("read_min_capacity"), serde_json::json!(3)),
+            (String::from("read_max_capacity"), serde_json::json!(10)),
+            (String::from("write_capacity_units"), serde_json::json!(3)),
+            (String::from("write_target_value"), serde_json::json!(80)),
+            (String::from("write_min_capacity"), serde_json::json!(2)),
+            (String::from("write_max_capacity"), serde_json::json!(10)),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_off_read() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("OFF")),
+            (String::from("capacity_unit"), serde_json::json!("READ")),
+            (String::from("read_capacity_units"), serde_json::json!(7)),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_off_write() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("OFF")),
+            (String::from("capacity_unit"), serde_json::json!("WRITE")),
+            (String::from("write_capacity_units"), serde_json::json!(7)),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ_WRITE -> ok
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_off_read_write() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("OFF")),
+            (
+                String::from("capacity_unit"),
+                serde_json::json!("READ_WRITE"),
+            ),
+            (String::from("read_capacity_units"), serde_json::json!(10)),
+            (String::from("write_capacity_units"), serde_json::json!(10)),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_ok());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE, without write_capacity_units -> error
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_on_write_without_write_capacity_units() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("ON")),
+            (String::from("capacity_unit"), serde_json::json!("WRITE")),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
+            DynamoDbTableScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+        assert!(dynamodb_table_scaling_component.is_err());
+    }
+    // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE, without write_capacity_units -> error
+    #[ignore]
+    #[tokio::test]
+    async fn apply_provisioned_off_write_without_write_capacity_units() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("region"), serde_json::json!("region")),
+            (String::from("access_key"), serde_json::json!("access_key")),
+            (String::from("secret_key"), serde_json::json!("secret_key")),
+            (String::from("table_name"), serde_json::json!("table_name")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (
+                String::from("capacity_mode"),
+                serde_json::json!("PROVISIONED"),
+            ),
+            (String::from("autoscaling_mode"), serde_json::json!("OFF")),
+            (String::from("capacity_unit"), serde_json::json!("WRITE")),
+        ]
+        .into_iter()
+        .collect();
+
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("amazon-dynamodb"),
+            metadata,
+        };
+        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
                 .apply(params)
                 .await;
