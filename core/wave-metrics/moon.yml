@@ -28,7 +28,16 @@ tasks:
     env:
       RUST_LOG: debug
   run:
-    command: "cargo run -- -d ./tests/yaml/definition.yaml -c ../../tests/yaml/wave-config.yaml --collectors-info ./tests/yaml/collectors.yaml"
+    command:
+      - "cargo"
+      - "run"
+      - "--"
+      - "-d"
+      - "./tests/yaml/cloudwatch-definition.yaml"
+      - "-c"
+      - "../../tests/yaml/wave-config.yaml"
+      - "--collectors-info"
+      - "./tests/yaml/collectors.yaml"
     deps:
       - "lint"
     inputs:

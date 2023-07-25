@@ -16,6 +16,7 @@ tasks:
     inputs:
       - "**/*"
     deps:
+      - "wave-metrics:build-aarch64-apple-darwin"
       - "api-server:build-aarch64-apple-darwin"
       - "controller:build-aarch64-apple-darwin"
       - "cli:build-aarch64-apple-darwin"

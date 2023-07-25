@@ -14,10 +14,12 @@ use std::{
 mod args;
 
 const DEFAULT_CONFIG_FILE: &str = "./wave-config.yaml";
-const DEFAULT_PLAN_FILE: &str = "./plan.yaml";
+const DEFAULT_DEFINITION_FILE: &str = "./definition.yaml";
+const DEFAULT_COLLECTORS_INFO: &str = "./collectors.yaml";
 const WAVE_CONTROLLER: &str = "wave-controller";
 const WAVE_API_SERVER: &str = "wave-api-server";
 const WAVE_WEB_APP: &str = "wave-web-app";
+const WAVE_METRICS: &str = "wave-metrics";
 const MINIMUM_NODE_VERSION: u32 = 14;
 
 struct App {
@@ -77,9 +79,11 @@ fn main() -> Result<()> {
     // Parse command line arguments
     let args: Args = Args::parse();
     let config = args.config;
-    let watch_plan = args.watch_plan;
-    let plan = args.plan;
-    let except_api_server = args.except_api_server;
+    let watch_definition = args.watch_definition;
+    let definition = args.definition;
+    let collectors_info = args.collectors_info;
+    let run_metrics = args.run_metrics;
+    let run_api_server = args.run_api_server;
     let run_web_app = args.run_web_app;
 
     // Create a channel to receive the events.
@@ -107,18 +111,32 @@ fn main() -> Result<()> {
         None => DEFAULT_CONFIG_FILE.to_string(),
     };
 
-    // Check plan file exists
-    let plan_file = match plan {
-        Some(plan) => {
-            let plan_path = std::path::Path::new(&plan);
-            if !plan_path.exists() {
-                error!("{} does not exist", plan);
-                DEFAULT_PLAN_FILE.to_string()
+    // Check definition file exists
+    let definition_file = match definition {
+        Some(definition) => {
+            let definition_path = std::path::Path::new(&definition);
+            if !definition_path.exists() {
+                error!("{} does not exist", definition);
+                DEFAULT_DEFINITION_FILE.to_string()
             } else {
-                plan
+                definition
             }
         }
-        None => DEFAULT_PLAN_FILE.to_string(),
+        None => DEFAULT_DEFINITION_FILE.to_string(),
+    };
+
+    // Check collectors info file exists
+    let collectors_info_file = match collectors_info {
+        Some(collectors_info) => {
+            let collectors_info_path = std::path::Path::new(&collectors_info);
+            if !collectors_info_path.exists() {
+                error!("{} does not exist", collectors_info);
+                DEFAULT_COLLECTORS_INFO.to_string()
+            } else {
+                collectors_info
+            }
+        }
+        None => DEFAULT_COLLECTORS_INFO.to_string(),
     };
 
     // Check bin files exist
@@ -129,7 +147,16 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    if !except_api_server {
+    if run_metrics {
+        let wave_metrics_path = format!("./{}", WAVE_METRICS);
+        let wave_metrics_file = std::path::Path::new(wave_metrics_path.as_str());
+        if !wave_metrics_file.exists() {
+            error!("{} binary does not exist", WAVE_METRICS);
+            std::process::exit(1);
+        }
+    }
+
+    if run_api_server {
         let api_server_path = format!("./{}", WAVE_API_SERVER);
         let api_server_file = std::path::Path::new(api_server_path.as_str());
         if !api_server_file.exists() {
@@ -139,7 +166,6 @@ fn main() -> Result<()> {
     }
 
     if run_web_app {
-        // let web_app_file = std::path::Path::new("./wave-web-app/server.js");
         let web_app_path = format!("./{}", WAVE_WEB_APP);
         let web_app_file = std::path::Path::new(web_app_path.as_str());
         if !web_app_file.exists() {
@@ -155,6 +181,7 @@ fn main() -> Result<()> {
         }
     }
 
+    // Start wave-controller
     let mut args_for_controller: Vec<String> = Vec::new();
 
     let config_file_for_controller = config_file.clone();
@@ -163,14 +190,15 @@ fn main() -> Result<()> {
         args_for_controller.push(config_file_for_controller);
     }
 
-    if !plan_file.clone().is_empty() {
-        args_for_controller.push("--plan".to_string());
-        args_for_controller.push(plan_file.clone());
+    let definition_file_for_controller = definition_file.clone();
+    if !definition_file_for_controller.is_empty() {
+        args_for_controller.push("--definition".to_string());
+        args_for_controller.push(definition_file_for_controller);
 
         // Watch plan file
-        if watch_plan {
-            plan_file_watcher.watch(Path::new(&plan_file), RecursiveMode::Recursive)?;
-            info!("Watching plan file: {}", &plan_file);
+        if watch_definition {
+            plan_file_watcher.watch(Path::new(&definition_file), RecursiveMode::Recursive)?;
+            info!("Watching plan file: {}", &definition_file);
         }
     }
 
@@ -182,39 +210,55 @@ fn main() -> Result<()> {
         envs: None,
     });
 
-    let wave_api_server_command = format!("./{}", WAVE_API_SERVER);
-    if !except_api_server {
-        let mut envs: HashMap<String, String> = HashMap::new();
-        // let config_file_for_api_server = config_file.clone();
-        if !&config_file.is_empty() {
-            let config = parse_wave_config_file(config_file.as_str());
-            if let Some(common_config) = config.get("COMMON").and_then(|v| v.as_mapping()) {
-                if let Some(db_url) = common_config.get("DB_URL").and_then(|v| v.as_str()) {
-                    envs.insert("DATABASE_URL".to_string(), db_url.to_string());
-                }
-            }
-
-            if let Some(web_app_config) = config.get("API_SERVER").and_then(|v| v.as_mapping()) {
-                debug!("api_server_config: {:?}", web_app_config);
-                if let Some(port) = web_app_config.get("PORT").and_then(|v| v.as_u64()) {
-                    envs.insert("PORT".to_string(), port.to_string());
-                }
-                if let Some(host) = web_app_config.get("HOST").and_then(|v| v.as_str()) {
-                    envs.insert("HOST".to_string(), host.to_string());
-                }
-            }
+    // Start wave-metrics
+    if run_metrics {
+        let mut args_for_metrics: Vec<String> = Vec::new();
+        let config_file_for_metrics = config_file.clone();
+        if !config_file_for_metrics.is_empty() {
+            args_for_metrics.push("--config".to_string());
+            args_for_metrics.push(config_file_for_metrics);
         }
 
-        debug!("envs: {:?}", envs);
+        let definition_file_for_metrics = definition_file.clone();
+        if !definition_file_for_metrics.is_empty() {
+            args_for_metrics.push("--definition".to_string());
+            args_for_metrics.push(definition_file_for_metrics);
+        }
 
+        if !collectors_info_file.is_empty() {
+            args_for_metrics.push("--collectors-info".to_string());
+            args_for_metrics.push(collectors_info_file);
+        }
+
+        let wave_metrics_command = format!("./{}", WAVE_METRICS);
         apps.push(App {
-            name: WAVE_API_SERVER.to_string(),
-            command: wave_api_server_command,
-            args: Vec::new(),
-            envs: Some(envs),
+            name: WAVE_METRICS.to_string(),
+            command: wave_metrics_command,
+            args: args_for_metrics,
+            envs: None,
         });
     }
 
+    // Start wave-api-server
+    if run_api_server {
+        let mut args_for_api_server: Vec<String> = Vec::new();
+        let config_file_for_api_server = config_file.clone();
+        if !config_file_for_api_server.is_empty() {
+            args_for_api_server.push("--config".to_string());
+            args_for_api_server.push(config_file_for_api_server);
+        }
+
+        let wave_api_server_command = format!("./{}", WAVE_API_SERVER);
+        apps.push(App {
+            name: WAVE_API_SERVER.to_string(),
+            command: wave_api_server_command,
+            args: args_for_api_server,
+            envs: None,
+        });
+    }
+
+    // Start wave-web-app
+    // TODO: Change the way to pass envs to the web app with a config file
     if run_web_app {
         let mut envs: HashMap<String, String> = HashMap::new();
         if !&config_file.is_empty() {
