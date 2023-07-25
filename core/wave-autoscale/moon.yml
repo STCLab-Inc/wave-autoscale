@@ -12,6 +12,8 @@ tasks:
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"
+    deps:
+      - "data-layer:test"
     env:
       RUST_LOG: debug
   # Unit testing
