@@ -667,6 +667,17 @@ impl DataLayer {
         metric_id: &str,
         json_value: &str,
     ) -> Result<()> {
+        // TODO: Validate json_value
+        // json_value has to follow the below format('tags' is optional)
+        // {
+        //     "name": "cpu_usage",
+        //     "tags": {
+        //        "host": "localhost",
+        //        "region": "us-west"
+        //     },
+        //    "value": 0.64,
+        // }
+        //
         let query_string =
             "INSERT INTO source_metrics (id, collector, metric_id, json_value) VALUES (?,?,?,?)";
         // ULID as id instead of UUID because of the time based sorting
