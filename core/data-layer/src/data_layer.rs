@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 const DEFAULT_DEFINITION_PATH: &str = "./plan.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
+const DEFAULT_PLAN_INTERVAL: u16 = 1000;
 
 #[derive(Debug)]
 pub struct DataLayer {
@@ -445,7 +446,7 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let interval_data = &plan.interval.unwrap_or(1000);
+            let interval_data = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
             let query_string = "INSERT INTO plan (db_id, id, title, interval, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
@@ -485,7 +486,7 @@ impl DataLayer {
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 title: row.get("title"),
-                interval: Some(row.try_get("interval").unwrap_or(1000)),
+                interval: Some(row.try_get("interval").unwrap_or(DEFAULT_PLAN_INTERVAL)),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
         }
@@ -507,7 +508,7 @@ impl DataLayer {
             db_id: result.get("db_id"),
             id: result.get("id"),
             title: result.get("title"),
-            interval: Some(result.try_get("interval").unwrap_or(1000)),
+            interval: Some(result.try_get("interval").unwrap_or(DEFAULT_PLAN_INTERVAL)),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
         };
         Ok(plan)
@@ -540,7 +541,7 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
-        let interval_data = &plan.interval.unwrap_or(1000);
+        let interval_data = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
         let query_string =
             "UPDATE plan SET id=?, title=?, interval=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
