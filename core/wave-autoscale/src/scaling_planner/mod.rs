@@ -8,6 +8,7 @@ use data_layer::{
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition,
+        scaling_plan_definition::DEFAULT_PLAN_INTERVAL
     },
     ScalingPlanDefinition,
 };
@@ -84,9 +85,9 @@ impl<'a> ScalingPlanner {
         let shared_last_run = self.last_plan_id.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
-        let plan_interval = scaling_plan_definition.interval.unwrap_or(1000);
-        let plan_interval = if plan_interval < 1000 {
-            1000
+        let plan_interval = scaling_plan_definition.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let plan_interval = if plan_interval < DEFAULT_PLAN_INTERVAL {
+            DEFAULT_PLAN_INTERVAL
         } else {
             plan_interval
         };

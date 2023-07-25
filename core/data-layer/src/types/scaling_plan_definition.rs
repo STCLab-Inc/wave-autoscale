@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use ts_rs::TS;
 
+pub const DEFAULT_PLAN_INTERVAL: u16 = 1000;
+
 fn default_kind() -> ObjectKind {
     ObjectKind::ScalingPlan
 }
@@ -24,7 +26,7 @@ pub struct ScalingPlanDefinition {
     #[validate(custom(validate_id_regex))]
     #[validate(min_length = 2)]
     pub id: String,
-    pub interval: Option<i64>,
+    pub interval: Option<u16>,
     // #[ts(type = "Array<object>")]
     pub plans: Vec<PlanItemDefinition>,
 }

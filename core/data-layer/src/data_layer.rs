@@ -2,6 +2,7 @@ use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -23,7 +24,6 @@ use uuid::Uuid;
 
 const DEFAULT_DEFINITION_PATH: &str = "./plan.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
-const DEFAULT_PLAN_INTERVAL: u16 = 1000;
 
 #[derive(Debug)]
 pub struct DataLayer {
@@ -446,7 +446,8 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let interval_data = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+            let plan_interval: &u16 = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+            let interval_num: u16 = plan_interval.clone();
             let query_string = "INSERT INTO plan (db_id, id, title, interval, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
@@ -455,7 +456,7 @@ impl DataLayer {
                 .bind(id)
                 .bind(plan.id)
                 .bind(plan.title.clone())
-                .bind(interval_data)
+                .bind(i64::from(interval_num as i16))
                 .bind(plans_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
@@ -486,7 +487,10 @@ impl DataLayer {
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 title: row.get("title"),
-                interval: Some(row.try_get("interval").unwrap_or(DEFAULT_PLAN_INTERVAL)),
+                interval: Some(
+                    row.try_get("interval")
+                        .unwrap_or(DEFAULT_PLAN_INTERVAL as i64) as u16,
+                ),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
         }
@@ -508,7 +512,11 @@ impl DataLayer {
             db_id: result.get("db_id"),
             id: result.get("id"),
             title: result.get("title"),
-            interval: Some(result.try_get("interval").unwrap_or(DEFAULT_PLAN_INTERVAL)),
+            interval: Some(
+                result
+                    .try_get("interval")
+                    .unwrap_or(DEFAULT_PLAN_INTERVAL as i64) as u16,
+            ),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
         };
         Ok(plan)
@@ -541,7 +549,8 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
-        let interval_data = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let plan_interval: &u16 = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let interval_num: u16 = plan_interval.clone();
         let query_string =
             "UPDATE plan SET id=?, title=?, interval=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
@@ -549,7 +558,7 @@ impl DataLayer {
             // SET
             .bind(plan.id)
             .bind(plan.title)
-            .bind(interval_data)
+            .bind(i64::from(interval_num as i16))
             .bind(plans_string)
             .bind(updated_at)
             // WHERE
