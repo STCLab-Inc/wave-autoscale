@@ -4,3 +4,5 @@ fileGroups:
     - "Cargo.toml"
   tests:
     - "tests/**/*"
+  db:
+    - "**/*/wave.db"

@@ -26,13 +26,18 @@ tasks:
   test:
     # TODO: Add test command
     command: 'echo wep-app'
-    inputs:
-      - '@globs(sources)'
+    deps:
+      - 'install'
+      - 'lint'
   run:
     command: 'next dev --turbo'
     inputs:
       - '@globs(sources)'
       - 'tsconfig.json'
+      - 'next.config.js'
+      - '.env.local'
+    deps:
+      - 'test'
   build:
     command: 'next build'
     inputs:

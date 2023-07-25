@@ -1,5 +1,27 @@
 tasks:
+  clean:
+    command: "find . -type f -name 'wave.db' -exec rm {} + > /dev/null"
+    platform: "system"
+    inputs:
+      - "@globs(db)"
+  clean-root:
+    command: "rm -rf ./tests/db/wave.db > /dev/null"
+    platform: "system"
+    inputs:
+      - "@globs(db)"
+    options:
+      runFromWorkspaceRoot: true
   lint:
     command: "cargo clippy --fix --allow-dirty --allow-staged"
     inputs:
       - "@globs(sources)"
+      - "@globs(tests)"
+  test:
+    deps:
+      - "lint"
+      - "clean"
+  run:
+    deps:
+      - "test"
+    options:
+      runFromWorkspaceRoot: true

@@ -1,16 +1,13 @@
 language: "rust"
 type: "library"
 owners:
-  defaultOwner: '@wave-autoscale-team'
-  
+  defaultOwner: "@wave-autoscale-team"
+
 tasks:
   test:
     command: "cargo nextest run -p data-layer --test-threads=1"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
     env:
-      RUST_LOG: debug
+      RUST_LOG: data_layer=debug
   test-history:
     command: "cargo test --test data_layer test_autoscaling_history -- --nocapture"
     inputs:

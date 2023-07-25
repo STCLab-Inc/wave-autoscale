@@ -10,5 +10,5 @@ wave_api_server:
   host: localhost
 
 wave_web_app:
-  port: 3005
+  port: 3004
   host: localhost

@@ -14,11 +14,14 @@ lto = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Internal dependencies
+data-layer = { path = "../data-layer" }
+utils = { path = "../utils" }
+# 3rd party dependencies
 clap = { version = "4.3.0", features = ["derive"] }
 env_logger = { version = "0.10.0" }
 log = { version = "0.4.18" }
 anyhow = "1.0.70"
-data-layer = { path = "../data-layer" }
 serde = { version = "1.0.157", features = ["derive"] }
 serde_json = "1.0.94"
 serde_yaml = "0.9.19"
@@ -29,4 +32,3 @@ flate2 = { version = "1.0.26" }
 tar = { version = "0.4.38" }
 walkdir = { version = "2.3.3" }
 toml = { version = "0.7.4" }
-utils = { path = "../utils" }
