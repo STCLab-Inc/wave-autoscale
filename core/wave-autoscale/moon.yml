@@ -32,6 +32,16 @@ tasks:
       - "@globs(tests)"
     env:
       RUST_LOG: wave_controller=debug
+
+  test-metrics-simulation:
+    command: "cargo nextest run -p wave-autoscale test_simulation --no-capture"
+    deps:
+      - "data-layer:lint"
+    env:
+      RUST_LOG: metrics_test=debug
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
   # Run
   run:
     command:
