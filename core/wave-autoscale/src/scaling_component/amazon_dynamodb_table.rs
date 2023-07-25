@@ -680,8 +680,8 @@ mod test {
     use std::collections::HashMap;
 
     // capacity_mode: ON_DEMAND -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_on_demand() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -712,8 +712,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_on_read() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -751,8 +751,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_on_write() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -790,8 +790,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ_WRITE -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_on_read_write() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -837,8 +837,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_off_read() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -874,8 +874,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_off_write() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -911,8 +911,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ_WRITE -> ok
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_off_read_write() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -952,8 +952,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE, without write_capacity_units -> error
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_on_write_without_write_capacity_units() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
@@ -988,8 +988,8 @@ mod test {
         assert!(dynamodb_table_scaling_component.is_err());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE, without write_capacity_units -> error
-    #[ignore]
     #[tokio::test]
+    #[ignore]
     async fn apply_provisioned_off_write_without_write_capacity_units() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
