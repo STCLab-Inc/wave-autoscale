@@ -446,8 +446,7 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let plan_interval: &u16 = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
-            let interval_num: u16 = plan_interval.clone();
+            let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
             let query_string = "INSERT INTO plan (db_id, id, title, interval, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
@@ -456,7 +455,7 @@ impl DataLayer {
                 .bind(id)
                 .bind(plan.id)
                 .bind(plan.title.clone())
-                .bind(i64::from(interval_num as i16))
+                .bind(plan_interval as i16)
                 .bind(plans_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
@@ -489,7 +488,7 @@ impl DataLayer {
                 title: row.get("title"),
                 interval: Some(
                     row.try_get("interval")
-                        .unwrap_or(DEFAULT_PLAN_INTERVAL as i64) as u16,
+                        .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
                 ),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
@@ -515,7 +514,7 @@ impl DataLayer {
             interval: Some(
                 result
                     .try_get("interval")
-                    .unwrap_or(DEFAULT_PLAN_INTERVAL as i64) as u16,
+                    .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
             ),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
         };
@@ -549,8 +548,7 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
-        let plan_interval: &u16 = &plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
-        let interval_num: u16 = plan_interval.clone();
+        let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
         let query_string =
             "UPDATE plan SET id=?, title=?, interval=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
@@ -558,7 +556,7 @@ impl DataLayer {
             // SET
             .bind(plan.id)
             .bind(plan.title)
-            .bind(i64::from(interval_num as i16))
+            .bind(plan_interval as i16)
             .bind(plans_string)
             .bind(updated_at)
             // WHERE
