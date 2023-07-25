@@ -14,6 +14,7 @@ mkdir -p archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 # Copy the binaries
 cp -r target/$PLATFORM/release/wave-controller archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 cp -r target/$PLATFORM/release/wave-api-server archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
+cp -r target/$PLATFORM/release/wave-metrics archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 cp -r target/$PLATFORM/release/wave-cli archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 cp -r core/web-app/.next/standalone archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM/wave-web-app
 cp -r core/web-app/.next/static archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM/wave-web-app/.next/static
