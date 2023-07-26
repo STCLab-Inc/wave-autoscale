@@ -2,7 +2,7 @@
 # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
 ---
 kind: Metric
-id: google_cloud_monitoring_mig_metric
+id: google_cloud_monitoring_mig_metrics
 collector: telegraf
 metric_kind: stackdriver
 metadata:
@@ -14,7 +14,7 @@ metadata:
 # Output in the database will be like this:
 # [
 #   {
-#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "name": "google_cloud_monitoring_mig_metrics_utilization",
 #     "tags": {
 #       "host": "local",
 #       "instance_id": "3137596874116707338",
@@ -26,7 +26,7 @@ metadata:
 #     "value": 0.009973257744559306
 #   },
 #   {
-#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "name": "google_cloud_monitoring_mig_metrics_utilization",
 #     "tags": {
 #       "host": "local",
 #       "instance_id": "8022840066979737199",
@@ -38,7 +38,7 @@ metadata:
 #     "value": 0.04300702278317961
 #   },
 #   {
-#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "name": "google_cloud_monitoring_mig_metrics_utilization",
 #     "tags": {
 #       "host": "local",
 #       "instance_id": "851205196260609218",
@@ -62,7 +62,7 @@ metadata:
 #     # JavaScript expression that returns a boolean value.
 #     expression: >
 #       get({
-#         name: 'google_cloud_monitoring_mig_metric_utilization'
+#         name: 'google_cloud_monitoring_mig_metrics_utilization'
 #       }) > 0.04
 #     # Higher priority values will be checked first.
 #     priority: 1

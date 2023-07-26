@@ -38,8 +38,8 @@ core/wave-cli/vector*
 # core/wave-metrics
 core/wave-metrics/telegraf*
 core/wave-metrics/vector*
-telegraf*
-vector*
+telegraf*/
+vector*/
 
 # VSCode
 .vscode/
