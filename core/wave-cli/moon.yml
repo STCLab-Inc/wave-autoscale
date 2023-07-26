@@ -6,10 +6,8 @@ owners:
 tasks:
   test:
     command: "cargo nextest run -p wave-cli"
-    inputs:
-      - "@globs(sources)"
     env:
-      RUST_LOG: debug
+      RUST_LOG: wave_cli=debug
   copy-wave-controller:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-controller ./wave-controller"
     platform: "system"
@@ -17,8 +15,6 @@ tasks:
       - "controller:build-aarch64-apple-darwin"
     outputs:
       - "./wave-controller"
-    env:
-      RUST_LOG: info
   copy-wave-metrics:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-metrics ./wave-metrics"
     platform: "system"
@@ -26,8 +22,6 @@ tasks:
       - "wave-metrics:build-aarch64-apple-darwin"
     outputs:
       - "./wave-metrics"
-    env:
-      RUST_LOG: info
   copy-wave-api-server:
     command: "cp ../../target/aarch64-apple-darwin/release/wave-api-server ./wave-api-server"
     platform: "system"
@@ -35,37 +29,26 @@ tasks:
       - "api-server:build-aarch64-apple-darwin"
     outputs:
       - "./wave-api-server"
-    env:
-      RUST_LOG: info
-  run-help:
-    command: "cargo watch -c -x 'run -- --help'"
-    deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: info
   run:
     command:
       - "cargo"
       - "run"
+      - "-p"
+      - "wave-cli"
       - "--"
       - "--run-metrics"
       - "--run-api-server"
-      - "--config=../../tests/yaml/wave-config.yaml"
-      - "--definition=./tests/yaml/definition.yaml"
-      - "--collectors-info=../wave-metrics/tests/yaml/collectors.yaml"
+      - "--config"
+      - "../../tests/config/wave-config.yaml"
+      - "--definition"
+      - "../wave-metrics/tests/yaml/cloudwatch-definition.yaml"
+      - "--collectors-info"
+      - "../wave-metrics/tests/yaml/collectors.yaml"
     deps:
-      - "lint"
       # TODO: Build web-app
       - "copy-wave-controller"
       - "copy-wave-metrics"
       - "copy-wave-api-server"
-    inputs:
-      - "@globs(sources)"
-      - "tests/yaml/definition.yaml"
-      - "/core/wave-metrics/tests/yaml/collectors.yaml"
-      - "/tests/yaml/wave-config.yaml"
     outputs:
       - "wave-controller"
       - "wave-api-server"
@@ -73,6 +56,8 @@ tasks:
       - "wave-web-app/**/*"
     env:
       RUST_LOG: wave_cli=debug
+    options:
+      runFromWorkspaceRoot: false
 
   # Build for Production
   # Linux

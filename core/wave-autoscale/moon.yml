@@ -9,14 +9,11 @@ dependsOn:
 tasks:
   test:
     command: "cargo nextest run -p wave-autoscale --test-threads=1"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
     deps:
+      - "utils:test"
       - "data-layer:test"
     env:
-      RUST_LOG: debug
-  # Unit testing
+      RUST_LOG: wave_controller=debug
   test-aws-ecs-service-scaling:
     command: "cargo test -p wave-autoscale --test aws_ecs_service_scaling -- --nocapture"
     deps:
@@ -25,7 +22,7 @@ tasks:
       - "@globs(sources)"
       - "@globs(tests)"
     env:
-      RUST_LOG: wave_autoscale=debug
+      RUST_LOG: wave_controller=debug
   test-aws-lambda-function:
     command: "cargo test -p wave-autoscale --test aws_lambda_function -- --nocapture"
     deps:
@@ -62,22 +59,29 @@ tasks:
       - "@globs(sources)"
     env:
       RUST_LOG: wave_controller=debug
-  run-with-empty:
-    command: "cargo watch -c -x 'run'"
+  test-metrics-simulation:
+    command: "cargo nextest run -p wave-autoscale test_simulation --no-capture"
     deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
+      - "data-layer:lint"
     env:
-      RUST_LOG: debug
+      RUST_LOG: metrics_test=debug
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+  # Run
   run:
-    command: "cargo watch -c -x 'run -- -d ./tests/yaml/plan_prometheus_ec2.yaml'"
-    deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "wave-autoscale"
+      - "--"
+      - "--config"
+      - "./tests/config/wave-config.yaml"
+      - "--definition"
+      - "./core/wave-autoscale/tests/yaml/plan_cloudwatch_ecs_ec2.yaml"
     env:
-      RUST_LOG: debug
+      RUST_LOG: wave_controller=debug
 
   # Build for Production
   # Linux
