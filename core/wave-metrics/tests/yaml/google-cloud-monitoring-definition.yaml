@@ -1,0 +1,70 @@
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+---
+kind: Metric
+id: google_cloud_monitoring_mig_metric
+collector: telegraf
+metric_kind: stackdriver
+metadata:
+  project: wave-autoscale-test
+  ## Include timeseries that start with the given metric type.
+  metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/utilization"]
+  interval: "1m"
+
+# Output in the database will be like this:
+# [
+#   {
+#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "tags": {
+#       "host": "local",
+#       "instance_id": "3137596874116707338",
+#       "instance_name": "test-instance-group-1-lp73",
+#       "project_id": "wave-autoscale-test",
+#       "resource_type": "gce_instance",
+#       "zone": "asia-northeast2-a"
+#     },
+#     "value": 0.009973257744559306
+#   },
+#   {
+#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "tags": {
+#       "host": "local",
+#       "instance_id": "8022840066979737199",
+#       "instance_name": "instance-group-2-r32v",
+#       "project_id": "wave-autoscale-test",
+#       "resource_type": "gce_instance",
+#       "zone": "asia-northeast2-a"
+#     },
+#     "value": 0.04300702278317961
+#   },
+#   {
+#     "name": "google_cloud_monitoring_mig_metric_utilization",
+#     "tags": {
+#       "host": "local",
+#       "instance_id": "851205196260609218",
+#       "instance_name": "instance-group-2-wpng",
+#       "project_id": "wave-autoscale-test",
+#       "resource_type": "gce_instance",
+#       "zone": "asia-northeast2-a"
+#     },
+#     "value": 0.0171343613359871
+#   }
+# ]
+
+
+# ---
+# kind: ScalingPlan
+# id: google_scaling_plan
+# title: "Scaling Plan for Google VM Instance"
+# plans:
+#   - id: scale-up-plan-1
+#     description: "Scale up"
+#     # JavaScript expression that returns a boolean value.
+#     expression: >
+#       get({
+#         name: 'google_cloud_monitoring_mig_metric_utilization'
+#       }) > 0.04
+#     # Higher priority values will be checked first.
+#     priority: 1
+#     scaling_components:
+#      ...
