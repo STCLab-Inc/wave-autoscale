@@ -31,6 +31,13 @@ moon run controller:[test|run]
 moon run controller:test-simulation
 ```
 
+### When you work on core/wave-metrics
+- Telegraf Tips
+  ```toml
+  # Print metrics to stdout
+  [[outputs.file]]
+  files = ["stdout"]
+  ```
 ## Coding Rules
 
 ### Rust
