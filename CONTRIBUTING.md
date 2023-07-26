@@ -19,6 +19,17 @@
   $ moon sync hooks
   ```
 
+## Development
+
+### When you work on core/wave-autoscale
+```bash
+# Run
+moon run controller:[test|run]
+
+# If you need a situation that metrics are sent to the database and your plan responses to the metrics
+# Edit core/wave-autoscale/tests/simulation.rs for your situation
+moon run controller:test-simulation
+```
 
 ## Coding Rules
 

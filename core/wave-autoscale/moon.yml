@@ -41,25 +41,7 @@ tasks:
       - "@globs(tests)"
     env:
       RUST_LOG: wave_autoscale=debug
-  # Run
-  run-help:
-    command: "cargo watch -c -x 'run -- --help'"
-    deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: debug
-  run-autoscaling-history-retention:
-    # command: "cargo watch -c -x 'run -- --autoscaling-history-retention=1d'"
-    command: "cargo run -- --autoscaling-history-retention=1d"
-    deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
-    env:
-      RUST_LOG: wave_controller=debug
-  test-metrics-simulation:
+  test-simulation:
     command: "cargo nextest run -p wave-autoscale test_simulation --no-capture"
     deps:
       - "data-layer:lint"
