@@ -1,5 +1,8 @@
 tasks:
-  clean:
+  clean-cargo:
+    command: "cargo clean"
+    platform: "system"
+  clean-db:
     command: "find . -type f -name 'wave.db' -exec rm {} + > /dev/null"
     platform: "system"
     inputs:
@@ -19,7 +22,7 @@ tasks:
   test:
     deps:
       - "lint"
-      - "clean"
+      - "clean-db"
   run:
     deps:
       - "test"
