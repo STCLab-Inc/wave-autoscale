@@ -31,7 +31,8 @@ jobs:
             ~/.cargo/advisory-db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Set up moon cache
         uses: actions/cache@v3
@@ -41,7 +42,8 @@ jobs:
           path: |
             .moon/cache/
           key: ${{ runner.os }}-moon-${{ hashFiles('**/moon.yml','.moon/**/*') }}
-          restore-keys: ${{ runner.os }}-moon
+          restore-keys: |
+            ${{ runner.os }}-moon-
 
       - name: Install Moonrepo
         uses: moonrepo/setup-moon-action@v1
