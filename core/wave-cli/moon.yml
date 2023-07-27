@@ -41,9 +41,9 @@ tasks:
       - "--config"
       - "../../tests/config/wave-config.yaml"
       - "--definition"
-      - "../wave-metrics/tests/yaml/cloudwatch-definition.yaml"
+      - "../wave-metrics/tests/metrics-examples/vector-host-metrics.yaml"
       - "--collectors-info"
-      - "../wave-metrics/tests/yaml/collectors.yaml"
+      - "../wave-metrics/tests/collectors/collectors.yaml"
     deps:
       # TODO: Build web-app
       - "copy-wave-controller"
@@ -54,6 +54,7 @@ tasks:
       - "wave-api-server"
       - "wave-metrics"
       - "wave-web-app/**/*"
+      - "tests/db/wave.db"
     env:
       RUST_LOG: wave_cli=debug
     options:

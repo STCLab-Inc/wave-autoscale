@@ -30,11 +30,13 @@ tasks:
       - "--config"
       - "./tests/config/wave-config.yaml"
       - "--definition"
-      - "./core/wave-metrics/tests/yaml/cloudwatch-definition.yaml"
+      - "./core/wave-metrics/tests/metrics-examples/vector-host-metrics.yaml"
       - "--collectors-info"
-      - "./core/wave-metrics/tests/yaml/collectors.yaml"
+      - "./core/wave-metrics/tests/collectors/collectors.yaml"
     env:
       RUST_LOG: wave_metrics=debug
+    inputs:
+      - "@globs(tests)"
   # Build for Production
   # Linux
   build-aarch64-unknown-linux-gnu:

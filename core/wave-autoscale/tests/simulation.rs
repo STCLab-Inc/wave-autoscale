@@ -1,4 +1,4 @@
-mod metrics_test {
+mod simulation_test {
     use data_layer::data_layer::DataLayer;
     use log::debug;
     use serde_json::json;
