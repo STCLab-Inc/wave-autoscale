@@ -1,10 +1,10 @@
 use super::ScalingComponent;
-use crate::util::{aws::get_aws_config, aws_region::get_aws_region_static_str};
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 
 use aws_config::SdkConfig;
-use aws_credential_types::Credentials;
+
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
 use aws_sdk_dynamodb::{

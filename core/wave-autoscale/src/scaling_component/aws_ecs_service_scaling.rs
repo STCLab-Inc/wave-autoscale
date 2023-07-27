@@ -1,8 +1,8 @@
 use super::ScalingComponent;
-use crate::util::{aws::get_aws_config, aws_region::get_aws_region_static_str};
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_ecs::{config::Credentials, error::ProvideErrorMetadata, Client};
+use aws_sdk_ecs::{error::ProvideErrorMetadata, Client};
 use data_layer::ScalingComponentDefinition;
 use serde_json::{json, Value};
 use std::collections::HashMap;
