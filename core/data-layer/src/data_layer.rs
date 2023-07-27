@@ -2,6 +2,7 @@ use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -445,7 +446,8 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, title, plans, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
+            let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+            let query_string = "INSERT INTO plan (db_id, id, title, interval, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -453,6 +455,7 @@ impl DataLayer {
                 .bind(id)
                 .bind(plan.id)
                 .bind(plan.title.clone())
+                .bind(plan_interval as i16)
                 .bind(plans_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
@@ -471,7 +474,7 @@ impl DataLayer {
     // Get all plans from the database
     pub async fn get_all_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
         let mut plans: Vec<ScalingPlanDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, title, plans, priority FROM plan";
+        let query_string = "SELECT db_id, id, title, interval, plans, priority FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -483,6 +486,10 @@ impl DataLayer {
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 title: row.get("title"),
+                interval: Some(
+                    row.try_get("interval")
+                        .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
+                ),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
         }
@@ -490,7 +497,7 @@ impl DataLayer {
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
-        let query_string = "SELECT db_id, id, title, plans FROM plan WHERE db_id=?";
+        let query_string = "SELECT db_id, id, title, interval, plans FROM plan WHERE db_id=?";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -504,6 +511,11 @@ impl DataLayer {
             db_id: result.get("db_id"),
             id: result.get("id"),
             title: result.get("title"),
+            interval: Some(
+                result
+                    .try_get("interval")
+                    .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
+            ),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
         };
         Ok(plan)
@@ -536,12 +548,15 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
-        let query_string = "UPDATE plan SET id=?, title=?, plans=?, updated_at=? WHERE db_id=?";
+        let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let query_string =
+            "UPDATE plan SET id=?, title=?, interval=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
             .bind(plan.id)
             .bind(plan.title)
+            .bind(plan_interval as i16)
             .bind(plans_string)
             .bind(updated_at)
             // WHERE
@@ -667,6 +682,17 @@ impl DataLayer {
         metric_id: &str,
         json_value: &str,
     ) -> Result<()> {
+        // TODO: Validate json_value
+        // json_value has to follow the below format('tags' is optional)
+        // {
+        //     "name": "cpu_usage",
+        //     "tags": {
+        //        "host": "localhost",
+        //        "region": "us-west"
+        //     },
+        //    "value": 0.64,
+        // }
+        //
         let query_string =
             "INSERT INTO source_metrics (id, collector, metric_id, json_value) VALUES (?,?,?,?)";
         // ULID as id instead of UUID because of the time based sorting

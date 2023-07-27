@@ -469,6 +469,8 @@ impl MetricCollectorManager {
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
 
+        let mut collector_processes: Vec<AppInfo> = Vec::new();
+
         // Find the metric definitions that use Vector collector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
@@ -476,15 +478,24 @@ impl MetricCollectorManager {
                 vector_metric_definitions.push(metric_definition);
             }
         }
+        if !vector_metric_definitions.is_empty() {
+            // Save the metric definitions to Vector config
+            let os_arch = self.get_os_arch();
+            let vector_dir_path = format!("./vector_{}", os_arch);
+            let vector_config_path = format!("{}/vector.toml", vector_dir_path);
+            self.save_metric_definitions_to_vector_config(
+                &vector_metric_definitions,
+                vector_config_path.as_str(),
+            );
 
-        // Save the metric definitions to Vector config
-        let os_arch = self.get_os_arch();
-        let vector_dir_path = format!("./vector_{}", os_arch);
-        let vector_config_path = format!("{}/vector.toml", vector_dir_path);
-        self.save_metric_definitions_to_vector_config(
-            &vector_metric_definitions,
-            vector_config_path.as_str(),
-        );
+            let vector_app_info = AppInfo {
+                name: "vector".to_string(),
+                command: format!("{}/vector", vector_dir_path),
+                args: Some(vec!["--config-toml".to_string(), vector_config_path]),
+                envs: None,
+            };
+            collector_processes.push(vector_app_info);
+        }
 
         // Find the metric definitions that use Telegraf collector
         let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
@@ -493,35 +504,28 @@ impl MetricCollectorManager {
                 telegraf_metric_definitions.push(metric_definition);
             }
         }
+        if !telegraf_metric_definitions.is_empty() {
+            // Save the metric definitions to Telegraf config
+            let os_arch = self.get_os_arch();
+            let telegraf_dir_path = format!("./telegraf_{}", os_arch);
+            let telegraf_config_path = format!("{}/telegraf.conf", telegraf_dir_path);
+            self.save_metric_definitions_to_telegraf_config(
+                &telegraf_metric_definitions,
+                telegraf_config_path.as_str(),
+            );
 
-        // Save the metric definitions to Telegraf config
-        let os_arch = self.get_os_arch();
-        let telegraf_dir_path = format!("./telegraf_{}", os_arch);
-        let telegraf_config_path = format!("{}/telegraf.conf", telegraf_dir_path);
-        self.save_metric_definitions_to_telegraf_config(
-            &telegraf_metric_definitions,
-            telegraf_config_path.as_str(),
-        );
-
-        // Run the collector binaries
-        let mut collector_processes: Vec<AppInfo> = Vec::new();
-        let vector_app_info = AppInfo {
-            name: "vector".to_string(),
-            command: format!("{}/vector", vector_dir_path),
-            args: Some(vec!["--config-toml".to_string(), vector_config_path]),
-            envs: None,
-        };
-        collector_processes.push(vector_app_info);
-
-        let telegraf_app_info = AppInfo {
-            name: "telegraf".to_string(),
-            command: format!("{}/telegraf", telegraf_dir_path),
-            args: Some(vec!["--config".to_string(), telegraf_config_path]),
-            envs: None,
-        };
-        collector_processes.push(telegraf_app_info);
-
-        run_processes(&collector_processes);
+            // Run the collector binaries
+            let telegraf_app_info = AppInfo {
+                name: "telegraf".to_string(),
+                command: format!("{}/telegraf", telegraf_dir_path),
+                args: Some(vec!["--config".to_string(), telegraf_config_path]),
+                envs: None,
+            };
+            collector_processes.push(telegraf_app_info);
+        }
+        if !collector_processes.is_empty() {
+            run_processes(&collector_processes);
+        }
     }
 }
 

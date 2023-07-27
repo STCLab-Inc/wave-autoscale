@@ -7,8 +7,5 @@ tasks:
   # Test - Integration + Unit
   test:
     command: "cargo nextest run -p utils --test-threads 1"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
     env:
-      RUST_LOG: debug
+      RUST_LOG: utils=debug

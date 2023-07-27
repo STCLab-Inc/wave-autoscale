@@ -1,24 +1,26 @@
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
-use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
+pub mod amazon_dynamodb_table;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
+pub mod gcp_mig_autoscaling;
 pub mod k8s_deployment;
 use self::{
+    amazon_dynamodb_table::DynamoDbTableScalingComponent,
     aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
-    k8s_deployment::K8sDeploymentScalingComponent,
+    gcp_mig_autoscaling::MIGAutoScalingComponent, k8s_deployment::K8sDeploymentScalingComponent,
 };
 use anyhow::Result;
 
 // ScalingComponent can be used in multiple threads. So it needs to be Send + Sync.
 #[async_trait]
 pub trait ScalingComponent: Send + Sync {
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()>;
+    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()>;
     fn get_scaling_component_kind(&self) -> &str;
     fn get_id(&self) -> &str;
 }
@@ -63,6 +65,12 @@ impl ScalingComponentManager {
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
             )),
+            DynamoDbTableScalingComponent::SCALING_KIND => Ok(Box::new(
+                DynamoDbTableScalingComponent::new(cloned_defintion),
+            )),
+            MIGAutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(MIGAutoScalingComponent::new(cloned_defintion)))
+            }
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
@@ -103,7 +111,11 @@ impl ScalingComponentManager {
         self.scaling_components.get(id)
     }
 
-    pub async fn apply_to(&self, id: &str, params: HashMap<String, Value>) -> Result<()> {
+    pub async fn apply_to(
+        &self,
+        id: &str,
+        params: HashMap<String, serde_json::Value>,
+    ) -> Result<()> {
         match self.scaling_components.get(id) {
             Some(scaling_component) => scaling_component.apply(params).await,
             None => Err(anyhow::anyhow!("Unknown scaling component kind")),

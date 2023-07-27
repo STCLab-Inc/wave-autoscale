@@ -8,6 +8,7 @@ use data_layer::{
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition,
+        scaling_plan_definition::DEFAULT_PLAN_INTERVAL
     },
     ScalingPlanDefinition,
 };
@@ -84,12 +85,15 @@ impl<'a> ScalingPlanner {
         let shared_last_run = self.last_plan_id.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
-
+        let plan_interval = scaling_plan_definition.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let plan_interval = if plan_interval < DEFAULT_PLAN_INTERVAL {
+            DEFAULT_PLAN_INTERVAL
+        } else {
+            plan_interval
+        };
         let plans = self.sort_plan_by_priority();
 
-        // TODO: Make this configurable
-        let polling_interval: u64 = 1000;
-        let mut interval = time::interval(Duration::from_millis(polling_interval));
+        let mut interval = time::interval(Duration::from_millis(plan_interval as u64));
 
         let task = tokio::spawn(async move {
             // Initialize the runtime and context to evaluate the scaling plan expressions
@@ -301,6 +305,7 @@ mod tests {
             db_id: "".to_string(),
             kind: ObjectKind::ScalingPlan,
             title: "Test Scaling Plan".to_string(),
+            interval: None,
             plans: vec![PlanItemDefinition {
                 id: "empty".to_string(),
                 description: "".to_string(),

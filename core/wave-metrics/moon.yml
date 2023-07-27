@@ -12,30 +12,29 @@ tasks:
     command: "cargo nextest run -p wave-metrics --test-threads 1"
     deps:
       - "lint"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
     env:
-      RUST_LOG: debug
-  # Unit testing
+      RUST_LOG: wave_metrics=debug
   test-metric-collector-manager:
     command: "cargo nextest run -p wave-metrics metric_collector_manager:: --test-threads 1"
     deps:
       - "lint"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
     env:
-      RUST_LOG: debug
+      RUST_LOG: wave_metrics=debug
   run:
-    command: "cargo run -- -d ./tests/yaml/definition.yaml -c ../../tests/yaml/wave-config.yaml --collectors-info ./tests/yaml/collectors.yaml"
-    deps:
-      - "lint"
-    inputs:
-      - "@globs(sources)"
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "wave-metrics"
+      - "--"
+      - "--config"
+      - "./tests/config/wave-config.yaml"
+      - "--definition"
+      - "./core/wave-metrics/tests/yaml/cloudwatch-definition.yaml"
+      - "--collectors-info"
+      - "./core/wave-metrics/tests/yaml/collectors.yaml"
     env:
-      RUST_LOG: info
-
+      RUST_LOG: wave_metrics=debug
   # Build for Production
   # Linux
   build-aarch64-unknown-linux-gnu:

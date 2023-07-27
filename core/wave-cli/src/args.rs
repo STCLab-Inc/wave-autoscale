@@ -12,17 +12,25 @@ pub struct Args {
     #[arg(short, long)]
     pub config: Option<String>,
 
-    /// Read initial plans from a yaml file. This plans will be saved into the database. If not specified, the default plans path './plan.yaml' will be used.
+    /// Read definition from a yaml file. If not specified, the default definition path './definition.yaml' will be used.
     #[arg(short, long)]
-    pub plan: Option<String>,
+    pub definition: Option<String>,
 
     /// Watch the plan file for changes and reload accodingly
     #[arg(long)]
-    pub watch_plan: bool,
+    pub watch_definition: bool,
 
-    /// Do not run Wave API Server
+    /// Read collectors info from a yaml file. If not specified, the default collectors info path './collectors.yaml' will be used.
     #[arg(long)]
-    pub except_api_server: bool,
+    pub collectors_info: Option<String>,
+
+    /// Run Wave Metrics
+    #[arg(long)]
+    pub run_metrics: bool,
+
+    /// Run Wave API Server
+    #[arg(long)]
+    pub run_api_server: bool,
 
     /// Run Wave Web App(Web Interface)
     #[arg(long)]

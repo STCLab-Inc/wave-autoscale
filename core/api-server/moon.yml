@@ -1,7 +1,7 @@
 language: "rust"
 type: "application"
 owners:
-  defaultOwner: '@wave-autoscale-team'
+  defaultOwner: "@wave-autoscale-team"
 
 dependsOn:
   - "data-layer"
@@ -9,28 +9,22 @@ dependsOn:
 tasks:
   test:
     command: "cargo nextest run -p api-server"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
-    env:
-      RUST_LOG: api_server=debug
-  test-metric:
-    command: "cargo test -p api-server --test app test_api_server_metric -- --nocapture"
-    inputs:
-      - "@globs(sources)"
-      - "@globs(tests)"
-    env:
-      RUST_LOG: api_server=debug
-  run:
-    command: "cargo run"
     deps:
-      - "lint"
-      - "utils:lint"
-    inputs:
-      - "@globs(sources)"
+      - "utils:test"
+      - "data-layer:test"
     env:
-      RUST_LOG: info
-
+      RUST_LOG: wave_api_server=debug
+  run:
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "api-server"
+      - "--"
+      - "--config"
+      - "./tests/config/wave-config.yaml"
+    env:
+      RUST_LOG: wave_api_server=debug
   # Build for Production
   # Linux
   build-aarch64-unknown-linux-gnu:
