@@ -23,6 +23,6 @@ pub fn get_aws_region_static_str(region: &str) -> &'static str {
         "sa-east-1" => "sa-east-1",
         "us-gov-east-1" => "us-gov-east-1",
         "us-gov-west-1" => "us-gov-west-1",
-        _ => "us-east-1",
+        _ => "",
     }
 }

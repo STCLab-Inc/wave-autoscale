@@ -1,3 +1,4 @@
+pub mod aws;
 pub mod aws_region;
-pub mod string;
 pub mod google_cloud;
+pub mod string;
