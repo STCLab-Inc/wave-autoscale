@@ -1,8 +1,8 @@
 use super::ScalingComponent;
-use crate::util::aws_region::get_aws_region_static_str;
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_autoscaling::{config::Credentials, error::ProvideErrorMetadata, Client};
+use aws_sdk_autoscaling::{error::ProvideErrorMetadata, Client};
 use data_layer::ScalingComponentDefinition;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -46,17 +46,20 @@ impl ScalingComponent for EC2AutoScalingComponent {
             metadata.get("region"),
             params.get("desired").and_then(Value::as_i64),
         ) {
-            let credentials =
-                Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
-            // aws_config needs a static region string
-            let region_static: &'static str = get_aws_region_static_str(region);
-            let shared_config = aws_config::from_env()
-                .region(region_static)
-                .credentials_provider(credentials)
-                .load()
-                .await;
-
-            let client = Client::new(&shared_config);
+            let config = get_aws_config(
+                Some(region.to_string()),
+                Some(access_key.to_string()),
+                Some(secret_key.to_string()),
+                None,
+                None,
+            )
+            .await;
+            if config.is_err() {
+                let config_err = config.err().unwrap();
+                return Err(anyhow::anyhow!(config_err));
+            }
+            let config = config.unwrap();
+            let client = Client::new(&config);
 
             let mut result = client
                 .update_auto_scaling_group()
