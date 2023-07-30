@@ -3,7 +3,7 @@ kind: ScalingComponent
 id: dynamodb_table
 component_kind: amazon-dynamodb
 metadata:
-  region: ap-northeast-3
-  access_key: AKIA5TOD4EBPANTGF4XJ
-  secret_key: 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
+  region: {{ yaml.user_1_region }}
+  access_key: {{ env.user_1_access_key }}
+  secret_key: {{ json.user_1_secret_key }}
   table_name: test-dynamodb-table
