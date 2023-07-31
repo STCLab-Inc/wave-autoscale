@@ -1,4 +1,0 @@
-# env: None
-env: ./tests/variables-examples/variables.env
-json: ./tests/variables-examples/variables.json
-yaml: ./tests/variables-examples/variables.yaml
