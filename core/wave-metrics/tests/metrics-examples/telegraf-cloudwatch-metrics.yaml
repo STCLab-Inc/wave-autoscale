@@ -2,7 +2,7 @@
 # https://github.com/influxdata/telegraf/blob/master/plugins/inputs/cloudwatch/README.md
 ---
 kind: Metric
-id: cloudwatch_dynamodb_metric
+id: cloudwatch_dynamodb_metrics
 collector: telegraf
 metric_kind: cloudwatch
 metadata:
@@ -28,7 +28,7 @@ metadata:
 # Output in the database will be like this:
 # [
 #   {
-#     "name": "cloudwatch_dynamodb_metric_consumed_write_capacity_units_sample_count",
+#     "name": "cloudwatch_dynamodb_metrics_consumed_write_capacity_units_sample_count",
 #     "tags": {
 #       "host": "Hwansoos-Laptop.local",
 #       "region": "ap-northeast-3",
@@ -48,7 +48,7 @@ metadata:
 #     # JavaScript expression that returns a boolean value.
 #     expression: >
 #       get({
-#         name: 'cloudwatch_dynamodb_metric_consumed_write_capacity_units_sample_count'
+#         name: 'cloudwatch_dynamodb_metrics_consumed_write_capacity_units_sample_count'
 #       }) > 30
 #     # Higher priority values will be checked first.
 #     priority: 1

@@ -1,0 +1,9 @@
+# https://vector.dev/docs/reference/configuration/sources/host_metrics/
+---
+kind: Metric
+id: vector_host_metrics
+collector: vector
+metric_kind: host_metrics
+metadata:
+  namespace: host
+  scrape_interval_secs: 5

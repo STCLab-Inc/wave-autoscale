@@ -1,9 +1,9 @@
 use super::ScalingComponent;
-use crate::util::aws_region::get_aws_region_static_str;
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
+use aws_sdk_ecs::{error::ProvideErrorMetadata, Client};
 use data_layer::ScalingComponentDefinition;
-use aws_sdk_ecs::{config::Credentials, error::ProvideErrorMetadata, Client};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -12,13 +12,10 @@ pub struct ECSServiceScalingComponent {
 }
 
 impl ECSServiceScalingComponent {
-
     pub const SCALING_KIND: &'static str = "amazon-ecs";
 
     pub fn new(definition: ScalingComponentDefinition) -> Self {
-        ECSServiceScalingComponent {
-            definition
-        }
+        ECSServiceScalingComponent { definition }
     }
 }
 
@@ -47,18 +44,21 @@ impl ScalingComponent for ECSServiceScalingComponent {
             metadata.get("service_name"),
             params.get("desired").and_then(Value::as_i64),
         ) {
-            // TODO provider_name 도 meta data 로?!
-            let credentials =
-                Credentials::new(access_key, secret_key, None, None, "wave-autoscale-test");
-            // aws_config needs a static region string
-            let region_static: &'static str = get_aws_region_static_str(region);
-            let shared_config = aws_config::from_env()
-                .region(region_static)
-                .credentials_provider(credentials)
-                .load()
-                .await;
+            let config = get_aws_config(
+                Some(region.to_string()),
+                Some(access_key.to_string()),
+                Some(secret_key.to_string()),
+                None,
+                None,
+            )
+            .await;
+            if config.is_err() {
+                let config_err = config.err().unwrap();
+                return Err(anyhow::anyhow!(config_err));
+            }
+            let config = config.unwrap();
 
-            let client = Client::new(&shared_config);
+            let client = Client::new(&config);
 
             let result = client
                 .update_service()
@@ -84,36 +84,31 @@ impl ScalingComponent for ECSServiceScalingComponent {
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
-
     }
-
 }
-
 
 #[cfg(test)]
 mod test {
+    use super::ECSServiceScalingComponent;
+    use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
-    use crate::scaling_component::ScalingComponent;
-    use super::ECSServiceScalingComponent;
-
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]
     async fn apply_test() {
-
         let scaling_definition = ScalingComponentDefinition {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db_id"),
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-ecs"),
-            metadata: HashMap::new()
+            metadata: HashMap::new(),
         };
 
         let params = HashMap::new();
-        let ecs_service_scaling_component = ECSServiceScalingComponent::new(scaling_definition).apply(params).await;
+        let ecs_service_scaling_component = ECSServiceScalingComponent::new(scaling_definition)
+            .apply(params)
+            .await;
         assert!(ecs_service_scaling_component.is_err());
     }
-
 }
-

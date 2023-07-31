@@ -542,8 +542,8 @@ mod tests {
         let _ = std::fs::remove_file("./wave.db");
 
         MetricCollectorManager::new(
-            "./tests/yaml/collectors.yaml",
-            "http://localhost:8081/api/metrics-receiver",
+            "./tests/collectors/collectors.yaml",
+            "http://localhost:3024/api/metrics-receiver",
         )
     }
 

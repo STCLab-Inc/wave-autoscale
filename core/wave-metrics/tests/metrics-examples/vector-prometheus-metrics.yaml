@@ -1,0 +1,14 @@
+# https://vector.dev/docs/reference/configuration/sources/prometheus_scrape/#query
+---
+kind: Metric
+id: vector_host_metrics
+collector: vector
+metric_kind: prometheus_scrape
+metadata:
+  endpoints:
+    - http://localhost:9090/metrics
+  query:
+      "match[]":
+        - '{job="somejob"}'
+        - '{__name__=~"job:.*"}'
+  scrape_interval_secs: 15

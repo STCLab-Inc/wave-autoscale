@@ -1,0 +1,7 @@
+# https://github.com/influxdata/telegraf/blob/master/plugins/inputs/mem/README.md
+---
+kind: Metric
+id: telegraf_mem_metrics
+collector: telegraf
+metric_kind: mem
+metadata:
