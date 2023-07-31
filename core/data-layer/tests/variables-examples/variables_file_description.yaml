@@ -1,4 +1,4 @@
 # env: None
-# env: core/data-layer/tests/variables-examples/variables.env
-# json: core/data-layer/tests/variables-examples/variables.json
-# yaml: core/data-layer/tests/variables-examples/variables.yaml
+env: ./tests/variables-examples/variables.env
+json: ./tests/variables-examples/variables.json
+yaml: ./tests/variables-examples/variables.yaml

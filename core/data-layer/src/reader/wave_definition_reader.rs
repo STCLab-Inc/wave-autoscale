@@ -165,12 +165,12 @@ struct VariableFileDescription {
 // Function to read the variable file description
 fn read_variable_file_description() -> Vec<(String, Option<String>)> {
     // Read the yaml file
-    let file_path = "core/data-layer/tests/variables-examples/variables_file_description.yaml";
+    let file_path = "./tests/variables-examples/variables_file_description.yaml";
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(error) => match error.kind() {
             ErrorKind::NotFound => {
-                eprintln!("Default variable file description not found.");
+                eprintln!("Default variable file description not found");
                 return Vec::new();
             }
             _ => panic!(
@@ -181,11 +181,11 @@ fn read_variable_file_description() -> Vec<(String, Option<String>)> {
     };
     let mut yaml_content = String::new();
     file.read_to_string(&mut yaml_content)
-        .expect("Failed to read file.");
+        .expect("Failed to read file");
 
     // Deserialize the yaml content into the struct
     let variable_file_description: VariableFileDescription =
-        serde_yaml::from_str(&yaml_content).expect("Failed to parse yaml.");
+        serde_yaml::from_str(&yaml_content).expect("Failed to parse yaml");
 
     // Construct the output vector
     let mut result = Vec::new();
