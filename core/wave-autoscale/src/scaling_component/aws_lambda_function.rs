@@ -2,7 +2,11 @@ use super::ScalingComponent;
 use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_lambda::{error::ProvideErrorMetadata, Client};
+
+use aws_smithy_types::error::metadata::ProvideErrorMetadata;
+
+use aws_sdk_lambda::Client as LambdaClient;
+
 use data_layer::ScalingComponentDefinition;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -67,7 +71,7 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
             }
             let shared_config = config.unwrap();
 
-            let client = Client::new(&shared_config);
+            let client = LambdaClient::new(&shared_config);
 
             // Set and put reserved concurrency if provided.
             if let Some(reserved_concurrency) = reserved_concurrency {
