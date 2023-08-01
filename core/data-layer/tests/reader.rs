@@ -69,4 +69,36 @@ mod reader {
         );
         Ok(())
     }
+
+    const EXAMPLE_ORIGINIAL_FILE_PATH: &str = "./tests/variables-examples/example.yaml";
+    fn read_example_original_yaml_file() -> Result<ParserResult> {
+        let yaml_file_path = EXAMPLE_ORIGINIAL_FILE_PATH;
+        read_definition_yaml_file(yaml_file_path)
+    }
+
+    #[test]
+    fn test_parsed_file_yaml_file() -> Result<()> {
+        let result = read_example_original_yaml_file()?;
+        if let Some(scaling_component_definition) = result.scaling_component_definitions.get(0) {
+            if let Some(region) = scaling_component_definition.metadata.get("region") {
+                assert_eq!(
+                    region, "ap-northeast-3",
+                    "Unexpected metadata value in region from yaml file"
+                );
+            }
+            if let Some(access_key) = scaling_component_definition.metadata.get("access_key") {
+                assert_eq!(
+                    access_key, "access_key",
+                    "Unexpected metadata value in access_key from environment file"
+                );
+            }
+            if let Some(secret_key) = scaling_component_definition.metadata.get("secret_key") {
+                assert_eq!(
+                    secret_key, "secret_key",
+                    "Unexpected metadata value in secret_key from json file"
+                );
+            }
+        }
+        Ok(())
+    }
 }
