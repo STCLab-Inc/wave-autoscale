@@ -1,7 +1,7 @@
 use gcp_auth::AuthenticationManager;
 use log::error;
 pub mod gcp_managed_instance_group;
-pub mod google_cloud_functions_helper;
+pub mod google_cloud_functions_instance_helper;
 
 async fn get_gcp_credential_token() -> Result<String, anyhow::Error> {
     // Set ENV

@@ -5,7 +5,7 @@ mod google_cloud_functions_instance_test {
 
     use data_layer::types::object_kind::ObjectKind::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
-    use wave_autoscale::scaling_component::google_cloud_functions_instance::GoogleCloudFunctionsInstanceScalingComponent;
+    use wave_autoscale::scaling_component::google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
     #[tokio::test]
@@ -32,7 +32,7 @@ mod google_cloud_functions_instance_test {
             kind: ScalingComponent,
             db_id: String::from("db_id"),
             id: String::from("scaling_component_cloud_functions_instance"),
-            component_kind: String::from("google-cloud-functions-instance"),
+            component_kind: String::from("google-cloud-functions"),
             metadata,
         }];
 
@@ -44,7 +44,7 @@ mod google_cloud_functions_instance_test {
         {
             let name = scaling_component.get_scaling_component_kind();
             assert!(
-                name == GoogleCloudFunctionsInstanceScalingComponent::SCALING_KIND,
+                name == CloudFunctionsInstanceScalingComponent::SCALING_KIND,
                 "Unexpected"
             );
         } else {

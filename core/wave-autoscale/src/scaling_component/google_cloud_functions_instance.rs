@@ -1,5 +1,5 @@
 use super::super::util::google_cloud::google_cloud_functions_instance_helper::{
-    call_patch_google_cloud_functions_instance, GoogleCloudFunctionsInstanceSetting,
+    call_patch_cloud_functions_instance, CloudFunctionsInstanceSetting,
 };
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
@@ -9,22 +9,22 @@ use data_layer::ScalingComponentDefinition;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-pub struct GoogleCloudFunctionsInstanceScalingComponent {
+pub struct CloudFunctionsInstanceScalingComponent {
     definition: ScalingComponentDefinition,
 }
 
-impl GoogleCloudFunctionsInstanceScalingComponent {
+impl CloudFunctionsInstanceScalingComponent {
     // Static variables
-    pub const SCALING_KIND: &'static str = "google-cloud-functions-instance";
+    pub const SCALING_KIND: &'static str = "google-cloud-functions";
 
     // Functions
     pub fn new(definition: ScalingComponentDefinition) -> Self {
-        GoogleCloudFunctionsInstanceScalingComponent { definition }
+        CloudFunctionsInstanceScalingComponent { definition }
     }
 }
 
 #[async_trait]
-impl ScalingComponent for GoogleCloudFunctionsInstanceScalingComponent {
+impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
     fn get_scaling_component_kind(&self) -> &str {
         &self.definition.component_kind
     }
@@ -145,7 +145,7 @@ impl ScalingComponent for GoogleCloudFunctionsInstanceScalingComponent {
                 return Err(anyhow::anyhow!("Invalid metadata"));
             } else {
                 query.pop(); // Remove the trailing comma
-                let google_cloud_functions_instance_setting = GoogleCloudFunctionsInstanceSetting {
+                let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
                     function_version: function_version.to_string(),
                     project_name: project_name.to_string(),
                     location_name: location_name.to_string(),
@@ -154,10 +154,8 @@ impl ScalingComponent for GoogleCloudFunctionsInstanceScalingComponent {
                     query: Some(vec![(String::from("updateMask"), query.join(""))]),
                 };
 
-                let result = call_patch_google_cloud_functions_instance(
-                    google_cloud_functions_instance_setting,
-                )
-                .await;
+                let result =
+                    call_patch_cloud_functions_instance(cloud_functions_instance_setting).await;
                 println!("result: {:?}", result);
                 if result.is_err() {
                     return Err(anyhow::anyhow!(json!({
@@ -194,14 +192,14 @@ impl ScalingComponent for GoogleCloudFunctionsInstanceScalingComponent {
 
 #[cfg(test)]
 mod test {
-    use super::GoogleCloudFunctionsInstanceScalingComponent;
+    use super::CloudFunctionsInstanceScalingComponent;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_patch_google_cloud_functions_instance_for_version_1_function() {
+    async fn apply_call_patch_cloud_functions_instance_for_version_1_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v1")),
             (
@@ -229,24 +227,24 @@ mod test {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db-id"),
             id: String::from("scaling-id"),
-            component_kind: String::from("google-cloud-functions-instance"),
+            component_kind: String::from("google-cloud-functions"),
             metadata,
         };
-        let google_cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            GoogleCloudFunctionsInstanceScalingComponent::new(scaling_definition)
+        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
+            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
                 .apply(params)
                 .await;
 
         println!(
-            "google_cloud_functions_instance_scaling_component: {:?}",
-            google_cloud_functions_instance_scaling_component
+            "cloud_functions_instance_scaling_component: {:?}",
+            cloud_functions_instance_scaling_component
         );
-        assert!(google_cloud_functions_instance_scaling_component.is_ok());
+        assert!(cloud_functions_instance_scaling_component.is_ok());
     }
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_patch_google_cloud_functions_instance_for_version_2_function() {
+    async fn apply_call_patch_cloud_functions_instance_for_version_2_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v2")),
             (
@@ -281,21 +279,21 @@ mod test {
             component_kind: String::from("google-cloud-functions"),
             metadata,
         };
-        let google_cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            GoogleCloudFunctionsInstanceScalingComponent::new(scaling_definition)
+        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
+            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
                 .apply(params)
                 .await;
 
         println!(
-            "google_cloud_functions_instance_scaling_component: {:?}",
-            google_cloud_functions_instance_scaling_component
+            "cloud_functions_instance_scaling_component: {:?}",
+            cloud_functions_instance_scaling_component
         );
-        assert!(google_cloud_functions_instance_scaling_component.is_ok());
+        assert!(cloud_functions_instance_scaling_component.is_ok());
     }
 
     #[ignore]
     #[tokio::test]
-    async fn apply_error_call_patch_google_cloud_functions_instance_for_version_1_function() {
+    async fn apply_error_call_patch_cloud_functions_instance_for_version_1_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v1")),
             (
@@ -323,24 +321,24 @@ mod test {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db-id"),
             id: String::from("scaling-id"),
-            component_kind: String::from("google-cloud-functions-instance"),
+            component_kind: String::from("google-cloud-functions"),
             metadata,
         };
-        let google_cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            GoogleCloudFunctionsInstanceScalingComponent::new(scaling_definition)
+        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
+            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
                 .apply(params)
                 .await;
 
         println!(
-            "google_cloud_functions_instance_scaling_component: {:?}",
-            google_cloud_functions_instance_scaling_component
+            "cloud_functions_instance_scaling_component: {:?}",
+            cloud_functions_instance_scaling_component
         );
-        assert!(google_cloud_functions_instance_scaling_component.is_err());
+        assert!(cloud_functions_instance_scaling_component.is_err());
     }
 
     #[ignore]
     #[tokio::test]
-    async fn apply_error_call_patch_google_cloud_functions_instance_for_version_2_function() {
+    async fn apply_error_call_patch_cloud_functions_instance_for_version_2_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v2")),
             (
@@ -375,15 +373,15 @@ mod test {
             component_kind: String::from("google-cloud-functions"),
             metadata,
         };
-        let google_cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            GoogleCloudFunctionsInstanceScalingComponent::new(scaling_definition)
+        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
+            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
                 .apply(params)
                 .await;
 
         println!(
-            "google_cloud_functions_instance_scaling_component: {:?}",
-            google_cloud_functions_instance_scaling_component
+            "cloud_functions_instance_scaling_component: {:?}",
+            cloud_functions_instance_scaling_component
         );
-        assert!(google_cloud_functions_instance_scaling_component.is_err());
+        assert!(cloud_functions_instance_scaling_component.is_err());
     }
 }
