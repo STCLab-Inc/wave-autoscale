@@ -1,10 +1,15 @@
 use gcp_auth::AuthenticationManager;
 use log::error;
 pub mod gcp_managed_instance_group;
+pub mod google_cloud_functions_helper;
 
 async fn get_gcp_credential_token() -> Result<String, anyhow::Error> {
     // Set ENV
     //std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", "/Users/ari/work/develop/keys/gcp/wave-autoscale-test-510ffb543810.json");
+    /* std::env::set_var(
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "/Users/bryan/Desktop/stclab/workspace/wave-autoscale/wave-autoscale-test-b5a2ece3a508.json",
+    ); */
     let authentication_manager = AuthenticationManager::new().await;
     if authentication_manager.is_err() {
         let authentication_manager_err = authentication_manager.err().unwrap();
