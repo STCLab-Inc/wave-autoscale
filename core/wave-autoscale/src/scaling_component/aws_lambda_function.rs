@@ -1,8 +1,8 @@
 use super::ScalingComponent;
-use crate::util::aws_region::get_aws_region_static_str;
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_lambda::{config::Credentials, error::ProvideErrorMetadata, Client};
+use aws_sdk_lambda::{error::ProvideErrorMetadata, Client};
 use data_layer::ScalingComponentDefinition;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -53,15 +53,19 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
                 .and_then(Value::as_i64)
                 .map(|v| v as i32),
         ) {
-            let credentials =
-                Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
-            // aws_config needs a static region string
-            let region_static: &'static str = get_aws_region_static_str(region);
-            let shared_config = aws_config::from_env()
-                .region(region_static)
-                .credentials_provider(credentials)
-                .load()
-                .await;
+            let config = get_aws_config(
+                Some(region.to_string()),
+                Some(access_key.to_string()),
+                Some(secret_key.to_string()),
+                None,
+                None,
+            )
+            .await;
+            if config.is_err() {
+                let config_err = config.err().unwrap();
+                return Err(anyhow::anyhow!(config_err));
+            }
+            let shared_config = config.unwrap();
 
             let client = Client::new(&shared_config);
 
@@ -119,26 +123,27 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
 
 #[cfg(test)]
 mod test {
+    use super::LambdaFunctionScalingComponent;
+    use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
-    use crate::scaling_component::ScalingComponent;
-    use super::LambdaFunctionScalingComponent;
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]
     async fn apply_test() {
-
         let scaling_definition = ScalingComponentDefinition {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db_id"),
             id: String::from("scaling-id"),
             component_kind: String::from("aws-lambda"),
-            metadata: HashMap::new()
+            metadata: HashMap::new(),
         };
 
         let params = HashMap::new();
-        let lambda_function_scaling_component = LambdaFunctionScalingComponent::new(scaling_definition).apply(params).await;
+        let lambda_function_scaling_component =
+            LambdaFunctionScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
         assert!(lambda_function_scaling_component.is_err());
     }
-
 }
