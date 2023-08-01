@@ -5,7 +5,7 @@ use super::ScalingComponent;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
-use reqwest::Error;
+
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -158,7 +158,7 @@ impl ScalingComponent for GoogleCloudFunctionsScalingComponent {
                     call_patch_google_cloud_functions(google_cloud_functions_setting).await;
                 if result.is_err() {
                     return Err(anyhow::anyhow!(json!({
-                        "message": "Google Cloud Functions API Call Error 1",
+                        "message": "API call error",
                         "code": "500",
                         "extras": result.unwrap_err().is_body().to_string()
                     })));
@@ -167,17 +167,19 @@ impl ScalingComponent for GoogleCloudFunctionsScalingComponent {
                 let result_status_code = result.status();
                 let core::result::Result::Ok(result_body) = result.text().await else {
                     return Err(anyhow::anyhow!(json!({
-                        "message": "Google Cloud Functions API Call Error 2",
+                        "message": "API call error",
                         "code": "500",
                         "extras": "Not found response text",
                     })));
                 };
                 if !result_status_code.is_success() {
-                    return Err(anyhow::anyhow!(json!({
-                        "message": "Google Cloud Functions API Call Error 3",
+                    log::error!("API call error: {:?}", result_body);
+                    let json = json!({
+                        "message": "API call error",
                         "code": result_status_code.as_str(),
                         "extras": result_body
-                    })));
+                    });
+                    return Err(anyhow::anyhow!(json));
                 }
             }
             Ok(())
@@ -194,7 +196,7 @@ mod test {
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
 
-    //#[ignore]
+    #[ignore]
     #[tokio::test]
     async fn apply_call_patch_google_cloud_functions_for_version_1_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
@@ -215,8 +217,8 @@ mod test {
         .into_iter()
         .collect();
         let params: HashMap<String, serde_json::Value> = vec![
-            (String::from("min_instances"), serde_json::json!(-2)),
-            (String::from("max_instances"), serde_json::json!(20)),
+            (String::from("min_instances"), serde_json::json!(2)),
+            (String::from("max_instances"), serde_json::json!(5)),
         ]
         .into_iter()
         .collect();
@@ -237,5 +239,148 @@ mod test {
             google_cloud_functions_scaling_component
         );
         assert!(google_cloud_functions_scaling_component.is_ok());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn apply_call_patch_google_cloud_functions_for_version_2_function() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("function_version"), serde_json::json!("v2")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("function_name"),
+                serde_json::json!("function-2"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(5)),
+            (String::from("max_instance_count"), serde_json::json!(8)),
+            (
+                String::from("max_instance_request_concurrency"),
+                serde_json::json!(3),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-functions"),
+            metadata,
+        };
+        let google_cloud_functions_scaling_component: Result<(), anyhow::Error> =
+            GoogleCloudFunctionsScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "google_cloud_functions_scaling_component: {:?}",
+            google_cloud_functions_scaling_component
+        );
+        assert!(google_cloud_functions_scaling_component.is_ok());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn apply_error_call_patch_google_cloud_functions_for_version_1_function() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("function_version"), serde_json::json!("v1")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("function_name"),
+                serde_json::json!("function-2"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instances"), serde_json::json!(2)),
+            (String::from("max_instances"), serde_json::json!(5)),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-functions"),
+            metadata,
+        };
+        let google_cloud_functions_scaling_component: Result<(), anyhow::Error> =
+            GoogleCloudFunctionsScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "google_cloud_functions_scaling_component: {:?}",
+            google_cloud_functions_scaling_component
+        );
+        assert!(google_cloud_functions_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn apply_error_call_patch_google_cloud_functions_for_version_2_function() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("function_version"), serde_json::json!("v2")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("function_name"),
+                serde_json::json!("function-2"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(-5)),
+            (String::from("max_instance_count"), serde_json::json!(-8)),
+            (
+                String::from("max_instance_request_concurrency"),
+                serde_json::json!(-3),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-functions"),
+            metadata,
+        };
+        let google_cloud_functions_scaling_component: Result<(), anyhow::Error> =
+            GoogleCloudFunctionsScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "google_cloud_functions_scaling_component: {:?}",
+            google_cloud_functions_scaling_component
+        );
+        assert!(google_cloud_functions_scaling_component.is_err());
     }
 }
