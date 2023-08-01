@@ -34,9 +34,9 @@ fn get_source_paths<P: AsRef<Path>>(input: P) -> (String, String, String) {
     let json_source_path = parent_path.join("variables.json");
 
     // Convert the path bufs to strings
-    let yaml_source_path_str = yaml_source_path.to_str().unwrap().to_string();
-    let env_source_path_str = env_source_path.to_str().unwrap().to_string();
-    let json_source_path_str = json_source_path.to_str().unwrap().to_string();
+    let yaml_source_path_str = yaml_source_path.to_str().unwrap_or("").to_string();
+    let env_source_path_str = env_source_path.to_str().unwrap_or("").to_string();
+    let json_source_path_str = json_source_path.to_str().unwrap_or("").to_string();
 
     // Return the source paths
     (
@@ -50,28 +50,32 @@ fn get_source_paths<P: AsRef<Path>>(input: P) -> (String, String, String) {
 fn extract_params_from_yaml_file(file_path: &str) -> Option<serde_json::Value> {
     let file_string = fs::read_to_string(file_path).ok()?;
     let file_yaml: serde_yaml::Value = serde_yaml::from_str(&file_string).ok()?;
-    if file_yaml.as_mapping().is_none() {
-        None
-    } else {
-        let file_map = file_yaml.as_mapping().unwrap();
-        let mut file_hashmap = HashMap::new();
-        for (key, value) in file_map.iter() {
-            if let (Some(key_str), Some(value_str)) = (key.as_str(), value.as_str()) {
-                file_hashmap.insert(key_str, value_str);
-            }
+
+    let file_map = match file_yaml.as_mapping() {
+        Some(file_map) => file_map,
+        None => return None,
+    };
+
+    let mut file_hashmap = HashMap::new();
+    for (key, value) in file_map.iter() {
+        if let (Some(key_str), Some(value_str)) = (key.as_str(), value.as_str()) {
+            file_hashmap.insert(key_str.to_string(), value_str.to_string());
         }
-        Some(serde_json::to_value(file_hashmap).unwrap())
     }
+
+    serde_json::to_value(file_hashmap).ok()
 }
 // Function to extract parameters from an env file
 fn extract_params_from_env_file(file_path: &str) -> Option<serde_json::Value> {
     let file_string = fs::read_to_string(file_path).ok()?;
-    let file_map = parse_dotenv(&file_string).unwrap();
+    let file_map = parse_dotenv(&file_string).ok()?;
+
     let mut file_hashmap = HashMap::new();
     for (key, value) in file_map.iter() {
         file_hashmap.insert(key, value);
     }
-    Some(serde_json::to_value(file_hashmap).unwrap())
+
+    serde_json::to_value(file_hashmap).ok()
 }
 // Function to remove backslash quotes from a json string
 fn remove_backslash_quotes(data: &str) -> String {
@@ -81,19 +85,21 @@ fn remove_backslash_quotes(data: &str) -> String {
 fn extract_params_from_json_file(file_path: &str) -> Option<serde_json::Value> {
     let file_string = fs::read_to_string(file_path).ok()?;
     let file_json: serde_json::Value = serde_json::from_str(&file_string).ok()?;
-    if file_json.as_object().is_none() {
-        None
-    } else {
-        let file_object = file_json.as_object().unwrap();
-        let mut file_hashmap = HashMap::new();
-        for (key, value) in file_object {
-            file_hashmap.insert(
-                remove_backslash_quotes(key),
-                remove_backslash_quotes(&value.to_string()),
-            );
-        }
-        Some(serde_json::to_value(file_hashmap).unwrap())
+
+    let file_object = match file_json.as_object() {
+        Some(file_object) => file_object,
+        None => return None,
+    };
+
+    let mut file_hashmap = HashMap::new();
+    for (key, value) in file_object {
+        file_hashmap.insert(
+            remove_backslash_quotes(key),
+            remove_backslash_quotes(&value.to_string()),
+        );
     }
+
+    serde_json::to_value(file_hashmap).ok()
 }
 // Function to get parameters for handlebars
 fn get_params_for_handlebars<P>(path: P) -> serde_json::Value
