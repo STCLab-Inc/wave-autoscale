@@ -156,7 +156,6 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
 
                 let result =
                     call_patch_cloud_functions_instance(cloud_functions_instance_setting).await;
-                println!("result: {:?}", result);
                 if result.is_err() {
                     return Err(anyhow::anyhow!(json!({
                         "message": "API call error",
