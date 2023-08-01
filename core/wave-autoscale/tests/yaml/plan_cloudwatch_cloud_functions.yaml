@@ -1,0 +1,51 @@
+---
+# TODO!
+kind: Metric
+id: cloudwatch_concurrent_executions_cnt
+metric_kind: cloudwatch-data
+metadata:
+  function_version: v1 # or v2
+  project_name: wave-autoscale-test
+  location_name: asia-northeast2
+  function_name: function-1
+  polling_interval: 30000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
+  expression: "SELECT COUNT(Invocations) FROM SCHEMA(\"AWS/Lambda\", FunctionName) WHERE FunctionName = 'test-lambda-function'"
+  period: 5
+  duration_seconds: 60
+---
+kind: ScalingComponent
+id: scaling_component_cloud_functions_instance
+component_kind: google-cloud-functions
+metadata:
+  function_version: v1 # or v2
+  project_name: wave-autoscale-test
+  location_name: asia-northeast2
+  function_name: function-1
+---
+kind: ScalingPlan
+id: scaling_plan_cloud_functions_instance
+title: "Scaling Plan for Cloud Functions Instance"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if concurrent executions value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_cloud_functions_instance
+        # JavaScript expression that returns an integer.
+        max_instances: 10
+        min_instances: 10
+  - id: scale-out-plan-2
+    description: "Scale out if concurrent executions value is greater than 2."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 2"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_cloud_functions_instance
+        # JavaScript expression that returns an integer.
+        max_instances: 2
+        min_instances: 2
