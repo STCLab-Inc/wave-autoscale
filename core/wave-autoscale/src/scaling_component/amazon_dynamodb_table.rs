@@ -1,10 +1,10 @@
 use super::ScalingComponent;
-use crate::util::aws_region::get_aws_region_static_str;
+use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 
 use aws_config::SdkConfig;
-use aws_credential_types::Credentials;
+
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
 use aws_sdk_dynamodb::{
@@ -504,15 +504,20 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                 .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
         ) {
-            let credentials =
-                Credentials::new(access_key, secret_key, None, None, "wave-autoscale");
-            // aws_config needs a static region string
-            let region_static: &'static str = get_aws_region_static_str(region);
-            let shared_config = aws_config::from_env()
-                .region(region_static)
-                .credentials_provider(credentials)
-                .load()
-                .await;
+            let config = get_aws_config(
+                Some(region.to_string()),
+                Some(access_key.to_string()),
+                Some(secret_key.to_string()),
+                None,
+                None,
+            )
+            .await;
+            if config.is_err() {
+                let config_err = config.err().unwrap();
+                return Err(anyhow::anyhow!(config_err));
+            }
+            let shared_config = config.unwrap();
+
             let handle_dynamodb_scaling_state =
                 handle_dynamodb_scaling_state(capacity_mode, autoscaling_mode, capacity_unit);
             match handle_dynamodb_scaling_state {
