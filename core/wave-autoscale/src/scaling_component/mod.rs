@@ -8,6 +8,7 @@ pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
 pub mod azure_vmss_autoscaling;
 pub mod gcp_mig_autoscaling;
+pub mod google_cloud_functions_instance;
 pub mod k8s_deployment;
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
@@ -15,6 +16,7 @@ use self::{
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
+    google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent,
 };
 use anyhow::Result;
@@ -76,6 +78,9 @@ impl ScalingComponentManager {
             VMSSAutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(VMSSAutoScalingComponent::new(cloned_defintion)))
             }
+            CloudFunctionsInstanceScalingComponent::SCALING_KIND => Ok(Box::new(
+                CloudFunctionsInstanceScalingComponent::new(cloned_defintion),
+            )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
