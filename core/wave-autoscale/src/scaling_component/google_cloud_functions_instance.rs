@@ -41,24 +41,14 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
             Some(Value::String(project_name)),
             Some(Value::String(location_name)),
             Some(Value::String(function_name)),
-            min_instances,
-            max_instances,
             min_instance_count,
             max_instance_count,
-            max_instance_request_concurrency,
+            max_request_per_instance,
         ) = (
             metadata.get("function_version"),
             metadata.get("project_name"),
             metadata.get("location_name"),
             metadata.get("function_name"),
-            params
-                .get("min_instances")
-                .and_then(Value::as_i64)
-                .map(|v| v as i32),
-            params
-                .get("max_instances")
-                .and_then(Value::as_i64)
-                .map(|v| v as i32),
             params
                 .get("min_instance_count")
                 .and_then(Value::as_i64)
@@ -68,7 +58,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 .and_then(Value::as_i64)
                 .map(|v| v as i32),
             params
-                .get("max_instance_request_concurrency")
+                .get("max_request_per_instance")
                 .and_then(Value::as_i64)
                 .map(|v| v as i32),
         ) {
@@ -93,14 +83,14 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 "v1" => {
                     add_to_payload_and_query(
                         "minInstances",
-                        min_instances,
+                        min_instance_count,
                         "minInstances,",
                         &mut payload_json,
                         &mut query,
                     );
                     add_to_payload_and_query(
                         "maxInstances",
-                        max_instances,
+                        max_instance_count,
                         "maxInstances,",
                         &mut payload_json,
                         &mut query,
@@ -124,7 +114,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                     );
                     add_to_payload_and_query(
                         "maxInstanceRequestConcurrency",
-                        max_instance_request_concurrency,
+                        max_request_per_instance,
                         "serviceConfig.maxInstanceRequestConcurrency,",
                         &mut service_config,
                         &mut query,
@@ -218,8 +208,8 @@ mod test {
         .into_iter()
         .collect();
         let params: HashMap<String, serde_json::Value> = vec![
-            (String::from("min_instances"), serde_json::json!(4)),
-            (String::from("max_instances"), serde_json::json!(5)),
+            (String::from("min_instance_count"), serde_json::json!(4)),
+            (String::from("max_instance_count"), serde_json::json!(5)),
         ]
         .into_iter()
         .collect();
@@ -266,7 +256,7 @@ mod test {
             (String::from("min_instance_count"), serde_json::json!(5)),
             (String::from("max_instance_count"), serde_json::json!(8)),
             (
-                String::from("max_instance_request_concurrency"),
+                String::from("max_request_per_instance"),
                 serde_json::json!(3),
             ),
         ]
@@ -312,8 +302,8 @@ mod test {
         .into_iter()
         .collect();
         let params: HashMap<String, serde_json::Value> = vec![
-            (String::from("min_instances"), serde_json::json!(2)),
-            (String::from("max_instances"), serde_json::json!(5)),
+            (String::from("min_instance_count"), serde_json::json!(2)),
+            (String::from("max_instance_count"), serde_json::json!(5)),
         ]
         .into_iter()
         .collect();
@@ -360,7 +350,7 @@ mod test {
             (String::from("min_instance_count"), serde_json::json!(-5)),
             (String::from("max_instance_count"), serde_json::json!(-8)),
             (
-                String::from("max_instance_request_concurrency"),
+                String::from("max_request_per_instance"),
                 serde_json::json!(-3),
             ),
         ]
