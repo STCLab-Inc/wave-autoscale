@@ -1,0 +1,60 @@
+---
+kind: Metric
+id: cloudwatch_concurrent_executions_cnt_1
+collector: telegraf
+metric_kind: cloudwatch
+metadata:
+  region: ap-northeast-2
+  # AWS Credentials using the local AWS credentials file(~/.aws/credentials)
+  profile: "default"
+  # Requested CloudWatch aggregation Period (required)
+  # Must be a multiple of 60s.
+  period: "2m"
+  # Collection Delay (required)
+  # Must account for metrics availability via CloudWatch API
+  delay: "2m"
+  # Recommended: use metric 'interval' that is a multiple of 'period' to avoid
+  # gaps or overlap in pulled data
+  interval: "1m"
+  namespaces: ["Google/CloudFunctions"]
+  metrics:
+    - names: ["Invocations"]
+      statistic_include: ["sample_count"]
+      dimensions:
+        - name: FunctionName
+          value: "function-1"
+---
+kind: ScalingComponent
+id: scaling_component_cloud_functions_v1_instance
+component_kind: google-cloud-functions
+metadata:
+  function_version: v1
+  project_name: wave-autoscale-test
+  location_name: asia-northeast2
+  function_name: function-1
+---
+kind: ScalingPlan
+id: scaling_plan_cloud_functions_instance
+title: "Scaling Plan for Cloud Functions Instance"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if concurrent executions value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt_1 >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_cloud_functions_v1_instance
+        # JavaScript expression that returns an integer.
+        min_instance_count: 5
+        max_instance_count: 10
+  - id: scale-out-plan-2
+    description: "Scale out if concurrent executions value is greater than 2."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt_1 >= 2"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_cloud_functions_v1_instance
+        # JavaScript expression that returns an integer.
+        min_instance_count: 2
+        max_instance_count: 5
