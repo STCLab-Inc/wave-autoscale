@@ -41,6 +41,15 @@ tasks:
       - "@globs(tests)"
     env:
       RUST_LOG: wave_autoscale=debug
+  test-google-cloud-functions-instance:
+    command: "cargo nextest run -p wave-autoscale --test google_cloud_functions_instance --no-capture"
+    deps:
+      - "data-layer:build"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_autoscale=debug
   test-simulation:
     command: "cargo nextest run -p wave-autoscale test_simulation --no-capture"
     deps:

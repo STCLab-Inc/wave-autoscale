@@ -7,13 +7,16 @@ pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
 pub mod gcp_mig_autoscaling;
+pub mod google_cloud_functions_instance;
 pub mod k8s_deployment;
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
     aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
-    gcp_mig_autoscaling::MIGAutoScalingComponent, k8s_deployment::K8sDeploymentScalingComponent,
+    gcp_mig_autoscaling::MIGAutoScalingComponent,
+    google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent,
 };
 use anyhow::Result;
 
@@ -71,6 +74,9 @@ impl ScalingComponentManager {
             MIGAutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(MIGAutoScalingComponent::new(cloned_defintion)))
             }
+            CloudFunctionsInstanceScalingComponent::SCALING_KIND => Ok(Box::new(
+                CloudFunctionsInstanceScalingComponent::new(cloned_defintion),
+            )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
