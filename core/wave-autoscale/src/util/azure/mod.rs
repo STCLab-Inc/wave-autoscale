@@ -1,3 +1,4 @@
+pub mod azure_autoscale_settings_helper;
 pub mod azure_virtual_machine_scale_sets;
 use azure_core;
 use azure_identity::client_credentials_flow;
