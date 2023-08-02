@@ -143,45 +143,46 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
 
             if query.is_empty() {
                 return Err(anyhow::anyhow!("Invalid metadata"));
-            } else {
-                query.pop(); // Remove the trailing comma
-                let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
-                    function_version: function_version.to_string(),
-                    project_name: project_name.to_string(),
-                    location_name: location_name.to_string(),
-                    function_name: function_name.to_string(),
-                    payload: Some(payload_json),
-                    query: Some(vec![(String::from("updateMask"), query.join(""))]),
-                };
+            }
 
-                let result =
-                    call_patch_cloud_functions_instance(cloud_functions_instance_setting).await;
-                if result.is_err() {
-                    return Err(anyhow::anyhow!(json!({
-                        "message": "API call error",
-                        "code": "500",
-                        "extras": result.unwrap_err().is_body().to_string()
-                    })));
-                }
-                let result = result.unwrap();
-                let result_status_code = result.status();
-                let core::result::Result::Ok(result_body) = result.text().await else {
+            query.pop(); // Remove the trailing comma
+            let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
+                function_version: function_version.to_string(),
+                project_name: project_name.to_string(),
+                location_name: location_name.to_string(),
+                function_name: function_name.to_string(),
+                payload: Some(payload_json),
+                query: Some(vec![(String::from("updateMask"), query.join(""))]),
+            };
+
+            let result =
+                call_patch_cloud_functions_instance(cloud_functions_instance_setting).await;
+            if result.is_err() {
+                return Err(anyhow::anyhow!(json!({
+                    "message": "API call error",
+                    "code": "500",
+                    "extras": result.unwrap_err().is_body().to_string()
+                })));
+            }
+            let result = result.unwrap();
+            let result_status_code = result.status();
+            let core::result::Result::Ok(result_body) = result.text().await else {
                     return Err(anyhow::anyhow!(json!({
                         "message": "API call error",
                         "code": "500",
                         "extras": "Not found response text",
                     })));
                 };
-                if !result_status_code.is_success() {
-                    log::error!("API call error: {:?}", result_body);
-                    let json = json!({
-                        "message": "API call error",
-                        "code": result_status_code.as_str(),
-                        "extras": result_body
-                    });
-                    return Err(anyhow::anyhow!(json));
-                }
+            if !result_status_code.is_success() {
+                log::error!("API call error: {:?}", result_body);
+                let json = json!({
+                    "message": "API call error",
+                    "code": result_status_code.as_str(),
+                    "extras": result_body
+                });
+                return Err(anyhow::anyhow!(json));
             }
+
             Ok(())
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
