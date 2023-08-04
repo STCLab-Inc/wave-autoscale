@@ -70,7 +70,7 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn test_call_azure_get_autoscale_settings_list_by_resource_group() {
+    async fn test_call_azure_get_autoscale_settings_list_by_resource_group_ok() {
         let azure_autoscale_setting = AzureAutoscaleSetting {
             azure_credential: get_test_env_data().0,
             subscription_id: get_test_env_data().1,
@@ -80,13 +80,27 @@ mod test {
         };
         let response =
             call_azure_get_autoscale_settings_list_by_resource_group(azure_autoscale_setting).await;
-        // println!("response: {:?}", response.unwrap().text().await.unwrap());
         assert!(response.unwrap().status().is_success());
     }
 
     #[ignore]
     #[tokio::test]
-    async fn test_get_autoscale_setting_name() {
+    async fn test_call_azure_get_autoscale_settings_list_by_resource_group_err_param() {
+        let azure_autoscale_setting = AzureAutoscaleSetting {
+            azure_credential: get_test_env_data().0,
+            subscription_id: get_test_env_data().1,
+            resource_group_name: "".to_string(),
+            autoscale_setting_name: None,
+            payload: None,
+        };
+        let response =
+            call_azure_get_autoscale_settings_list_by_resource_group(azure_autoscale_setting).await;
+        assert!(!response.unwrap().status().is_success());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_get_autoscale_setting_name_ok() {
         let azure_autoscale_setting = AzureAutoscaleSetting {
             azure_credential: get_test_env_data().0,
             subscription_id: get_test_env_data().1,
@@ -105,6 +119,24 @@ mod test {
             call_azure_get_autoscale_settings_list_by_resource_group(azure_autoscale_setting).await;
         let response_json = response.unwrap().json::<serde_json::Value>().await.unwrap();
         assert!(!get_autoscale_setting_name(response_json, vmss_resource_id).0.is_empty());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_get_autoscale_setting_name_err_vmss_resource_id() {
+        let azure_autoscale_setting = AzureAutoscaleSetting {
+            azure_credential: get_test_env_data().0,
+            subscription_id: get_test_env_data().1,
+            resource_group_name: "test-vmss-uniform-grp".to_string(),
+            autoscale_setting_name: None,
+            payload: None,
+        };
+        let vmss_resource_id = String::from("");
+        
+        let response =
+            call_azure_get_autoscale_settings_list_by_resource_group(azure_autoscale_setting).await;
+        let response_json = response.unwrap().json::<serde_json::Value>().await.unwrap();
+        assert!(get_autoscale_setting_name(response_json, vmss_resource_id).0.is_empty());
     }
 
     #[ignore]
