@@ -1,0 +1,63 @@
+---
+kind: Metric
+id: cloudwatch_dynamodb_id
+metric_kind: cloudwatch-data
+metadata:
+  region: ap-northeast-3
+  access_key: AKIA5TOD4EBPND6KWUE6
+  secret_key: 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
+  polling_interval: 60000
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
+  expression: 'SELECT MAX(CPUUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = ''wave-test-cluster10'''
+  period: 5
+  duration_seconds: 120
+  # TODO: support MetricStat
+---
+kind: ScalingComponent
+id: azure_vmss_autoscaling_api_server
+component_kind: azure-virtual-machine-scale-sets
+metadata:
+  client_id: a4b06c02-9209-415c-a6e7-65d3b540500d
+  client_secret: rLA8Q~jDhLZ8wWByiTHw7mSpdbc2W3egESs2XaeS
+  tenant_id: 1e8be449-6c5c-4e69-a908-af14f8ba402d
+  subscription_id: 5c038b10-c4be-4b0b-8f38-b0c54c348316
+  resource_group_name: test-vmss-uniform-grp
+  vm_scale_set_name: test-vmss-uniform
+---
+kind: ScalingPlan
+id: scaling_plan_azure_vmss_autoscaling
+title: "Scaling Plan for Azure VMSS Autoscaling"
+interval: 10000
+plans:
+  - id: scale-out-plan-1
+    description: "Scale in if CPU usage is greater than 40%."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'cloudwatch_dynamodb_id',
+        name: 'dynamodb_capacity_usage',
+        tags: {
+          tag1: 'value1'
+        }
+      }) <= 30
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: azure_vmss_autoscaling_api_server
+        capacity: 2
+  - id: scale-out-plan-2
+    description: "Scale out if CPU usage is greater than 70%."
+    expression: >
+      get({
+        metric_id: 'cloudwatch_dynamodb_id',
+        name: 'dynamodb_capacity_usage',
+        tags: {
+          tag1: 'value1'
+        }
+      }) >= 70
+    priority: 2
+    scaling_components:
+      - component_id: azure_vmss_autoscaling_api_server
+        # JavaScript expression that returns an integer.
+        capacity: 3

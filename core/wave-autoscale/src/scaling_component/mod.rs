@@ -6,6 +6,7 @@ pub mod amazon_dynamodb_table;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
+pub mod azure_vmss_autoscaling;
 pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod k8s_deployment;
@@ -14,7 +15,7 @@ use self::{
     aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
-    gcp_mig_autoscaling::MIGAutoScalingComponent,
+    azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent,
 };
@@ -73,6 +74,9 @@ impl ScalingComponentManager {
             )),
             MIGAutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(MIGAutoScalingComponent::new(cloned_defintion)))
+            }
+            VMSSAutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(VMSSAutoScalingComponent::new(cloned_defintion)))
             }
             CloudFunctionsInstanceScalingComponent::SCALING_KIND => Ok(Box::new(
                 CloudFunctionsInstanceScalingComponent::new(cloned_defintion),
