@@ -7,14 +7,14 @@ use data_layer::{
     data_layer::DataLayer,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
-        plan_item_definition::PlanItemDefinition,
-        scaling_plan_definition::DEFAULT_PLAN_INTERVAL
+        plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
     },
     ScalingPlanDefinition,
 };
 use log::{debug, error};
 use rquickjs::async_with;
 use serde_json::{json, Value};
+use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
 
@@ -85,12 +85,28 @@ impl<'a> ScalingPlanner {
         let shared_last_run = self.last_plan_id.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
-        let plan_interval = scaling_plan_definition.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
+
+        // For plan_interval
+        let plan_interval = scaling_plan_definition
+            .interval
+            .unwrap_or(DEFAULT_PLAN_INTERVAL);
+        // plan_interval should be at least DEFAULT_PLAN_INTERVAL
         let plan_interval = if plan_interval < DEFAULT_PLAN_INTERVAL {
             DEFAULT_PLAN_INTERVAL
         } else {
             plan_interval
         };
+        // If there is a cron_expression in plans then plan_interval should be set to 1 second to check the cron_expression every second
+        let plan_interval = if scaling_plan_definition
+            .plans
+            .iter()
+            .any(|plan| plan.cron_expression.is_some())
+        {
+            DEFAULT_PLAN_INTERVAL
+        } else {
+            plan_interval
+        };
+
         let plans = self.sort_plan_by_priority();
 
         let mut interval = time::interval(Duration::from_millis(plan_interval as u64));
@@ -130,11 +146,9 @@ impl<'a> ScalingPlanner {
                                 let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
                                 let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
                                 let tags = args.get::<String, HashMap<String, String>>("tags".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-
                                 let json_values = metric_values_for_get.get(&metric_id).ok_or(rquickjs::Error::Exception)?;
                                 let json_values = json_values.as_str().ok_or(rquickjs::Error::Exception)?;
                                 let json_values: Value = serde_json::from_str(json_values).map_err(|_| rquickjs::Error::Exception)?;
-                            
                                 let json_values = json_values.as_array().ok_or(rquickjs::Error::Exception)?;
                                 let value = json_values.iter().find(|value| {
                                     value.as_object().and_then(|value| value.get("name").and_then(Value::as_str)) == Some(name.as_str())
@@ -164,18 +178,59 @@ impl<'a> ScalingPlanner {
                     let mut excuted = false;
                     // Find the plan that matches the expression
                     for plan in plans.iter() {
-                        let expression = &plan.expression;
-                        let result = async_with!(context => |ctx| {
-                            let Ok(result) = ctx.eval::<bool, _>(expression.clone()) else {
-                                return false;
-                            };
-                            result
-                        })
-                        .await;
-
-                        // If the expression is false, move to the next plan
-                        if !result {
+                        if plan.cron_expression.is_none() && plan.expression.is_none() {
+                            error!("Both cron_expression and expression are empty");
                             continue;
+                        }
+                        // 1. Cron Expression
+                        if let Some(cron_expression) = plan.cron_expression.as_ref() {
+                            if !cron_expression.is_empty() {
+                                let schedule = cron::Schedule::from_str(cron_expression.as_str());
+                                if schedule.is_err() {
+                                    error!("Error parsing cron expression: {}", cron_expression);
+                                    continue;
+                                }
+                                let schedule = schedule.unwrap();
+                                let now = chrono::Utc::now();
+                                let datetime = schedule.upcoming(chrono::Utc).take(1).next();
+                                if datetime.is_none() {
+                                    error!(
+                                        "Error getting next datetime for cron expression: {}",
+                                        cron_expression
+                                    );
+                                    continue;
+                                }
+                                let datetime = datetime.unwrap();
+                                let duration = datetime - now;
+                                let duration = duration.num_milliseconds();
+                                if duration < 0 || duration > DEFAULT_PLAN_INTERVAL as i64 {
+                                    error!(
+                                        "The datetime is not yet reached for cron expression: {}",
+                                        cron_expression
+                                    );
+                                    continue;
+                                }
+                                // It is time to execute the plan. Move on.
+                            }
+                        }
+
+                        // 2. JS Expression
+                        if let Some(expression) = plan.expression.as_ref() {
+                            if !expression.is_empty() {
+                                // Evaluate the expression
+                                let result = async_with!(context => |ctx| {
+                                    let Ok(result) = ctx.eval::<bool, _>(expression.clone()) else {
+                                        return false;
+                                    };
+                                    result
+                                })
+                                .await;
+
+                                // If the expression is false, move to the next plan
+                                if !result {
+                                    continue;
+                                }
+                            }
                         }
 
                         // TODO: Stabilization window(time)
@@ -250,6 +305,9 @@ impl<'a> ScalingPlanner {
             self.task = None;
         }
     }
+    pub fn get_last_plan_id(&self) -> Arc<RwLock<String>> {
+        self.last_plan_id.clone()
+    }
 }
 
 #[cfg(test)]
@@ -265,19 +323,72 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    #[tokio::test]
-    async fn test_run() {
+    const COLLECTOR: &str = "vector";
+    const METRIC_DEFINTION_ID: &str = "metric1";
+
+    async fn get_scaling_planner(
+        plans: Vec<PlanItemDefinition>,
+    ) -> (Arc<DataLayer>, ScalingPlanner) {
+        // Initialize DataLayer
         let data_layer = Arc::new(DataLayer::new("", "").await);
+        // Create a MetricDefinition
         let metric_definitions = vec![MetricDefinition {
-            id: "metric1".to_string(),
+            id: METRIC_DEFINTION_ID.to_string(),
             metadata: HashMap::new(),
             kind: ObjectKind::Metric,
             db_id: "".to_string(),
-            collector: "vector".to_string(),
+            collector: COLLECTOR.to_string(),
             metric_kind: "prometheus".to_string(),
         }];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
+        // To fetch the metrics, we need to start the MetricUpdater
+        let mut metric_updater = MetricUpdater::new(data_layer.clone(), 1000);
+        metric_updater.run().await;
+        let shared_metric_updater = Arc::new(RwLock::new(metric_updater));
+
+        // Create a ScalingComponentManager
+        let scaling_component_manager = ScalingComponentManager::new_shared();
+
+        // Create a ScalingPlanner
+        let scaling_plan_definition = ScalingPlanDefinition {
+            id: "test".to_string(),
+            db_id: "".to_string(),
+            kind: ObjectKind::ScalingPlan,
+            title: "Test Scaling Plan".to_string(),
+            interval: None,
+            plans,
+        };
+
+        let scaling_planner = ScalingPlanner::new(
+            scaling_plan_definition,
+            shared_metric_updater,
+            scaling_component_manager,
+            data_layer.clone(),
+        );
+        (data_layer, scaling_planner)
+    }
+
+    #[tokio::test]
+    async fn test_simple_expression() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: Some(
+                "get({ metric_id: 'metric1', name: 'test', tags: { tag1: 'value1'}}) > 0"
+                    .to_string(),
+            ),
+            cron_expression: None,
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        // Add a metric to the DataLayer
         let metric = json!([
             {
                 "name": "test",
@@ -288,44 +399,190 @@ mod tests {
             }
         ])
         .to_string();
-        let metric = metric.as_str();
-
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric)
+            .add_source_metric("vector", "metric1", metric.as_str())
             .await;
 
-        let mut metric_updater = MetricUpdater::new(data_layer.clone(), 1000);
-        metric_updater.run().await;
-
-        let shared_metric_updater = Arc::new(RwLock::new(metric_updater));
-
-        let scaling_component_manager = ScalingComponentManager::new_shared();
-        let scaling_plan_definition = ScalingPlanDefinition {
-            id: "test".to_string(),
-            db_id: "".to_string(),
-            kind: ObjectKind::ScalingPlan,
-            title: "Test Scaling Plan".to_string(),
-            interval: None,
-            plans: vec![PlanItemDefinition {
-                id: "empty".to_string(),
-                description: "".to_string(),
-                expression:
-                    "get({ metric_id: 'metric1', name: 'test', tags: { tag1: 'value1'}}) > 0"
-                        .to_string(),
-                priority: 1,
-                scaling_components: vec![],
-                ui: None,
-            }],
-        };
-        let mut scaling_planner = ScalingPlanner::new(
-            scaling_plan_definition,
-            shared_metric_updater.clone(),
-            scaling_component_manager.clone(),
-            data_layer.clone(),
-        );
-
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, plan_id);
+        }
+    }
+    #[tokio::test]
+    async fn test_cron_expression() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: Some("*/2 * * * * * *".to_string()),
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
         scaling_planner.run();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, plan_id);
+        }
+    }
+    #[tokio::test]
+    async fn test_complex_expression() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: Some(
+                "get({ metric_id: 'metric1', name: 'test', tags: { tag1: 'value1'}}) > 0"
+                    .to_string(),
+            ),
+            cron_expression: Some("*/2 * * * * * *".to_string()),
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        // Add a metric to the DataLayer
+        let metric = json!([
+            {
+                "name": "test",
+                "tags": {
+                    "tag1": "value1"
+                },
+                "value": 1,
+            }
+        ])
+        .to_string();
+        let _ = data_layer
+            .add_source_metric("vector", "metric1", metric.as_str())
+            .await;
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, plan_id);
+        }
+    }
+    #[tokio::test]
+    async fn test_complex_expression_failed_with_value() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: Some(
+                "get({ metric_id: 'metric1', name: 'test', tags: { tag1: 'value1'}}) > 0"
+                    .to_string(),
+            ),
+            cron_expression: Some("*/2 * * * * * *".to_string()),
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        // Add a metric to the DataLayer
+        let metric = json!([
+            {
+                "name": "test",
+                "tags": {
+                    "tag1": "value1"
+                },
+                "value": 0,
+            }
+        ])
+        .to_string();
+        let _ = data_layer
+            .add_source_metric("vector", "metric1", metric.as_str())
+            .await;
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, "");
+        }
+    }
+    #[tokio::test]
+    async fn test_complex_expression_failed_with_cron() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: Some(
+                "get({ metric_id: 'metric1', name: 'test', tags: { tag1: 'value1'}}) > 0"
+                    .to_string(),
+            ),
+            cron_expression: Some("* * * * * * 2007".to_string()),
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        // Add a metric to the DataLayer
+        let metric = json!([
+            {
+                "name": "test",
+                "tags": {
+                    "tag1": "value1"
+                },
+                "value": 1,
+            }
+        ])
+        .to_string();
+        let _ = data_layer
+            .add_source_metric("vector", "metric1", metric.as_str())
+            .await;
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, "");
+        }
+    }
+    #[tokio::test]
+    async fn test_empty_expression_to_fail() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: None,
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, "");
+        }
     }
 }

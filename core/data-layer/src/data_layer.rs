@@ -149,20 +149,20 @@ impl DataLayer {
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
             loop {
-                println!("Watching...");
+                debug!("Watching...");
                 let query_string =
                     "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;";
                 let result_string = sqlx::query(query_string).fetch_all(&pool).await.unwrap();
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
                     let updated_at: String = row.get(0);
-                    println!("{:?}", updated_at);
+                    debug!("{:?}", updated_at);
                     updated_at_hash_string.push_str(&updated_at);
                 }
                 if lastest_updated_at_hash != updated_at_hash_string {
                     // Send signals after the first time
                     if !lastest_updated_at_hash.is_empty() {
-                        println!("is not empty");
+                        debug!("is not empty");
                         let timestamp = Utc::now().to_rfc3339();
                         let result = notify_sender.send(timestamp);
                         if result.is_err() {
@@ -173,7 +173,7 @@ impl DataLayer {
                         }
                     }
                     lastest_updated_at_hash = updated_at_hash_string;
-                    println!("Updated at hash changed");
+                    debug!("Updated at hash changed");
                 }
                 // 1 second
                 tokio::time::sleep(tokio::time::Duration::from_secs(watch_duration)).await;
@@ -710,19 +710,21 @@ impl DataLayer {
             error!("Error: {}", error_message);
             return Err(anyhow!(error_message));
         }
+        debug!("Added a source metric: {}", metric_id);
         Ok(())
     }
     // Get a latest metrics by collector and metric_id from the database
     pub async fn get_source_metrics_values(
         &self,
         metric_ids: Vec<String>,
-        polling_interval: u64,
+        time_greater_than: u64,
     ) -> Result<HashMap<String, serde_json::Value>> {
         // Subtract the duration from the current time
-        let past_time = SystemTime::now() - Duration::from_millis(polling_interval);
-        let ulid = Ulid::from_datetime(past_time);
+        //
+        let offset_time = SystemTime::now() - Duration::from_millis(time_greater_than);
+        let ulid = Ulid::from_datetime(offset_time);
         let query_string =
-            "SELECT DISTINCT metric_id, id, json_value FROM source_metrics WHERE id >= ? and metric_id in (?) ORDER BY id DESC";
+            "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= ? and metric_id in (?) ORDER BY id DESC LIMIT 1";
         let metric_ids = metric_ids.join(",");
         let result = sqlx::query(query_string)
             .bind(ulid.to_string())
@@ -733,10 +735,6 @@ impl DataLayer {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
-        // if result.is_none() {
-        //     return Err(anyhow!("No value found"));
-        // }
-        // let result = result.unwrap();
         let mut metric_values: HashMap<String, serde_json::Value> = HashMap::new();
         for row in result {
             let metric_id: String = row.get("metric_id");
@@ -745,10 +743,5 @@ impl DataLayer {
             metric_values.insert(metric_id, json_value);
         }
         Ok(metric_values)
-
-        // let json_value: String = result.get("json_value");
-
-        // let json_value = json!(json_value);
-        // Ok(json_value)
     }
 }
