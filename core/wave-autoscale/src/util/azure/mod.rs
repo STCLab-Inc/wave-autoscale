@@ -67,7 +67,7 @@ mod test {
         let azure_credential = AzureCredential {
             client_id: Some("AZURE_CLIENT_ID".to_string()),
             client_secret: Some("AZURE_CLIENT_SECRET".to_string()),
-            tenant_id: Some("rLA8Q~jDhLZ8wWByiTHw7mSpdbc2W3egESs2XaeS".to_string()),
+            tenant_id: Some("AZURE_TENANT_ID".to_string()),
         };
         let token = get_azure_credential_token(azure_credential);
         assert!(token.await.is_err());
