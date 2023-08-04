@@ -55,9 +55,9 @@ impl ScalingComponent for VMSSAutoScalingComponent {
             params.get("capacity").and_then(serde_json::Value::as_u64),
         ) {
             let azure_credential = AzureCredential {
-                client_id: client_id.to_string(),
-                client_secret: client_secret.to_string(),
-                tenant_id: tenant_id.to_string(),
+                client_id: Some(client_id.to_string()),
+                client_secret: Some(client_secret.to_string()),
+                tenant_id: Some(tenant_id.to_string()),
             };
             let azure_vmss_setting = AzureVmssSetting {
                 azure_credential: azure_credential.clone(),
@@ -100,11 +100,9 @@ impl ScalingComponent for VMSSAutoScalingComponent {
                 })));
             }
 
-            let azure_autoscale_setting_enabled_check =
-                azure_autoscale_setting_enabled_check.unwrap();
-            if azure_autoscale_setting_enabled_check.is_some() {
-                let azure_autoscale_setting_enabled_check =
-                    azure_autoscale_setting_enabled_check.unwrap();
+            if let Ok(Some(azure_autoscale_setting_enabled_check)) =
+                azure_autoscale_setting_enabled_check
+            {
                 if azure_autoscale_setting_enabled_check.enabled {
                     // update autoscale setting enabled - off
                     let mut azure_autoscale_setting_update = azure_autoscale_setting.clone();
@@ -156,7 +154,9 @@ impl ScalingComponent for VMSSAutoScalingComponent {
             }
             let response_capacity = response_capacity.unwrap();
             let response_capacity_status = response_capacity.status();
-            let response_capacity_body = response_capacity.text().await.unwrap();
+            let response_capacity_body = response_capacity.text().await.unwrap_or(String::from(
+                "Azure Autoscale Setting API Call Fail - update capacity",
+            ));
             if !response_capacity_status.is_success() {
                 error!("Azure Autoscale Setting API Call Fail - update capacity");
                 return Err(anyhow::anyhow!(serde_json::json!({

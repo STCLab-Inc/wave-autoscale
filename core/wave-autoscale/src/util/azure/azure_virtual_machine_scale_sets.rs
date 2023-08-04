@@ -1,7 +1,6 @@
 use super::*;
 use reqwest::{Client, Response};
 
-
 #[derive(Clone)]
 pub struct AzureVmssSetting {
     pub azure_credential: AzureCredential,
@@ -34,9 +33,9 @@ mod test {
 
     fn get_test_env_data() -> (AzureCredential, String) {
         let azure_credential = AzureCredential {
-            client_id: std::env::var("AZURE_CLIENT_ID").unwrap(),
-            client_secret: std::env::var("AZURE_CLIENT_SECRET").unwrap(),
-            tenant_id: std::env::var("AZURE_TENANT_ID").unwrap(),
+            client_id: None,
+            client_secret: None,
+            tenant_id: None,
         };
         let subscription_id = std::env::var("AZURE_SUBSCRIPTION_ID").unwrap();
         (azure_credential, subscription_id)
@@ -61,7 +60,6 @@ mod test {
         let result = resp.unwrap();
         let result_status = result.status();
         let result_text = result.text();
-        println!("result - {:?}", result_text.await.unwrap());
         assert!(result_status.is_success());
     }
 

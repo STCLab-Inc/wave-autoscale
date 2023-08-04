@@ -48,9 +48,9 @@ mod test {
 
     fn get_test_env_data() -> (AzureCredential, String) {
         let azure_credential = AzureCredential {
-            client_id: std::env::var("AZURE_CLIENT_ID").unwrap(),
-            client_secret: std::env::var("AZURE_CLIENT_SECRET").unwrap(),
-            tenant_id: std::env::var("AZURE_TENANT_ID").unwrap(),
+            client_id: None,
+            client_secret: None,
+            tenant_id: None,
         };
         let subscription_id = std::env::var("AZURE_SUBSCRIPTION_ID").unwrap();
         (azure_credential, subscription_id)
@@ -58,15 +58,9 @@ mod test {
 
     fn get_autoscale_setting_name(response_json: serde_json::Value, vmss_resource_id :String) -> (String, serde_json::Value) {
         let autoscale_list = response_json.get("value").unwrap();
-        println!("autoscale_list: {:?}", autoscale_list);
-        println!("autoscale_list2: {:?}", autoscale_list.as_array());
         for item in autoscale_list.as_array().unwrap() {
-            println!("enter for loop");
             let item = serde_json::json!(item);
-            // println!("item: {:?}", item);
             if item.get("properties").unwrap().get("targetResourceUri").unwrap() == &serde_json::Value::String(vmss_resource_id.to_string()) {
-                println!("autoscale_setting_name: {:?}", item.get("name").unwrap().as_str().unwrap().to_string());
-                println!("autoscale_setting_profiles: {:?}", item.get("properties").unwrap().get("profiles"));
                 return (item.get("name").unwrap().as_str().unwrap().to_string(), item.get("properties").unwrap().get("profiles").unwrap().clone());
             }
         }
@@ -144,10 +138,8 @@ mod test {
                 "targetResourceUri": vmss_resource_id.clone()
             },
         }));
-        println!("azure_autoscale_setting_update.autoscale_setting_name: {:?}", azure_autoscale_setting_update.autoscale_setting_name);
         let response_autoscale_update =
         call_azure_patch_autoscale_settings_update(azure_autoscale_setting_update).await;
-        // println!("response_autoscale_update: {:?}", response_autoscale_update.unwrap().text().await.unwrap());
         assert!(response_autoscale_update.unwrap().status().is_success());
     }
 
