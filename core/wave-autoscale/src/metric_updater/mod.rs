@@ -6,6 +6,9 @@ use tokio::sync::RwLock;
 
 pub type SharedMetricUpdater = Arc<RwLock<MetricUpdater>>;
 
+// TODO: move this to config
+// 1 minute
+const MAX_TIME_GREATER_THAN: u64 = 1000 * 60;
 pub struct MetricUpdater {
     metric_values: Arc<RwLock<HashMap<String, Value>>>,
     data_layer: Arc<DataLayer>,
@@ -49,7 +52,7 @@ impl MetricUpdater {
         let task = tokio::spawn(async move {
             loop {
                 let new_metric_values = data_layer
-                    .get_source_metrics_values(metric_ids.clone(), polling_interval)
+                    .get_source_metrics_values(metric_ids.clone(), MAX_TIME_GREATER_THAN)
                     .await;
 
                 debug!("new_metric_values: {:?}", new_metric_values);

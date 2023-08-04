@@ -17,9 +17,11 @@ pub struct PlanItemDefinition {
     #[validate(min_length = 2)]
     pub id: String,
     #[serde(default)]
-    pub description: String,
+    pub description: Option<String>,
     #[serde(default)]
-    pub expression: String,
+    pub expression: Option<String>,
+    #[serde(default)]
+    pub cron_expression: Option<String>,
     #[serde(default)]
     pub priority: i16,
     #[ts(type = "Array<any>")]
