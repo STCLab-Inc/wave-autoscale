@@ -632,9 +632,14 @@ impl DataLayer {
         to_date: DateTime<Utc>,
     ) -> Result<Vec<AutoscalingHistoryDefinition>> {
         let mut autoscaling_history: Vec<AutoscalingHistoryDefinition> = Vec::new();
-        let from = Ulid::from_datetime(from_date.into()).to_string();
-        let to = Ulid::from_datetime(to_date.into()).to_string();
+        // Convert from and to date to Ulid.
+        // e.g. 2021-01-01 00:00:00.000 -> 01F8ZQZ1Z0Z000000000000000
+        let from = Ulid::from_parts(from_date.timestamp_millis() as u64, 0).to_string();
+        // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
+        let to_date = to_date + chrono::Duration::milliseconds(1);
+        let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
 
+        // Query
         let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE id BETWEEN ? AND ?";
         let result = sqlx::query(query_string)
             .bind(from)
@@ -662,7 +667,11 @@ impl DataLayer {
     }
     // Remove the old AutoscalingHistory from the database
     pub async fn remove_old_autoscaling_history(&self, to_date: DateTime<Utc>) -> Result<()> {
-        let to = Ulid::from_datetime(to_date.into()).to_string();
+        // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
+        let to_date = to_date + chrono::Duration::milliseconds(1);
+        let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
+
+        // Query
         let query_string = "DELETE FROM autoscaling_history WHERE id <= ?";
         let result = sqlx::query(query_string).bind(to).execute(&self.pool).await;
         if result.is_err() {
@@ -791,6 +800,7 @@ mod tests {
         // Get a AutoscalingHistory from the database
         let from_date = chrono::Utc::now() - chrono::Duration::days(1);
         let to_date = chrono::Utc::now();
+        // let to_date = chrono::Utc::now();
         let result = data_layer
             .get_autoscaling_history_by_date(from_date, to_date)
             .await;
