@@ -9,6 +9,7 @@ import HistoryHeatmap from './history-heatmap';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { decodeTime } from 'ulid';
 
 async function getHistory(
   from: Dayjs = dayjs().subtract(7, 'days'),
@@ -21,19 +22,28 @@ async function getHistory(
 const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
 
+interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
+  created_at: number;
+}
+
 export default function AutoscalingHistoryPage({}) {
   const searchParams = useSearchParams();
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   const fromDayjs = useMemo(() => (from ? dayjs(from) : DEFAULT_FROM), [from]);
   const toDayjs = useMemo(() => (to ? dayjs(to) : DEFAULT_TO), [to]);
-  const [history, setHistory] = useState<AutoscalingHistoryDefinition[]>([]);
+  const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     const fetchHistory = async () => {
-      const history = await getHistory(fromDayjs, toDayjs);
-      // setHistory([ ...history, ...history, ...history, ...history, ...history]);
+      let history = await getHistory(fromDayjs, toDayjs);
+      history = history.map((historyItem: AutoscalingHistoryDefinition) => {
+        return {
+          ...historyItem,
+          created_at: decodeTime(historyItem.id),
+        };
+      });
       setHistory(history);
     };
     fetchHistory();
@@ -107,7 +117,7 @@ export default function AutoscalingHistoryPage({}) {
             </tr>
           </thead>
           <tbody>
-            {history.map((historyItem: AutoscalingHistoryDefinition) => {
+            {history.map((historyItem: AutoscalingHistoryDefinitionEx) => {
               return (
                 <tr key={historyItem.id}>
                   <th>

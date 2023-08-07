@@ -1,5 +1,5 @@
-use chrono::serde::ts_seconds;
-use chrono::Utc;
+
+
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use ts_rs::TS;
@@ -19,9 +19,6 @@ pub struct AutoscalingHistoryDefinition {
     pub metric_values_json: String,
     pub metadata_values_json: String,
     pub fail_message: Option<String>,
-    #[ts(type = "number")]
-    #[serde(with = "ts_seconds")]
-    pub created_at: chrono::DateTime<Utc>,
 }
 
 impl AutoscalingHistoryDefinition {
@@ -41,7 +38,6 @@ impl AutoscalingHistoryDefinition {
             metric_values_json,
             metadata_values_json,
             fail_message,
-            created_at: Utc::now(),
         }
     }
 }

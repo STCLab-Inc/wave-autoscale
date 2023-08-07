@@ -577,8 +577,8 @@ impl DataLayer {
         &self,
         autoscaling_history: AutoscalingHistoryDefinition,
     ) -> Result<()> {
-        let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at) VALUES (?,?,?,?,?,?,?,?)";
-        let id = Uuid::new_v4().to_string();
+        let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message) VALUES (?,?,?,?,?,?,?)";
+        let id = Ulid::new().to_string();
         let result = sqlx::query(query_string)
             // INTO
             .bind(id)
@@ -588,7 +588,6 @@ impl DataLayer {
             .bind(autoscaling_history.metric_values_json)
             .bind(autoscaling_history.metadata_values_json)
             .bind(autoscaling_history.fail_message)
-            .bind(autoscaling_history.created_at)
             .execute(&self.pool)
             .await;
         if result.is_err() {
@@ -602,7 +601,7 @@ impl DataLayer {
         plan_id: String,
     ) -> Result<Vec<AutoscalingHistoryDefinition>> {
         let mut autoscaling_history: Vec<AutoscalingHistoryDefinition> = Vec::new();
-        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at FROM autoscaling_history WHERE plan_id=?";
+        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE plan_id=?";
         let result = sqlx::query(query_string)
             .bind(plan_id)
             .fetch_all(&self.pool)
@@ -622,7 +621,6 @@ impl DataLayer {
                 metric_values_json: row.get("metric_values_json"),
                 metadata_values_json: row.get("metadata_values_json"),
                 fail_message: row.get("fail_message"),
-                created_at: row.get("created_at"),
             });
         }
         Ok(autoscaling_history)
@@ -634,11 +632,18 @@ impl DataLayer {
         to_date: DateTime<Utc>,
     ) -> Result<Vec<AutoscalingHistoryDefinition>> {
         let mut autoscaling_history: Vec<AutoscalingHistoryDefinition> = Vec::new();
-        // TODO: DRY - query_string
-        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message, created_at FROM autoscaling_history WHERE created_at BETWEEN ? AND ?";
+        // Convert from and to date to Ulid.
+        // e.g. 2021-01-01 00:00:00.000 -> 01F8ZQZ1Z0Z000000000000000
+        let from = Ulid::from_parts(from_date.timestamp_millis() as u64, 0).to_string();
+        // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
+        let to_date = to_date + chrono::Duration::milliseconds(1);
+        let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
+
+        // Query
+        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE id BETWEEN ? AND ?";
         let result = sqlx::query(query_string)
-            .bind(from_date)
-            .bind(to_date)
+            .bind(from)
+            .bind(to)
             .fetch_all(&self.pool)
             .await;
 
@@ -656,18 +661,19 @@ impl DataLayer {
                 metric_values_json: row.get("metric_values_json"),
                 metadata_values_json: row.get("metadata_values_json"),
                 fail_message: row.get("fail_message"),
-                created_at: row.get("created_at"),
             });
         }
         Ok(autoscaling_history)
     }
     // Remove the old AutoscalingHistory from the database
     pub async fn remove_old_autoscaling_history(&self, to_date: DateTime<Utc>) -> Result<()> {
-        let query_string = "DELETE FROM autoscaling_history WHERE created_at < ?";
-        let result = sqlx::query(query_string)
-            .bind(to_date)
-            .execute(&self.pool)
-            .await;
+        // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
+        let to_date = to_date + chrono::Duration::milliseconds(1);
+        let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
+
+        // Query
+        let query_string = "DELETE FROM autoscaling_history WHERE id <= ?";
+        let result = sqlx::query(query_string).bind(to).execute(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
@@ -743,5 +749,85 @@ impl DataLayer {
             metric_values.insert(metric_id, json_value);
         }
         Ok(metric_values)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ulid::Ulid;
+
+    use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
+
+    use super::DataLayer;
+
+    async fn get_data_layer() -> DataLayer {
+        const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
+        // Delete the test db if it exists
+        let path = std::path::Path::new(DEFAULT_DB_URL.trim_start_matches("sqlite://"));
+        let remove_result = std::fs::remove_file(path);
+        if remove_result.is_err() {
+            println!("Error removing file: {:?}", remove_result);
+        }
+        DataLayer::new(DEFAULT_DB_URL, "").await
+    }
+
+    fn get_autoscaling_history_definition() -> AutoscalingHistoryDefinition {
+        let id = Ulid::new().to_string();
+        let plan_id = Ulid::new().to_string();
+        let plan_db_id = Ulid::new().to_string();
+        AutoscalingHistoryDefinition {
+            id,
+            plan_db_id,
+            plan_id,
+            plan_item_json: "test_plan_item_json".to_string(),
+            metric_values_json: "test_metric_values_json".to_string(),
+            metadata_values_json: "test_metadata_values_json".to_string(),
+            fail_message: Some("test_fail_message".to_string()),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_autoscaling_history() {
+        let data_layer = get_data_layer().await;
+
+        // Add a AutoscalingHistory to the database
+        let autoscaling_history_definition = get_autoscaling_history_definition();
+        let result = data_layer
+            .add_autoscaling_history(autoscaling_history_definition.clone())
+            .await;
+        assert!(result.is_ok());
+
+        // Get a AutoscalingHistory from the database
+        let from_date = chrono::Utc::now() - chrono::Duration::days(1);
+        let to_date = chrono::Utc::now();
+        // let to_date = chrono::Utc::now();
+        let result = data_layer
+            .get_autoscaling_history_by_date(from_date, to_date)
+            .await;
+        assert!(result.is_ok());
+
+        let result = result.unwrap();
+        assert_eq!(
+            result[0].plan_db_id,
+            autoscaling_history_definition.plan_db_id
+        );
+
+        // Get a AutoscalingHistory from the database by plan_id
+        let result = data_layer
+            .get_autoscaling_history_by_plan_id(autoscaling_history_definition.plan_id.clone())
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result[0].plan_id, autoscaling_history_definition.plan_id);
+
+        // Remove the old AutoscalingHistory from the database
+        let result = data_layer.remove_old_autoscaling_history(to_date).await;
+        assert!(result.is_ok());
+        let result = data_layer
+            .get_autoscaling_history_by_date(from_date, to_date)
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.len(), 0);
     }
 }
