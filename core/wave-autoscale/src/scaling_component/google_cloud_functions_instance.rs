@@ -6,7 +6,6 @@ use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
 
-use serde_json::{json, Value};
 use std::collections::HashMap;
 
 pub struct CloudFunctionsInstanceScalingComponent {
@@ -33,14 +32,14 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
-        let metadata: HashMap<String, Value> = self.definition.metadata.clone();
+    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+        let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
-            Some(Value::String(function_version)),
-            Some(Value::String(project_name)),
-            Some(Value::String(location_name)),
-            Some(Value::String(function_name)),
+            Some(serde_json::Value::String(function_version)),
+            Some(serde_json::Value::String(project_name)),
+            Some(serde_json::Value::String(location_name)),
+            Some(serde_json::Value::String(function_name)),
             min_instance_count,
             max_instance_count,
             max_request_per_instance,
@@ -51,15 +50,15 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
             metadata.get("function_name"),
             params
                 .get("min_instance_count")
-                .and_then(Value::as_i64)
+                .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
             params
                 .get("max_instance_count")
-                .and_then(Value::as_i64)
+                .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
             params
                 .get("max_request_per_instance")
-                .and_then(Value::as_i64)
+                .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
         ) {
             // Helper function to add a field to payload json and query
@@ -71,12 +70,12 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 query: &mut Vec<String>,
             ) {
                 if let Some(value) = value {
-                    payload_json[field] = json!(value);
+                    payload_json[field] = serde_json::json!(value);
                     query.push(query_str.to_string());
                 }
             }
 
-            let mut payload_json = json!({});
+            let mut payload_json = serde_json::json!({});
             let mut query = Vec::new();
 
             match function_version.as_str() {
@@ -97,7 +96,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                     );
                 }
                 "v2" => {
-                    let mut service_config = json!({});
+                    let mut service_config = serde_json::json!({});
                     add_to_payload_and_query(
                         "minInstanceCount",
                         min_instance_count,
@@ -148,7 +147,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
             let result =
                 call_patch_cloud_functions_instance(cloud_functions_instance_setting).await;
             if result.is_err() {
-                return Err(anyhow::anyhow!(json!({
+                return Err(anyhow::anyhow!(serde_json::json!({
                     "message": "API call error",
                     "code": "500",
                     "extras": result.unwrap_err().is_body().to_string()
@@ -157,7 +156,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
             let result = result.unwrap();
             let result_status_code = result.status();
             let core::result::Result::Ok(result_body) = result.text().await else {
-                    return Err(anyhow::anyhow!(json!({
+                    return Err(anyhow::anyhow!(serde_json::json!({
                         "message": "API call error",
                         "code": "500",
                         "extras": "Not found response text",
@@ -165,7 +164,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 };
             if !result_status_code.is_success() {
                 log::error!("API call error: {:?}", result_body);
-                let json = json!({
+                let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
                     "extras": result_body
