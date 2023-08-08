@@ -1,5 +1,5 @@
 use super::super::util::google_cloud::google_cloud_functions_instance_helper::{
-    call_patch_cloud_functions_instance, CloudFunctionsInstanceSetting,
+    call_patch_cloud_functions_instance, CloudFunctionsPatchInstanceSetting,
 };
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
@@ -136,7 +136,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
             }
 
             query.pop(); // Remove the trailing comma
-            let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
+            let cloud_functions_instance_setting = CloudFunctionsPatchInstanceSetting {
                 function_version: function_version.to_string(),
                 project_name: project_name.to_string(),
                 location_name: location_name.to_string(),
