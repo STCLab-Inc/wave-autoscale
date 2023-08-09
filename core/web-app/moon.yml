@@ -30,12 +30,13 @@ tasks:
       - 'install'
       - 'lint'
   run:
-    command: 'next dev --turbo'
+    command: 'next dev'
     inputs:
       - '@globs(sources)'
       - 'tsconfig.json'
       - 'next.config.js'
       - '.env.local'
+      - 'package.json'
     deps:
       - 'test'
   build:

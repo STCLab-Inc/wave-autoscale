@@ -6,6 +6,5 @@ CREATE TABLE autoscaling_history (
   plan_item_json TEXT,
   metric_values_json TEXT,
   metadata_values_json TEXT,
-  fail_message TEXT,
-  created_at TEXT
+  fail_message TEXT
 );
