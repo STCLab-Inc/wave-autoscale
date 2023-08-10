@@ -3,6 +3,7 @@ use data_layer::ScalingComponentDefinition;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 pub mod amazon_dynamodb_table;
+pub mod amazon_emr_ec2;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
@@ -12,7 +13,7 @@ pub mod google_cloud_functions_instance;
 pub mod k8s_deployment;
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
-    aws_ec2_autoscaling::EC2AutoScalingComponent,
+    amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
@@ -81,6 +82,9 @@ impl ScalingComponentManager {
             CloudFunctionsInstanceScalingComponent::SCALING_KIND => Ok(Box::new(
                 CloudFunctionsInstanceScalingComponent::new(cloned_defintion),
             )),
+            EMREC2AutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(EMREC2AutoScalingComponent::new(cloned_defintion)))
+            }
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }

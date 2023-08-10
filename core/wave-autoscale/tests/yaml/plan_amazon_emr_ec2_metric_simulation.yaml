@@ -1,0 +1,67 @@
+---
+kind: Metric
+id: cloudwatch_dynamodb_id
+metric_kind: cloudwatch-data
+metadata:
+  polling_interval: 60000
+  expression: 'SELECT MAX(CPUUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = ''wave-test-cluster10'''
+  period: 5
+  duration_seconds: 120
+---
+kind: ScalingComponent
+id: amazon_emr_ec2_server_instance_group
+component_kind: amazon-emr-ec2
+metadata:
+  cluster_id: j-3LH6Z84089JC3
+  instance_group_id: ig-2S31LAZVPDDUE
+---
+kind: ScalingComponent
+id: amazon_emr_ec2_server_instance_fleet
+component_kind: amazon-emr-ec2
+metadata:
+  region: ap-northeast-1
+  access_key: AKIA5TOD4EBPND6KWUE6
+  secret_key: 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
+  cluster_id: j-2T6BQIJU088IA
+  instance_group_id: if-3U3AS4Q3S5DME
+---
+kind: ScalingPlan
+id: scaling_plan_amazon_emr_ec2_autoscaling
+title: "Scaling Plan for Amazon EMR EC2 Autoscaling"
+interval: 10000
+plans:
+  - id: scale-out-plan-1
+    description: "Instance group scale in if CPU usage is greater than 30%."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'cloudwatch_dynamodb_id',
+        name: 'dynamodb_capacity_usage',
+        tags: {
+          tag1: 'value1'
+        }
+      }) <= 30
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: amazon_emr_ec2_server_instance_group
+        instance_count: 2
+        step_concurrency_level: 2
+  - id: scale-out-plan-2
+    description: "Instance fleet scale out if CPU usage is greater than 30%."
+    expression: >
+      get({
+        metric_id: 'cloudwatch_dynamodb_id',
+        name: 'dynamodb_capacity_usage',
+        tags: {
+          tag1: 'value1'
+        }
+      }) <= 30
+    priority: 2
+    scaling_components:
+      - component_id: amazon_emr_ec2_server_instance_fleet
+        on_demand_capacity: 2
+        spot_capacity: 2
+        step_concurrency_level: 3
+        on_demand_timeout_duration_minutes: 10
+        spot_timeout_duration_minutes: 10
