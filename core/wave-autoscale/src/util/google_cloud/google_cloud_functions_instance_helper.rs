@@ -36,7 +36,6 @@ pub async fn call_patch_cloud_functions_instance(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::util::google_cloud::google_cloud_functions_instance_helper::CloudFunctionsPatchInstanceSetting;
 
     #[ignore]
     #[tokio::test]

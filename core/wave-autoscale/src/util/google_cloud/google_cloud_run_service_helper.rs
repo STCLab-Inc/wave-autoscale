@@ -99,7 +99,6 @@ pub async fn call_patch_cloud_run_service_based_on_api_version_2(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::util::google_cloud::google_cloud_run_service_helper::{CloudRunGetServiceSetting, CloudRunPatchServiceSetting};
 
     #[ignore]
     #[tokio::test]
