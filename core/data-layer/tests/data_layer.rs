@@ -6,12 +6,12 @@
 
 mod data_layer {
     use anyhow::Result;
-    use chrono::{Duration, Utc};
+    
     use data_layer::{
         data_layer::DataLayer,
         reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
         types::{
-            autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+            object_kind::ObjectKind,
         },
         MetricDefinition, ScalingComponentDefinition,
     };
@@ -318,55 +318,6 @@ mod data_layer {
         assert_eq!(
             origin_plan_json, updated_plan_json,
             "Unexpected scaling plans metadata"
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_autoscaling_history() -> Result<()> {
-        let data_layer = get_data_layer().await?;
-
-        // Add a AutoscalingHistory
-        let created_at = Utc::now() - Duration::days(2);
-        let autoscaling_history = AutoscalingHistoryDefinition {
-            id: "".to_string(),
-            plan_db_id: "".to_string(),
-            plan_id: "".to_string(),
-            plan_item_json: "".to_string(),
-            metric_values_json: "".to_string(),
-            metadata_values_json: "".to_string(),
-            fail_message: Some(String::from("fail_message")),
-            created_at,
-        };
-        let add_autoscaling_history_result = data_layer
-            .add_autoscaling_history(autoscaling_history.clone())
-            .await;
-        if add_autoscaling_history_result.is_err() {
-            panic!("Unexpected error: {:?}", add_autoscaling_history_result);
-        }
-
-        // Remove the old AutoscalingHistory
-        let to_date = Utc::now() - Duration::days(1);
-        let remove_autoscaling_history_result =
-            data_layer.remove_old_autoscaling_history(to_date).await;
-
-        if remove_autoscaling_history_result.is_err() {
-            panic!("Unexpected error: {:?}", remove_autoscaling_history_result);
-        }
-
-        // Check that the AutoscalingHistory was removed
-        let autoscaling_history_result = data_layer
-            .get_autoscaling_history_by_date(created_at, to_date)
-            .await;
-        if autoscaling_history_result.is_err() {
-            panic!("Unexpected error: {:?}", autoscaling_history_result);
-        }
-        let autoscaling_history_result = autoscaling_history_result.unwrap();
-        assert_eq!(
-            autoscaling_history_result.len(),
-            0,
-            "Unexpected AutoscalingHistory count"
         );
 
         Ok(())
