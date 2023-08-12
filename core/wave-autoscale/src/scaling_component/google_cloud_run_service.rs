@@ -168,7 +168,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             }
             let result = result.unwrap();
             let result_status_code = result.status();
-            let result_body = match result.text().await {
+            let result_body: String = match result.text().await {
                 core::result::Result::Ok(result_body) => result_body,
                 Err(_error) => {
                     return Err(anyhow::anyhow!(serde_json::json!({
@@ -390,7 +390,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             }
             let result = result.unwrap();
             let result_status_code = result.status();
-            let result_body = match result.text().await {
+            let result_body: String = match result.text().await {
                 core::result::Result::Ok(result_body) => result_body,
                 Err(_error) => {
                     return Err(anyhow::anyhow!(serde_json::json!({
