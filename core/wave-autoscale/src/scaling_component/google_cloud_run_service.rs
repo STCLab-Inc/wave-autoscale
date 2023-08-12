@@ -68,57 +68,84 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 .and_then(serde_json::Value::as_str)
                 .map(|s| s as &str),
         ) {
-            fn extract_container_image_from_first_version(
+            fn extract_container_image_based_on_api_version_1(
                 json_str: &str,
                 service_name: &str,
             ) -> Option<String> {
-                let parsed: serde_json::Value =
-                    serde_json::from_str(json_str).expect("Failed to parse JSON");
+                let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
 
-                if parsed["metadata"]["name"].as_str() == Some(service_name) {
-                    return parsed["spec"]["template"]["spec"]["containers"][0]["image"]
-                        .as_str()
-                        .map(|s| s.to_string());
+                if let core::result::Result::Ok(parsed) = parsed_result {
+                    if parsed["metadata"]["name"].as_str() == Some(service_name) {
+                        if let Some(containers) =
+                            parsed["spec"]["template"]["spec"]["containers"].as_array()
+                        {
+                            if !containers.is_empty() {
+                                return containers[0]["image"].as_str().map(|s| s.to_string());
+                            }
+                        }
+                    }
                 }
 
                 None
             }
-            fn extract_container_image_from_second_version(
+
+            fn extract_container_image_based_on_api_version_2(
                 json_str: &str,
                 service_name: &str,
             ) -> Option<String> {
-                let parsed: serde_json::Value =
-                    serde_json::from_str(json_str).expect("Failed to parse JSON");
+                let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
 
-                if parsed["name"].as_str() == Some(service_name) {
-                    return parsed["template"]["containers"][0]["image"]
-                        .as_str()
-                        .map(|s| s.to_string());
+                if let core::result::Result::Ok(parsed) = parsed_result {
+                    if parsed["name"].as_str() == Some(service_name) {
+                        if let Some(containers) = parsed["template"]["containers"].as_array() {
+                            if !containers.is_empty() {
+                                return containers[0]["image"].as_str().map(|s| s.to_string());
+                            }
+                        }
+                    }
                 }
 
                 None
             }
-            fn extract_container_image(
+
+            fn extract_container_image_based_on_api_version(
                 metadata: &HashMap<String, serde_json::Value>,
                 json_str: &str,
             ) -> Option<String> {
-                match metadata.get("api_version").unwrap().as_str().unwrap_or("") {
-                    "v1" => extract_container_image_from_first_version(
-                        json_str,
-                        metadata.get("service_name").unwrap().as_str().unwrap_or(""),
-                    ),
+                // Safe extraction of api_version
+                let api_version = metadata
+                    .get("api_version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+
+                match api_version {
+                    "v1" => {
+                        let service_name = metadata
+                            .get("service_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        extract_container_image_based_on_api_version_1(json_str, service_name)
+                    }
                     _ => {
+                        let project_name = metadata
+                            .get("project_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        let location_name = metadata
+                            .get("location_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        let service_name = metadata
+                            .get("service_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+
                         let formatted_service_name = format!(
                             "projects/{}/locations/{}/services/{}",
-                            metadata.get("project_name").unwrap().as_str().unwrap_or(""),
-                            metadata
-                                .get("location_name")
-                                .unwrap()
-                                .as_str()
-                                .unwrap_or(""),
-                            metadata.get("service_name").unwrap().as_str().unwrap_or("")
+                            project_name, location_name, service_name
                         );
-                        extract_container_image_from_second_version(
+
+                        extract_container_image_based_on_api_version_2(
                             json_str,
                             &formatted_service_name,
                         )
@@ -143,12 +170,12 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             let result = result.unwrap();
             let result_status_code = result.status();
             let core::result::Result::Ok(result_body) = result.text().await else {
-                        return Err(anyhow::anyhow!(serde_json::json!({
-                            "message": "API call error",
-                            "code": "500",
-                            "extras": "Not found response text",
-                        })));
-                    };
+                return Err(anyhow::anyhow!(serde_json::json!({
+                    "message": "API call error",
+                    "code": "500",
+                    "extras": "Not found response text",
+                })));
+            };
             if !result_status_code.is_success() {
                 log::error!("API call error: {:?}", result_body);
                 let json = serde_json::json!({
@@ -158,9 +185,11 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 });
                 return Err(anyhow::anyhow!(json));
             }
-            let container_image = extract_container_image(&metadata, &result_body);
 
-            fn create_payload_from_first_version(
+            let container_image =
+                extract_container_image_based_on_api_version(&metadata, &result_body);
+
+            fn create_payload_based_on_api_version_1(
                 service_name: &str,
                 project_name: &str,
                 min_instance_count: Option<&str>,
@@ -169,7 +198,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 execution_environment: Option<&str>,
                 container_image: &str,
             ) -> serde_json::Value {
-                // Annotations
                 let mut annotations = serde_json::Map::new();
 
                 if let Some(min_count) = min_instance_count {
@@ -187,7 +215,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 }
 
                 if let Some(environment) = execution_environment {
-                    // Allowed values are gen1 and gen2
                     let environment = match environment {
                         "EXECUTION_ENVIRONMENT_UNSPECIFIED" => "gen1",
                         "EXECUTION_ENVIRONMENT_GEN1" => "gen1",
@@ -200,7 +227,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     );
                 }
 
-                // Spec
                 let mut spec = serde_json::Map::new();
 
                 if let Some(concurrency) = max_request_per_instance {
@@ -215,7 +241,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     serde_json::json!([{ "image": container_image }]),
                 );
 
-                // Only include the metadata section if there are annotations
                 let template = if annotations.is_empty() {
                     serde_json::json!({ "spec": spec })
                 } else {
@@ -239,7 +264,8 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     }
                 })
             }
-            fn create_payload_from_second_version(
+
+            fn create_payload_based_on_api_version_2(
                 min_instance_count: Option<&str>,
                 max_instance_count: Option<&str>,
                 max_request_per_instance: Option<&str>,
@@ -248,7 +274,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             ) -> serde_json::Value {
                 let mut template = serde_json::Map::new();
 
-                // Add maxInstanceRequestConcurrency to template if it's available
                 if let Some(max_request) = max_request_per_instance {
                     template.insert(
                         "maxInstanceRequestConcurrency".to_string(),
@@ -256,7 +281,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     );
                 }
 
-                // Scaling block
                 let mut scaling = serde_json::Map::new();
                 if let Some(min_count) = min_instance_count {
                     scaling.insert(
@@ -274,13 +298,11 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     template.insert("scaling".to_string(), serde_json::Value::Object(scaling));
                 }
 
-                // Containers block
                 template.insert(
                     "containers".to_string(),
                     serde_json::json!([{ "image": container_image }]),
                 );
 
-                // Add executionEnvironment to template if it's available
                 if let Some(env) = execution_environment {
                     template.insert(
                         "executionEnvironment".to_string(),
@@ -288,14 +310,14 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     );
                 }
 
-                // Return the overall structure
                 serde_json::Value::Object({
                     let mut obj = serde_json::Map::new();
                     obj.insert("template".to_string(), serde_json::Value::Object(template));
                     obj
                 })
             }
-            fn create_payload(
+
+            fn create_payload_based_on_api_version(
                 metadata: &HashMap<String, serde_json::Value>,
                 min_instance_count: Option<&str>,
                 max_instance_count: Option<&str>,
@@ -303,17 +325,27 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 execution_environment: Option<&str>,
                 container_image: &str,
             ) -> serde_json::Value {
-                match metadata.get("api_version").unwrap().as_str().unwrap_or("") {
-                    "v1" => create_payload_from_first_version(
-                        metadata.get("service_name").unwrap().as_str().unwrap_or(""),
-                        metadata.get("project_name").unwrap().as_str().unwrap_or(""),
+                match metadata
+                    .get("api_version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                {
+                    "v1" => create_payload_based_on_api_version_1(
+                        metadata
+                            .get("service_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                        metadata
+                            .get("project_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
                         min_instance_count,
                         max_instance_count,
                         max_request_per_instance,
                         execution_environment,
                         container_image,
                     ),
-                    _ => create_payload_from_second_version(
+                    _ => create_payload_based_on_api_version_2(
                         min_instance_count,
                         max_instance_count,
                         max_request_per_instance,
@@ -328,7 +360,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 project_name: project_name.to_string(),
                 location_name: location_name.to_string(),
                 service_name: service_name.to_string(),
-                payload: Some(create_payload(
+                payload: Some(create_payload_based_on_api_version(
                     &metadata,
                     min_instance_count
                         .map(|value| value.to_string())
