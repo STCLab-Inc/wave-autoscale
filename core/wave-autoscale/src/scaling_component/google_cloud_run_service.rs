@@ -1,7 +1,6 @@
-use crate::util::google_cloud::google_cloud_run_service_helper::call_patch_cloud_run_service;
-
 use super::super::util::google_cloud::google_cloud_run_service_helper::{
-    call_get_cloud_run_service, CloudRunGetServiceSetting, CloudRunPatchServiceSetting,
+    call_get_cloud_run_service, call_patch_cloud_run_service, CloudRunGetServiceSetting,
+    CloudRunPatchServiceSetting,
 };
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
