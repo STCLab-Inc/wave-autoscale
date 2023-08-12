@@ -1,7 +1,7 @@
-use super::super::util::google_cloud::google_cloud_functions_instance_helper::{
+use super::ScalingComponent;
+use crate::util::google_cloud::google_cloud_functions_instance_helper::{
     call_patch_cloud_functions_instance, CloudFunctionsPatchInstanceSetting,
 };
-use super::ScalingComponent;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
