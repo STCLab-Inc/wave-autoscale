@@ -179,7 +179,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 }
             };
             if !result_status_code.is_success() {
-                log::error!("API call error: {:?}", result_body);
+                log::error!("API call error: {:?}", &result_body);
                 let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
@@ -401,7 +401,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 }
             };
             if !result_status_code.is_success() {
-                log::error!("API call error: {:?}", result_body);
+                log::error!("API call error: {:?}", &result_body);
                 let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
