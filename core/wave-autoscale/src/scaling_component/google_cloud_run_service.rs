@@ -169,12 +169,12 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             let result = result.unwrap();
             let result_status_code = result.status();
             let core::result::Result::Ok(result_body) = result.text().await else {
-                return Err(anyhow::anyhow!(serde_json::json!({
-                    "message": "API call error",
-                    "code": "500",
-                    "extras": "Not found response text",
-                })));
-            };
+                    return Err(anyhow::anyhow!(serde_json::json!({
+                        "message": "API call error",
+                        "code": "500",
+                        "extras": "Not found response text",
+                    })));
+                };
             if !result_status_code.is_success() {
                 log::error!("API call error: {:?}", result_body);
                 let json = serde_json::json!({
