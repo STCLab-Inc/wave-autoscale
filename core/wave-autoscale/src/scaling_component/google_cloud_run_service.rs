@@ -67,6 +67,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 .and_then(serde_json::Value::as_str)
                 .map(|s| s as &str),
         ) {
+            // Extract container image from the response of get cloud run service version 1 api
             fn extract_container_image_based_on_api_version_1(
                 json_str: &str,
                 service_name: &str,
@@ -87,7 +88,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
 
                 None
             }
-
+            // Extract container image from the response of get cloud run service version 2 api
             fn extract_container_image_based_on_api_version_2(
                 json_str: &str,
                 service_name: &str,
@@ -106,7 +107,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
 
                 None
             }
-
+            // Extract container image from the response of get cloud run service to know current container image, required to patch cloud run service
             fn extract_container_image_based_on_api_version(
                 metadata: &HashMap<String, serde_json::Value>,
                 json_str: &str,
@@ -151,7 +152,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     }
                 }
             }
-
+            // Call get cloud run service api
             let cloud_run_get_service_setting = CloudRunGetServiceSetting {
                 api_version: api_version.to_string(),
                 project_name: project_name.to_string(),
@@ -187,10 +188,10 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 });
                 return Err(anyhow::anyhow!(json));
             }
-
+            // Extract current container image from Cloud Run service response for patching
             let container_image =
                 extract_container_image_based_on_api_version(&metadata, &result_body);
-
+            // Create payload to patch cloud run service version 1 api
             fn create_payload_based_on_api_version_1(
                 service_name: &str,
                 project_name: &str,
@@ -266,7 +267,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     }
                 })
             }
-
+            // Create payload to patch cloud run service version 2 api
             fn create_payload_based_on_api_version_2(
                 min_instance_count: Option<&str>,
                 max_instance_count: Option<&str>,
@@ -318,7 +319,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     obj
                 })
             }
-
+            // Create payload to patch cloud run service based on api versions
             fn create_payload_based_on_api_version(
                 metadata: &HashMap<String, serde_json::Value>,
                 min_instance_count: Option<&str>,
@@ -356,7 +357,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     ),
                 }
             }
-
+            // Call patch cloud run service api
             let cloud_run_patch_service_setting = CloudRunPatchServiceSetting {
                 api_version: api_version.to_string(),
                 project_name: project_name.to_string(),
