@@ -61,20 +61,6 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
         ) {
-            // Helper function to add a field to payload json and query
-            fn add_to_payload_and_query(
-                field: &str,
-                value: Option<i32>,
-                query_str: &str,
-                payload_json: &mut serde_json::Value,
-                query: &mut Vec<String>,
-            ) {
-                if let Some(value) = value {
-                    payload_json[field] = serde_json::json!(value);
-                    query.push(query_str.to_string());
-                }
-            }
-
             let mut payload_json = serde_json::json!({});
             let mut query = Vec::new();
 
@@ -179,6 +165,20 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
+    }
+}
+
+// Helper function to add a field to payload json and query
+fn add_to_payload_and_query(
+    field: &str,
+    value: Option<i32>,
+    query_str: &str,
+    payload_json: &mut serde_json::Value,
+    query: &mut Vec<String>,
+) {
+    if let Some(value) = value {
+        payload_json[field] = serde_json::json!(value);
+        query.push(query_str.to_string());
     }
 }
 

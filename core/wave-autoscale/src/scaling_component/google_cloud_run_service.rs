@@ -67,91 +67,6 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 .and_then(serde_json::Value::as_str)
                 .map(|s| s as &str),
         ) {
-            // Extract container image from the response of get cloud run service version 1 api
-            fn extract_container_image_based_on_api_version_1(
-                json_str: &str,
-                service_name: &str,
-            ) -> Option<String> {
-                let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
-
-                if let core::result::Result::Ok(parsed) = parsed_result {
-                    if parsed["metadata"]["name"].as_str() == Some(service_name) {
-                        if let Some(containers) =
-                            parsed["spec"]["template"]["spec"]["containers"].as_array()
-                        {
-                            if !containers.is_empty() {
-                                return containers[0]["image"].as_str().map(|s| s.to_string());
-                            }
-                        }
-                    }
-                }
-
-                None
-            }
-            // Extract container image from the response of get cloud run service version 2 api
-            fn extract_container_image_based_on_api_version_2(
-                json_str: &str,
-                service_name: &str,
-            ) -> Option<String> {
-                let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
-
-                if let core::result::Result::Ok(parsed) = parsed_result {
-                    if parsed["name"].as_str() == Some(service_name) {
-                        if let Some(containers) = parsed["template"]["containers"].as_array() {
-                            if !containers.is_empty() {
-                                return containers[0]["image"].as_str().map(|s| s.to_string());
-                            }
-                        }
-                    }
-                }
-
-                None
-            }
-            // Extract container image from the response of get cloud run service to know current container image, required to patch cloud run service
-            fn extract_container_image_based_on_api_version(
-                metadata: &HashMap<String, serde_json::Value>,
-                json_str: &str,
-            ) -> Option<String> {
-                // Safe extraction of api_version
-                let api_version = metadata
-                    .get("api_version")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-
-                match api_version {
-                    "v1" => {
-                        let service_name = metadata
-                            .get("service_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        extract_container_image_based_on_api_version_1(json_str, service_name)
-                    }
-                    _ => {
-                        let project_name = metadata
-                            .get("project_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let location_name = metadata
-                            .get("location_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let service_name = metadata
-                            .get("service_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-
-                        let formatted_service_name = format!(
-                            "projects/{}/locations/{}/services/{}",
-                            project_name, location_name, service_name
-                        );
-
-                        extract_container_image_based_on_api_version_2(
-                            json_str,
-                            &formatted_service_name,
-                        )
-                    }
-                }
-            }
             // Call get cloud run service api
             let cloud_run_get_service_setting = CloudRunGetServiceSetting {
                 api_version: api_version.to_string(),
@@ -188,175 +103,11 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 });
                 return Err(anyhow::anyhow!(json));
             }
+
             // Extract current container image from Cloud Run service response for patching
             let container_image =
                 extract_container_image_based_on_api_version(&metadata, &result_body);
-            // Create payload to patch cloud run service version 1 api
-            fn create_payload_based_on_api_version_1(
-                service_name: &str,
-                project_name: &str,
-                min_instance_count: Option<&str>,
-                max_instance_count: Option<&str>,
-                max_request_per_instance: Option<&str>,
-                execution_environment: Option<&str>,
-                container_image: &str,
-            ) -> serde_json::Value {
-                let mut annotations = serde_json::Map::new();
 
-                if let Some(min_count) = min_instance_count {
-                    annotations.insert(
-                        "autoscaling.knative.dev/minScale".to_string(),
-                        serde_json::json!(min_count),
-                    );
-                }
-
-                if let Some(max_count) = max_instance_count {
-                    annotations.insert(
-                        "autoscaling.knative.dev/maxScale".to_string(),
-                        serde_json::json!(max_count),
-                    );
-                }
-
-                if let Some(environment) = execution_environment {
-                    let environment = match environment {
-                        "EXECUTION_ENVIRONMENT_UNSPECIFIED" => "gen1",
-                        "EXECUTION_ENVIRONMENT_GEN1" => "gen1",
-                        "EXECUTION_ENVIRONMENT_GEN2" => "gen2",
-                        _ => "gen1",
-                    };
-                    annotations.insert(
-                        "run.googleapis.com/execution-environment".to_string(),
-                        serde_json::json!(environment),
-                    );
-                }
-
-                let mut spec = serde_json::Map::new();
-
-                if let Some(concurrency) = max_request_per_instance {
-                    spec.insert(
-                        "containerConcurrency".to_string(),
-                        serde_json::json!(concurrency),
-                    );
-                }
-
-                spec.insert(
-                    "containers".to_string(),
-                    serde_json::json!([{ "image": container_image }]),
-                );
-
-                let template = if annotations.is_empty() {
-                    serde_json::json!({ "spec": spec })
-                } else {
-                    serde_json::json!({
-                        "metadata": {
-                            "annotations": annotations
-                        },
-                        "spec": spec
-                    })
-                };
-
-                serde_json::json!({
-                    "apiVersion": "serving.knative.dev/v1",
-                    "kind": "Service",
-                    "metadata": {
-                        "name": service_name,
-                        "namespace": project_name,
-                    },
-                    "spec": {
-                        "template": template
-                    }
-                })
-            }
-            // Create payload to patch cloud run service version 2 api
-            fn create_payload_based_on_api_version_2(
-                min_instance_count: Option<&str>,
-                max_instance_count: Option<&str>,
-                max_request_per_instance: Option<&str>,
-                execution_environment: Option<&str>,
-                container_image: &str,
-            ) -> serde_json::Value {
-                let mut template = serde_json::Map::new();
-
-                if let Some(max_request) = max_request_per_instance {
-                    template.insert(
-                        "maxInstanceRequestConcurrency".to_string(),
-                        serde_json::Value::String(max_request.to_string()),
-                    );
-                }
-
-                let mut scaling = serde_json::Map::new();
-                if let Some(min_count) = min_instance_count {
-                    scaling.insert(
-                        "minInstanceCount".to_string(),
-                        serde_json::Value::String(min_count.to_string()),
-                    );
-                }
-                if let Some(max_count) = max_instance_count {
-                    scaling.insert(
-                        "maxInstanceCount".to_string(),
-                        serde_json::Value::String(max_count.to_string()),
-                    );
-                }
-                if !scaling.is_empty() {
-                    template.insert("scaling".to_string(), serde_json::Value::Object(scaling));
-                }
-
-                template.insert(
-                    "containers".to_string(),
-                    serde_json::json!([{ "image": container_image }]),
-                );
-
-                if let Some(env) = execution_environment {
-                    template.insert(
-                        "executionEnvironment".to_string(),
-                        serde_json::Value::String(env.to_string()),
-                    );
-                }
-
-                serde_json::Value::Object({
-                    let mut obj = serde_json::Map::new();
-                    obj.insert("template".to_string(), serde_json::Value::Object(template));
-                    obj
-                })
-            }
-            // Create payload to patch cloud run service based on api versions
-            fn create_payload_based_on_api_version(
-                metadata: &HashMap<String, serde_json::Value>,
-                min_instance_count: Option<&str>,
-                max_instance_count: Option<&str>,
-                max_request_per_instance: Option<&str>,
-                execution_environment: Option<&str>,
-                container_image: &str,
-            ) -> serde_json::Value {
-                match metadata
-                    .get("api_version")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                {
-                    "v1" => create_payload_based_on_api_version_1(
-                        metadata
-                            .get("service_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or(""),
-                        metadata
-                            .get("project_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or(""),
-                        min_instance_count,
-                        max_instance_count,
-                        max_request_per_instance,
-                        execution_environment,
-                        container_image,
-                    ),
-                    _ => create_payload_based_on_api_version_2(
-                        min_instance_count,
-                        max_instance_count,
-                        max_request_per_instance,
-                        execution_environment,
-                        container_image,
-                    ),
-                }
-            }
             // Call patch cloud run service api
             let cloud_run_patch_service_setting = CloudRunPatchServiceSetting {
                 api_version: api_version.to_string(),
@@ -416,6 +167,254 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
     }
+}
+
+// Extract container image from the response of get cloud run service to know current container image, required to patch cloud run service
+fn extract_container_image_based_on_api_version(
+    metadata: &HashMap<String, serde_json::Value>,
+    json_str: &str,
+) -> Option<String> {
+    // Safe extraction of api_version
+    let api_version = metadata
+        .get("api_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    match api_version {
+        "v1" => {
+            let service_name = metadata
+                .get("service_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            extract_container_image_based_on_api_version_1(json_str, service_name)
+        }
+        _ => {
+            let project_name = metadata
+                .get("project_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let location_name = metadata
+                .get("location_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let service_name = metadata
+                .get("service_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
+            let formatted_service_name = format!(
+                "projects/{}/locations/{}/services/{}",
+                project_name, location_name, service_name
+            );
+
+            extract_container_image_based_on_api_version_2(json_str, &formatted_service_name)
+        }
+    }
+}
+// Extract container image from the response of get cloud run service version 1 api
+fn extract_container_image_based_on_api_version_1(
+    json_str: &str,
+    service_name: &str,
+) -> Option<String> {
+    let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
+
+    if let core::result::Result::Ok(parsed) = parsed_result {
+        if parsed["metadata"]["name"].as_str() == Some(service_name) {
+            if let Some(containers) = parsed["spec"]["template"]["spec"]["containers"].as_array() {
+                if !containers.is_empty() {
+                    return containers[0]["image"].as_str().map(|s| s.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+// Extract container image from the response of get cloud run service version 2 api
+fn extract_container_image_based_on_api_version_2(
+    json_str: &str,
+    service_name: &str,
+) -> Option<String> {
+    let parsed_result = serde_json::from_str::<serde_json::Value>(json_str);
+
+    if let core::result::Result::Ok(parsed) = parsed_result {
+        if parsed["name"].as_str() == Some(service_name) {
+            if let Some(containers) = parsed["template"]["containers"].as_array() {
+                if !containers.is_empty() {
+                    return containers[0]["image"].as_str().map(|s| s.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+// Create payload to update cloud run service based on api versions
+fn create_payload_based_on_api_version(
+    metadata: &HashMap<String, serde_json::Value>,
+    min_instance_count: Option<&str>,
+    max_instance_count: Option<&str>,
+    max_request_per_instance: Option<&str>,
+    execution_environment: Option<&str>,
+    container_image: &str,
+) -> serde_json::Value {
+    match metadata
+        .get("api_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+    {
+        "v1" => create_payload_based_on_api_version_1(
+            metadata
+                .get("service_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or(""),
+            metadata
+                .get("project_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or(""),
+            min_instance_count,
+            max_instance_count,
+            max_request_per_instance,
+            execution_environment,
+            container_image,
+        ),
+        _ => create_payload_based_on_api_version_2(
+            min_instance_count,
+            max_instance_count,
+            max_request_per_instance,
+            execution_environment,
+            container_image,
+        ),
+    }
+}
+// Create payload to put cloud run service version 1 api
+fn create_payload_based_on_api_version_1(
+    service_name: &str,
+    project_name: &str,
+    min_instance_count: Option<&str>,
+    max_instance_count: Option<&str>,
+    max_request_per_instance: Option<&str>,
+    execution_environment: Option<&str>,
+    container_image: &str,
+) -> serde_json::Value {
+    let mut annotations = serde_json::Map::new();
+
+    if let Some(min_count) = min_instance_count {
+        annotations.insert(
+            "autoscaling.knative.dev/minScale".to_string(),
+            serde_json::json!(min_count),
+        );
+    }
+
+    if let Some(max_count) = max_instance_count {
+        annotations.insert(
+            "autoscaling.knative.dev/maxScale".to_string(),
+            serde_json::json!(max_count),
+        );
+    }
+
+    if let Some(environment) = execution_environment {
+        let environment = match environment {
+            "EXECUTION_ENVIRONMENT_UNSPECIFIED" => "gen1",
+            "EXECUTION_ENVIRONMENT_GEN1" => "gen1",
+            "EXECUTION_ENVIRONMENT_GEN2" => "gen2",
+            _ => "gen1",
+        };
+        annotations.insert(
+            "run.googleapis.com/execution-environment".to_string(),
+            serde_json::json!(environment),
+        );
+    }
+
+    let mut spec = serde_json::Map::new();
+
+    if let Some(concurrency) = max_request_per_instance {
+        spec.insert(
+            "containerConcurrency".to_string(),
+            serde_json::json!(concurrency),
+        );
+    }
+
+    spec.insert(
+        "containers".to_string(),
+        serde_json::json!([{ "image": container_image }]),
+    );
+
+    let template = if annotations.is_empty() {
+        serde_json::json!({ "spec": spec })
+    } else {
+        serde_json::json!({
+            "metadata": {
+                "annotations": annotations
+            },
+            "spec": spec
+        })
+    };
+
+    serde_json::json!({
+        "apiVersion": "serving.knative.dev/v1",
+        "kind": "Service",
+        "metadata": {
+            "name": service_name,
+            "namespace": project_name,
+        },
+        "spec": {
+            "template": template
+        }
+    })
+}
+// Create payload to patch cloud run service version 2 api
+fn create_payload_based_on_api_version_2(
+    min_instance_count: Option<&str>,
+    max_instance_count: Option<&str>,
+    max_request_per_instance: Option<&str>,
+    execution_environment: Option<&str>,
+    container_image: &str,
+) -> serde_json::Value {
+    let mut template = serde_json::Map::new();
+
+    if let Some(max_request) = max_request_per_instance {
+        template.insert(
+            "maxInstanceRequestConcurrency".to_string(),
+            serde_json::Value::String(max_request.to_string()),
+        );
+    }
+
+    let mut scaling = serde_json::Map::new();
+    if let Some(min_count) = min_instance_count {
+        scaling.insert(
+            "minInstanceCount".to_string(),
+            serde_json::Value::String(min_count.to_string()),
+        );
+    }
+    if let Some(max_count) = max_instance_count {
+        scaling.insert(
+            "maxInstanceCount".to_string(),
+            serde_json::Value::String(max_count.to_string()),
+        );
+    }
+    if !scaling.is_empty() {
+        template.insert("scaling".to_string(), serde_json::Value::Object(scaling));
+    }
+
+    template.insert(
+        "containers".to_string(),
+        serde_json::json!([{ "image": container_image }]),
+    );
+
+    if let Some(env) = execution_environment {
+        template.insert(
+            "executionEnvironment".to_string(),
+            serde_json::Value::String(env.to_string()),
+        );
+    }
+
+    serde_json::Value::Object({
+        let mut obj = serde_json::Map::new();
+        obj.insert("template".to_string(), serde_json::Value::Object(template));
+        obj
+    })
 }
 
 #[cfg(test)]
