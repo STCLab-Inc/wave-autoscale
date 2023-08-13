@@ -597,4 +597,293 @@ mod test {
         );
         assert!(cloud_run_service_scaling_component.is_ok());
     }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the service is not exist based on api version 1
+    async fn apply_error_call_get_cloud_run_service_based_on_version_1() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v1")),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("service_name"),
+                serde_json::json!("service-not-exist"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![].into_iter().collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the service is not exist based on api version 2
+    async fn apply_error_call_get_cloud_run_service_based_on_version_2() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v2")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("service_name"),
+                serde_json::json!("service-not-exist"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![].into_iter().collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the minimum instance count is bigger than the maximum instance count based on api version 1
+    async fn apply_error_case_1_call_update_cloud_run_service_based_on_version_1() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v1")),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (String::from("service_name"), serde_json::json!("service-1")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(10)),
+            (String::from("max_instance_count"), serde_json::json!(5)),
+            (
+                String::from("max_request_per_instance"),
+                serde_json::json!(3),
+            ),
+            (
+                String::from("execution_environment"),
+                serde_json::json!("EXECUTION_ENVIRONMENT_UNSPECIFIED"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the maximum request per instance is smaller than zero based on api version 1
+    async fn apply_error_case_2_call_update_cloud_run_service_based_on_version_1() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v1")),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (String::from("service_name"), serde_json::json!("service-1")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(2)),
+            (String::from("max_instance_count"), serde_json::json!(5)),
+            (
+                String::from("max_request_per_instance"),
+                serde_json::json!(-5),
+            ),
+            (
+                String::from("execution_environment"),
+                serde_json::json!("EXECUTION_ENVIRONMENT_UNSPECIFIED"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the the maximum instance count is zero based on api version 2
+    async fn apply_error_case_1_call_update_cloud_run_service_based_on_version_2() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v2")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (String::from("service_name"), serde_json::json!("service-1")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(2)),
+            (String::from("max_instance_count"), serde_json::json!(0)),
+            (
+                String::from("max_request_per_instance"),
+                serde_json::json!(6),
+            ),
+            (
+                String::from("execution_environment"),
+                serde_json::json!("EXECUTION_ENVIRONMENT_UNSPECIFIED"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
+
+    #[ignore]
+    #[tokio::test]
+    // Error case for the case that the the maximum instance count is bigger than quota based on api version 2
+    async fn apply_error_case_2_call_update_cloud_run_service_based_on_version_2() {
+        let metadata: HashMap<String, serde_json::Value> = vec![
+            (String::from("api_version"), serde_json::json!("v2")),
+            (
+                String::from("project_name"),
+                serde_json::json!("wave-autoscale-test"),
+            ),
+            (
+                String::from("location_name"),
+                serde_json::json!("asia-northeast2"),
+            ),
+            (String::from("service_name"), serde_json::json!("service-1")),
+        ]
+        .into_iter()
+        .collect();
+        let params: HashMap<String, serde_json::Value> = vec![
+            (String::from("min_instance_count"), serde_json::json!(0)),
+            (
+                String::from("max_instance_count"),
+                serde_json::json!(10000000),
+            ),
+            (
+                String::from("max_request_per_instance"),
+                serde_json::json!(1),
+            ),
+            (
+                String::from("execution_environment"),
+                serde_json::json!("EXECUTION_ENVIRONMENT_UNSPECIFIED"),
+            ),
+        ]
+        .into_iter()
+        .collect();
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db-id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("google-cloud-run"),
+            metadata,
+        };
+        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
+            CloudRunServiceScalingComponent::new(scaling_definition)
+                .apply(params)
+                .await;
+
+        println!(
+            "cloud_run_service_scaling_component: {:?}",
+            cloud_run_service_scaling_component
+        );
+        assert!(cloud_run_service_scaling_component.is_err());
+    }
 }
