@@ -1,6 +1,6 @@
 use super::super::util::google_cloud::google_cloud_run_service_helper::{
-    call_get_cloud_run_service, call_patch_cloud_run_service, CloudRunGetServiceSetting,
-    CloudRunPatchServiceSetting,
+    call_get_cloud_run_service, call_update_cloud_run_service, CloudRunGetServiceSetting,
+    CloudRunUpdateServiceSetting,
 };
 use super::ScalingComponent;
 use anyhow::{Ok, Result};
@@ -104,12 +104,12 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 return Err(anyhow::anyhow!(json));
             }
 
-            // Extract current container image from Cloud Run service response for patching
+            // Extract current container image from Cloud Run service response for update
             let container_image =
                 extract_container_image_based_on_api_version(&metadata, &result_body);
 
-            // Call patch cloud run service api
-            let cloud_run_patch_service_setting = CloudRunPatchServiceSetting {
+            // Call update cloud run service api
+            let cloud_run_update_service_setting = CloudRunUpdateServiceSetting {
                 api_version: api_version.to_string(),
                 project_name: project_name.to_string(),
                 location_name: location_name.to_string(),
@@ -132,7 +132,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                     &container_image.unwrap_or("".to_string()),
                 )),
             };
-            let result = call_patch_cloud_run_service(cloud_run_patch_service_setting).await;
+            let result = call_update_cloud_run_service(cloud_run_update_service_setting).await;
             if result.is_err() {
                 return Err(anyhow::anyhow!(serde_json::json!({
                     "message": "API call error",
@@ -169,7 +169,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
     }
 }
 
-// Extract container image from the response of get cloud run service to know current container image, required to patch cloud run service
+// Extract container image from the response of get cloud run service to know current container image, required to update cloud run service
 fn extract_container_image_based_on_api_version(
     metadata: &HashMap<String, serde_json::Value>,
     json_str: &str,
@@ -426,7 +426,7 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_get_first_version_cloud_run_service() {
+    async fn apply_call_get_cloud_run_service_based_on_version_1() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v1")),
             (
@@ -463,7 +463,7 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_get_second_version_cloud_run_service() {
+    async fn apply_call_get_cloud_run_service_based_on_version_2() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v2")),
             (
@@ -500,7 +500,7 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_patch_first_version_cloud_run_service() {
+    async fn apply_call_update_cloud_run_service_based_on_version_1() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v1")),
             (
@@ -550,7 +550,7 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn apply_call_patch_second_version_cloud_run_service() {
+    async fn apply_call_update_cloud_run_service_based_on_version_2() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v2")),
             (

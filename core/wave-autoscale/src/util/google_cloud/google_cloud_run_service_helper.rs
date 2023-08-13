@@ -50,14 +50,14 @@ pub async fn call_get_cloud_run_service_based_on_api_version_2(
 
 // v1 and v2    - https://cloud.google.com/run/docs/reference/about-apis
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CloudRunPatchServiceSetting {
+pub struct CloudRunUpdateServiceSetting {
     pub api_version: String,
     pub project_name: String,
     pub location_name: String,
     pub service_name: String,
     pub payload: Option<serde_json::Value>,
 }
-pub async fn call_patch_cloud_run_service(cloud_run_service_setting: CloudRunPatchServiceSetting)-> Result<Response, Error>{
+pub async fn call_update_cloud_run_service(cloud_run_service_setting: CloudRunUpdateServiceSetting)-> Result<Response, Error>{
 match cloud_run_service_setting.api_version.as_str() {
     "v1" => call_put_cloud_run_service_based_on_api_version_1(cloud_run_service_setting).await,
     _ =>  call_patch_cloud_run_service_based_on_api_version_2(cloud_run_service_setting).await,    
@@ -65,7 +65,7 @@ match cloud_run_service_setting.api_version.as_str() {
 }
 // v1   - https://cloud.google.com/run/docs/reference/rest/v1/namespaces.services/replaceService
 pub async fn call_put_cloud_run_service_based_on_api_version_1(
-    cloud_run_service_setting: CloudRunPatchServiceSetting,
+    cloud_run_service_setting: CloudRunUpdateServiceSetting,
 ) -> Result<Response, Error> {
     Client::new()
         .put(format!(
@@ -81,7 +81,7 @@ pub async fn call_put_cloud_run_service_based_on_api_version_1(
 }
 // v2   - https://cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/patch
 pub async fn call_patch_cloud_run_service_based_on_api_version_2(
-    cloud_run_service_setting: CloudRunPatchServiceSetting,
+    cloud_run_service_setting: CloudRunUpdateServiceSetting,
 ) -> Result<Response, Error> {
     Client::new()
         .patch(format!(
@@ -127,7 +127,7 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_call_put_cloud_run_service_based_on_api_version_1() {
-        let cloud_run_service_setting = CloudRunPatchServiceSetting {
+        let cloud_run_service_setting = CloudRunUpdateServiceSetting {
             api_version: "v1".to_string(),
             location_name: "asia-northeast2".to_string(),
             project_name: "wave-autoscale-test".to_string(),            
@@ -161,7 +161,7 @@ mod test {
             })),            
         };
 
-        let response = call_patch_cloud_run_service(cloud_run_service_setting)
+        let response = call_update_cloud_run_service(cloud_run_service_setting)
             .await
             .unwrap();
 
@@ -202,7 +202,7 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_call_patch_cloud_run_service_based_on_api_version_2() {
-        let cloud_run_service_setting = CloudRunPatchServiceSetting {
+        let cloud_run_service_setting = CloudRunUpdateServiceSetting {
             api_version: "v2".to_string(),
             project_name: "wave-autoscale-test".to_string(),
             location_name: "asia-northeast2".to_string(),
@@ -224,7 +224,7 @@ mod test {
             })),            
         };
 
-        let response = call_patch_cloud_run_service(cloud_run_service_setting)
+        let response = call_update_cloud_run_service(cloud_run_service_setting)
             .await
             .unwrap();
 
