@@ -1,0 +1,64 @@
+---
+kind: Metric
+id: cloudwatch_concurrent_executions_cnt
+collector: telegraf
+metric_kind: cloudwatch
+metadata:
+  region: ap-northeast-2
+  # AWS Credentials using the local AWS credentials file(~/.aws/credentials)
+  profile: "default"
+  # Requested CloudWatch aggregation Period (required)
+  # Must be a multiple of 60s.
+  period: "2m"
+  # Collection Delay (required)
+  # Must account for metrics availability via CloudWatch API
+  delay: "2m"
+  # Recommended: use metric 'interval' that is a multiple of 'period' to avoid
+  # gaps or overlap in pulled data
+  interval: "1m"
+  namespaces: ["Google/CloudRun"]
+  metrics:
+    - names: ["Invocations"]
+      statistic_include: ["sample_count"]
+      dimensions:
+        - name: ServiceName
+          value: "service-1"
+---
+kind: ScalingComponent
+id: scaling_component_cloud_run_service
+component_kind: google-cloud-run
+metadata:
+  api_version: v2
+  location_name: asia-northeast2
+  project_name: wave-autoscale-test
+  service_name: service-1
+---
+kind: ScalingPlan
+id: scaling_plan_cloud_run_service
+title: "Scaling Plan for Cloud Run Service"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if concurrent executions value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_cloud_run_service
+        # JavaScript expression that returns an integer.
+        min_instance_count: 5
+        max_instance_count: 10
+        max_request_per_instance: 20
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scale-out-plan-2
+    description: "Scale out if concurrent executions value is greater than 2."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 2"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_cloud_run_service
+        # JavaScript expression that returns an integer.
+        min_instance_count: 2
+        max_instance_count: 5
+        max_request_per_instance: 10
+        execution_environment: EXECUTION_ENVIRONMENT_GEN2

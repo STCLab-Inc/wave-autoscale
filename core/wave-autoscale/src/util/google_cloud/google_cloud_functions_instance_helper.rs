@@ -4,7 +4,7 @@ use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CloudFunctionsInstanceSetting {
+pub struct CloudFunctionsPatchInstanceSetting {
     pub function_version: String,
     pub project_name: String,
     pub location_name: String,
@@ -16,7 +16,7 @@ pub struct CloudFunctionsInstanceSetting {
 // v1   - https://cloud.google.com/functions/docs/reference/rest/v1/projects.locations.functions/patch
 // v2   - https://cloud.google.com/functions/docs/reference/rest/v2/projects.locations.functions/patch
 pub async fn call_patch_cloud_functions_instance(
-    cloud_functions_instance_setting: CloudFunctionsInstanceSetting,
+    cloud_functions_instance_setting: CloudFunctionsPatchInstanceSetting,
 ) -> Result<Response, Error> {
     Client::new()
         .patch(format!(
@@ -36,12 +36,11 @@ pub async fn call_patch_cloud_functions_instance(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::util::google_cloud::google_cloud_functions_instance_helper::CloudFunctionsInstanceSetting;
 
     #[ignore]
     #[tokio::test]
     async fn test_call_patch_cloud_functions_instance_for_version_1_function() {
-        let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
+        let cloud_functions_instance_setting = CloudFunctionsPatchInstanceSetting {
             function_version: "v1".to_string(),
             project_name: "wave-autoscale-test".to_string(),
             location_name: "asia-northeast2".to_string(),
@@ -73,7 +72,7 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_call_patch_cloud_functions_instance_for_version_2_function() {
-        let cloud_functions_instance_setting = CloudFunctionsInstanceSetting {
+        let cloud_functions_instance_setting = CloudFunctionsPatchInstanceSetting {
             function_version: "v2".to_string(),
             project_name: "wave-autoscale-test".to_string(),
             location_name: "asia-northeast2".to_string(),
