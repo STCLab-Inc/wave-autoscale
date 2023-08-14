@@ -90,10 +90,15 @@ impl<'a> ScalingPlanner {
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
 
+        // metadata
+        let plan_metadata = scaling_plan_definition.metadata;
+
         // For plan_interval
-        let plan_interval = scaling_plan_definition
-            .interval
-            .unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let plan_interval: u16 = plan_metadata
+            .get("interval")
+            .unwrap_or(&json!(DEFAULT_PLAN_INTERVAL))
+            .as_u64()
+            .unwrap_or(DEFAULT_PLAN_INTERVAL as u64) as u16;
         // plan_interval should be at least DEFAULT_PLAN_INTERVAL
         let plan_interval = if plan_interval < DEFAULT_PLAN_INTERVAL {
             DEFAULT_PLAN_INTERVAL
@@ -110,8 +115,6 @@ impl<'a> ScalingPlanner {
         } else {
             plan_interval
         };
-        // metadata
-        let plan_metadata = scaling_plan_definition.metadata;
 
         let plans = self.sort_plan_by_priority();
 
@@ -386,8 +389,6 @@ mod tests {
             id: "test".to_string(),
             db_id: "".to_string(),
             kind: ObjectKind::ScalingPlan,
-            title: "Test Scaling Plan".to_string(),
-            interval: None,
             metadata: HashMap::new(),
             plans,
         };
