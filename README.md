@@ -7,10 +7,14 @@
 - Documentation: https://waveautoscale.com/docs/guide/introduction/
 
 Wave Autoscale is an autoscaling solution that simplifies and automates complex autoscaling configurations within the cloud, adapting to the changing traffic demands.
-Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, they often struggle to handle the many challenges associated with dynamic scaling demands.
-- **Complexity of Managing Modern Architectures**: Modern architectures often consist of various interlinked components like microservices or serverless functions. Managing and scaling these intricate structures can become overwhelming and time-consuming.
-- **Disconnect between Monitoring Data and Autoscaling Actions**: The information gained from monitoring data is invaluable, but there can often be a significant gap between this insight and the autoscaling actions that are undertaken. This disconnect might lead to less-than-optimal scaling decisions and hinder the application's ability to adapt efficiently to fluctuating demands.
-- **Bridging Business Requirements and Autoscaling Options**: Each business has unique workload patterns and performance needs. Current autoscaling solutions may not offer enough flexibility or customization to meet these specific requirements, leading to challenges in aligning business goals with autoscaling strategies.
+Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, engineers often struggle to handle the many challenges associated with dynamic scaling demands.
+
+- **Beyond CPU Utilization Scaling**: Traditional autoscaling often relies on simple metrics like CPU utilization. While it's an essential factor, it doesn't always provide a complete picture. Wave Autoscale considers a wider range of metrics, such as the size of the message queue, the status of the database, custom business KPIs, and more, allowing for a more nuanced and responsive scaling strategy.
+- **Simultaneous Multi-Component Scaling**: In modern architectures, scaling just one component like Kubernetes pods may not suffice. Related components such as serverless functions, databases, caching layers, and more must be scaled concurrently. Wave Autoscale provides simultaneous multi-scaling capabilities that cover a wide array of components, ensuring that all interconnected parts of an application are scaled in harmony, thus preventing bottlenecks.
+- **Intelligent Traffic-Aware Scaling**: Seasonal variations, marketing campaigns, or product launches can cause sudden spikes in user traffic. Wave Autoscale reacts to these changes, ensuring that resources are scaled up promptly to meet demand and provide a seamless user experience.
+- **Customized Scaling for Machine Learning Workloads**: Machine learning workloads may require specific scaling strategies based on the data input size, model complexity, and processing requirements. Wave Autoscale offers data-driven allocation, allowing engineers to define custom scaling plans that align with the unique demands of ML applications.
+- **Scaling for IoT Applications**: IoT environments are incredibly dynamic, with data volume and processing needs that can change rapidly. Wave Autoscale's volume-based allocation is designed to handle such variations efficiently, ensuring that resources are allocated based on real-time data processing requirements.
+- **Cost-Effective Scaling**: Unnecessary over-provisioning leads to increased costs, while under-provisioning can impact performance. Wave Autoscale continuously monitors and adjusts resources based on actual usage, ensuring cost-efficient scaling without compromising on performance.
 
 Wave Autoscale is designed to overcome these challenges, providing a more tailored and responsive approach to autoscaling that aligns with both technical complexities and business needs.
 
@@ -20,7 +24,15 @@ Wave Autoscale is designed to overcome these challenges, providing a more tailor
 Wave Autoscale works by letting users write down what they need for scaling. This includes [**scaling plan definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-plans) and [**scaling component definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-components). Within the scaling plan definitions, there are three ways to trigger scaling components:
 
 1. **Metric-based Events (Logical Expression in JavaScript)**: Users can write conditions using logical expressions in JavaScript that, when met, will initiate scaling.
+   ```yaml
+   // In a yaml file, if the number of connections to the Postgres exceeds 300
+   expression: get({ metric_id: 'postgres', name: 'db_connections' }) > 300
+   ```
 2. **Time-based Events (Cron Expression)**: Users can schedule scaling actions at specific times using cron expressions.
+   ```yaml
+   // In a yaml file, every day at 1am
+   cron_expression: "0 0 1 * * * *"
+   ```
 3. **Custom Events (Custom Trigger by HTTP)**: Users can create their own triggers using HTTP, allowing for unique and specialized scaling actions.
 
 If a user wants to include measurements like traffic or usage, they can write down [**metric definitions**](https://www.waveautoscale.com/docs/guide/concepts/metrics). The system then looks at these instructions, especially the rules in the scaling plan definitions. When those rules are met, the scaling components are triggered. This means that the system can change and adjust automatically to different needs.
@@ -70,18 +82,21 @@ If a user wants to include measurements like traffic or usage, they can write do
 ### Metrics ###
 For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
 
-- Telegraf: With support for about 250 input plugins, Telegraf offers an extensive range of metric collection possibilities. It's known for its adaptability to various environments and ease of configuration. [Learn more about Telegraf input plugins.](https://docs.influxdata.com/telegraf/v1.27/plugins/)
-- Vector: Supporting around 40 different sources, Vector provides a high-performance solution for collecting logs, metrics, and events. Its unified data model and strong reliability make it a valuable tool in monitoring and scaling. [Learn more about Vector sources.](https://vector.dev/docs/reference/configuration/sources/)
+- [Telegraf](https://github.com/influxdata/telegraf): With support for about 250 input plugins, Telegraf offers an extensive range of metric collection possibilities. It's known for its adaptability to various environments and ease of configuration. [The MIT license](https://github.com/influxdata/telegraf/blob/master/LICENSE). [Learn more about Telegraf input plugins.](https://docs.influxdata.com/telegraf/v1.27/plugins/)
+- [Vector](https://github.com/vectordotdev/vector): Supporting around 40 different sources, Vector provides a high-performance solution for collecting logs, metrics, and events. Its unified data model and strong reliability make it a valuable tool in monitoring and scaling. [The MPL 2.0 license](https://github.com/vectordotdev/vector/blob/master/LICENSE). [Learn more about Vector sources.](https://vector.dev/docs/reference/configuration/sources/)
 
 These tools collectively empower Wave Autoscale to accurately monitor and adapt to the ever-changing demands of various cloud environments.
 
 ---
-## 📄 Resources ##
+## 📄 Information ##
 
 ### Similar Projects ### 
 There are several notable projects offering unique capabilities. Here's a look at some of them:
 
 - KEDA (Kubernetes Event-Driven Autoscaling): KEDA is a prominent open-source project that focuses on event-driven autoscaling for Kubernetes workloads. It supports a wide variety of event sources and is designed to seamlessly work with Kubernetes deployments. [Learn more about KEDA.](https://keda.sh/)
 
+### License ###
+This monorepo uses several licenses. See [LICENSE](https://github.com/STCLab-Inc/wave-autoscale/blob/main/LICENSE) for more details.
+
 ---
-© [STCLab, Inc](https://stclab.com/). All materials licensed under ...
+© [STCLab, Inc](https://stclab.com/).
