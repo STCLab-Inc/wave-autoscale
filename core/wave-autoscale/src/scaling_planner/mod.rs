@@ -3,6 +3,7 @@ use crate::{
     metric_updater::SharedMetricUpdater, scaling_component::SharedScalingComponentManager,
 };
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use data_layer::{
     data_layer::DataLayer,
     types::{
@@ -49,6 +50,7 @@ pub struct ScalingPlanner {
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_id: Arc<RwLock<String>>,
+    last_plan_timestamp: Option<DateTime<Utc>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
 }
@@ -65,6 +67,7 @@ impl<'a> ScalingPlanner {
             metric_updater,
             scaling_component_manager,
             last_plan_id: Arc::new(RwLock::new(String::new())),
+            last_plan_timestamp: None,
             data_layer,
             task: None,
         }
@@ -83,6 +86,7 @@ impl<'a> ScalingPlanner {
         let shared_metric_updater = self.metric_updater.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
         let shared_last_run = self.last_plan_id.clone();
+        let mut shared_last_plan_timestamp = self.last_plan_timestamp;
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
 
@@ -106,6 +110,8 @@ impl<'a> ScalingPlanner {
         } else {
             plan_interval
         };
+        // metadata
+        let plan_metadata = scaling_plan_definition.metadata;
 
         let plans = self.sort_plan_by_priority();
 
@@ -125,6 +131,28 @@ impl<'a> ScalingPlanner {
 
             // Run the loop every interval
             loop {
+                if !plan_metadata.is_empty() {
+                    let cool_down = plan_metadata.get("cool_down");
+                    if let Some(cool_down) = cool_down {
+                        debug!("Cool down is set to {:?}", cool_down);
+
+                        // apply cool down
+                        if let Some(last_plan_timestamp) = shared_last_plan_timestamp {
+                            let now = Utc::now();
+                            let Some(cool_down_seconds) = cool_down.as_i64() else {
+                            error!("Cool down is not a number");
+                            interval.tick().await;
+                            continue;
+                        };
+                            let cool_down_duration = chrono::Duration::seconds(cool_down_seconds);
+                            if now - last_plan_timestamp < cool_down_duration {
+                                debug!("Cool down is not over yet");
+                                interval.tick().await;
+                                continue;
+                            }
+                        }
+                    }
+                }
                 {
                     // Get the metric values from the MetricUpdater. MetricUpdater fetches and keeps the values every interval.
                     let metric_values: HashMap<String, Value> = {
@@ -255,6 +283,11 @@ impl<'a> ScalingPlanner {
 
                         debug!("results - {:?}", results);
 
+                        // update last plan timestamp
+                        if !results.is_empty() {
+                            shared_last_plan_timestamp = Some(Utc::now());
+                        }
+
                         // Update the last run
                         {
                             let mut shared_last_run = shared_last_run.write().await;
@@ -357,6 +390,7 @@ mod tests {
             kind: ObjectKind::ScalingPlan,
             title: "Test Scaling Plan".to_string(),
             interval: None,
+            metadata: HashMap::new(),
             plans,
         };
 
@@ -367,6 +401,14 @@ mod tests {
             data_layer.clone(),
         );
         (data_layer, scaling_planner)
+    }
+
+    #[test]
+    fn test_utc_calculated() {
+        let now = Utc::now();
+        let before_2_seconds = now - chrono::Duration::seconds(2);
+
+        assert!(now - before_2_seconds == chrono::Duration::seconds(2));
     }
 
     #[tokio::test]
