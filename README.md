@@ -2,6 +2,10 @@
 
 ![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9afc3c9-53a3-4cd2-9696-5b4387abfc73)
 
+
+- Website: https://waveautoscale.com
+- Documentation: https://waveautoscale.com/docs/guide/introduction/
+
 Wave Autoscale is an autoscaling solution that simplifies and automates complex autoscaling configurations within the cloud, adapting to the changing traffic demands.
 Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, they often struggle to handle the many challenges associated with dynamic scaling demands.
 - **Complexity of Managing Modern Architectures**: Modern architectures often consist of various interlinked components like microservices or serverless functions. Managing and scaling these intricate structures can become overwhelming and time-consuming.
@@ -13,16 +17,21 @@ Wave Autoscale is designed to overcome these challenges, providing a more tailor
 ---
 
 ## ⚙️ How Wave Autoscale Works ##
-Wave Autoscale works by letting users write down what they need for scaling. This includes **scaling plan definitions** and **scaling component definitions**. Within the scaling plan definitions, there are three ways to trigger scaling components:
+Wave Autoscale works by letting users write down what they need for scaling. This includes [**scaling plan definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-plans) and [**scaling component definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-components). Within the scaling plan definitions, there are three ways to trigger scaling components:
 
 1. **Metric-based Events (Logical Expression in JavaScript)**: Users can write conditions using logical expressions in JavaScript that, when met, will initiate scaling.
 2. **Time-based Events (Cron Expression)**: Users can schedule scaling actions at specific times using cron expressions.
 3. **Custom Events (Custom Trigger by HTTP)**: Users can create their own triggers using HTTP, allowing for unique and specialized scaling actions.
 
-If a user wants to include measurements like traffic or usage, they can write down **metric definitions**. The system then looks at these instructions, especially the rules in the scaling plan definitions. When those rules are met, the scaling components are triggered. This means that the system can change and adjust automatically to different needs.
+If a user wants to include measurements like traffic or usage, they can write down [**metric definitions**](https://www.waveautoscale.com/docs/guide/concepts/metrics). The system then looks at these instructions, especially the rules in the scaling plan definitions. When those rules are met, the scaling components are triggered. This means that the system can change and adjust automatically to different needs.
 
 
-Wave Autoscale can integrate with a variety of metrics from multiple sources, including Application Performance Monitoring (APM) tools such as [Datadog](https://www.datadoghq.com/), [New Relic](https://newrelic.com/), and [Dynatrace](https://www.dynatrace.com/), End-User Monitoring (EUM) solutions like [AppDynamics](https://www.appdynamics.com/), [Splunk](https://www.splunk.com/), and [Elastic APM](https://www.elastic.co/apm), [Prometheus](https://prometheus.io/) for monitoring and alerting, as well as system metrics like message counts in [Kafka](https://kafka.apache.org/) and [AWS SQS](https://aws.amazon.com/sqs/). This integration allows you to make more informed scaling decisions based on a comprehensive understanding of your application's performance and user experience.
+### Features
+
+- **Unified Autoscaling Management**: Centralizes the management of various autoscaling components like Kubernetes (k8s), EC2 Autoscaling, and more in one place, providing a single dashboard for total control and transparency.
+- **Wide Range of Integrations**: Connects with numerous metrics sources such as APM tools, system metrics, and monitoring solutions, offering a comprehensive understanding of application performance.
+- **Simultaneous Multi-Scaling**: Wave Autoscale is a powerful tool that enables the control and management of various scaling components, including VMs (such as Amazon EC2 instances), container orchestration systems (like Kubernetes), and serverless platforms (such as provisioned concurrency). What sets Wave Autoscale apart is its ability to handle these different scaling components simultaneously, providing a comprehensive solution for managing scalability in a diverse infrastructure environment.
+- **Flexible Scaling Policies**: Wave Autoscale allows you to define custom scaling policies based on your specific needs, such as traffic volume, resource utilization, or SLOs.
 
 ### Principles
 
@@ -45,7 +54,7 @@ Wave Autoscale can integrate with a variety of metrics from multiple sources, in
 
 ---
 
-## 💻 Under The Hood ##
+## 🔗 Integrations ##
 
 ### Scaling Components
 |   |AWS|Google Cloud|Azure|
