@@ -267,14 +267,6 @@ impl<'a> ScalingPlanner {
                         // TODO: Stabilization window(time)
                         // Check if the plan has already been executed
                         let scaling_plan_id = &plan.id;
-                        let res = {
-                            let shared_last_run_read = shared_last_run.read().await;
-                            *shared_last_run_read.clone() == *scaling_plan_id
-                        };
-                        if res {
-                            debug!("Scaling plan {} has already been executed", scaling_plan_id);
-                            continue;
-                        }
 
                         // Apply the scaling components
                         let scaling_components_metadata = &plan.scaling_components;
