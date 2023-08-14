@@ -19,6 +19,8 @@ metadata:
 ---
 kind: ScalingPlan
 id: scaling_plan_id
+metadata:
+  title: scaling_plan_title
 plans:
   - id: plan_id
     expression: "metric_id >= 30"
