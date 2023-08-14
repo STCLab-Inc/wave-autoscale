@@ -50,7 +50,7 @@ pub struct ScalingPlanner {
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_id: Arc<RwLock<String>>,
-    last_plan_timestamp: Option<DateTime<Utc>>,
+    last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
 }
@@ -67,7 +67,7 @@ impl<'a> ScalingPlanner {
             metric_updater,
             scaling_component_manager,
             last_plan_id: Arc::new(RwLock::new(String::new())),
-            last_plan_timestamp: None,
+            last_plan_timestamp: Arc::new(RwLock::new(None)),
             data_layer,
             task: None,
         }
@@ -86,7 +86,7 @@ impl<'a> ScalingPlanner {
         let shared_metric_updater = self.metric_updater.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
         let shared_last_run = self.last_plan_id.clone();
-        let mut shared_last_plan_timestamp = self.last_plan_timestamp;
+        let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
 
@@ -137,18 +137,21 @@ impl<'a> ScalingPlanner {
                         debug!("Cool down is set to {:?}", cool_down);
 
                         // apply cool down
+                        let shared_last_plan_timestamp = *shared_last_plan_timestamp.read().await;
                         if let Some(last_plan_timestamp) = shared_last_plan_timestamp {
                             let now = Utc::now();
                             let Some(cool_down_seconds) = cool_down.as_i64() else {
-                            error!("Cool down is not a number");
-                            interval.tick().await;
-                            continue;
-                        };
+                                error!("Cool down is not a number");
+                                interval.tick().await;
+                                continue;
+                            };
                             let cool_down_duration = chrono::Duration::seconds(cool_down_seconds);
                             if now - last_plan_timestamp < cool_down_duration {
                                 debug!("Cool down is not over yet");
                                 interval.tick().await;
                                 continue;
+                            } else {
+                                debug!("Cool down Finish");
                             }
                         }
                     }
@@ -285,7 +288,10 @@ impl<'a> ScalingPlanner {
 
                         // update last plan timestamp
                         if !results.is_empty() {
-                            shared_last_plan_timestamp = Some(Utc::now());
+                            let mut shared_last_plan_timestamp =
+                                shared_last_plan_timestamp.write().await;
+                            *shared_last_plan_timestamp = Some(Utc::now());
+                            println!(" >> update last plan timestamp");
                         }
 
                         // Update the last run
