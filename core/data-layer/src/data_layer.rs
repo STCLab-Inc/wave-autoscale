@@ -446,8 +446,9 @@ impl DataLayer {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
+            let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
             let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
-            let query_string = "INSERT INTO plan (db_id, id, title, interval, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
+            let query_string = "INSERT INTO plan (db_id, id, title, interval, metadata, plans, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (title, plans, updated_at) = (?,?,?)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -456,6 +457,7 @@ impl DataLayer {
                 .bind(plan.id)
                 .bind(plan.title.clone())
                 .bind(plan_interval as i16)
+                .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
@@ -474,7 +476,7 @@ impl DataLayer {
     // Get all plans from the database
     pub async fn get_all_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
         let mut plans: Vec<ScalingPlanDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, title, interval, plans, priority FROM plan";
+        let query_string = "SELECT db_id, id, title, interval, plans, priority, metadata FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -490,6 +492,7 @@ impl DataLayer {
                     row.try_get("interval")
                         .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
                 ),
+                metadata: serde_json::from_str(row.get("metadata")).unwrap(),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
         }
@@ -497,7 +500,8 @@ impl DataLayer {
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
-        let query_string = "SELECT db_id, id, title, interval, plans FROM plan WHERE db_id=?";
+        let query_string =
+            "SELECT db_id, id, title, interval, metadata, plans FROM plan WHERE db_id=?";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -516,6 +520,7 @@ impl DataLayer {
                     .try_get("interval")
                     .unwrap_or(DEFAULT_PLAN_INTERVAL as i16) as u16,
             ),
+            metadata: serde_json::from_str(result.get("metadata")).unwrap(),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
         };
         Ok(plan)
@@ -548,15 +553,17 @@ impl DataLayer {
     // Update a plan in the database
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
+        let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
         let plan_interval: u16 = plan.interval.unwrap_or(DEFAULT_PLAN_INTERVAL);
         let query_string =
-            "UPDATE plan SET id=?, title=?, interval=?, plans=?, updated_at=? WHERE db_id=?";
+            "UPDATE plan SET id=?, title=?, interval=?, metadata=?, plans=?, updated_at=? WHERE db_id=?";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
             .bind(plan.id)
             .bind(plan.title)
             .bind(plan_interval as i16)
+            .bind(metatdata_string)
             .bind(plans_string)
             .bind(updated_at)
             // WHERE

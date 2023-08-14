@@ -5,6 +5,7 @@ CREATE TABLE
     title TEXT,
     priority INTEGER,
     interval INTEGER,
+    metadata TEXT,
     plans TEXT,
     created_at TEXT,
     updated_at TEXT
