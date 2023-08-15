@@ -342,6 +342,9 @@ impl<'a> ScalingPlanner {
     pub fn get_last_plan_id(&self) -> Arc<RwLock<String>> {
         self.last_plan_id.clone()
     }
+    pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
+        self.last_plan_timestamp.clone()
+    }
 }
 
 #[cfg(test)]
@@ -408,6 +411,33 @@ mod tests {
         let before_2_seconds = now - chrono::Duration::seconds(2);
 
         assert!(now - before_2_seconds == chrono::Duration::seconds(2));
+    }
+
+    #[tokio::test]
+    async fn test_last_plan_timestamp() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: Some("*/2 * * * * * *".to_string()),
+            priority: 1,
+            scaling_components: vec![json!({"component_id": "test_component_id"})],
+            ui: None,
+        }])
+        .await;
+
+        scaling_planner.run();
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+        {
+            scaling_planner.stop();
+            let after_last_plan_timestamp = scaling_planner.get_last_plan_timestamp().clone();
+            let shared_after_last_plan_timestamp = after_last_plan_timestamp.read().await;
+            assert!(shared_after_last_plan_timestamp.is_some());
+        }
     }
 
     #[tokio::test]
