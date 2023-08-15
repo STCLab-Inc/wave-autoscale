@@ -1,44 +1,55 @@
-<!-- ![drawing](https://docs.google.com/presentation/d/1mE9LXq-Z780BNVzUUA4eizlbridFnDp11PQD6tCqapw/export/png) -->
+## Wave Autoscale - Optimize Cloud Autoscaling: Peak Performance, Cost-Efficient
 
-![drawing](https://docs.google.com/presentation/d/1RrznySF0Yzu5nNPdzQECfGHhZxAeBeBJUlMCi3kB-pg/export/png)
+![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9afc3c9-53a3-4cd2-9696-5b4387abfc73)
 
-# Wave Autoscale
-**Proactive and Reactive Event Driven Autoscaling for EC2, Kubernetes, Serverless, and more.**
 
-Developed by [STCLAB](https://www.stclab.com)
+- Website: https://waveautoscale.com
+- Documentation: https://waveautoscale.com/docs/guide/introduction/
 
-**Table of contents**
-- [What is Wave Autoscale?](#what-is-wave-autoscale)
-  - [Principles](#principles)
-  - [Use Cases](#use-cases)
-- [Getting started](#getting-started)
-- [Configuration](#configuration)
-  - [Metrics](#metrics)
-  - [Scaling Components](#scaling-components)
-  - [Scaling Plans](#scaling-plans)
-- [Development](#development)
-  - [Preparation](#preparation)
-- [Additional Notes](#additional-notes)
-- [Contributing](#contributing)
-- [License](#license)
-- [Support](#support)
-- [Acknowledgments](#acknowledgments)
+Wave Autoscale is an autoscaling solution that simplifies and automates complex autoscaling configurations within the cloud, adapting to the changing traffic demands.
+Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, engineers often struggle to handle the many challenges associated with dynamic scaling demands.
 
-## What is Wave Autoscale?
-Wave Autoscale is a scalable, intelligent autoscaling solution for cloud-based applications. Our mission is to provide businesses with a seamless autoscaling experience, enabling them to efficiently manage their resources while minimizing costs and maintaining optimal performance.
+- **Beyond CPU Utilization Scaling**: Traditional autoscaling often relies on simple metrics like CPU utilization. While it's an essential factor, it doesn't always provide a complete picture. Wave Autoscale considers a wider range of metrics, such as the size of the message queue, the status of the database, custom business KPIs, and more, allowing for a more nuanced and responsive scaling strategy.
+- **Simultaneous Multi-Component Scaling**: In modern architectures, scaling just one component like Kubernetes pods may not suffice. Related components such as serverless functions, databases, caching layers, and more must be scaled concurrently. Wave Autoscale provides simultaneous multi-scaling capabilities that cover a wide array of components, ensuring that all interconnected parts of an application are scaled in harmony, thus preventing bottlenecks.
+- **Intelligent Traffic-Aware Scaling**: Seasonal variations, marketing campaigns, or product launches can cause sudden spikes in user traffic. Wave Autoscale reacts to these changes, ensuring that resources are scaled up promptly to meet demand and provide a seamless user experience.
+- **Customized Scaling for Machine Learning Workloads**: Machine learning workloads may require specific scaling strategies based on the data input size, model complexity, and processing requirements. Wave Autoscale offers data-driven allocation, allowing engineers to define custom scaling plans that align with the unique demands of ML applications.
+- **Scaling for IoT Applications**: IoT environments are incredibly dynamic, with data volume and processing needs that can change rapidly. Wave Autoscale's volume-based allocation is designed to handle such variations efficiently, ensuring that resources are allocated based on real-time data processing requirements.
+- **Cost-Effective Scaling**: Unnecessary over-provisioning leads to increased costs, while under-provisioning can impact performance. Wave Autoscale continuously monitors and adjusts resources based on actual usage, ensuring cost-efficient scaling without compromising on performance.
 
-Wave Autoscale is an advanced autoscaling service that provides both proactive and reactive event-driven autoscaling for a variety of platforms, including Amazon EC2, Kubernetes, data processing like Amazon EMR, serverless services Like AWS Lambda, and more. Designed as a coordinated solution to existing autoscaling technologies such as [AWS EC2 Autoscaling](https://aws.amazon.com/ec2/autoscaling/), [Kubernetes Karpenter](https://karpenter.sh/), and [Kubernetes Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/), Wave Autoscale extends their capabilities by incorporating both proactive and reactive scaling strategies. This ensures optimal resource allocation, improves application performance, and minimizes operational costs, resulting in a seamless end-user experience across diverse cloud environments.
+Wave Autoscale is designed to overcome these challenges, providing a more tailored and responsive approach to autoscaling that aligns with both technical complexities and business needs.
 
-Proactive autoscaling utilizes historical data and predictive analytics to anticipate demand fluctuations and adjust resources accordingly, while reactive autoscaling responds to real-time metrics and events to make immediate scaling decisions. Together, these approaches enable Wave Autoscale to deliver unparalleled efficiency and adaptability for your cloud applications.
+---
 
-Wave Autoscale can integrate with a variety of metrics from multiple sources, including Application Performance Monitoring (APM) tools such as [Datadog](https://www.datadoghq.com/), [New Relic](https://newrelic.com/), and [Dynatrace](https://www.dynatrace.com/), End-User Monitoring (EUM) solutions like [AppDynamics](https://www.appdynamics.com/), [Splunk](https://www.splunk.com/), and [Elastic APM](https://www.elastic.co/apm), [Prometheus](https://prometheus.io/) for monitoring and alerting, as well as system metrics like message counts in [Kafka](https://kafka.apache.org/) and [AWS SQS](https://aws.amazon.com/sqs/). This integration allows you to make more informed scaling decisions based on a comprehensive understanding of your application's performance and user experience.
+## ⚙️ How Wave Autoscale Works ##
+Wave Autoscale works by letting users write down what they need for scaling. This includes [**scaling plan definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-plans) and [**scaling component definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-components). Within the scaling plan definitions, there are three ways to trigger scaling components:
+
+1. **Metric-based Events (Logical Expression in JavaScript)**: Users can write conditions using logical expressions in JavaScript that, when met, will initiate scaling.
+   ```yaml
+   // In a yaml file, if the number of connections to the Postgres exceeds 300
+   expression: get({ metric_id: 'postgres', name: 'db_connections' }) > 300
+   ```
+2. **Time-based Events (Cron Expression)**: Users can schedule scaling actions at specific times using cron expressions.
+   ```yaml
+   // In a yaml file, every day at 1am
+   cron_expression: "0 0 1 * * * *"
+   ```
+3. **Custom Events (Custom Trigger by HTTP)**: Users can create their own triggers using HTTP, allowing for unique and specialized scaling actions.
+
+If a user wants to include measurements like traffic or usage, they can write down [**metric definitions**](https://www.waveautoscale.com/docs/guide/concepts/metrics). The system then looks at these instructions, especially the rules in the scaling plan definitions. When those rules are met, the scaling components are triggered. This means that the system can change and adjust automatically to different needs.
+
+
+### Features
+
+- **Unified Autoscaling Management**: Centralizes the management of various autoscaling components like Kubernetes (k8s), EC2 Autoscaling, and more in one place, providing a single dashboard for total control and transparency.
+- **Wide Range of Integrations**: Connects with numerous metrics sources such as APM tools, system metrics, and monitoring solutions, offering a comprehensive understanding of application performance.
+- **Simultaneous Multi-Scaling**: Wave Autoscale is a powerful tool that enables the control and management of various scaling components, including VMs (such as Amazon EC2 instances), container orchestration systems (like Kubernetes), and serverless platforms (such as provisioned concurrency). What sets Wave Autoscale apart is its ability to handle these different scaling components simultaneously, providing a comprehensive solution for managing scalability in a diverse infrastructure environment.
+- **Flexible Scaling Policies**: Wave Autoscale allows you to define custom scaling policies based on your specific needs, such as traffic volume, resource utilization, or SLOs.
 
 ### Principles
 
 - **Reliability**: Built with reliability in mind, using [Rust](https://www.rust-lang.org/) to ensure optimal resource allocation and application performance.
 - **Integration**: Seamlessly integrates with a wide range of metrics sources, including APM tools and system metrics, for easy incorporation into existing development workflows.
 - **Customization**: Offers extensive customization options for SREs and cloud engineers to tailor the solution to their specific needs, beyond traditional autoscaling for services such as EC2.
-
 
 ### Use Cases
 
@@ -52,174 +63,40 @@ Wave Autoscale can integrate with a variety of metrics from multiple sources, in
 - **Data-driven allocation** for machine learning workloads based on data input size, model complexity, and processing requirements.
 - **Player-focused allocation** for game servers based on player activity and demand
 
-## Getting started
 
-(TBD)
+---
 
-## Configuration
-
-The configuration file consists of three main sections: Metrics, Scaling Components, and Scaling Plans. Below is an explanation of each section:
-
-### Metrics
-
-**Monitoring**
-- [x] Prometheus
-- [x] Amazon CloudWatch
-- [ ] DataDog
-- [ ] New Relic
-- [ ] Dynatrace
-- [ ] AppDynamics
-- [ ] Splunk
-- [ ] Elastic APM
-
-**Messaging System**
-- [ ] Kafka
-- [ ] AWS SQS
-
-**Workflow**
-- [ ] Airflow
-- [ ] Luigi
-- [ ] MLFlow
-
-**Data Analytics**
-- [ ] Apache Spark
-- [ ] Databricks
-
-Metrics are used to define the data sources for the scaling plans. A metric has the following attributes:
-
-- `kind`: Metric
-- `id`: A unique identifier for the metric.
-- `metric_kind`: The metric system being used (e.g., `prometheus`).
-- `metadata`: A set of key-value pairs containing additional information about the metric.
-- `polling_interval`: The interval (in milliseconds) at which the metric is polled.
-
-Example:
-
-```yaml
-kind: Metric
-id: prometheus_api_server_cpu_average_total
-metric_kind: prometheus
-metadata:
-  endpoint: http://3.34.170.13:9090
-  query: avg(100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[20s])) by (hostname) * 100))
-polling_interval: 1000
-```
+## 🔗 Integrations ##
 
 ### Scaling Components
+|   |AWS|Google Cloud|Azure|
+|---|---|---|---|
+|Virtual Machine Group|✅ EC2 Autoscaling Group|✅ Managed Instance Group|✅ Azure Virtual Machine Scale Sets|
+|Container Service|✅ Amazon ECS|✅ Cloud Run|🚧 Azure Container Apps|
+|Kubernetes|✅ Amazon EKS (Deployment)|✅ Google Kubernetes Engine (Deployment)|✅ Managed Kubernetes Service (Deployment)|
+|Serverless Function|✅ AWS Lambda (Reserved Concurrency, Provisioned Concurrency)|✅ Cloud Functions |🚧 Azure Functions|
+|Database|✅ DynamoDB|||
+|Data Workloads|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
+|In-Memory Database|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
 
-- [x] Kubernetes Deployment Scaling
-- [x] Amazon EC2 Autoscaling
-- [ ] Amazon EMR managed scaling
-- [ ] Amazon ECS Autoscaling
-- [ ] Amazon Karpaenter
-- [ ] AWS Lambda Provisioned Concurrency
-- [ ] Amazon RDS Autoscaling
-- [ ] Amazon DynamoDB Autoscaling
-- [ ] Amazon Managed Streaming for Apache Kafka(MSK) Autoscaling
-- [ ] Amazon SQS Autoscaling
-- [ ] Amazon ElastiCache Autoscaling
-- [ ] Amazon Neptune Autoscaling
-- [ ] Amazon DocumentDB Autoscaling
-- [ ] Amazon Elasticache Redis Cluster Autoscaling
-- [ ] Amazon Elasticache Memcached Cluster Autoscaling
-- [ ] Amazon SageMaker Endpoint Autoscaling
+### Metrics ###
+For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
 
-Scaling components define the resources that will be scaled. A scaling component has the following attributes:
+- [Telegraf](https://github.com/influxdata/telegraf): With support for about 250 input plugins, Telegraf offers an extensive range of metric collection possibilities. It's known for its adaptability to various environments and ease of configuration. [The MIT license](https://github.com/influxdata/telegraf/blob/master/LICENSE). [Learn more about Telegraf input plugins.](https://docs.influxdata.com/telegraf/v1.27/plugins/)
+- [Vector](https://github.com/vectordotdev/vector): Supporting around 40 different sources, Vector provides a high-performance solution for collecting logs, metrics, and events. Its unified data model and strong reliability make it a valuable tool in monitoring and scaling. [The MPL 2.0 license](https://github.com/vectordotdev/vector/blob/master/LICENSE). [Learn more about Vector sources.](https://vector.dev/docs/reference/configuration/sources/)
 
-- `kind`: ScalingComponent
-- `id`: A unique identifier for the scaling component.
-- `component_kind`: The platform or technology being used for scaling (e.g., `aws-ec2-autoscaling`).
-- `metadata`: A set of key-value pairs containing additional information about the scaling component.
+These tools collectively empower Wave Autoscale to accurately monitor and adapt to the ever-changing demands of various cloud environments.
 
-Example:
+---
+## 📄 Information ##
 
-```yaml
-kind: ScalingComponent
-id: ec2_autoscaling_api_server
-component_kind: aws-ec2-autoscaling
-metadata:
-  region: ap-northeast-2
-  access_key: YOUR_AWS_ACCESS_KEY
-  secret_key: YOUR_AWS_SECRET_KEY
-  asg_name: tf-wa-20230322020900305100000006
+### Similar Projects ### 
+There are several notable projects offering unique capabilities. Here's a look at some of them:
 
-```
+- KEDA (Kubernetes Event-Driven Autoscaling): KEDA is a prominent open-source project that focuses on event-driven autoscaling for Kubernetes workloads. It supports a wide variety of event sources and is designed to seamlessly work with Kubernetes deployments. [Learn more about KEDA.](https://keda.sh/)
 
-### Scaling Plans
+### License ###
+This monorepo uses several licenses. See [LICENSE](https://github.com/STCLab-Inc/wave-autoscale/blob/main/LICENSE) for more details.
 
-Scaling plans define the rules for scaling based on the metrics and scaling components. A scaling plan has the following attributes:
-
-- `kind`: ScalingPlan
-- `id`: A unique identifier for the scaling plan.
-- `plans`: A list of individual scaling plan objects.
-
-Each scaling plan object contains:
-
-- `id`: A unique identifier for the individual scaling plan.
-- `expression`: A JavaScript expression that returns a boolean value based on metric data.
-- `priority`: The priority of the plan. Higher priority values will be checked first.
-- `scaling_components`: A list of scaling component objects with their scaling configuration.
-
-Example:
-
-```yaml
-kind: ScalingPlan
-id: scaling_plan_ec2_autoscaling
-plans:
-  - id: scale-out-plan-1
-    expression: "prometheus_api_server_cpu_average_total >= 30"
-    priority: 1
-    scaling_components:
-      - component_id: ec2_autoscaling_api_server
-        desired: "Math.floor(prometheus_api_server_cpu_average_total / 10)"
-
-```
-
-
-## Development
-
-
-### Preparation
-- Install [cargo-make](https://github.com/sagiegurari/cargo-make)
-- Install [cargo-watch](https://crates.io/crates/cargo-watch)
-
-
-
-**cargo-make**
-```bash
-cargo make test-controller-planner
-```
-
-**cargo-watch**
-To watch the wave-autoscale package
-```bash
-cargo watch -x 'run -p wave-autoscale'
-```
-
-## Additional Notes
-
-- Make sure to configure the correct access keys, secret keys, and other sensitive information for your scaling components.
-- Test your expressions and scaling rules thoroughly to ensure they produce the desired outcome.
-- Monitor the logs and output of your application to identify any issues or unexpected behavior.
-
-## Contributing
-
-If you'd like to contribute to this project, please follow these steps:
-
-1. Fork the repository.
-2. Create a branch for your feature or bugfix.
-3. Implement and test your changes.
-4. Create a pull request for review.
-
-## License
-
-This project is licensed under the [MIT License](https://chat.openai.com/LICENSE).
-
-## Support
-
-If you encounter any issues or need help with the project, please open an issue on the project's GitHub page, and we'll be happy to assist you.
-
-## Acknowledgments
-
-We would like to thank all the contributors and users of this project for their support and valuable feedback. Your contributions help make this project better for everyone.
-nts.
+---
+© [STCLab, Inc](https://stclab.com/).
