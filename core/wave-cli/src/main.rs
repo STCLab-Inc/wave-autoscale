@@ -21,6 +21,7 @@ const WAVE_API_SERVER: &str = "wave-api-server";
 const WAVE_WEB_APP: &str = "wave-web-app";
 const WAVE_METRICS: &str = "wave-metrics";
 const MINIMUM_NODE_VERSION: u32 = 14;
+const INTERVAL: u64 = 5;
 
 struct App {
     name: String,
@@ -336,7 +337,7 @@ fn main() -> Result<()> {
             break;
         }
 
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(INTERVAL));
     }
 
     Ok(())
