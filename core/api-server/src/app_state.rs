@@ -10,6 +10,6 @@ pub struct AppState {
 pub async fn get_app_state(sql_url: &str) -> web::Data<AppState> {
     web::Data::new(AppState {
         counter: Mutex::new(0),
-        data_layer: DataLayer::new(sql_url, "").await,
+        data_layer: DataLayer::new(sql_url).await,
     })
 }

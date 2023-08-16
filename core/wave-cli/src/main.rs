@@ -235,6 +235,7 @@ fn main() -> Result<()> {
             definition_file,
             "--collectors-info".to_string(),
             collectors_info_file,
+            "--from-cli".to_string(),
         ];
 
         let wave_metrics_command = format!("./{}", WAVE_METRICS);

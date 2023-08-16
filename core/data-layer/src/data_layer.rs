@@ -32,27 +32,29 @@ pub struct DataLayer {
 }
 
 impl DataLayer {
-    pub async fn new(sql_url: &str, definition_path: &str) -> Self {
+    pub async fn new(sql_url: &str) -> Self {
         let sql_url = if sql_url.is_empty() {
             DEFAULT_DB_URL
         } else {
             sql_url
         };
 
-        let data_layer = DataLayer {
+        DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
-        };
-        data_layer.migrate().await;
+        }
+    }
+
+    pub async fn sync(&self, definition_path: &str) {
+        self.migrate().await;
 
         // TODO: Validate the definition file before loading it into the database
-        if data_layer
+        if self
             .load_definition_file_into_database(definition_path)
             .await
             .is_err()
         {
             error!("Failed to load definition file into database");
         }
-        data_layer
     }
 
     async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
@@ -768,7 +770,9 @@ mod tests {
         if remove_result.is_err() {
             println!("Error removing file: {:?}", remove_result);
         }
-        DataLayer::new(DEFAULT_DB_URL, "").await
+        let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
+        data_layer.sync("").await;
+        data_layer
     }
 
     fn get_autoscaling_history_definition() -> AutoscalingHistoryDefinition {

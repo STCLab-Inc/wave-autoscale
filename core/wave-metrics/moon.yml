@@ -37,6 +37,16 @@ tasks:
       RUST_LOG: wave_metrics=debug
     inputs:
       - "@globs(tests)"
+  run-help:
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "wave-metrics"
+      - "--"
+      - "--help"
+    env:
+      RUST_LOG: wave_metrics=debug
   # Build for Production
   # Linux
   build-aarch64-unknown-linux-gnu:

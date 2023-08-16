@@ -6,13 +6,11 @@
 
 mod data_layer {
     use anyhow::Result;
-    
+
     use data_layer::{
         data_layer::DataLayer,
         reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
-        types::{
-            object_kind::ObjectKind,
-        },
+        types::object_kind::ObjectKind,
         MetricDefinition, ScalingComponentDefinition,
     };
     use rand::Rng;
@@ -44,7 +42,8 @@ mod data_layer {
         if remove_result.is_err() {
             println!("Error removing file: {:?}", remove_result);
         }
-        let data_layer = DataLayer::new(TEST_DB, "").await;
+        let data_layer = DataLayer::new(TEST_DB).await;
+        data_layer.sync("").await;
         Ok(data_layer)
     }
 

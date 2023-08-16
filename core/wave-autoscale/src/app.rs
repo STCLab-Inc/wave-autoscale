@@ -67,7 +67,8 @@ impl App {
         let db_url = config_result.common.db_url.clone();
 
         // Create DataLayer
-        let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
+        let data_layer = DataLayer::new(db_url.as_str()).await;
+        data_layer.sync(definition.as_str()).await;
         // Do not need RwLock or Mutex because the DataLayer is read-only.
         let shared_data_layer = Arc::new(data_layer);
 

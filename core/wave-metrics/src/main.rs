@@ -37,8 +37,10 @@ async fn main() -> Result<()> {
     let output_url = wave_config.wave_metrics.output.url;
 
     // Create DataLayer
-    let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
-
+    let data_layer = DataLayer::new(db_url.as_str()).await;
+    if !args.from_cli {
+        data_layer.sync(definition.as_str()).await;
+    }
     // Process
     // 1. Read definition file and identify which kind of collector needed
     // 2. Download the collector binary if it doesn't exist
