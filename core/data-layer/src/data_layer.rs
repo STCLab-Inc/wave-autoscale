@@ -48,22 +48,20 @@ impl DataLayer {
         self.migrate().await;
 
         // TODO: Validate the definition file before loading it into the database
-        if self
-            .load_definition_file_into_database(definition_path)
-            .await
-            .is_err()
-        {
-            error!("Failed to load definition file into database");
+        if !definition_path.is_empty() && Path::new(definition_path).exists() {
+            let result = self
+                .load_definition_file_into_database(definition_path)
+                .await;
+            if result.is_err() {
+                error!(
+                    "Failed to load the definition file into the database: {:?}",
+                    result
+                );
+            }
         }
     }
 
     async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
-        // Get the definition path not
-        let definition_path = if definition_path.is_empty() {
-            DEFAULT_DEFINITION_PATH
-        } else {
-            definition_path
-        };
         // Parse the plan_file
         let parser_result = read_definition_yaml_file(definition_path);
         if parser_result.is_err() {
@@ -154,7 +152,10 @@ impl DataLayer {
                 debug!("Watching...");
                 let query_string =
                     "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;";
-                let result_string = sqlx::query(query_string).fetch_all(&pool).await.unwrap();
+                let Ok(result_string) = sqlx::query(query_string).fetch_all(&pool).await else {
+                    error!("Failed to fetch updated_at from the database");
+                    continue;
+                };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
                     let updated_at: String = row.get(0);

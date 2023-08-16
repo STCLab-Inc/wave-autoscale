@@ -24,5 +24,7 @@ tasks:
       RUST_LOG: info
   build:
     command: "cargo build"
+    deps:
+      - "test"
     inputs:
       - "@globs(sources)"
