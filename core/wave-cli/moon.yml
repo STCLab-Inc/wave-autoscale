@@ -56,6 +56,18 @@ tasks:
       - "wave-web-app/**/*"
       - "tests/db/wave.db"
     env:
+      RUST_LOG: debug
+    options:
+      runFromWorkspaceRoot: false
+  run-help:
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "wave-cli"
+      - "--"
+      - "--help"
+    env:
       RUST_LOG: wave_cli=debug
     options:
       runFromWorkspaceRoot: false
