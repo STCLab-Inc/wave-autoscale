@@ -8,6 +8,7 @@ if [ -z "$PLATFORM" ] ; then echo "VERSION is not set" ; exit 1 ; fi
 
 # Create the archive directory
 cd ../..
+rm -rf archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 mkdir -p archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 # mkdir -p archive/wave-autoscale-$VERSION-$PLATFORM
 
@@ -18,6 +19,10 @@ cp -r target/$PLATFORM/release/wave-metrics archive/wave-autoscale-$VERSION/wave
 cp -r target/$PLATFORM/release/wave-cli archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 cp -r core/web-app/.next/standalone archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM/wave-web-app
 cp -r core/web-app/.next/static archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM/wave-web-app/.next/static
+
+# Copy the configuration files
+cp -r tests/config/wave-config.yaml archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
+cp -r core/wave-metrics/tests/collectors/collectors.yaml archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
 
 # Archive the binaries
 tar -C archive -czvf ./archive/wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM.tar.gz wave-autoscale-$VERSION/wave-autoscale-$VERSION-$PLATFORM
