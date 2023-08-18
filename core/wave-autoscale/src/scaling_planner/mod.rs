@@ -143,18 +143,17 @@ impl<'a> ScalingPlanner {
                         let shared_last_plan_timestamp = *shared_last_plan_timestamp.read().await;
                         if let Some(last_plan_timestamp) = shared_last_plan_timestamp {
                             let now = Utc::now();
-                            let Some(cool_down_seconds) = cool_down.as_i64() else {
-                                error!("Cool down is not a number");
-                                interval.tick().await;
-                                continue;
-                            };
-                            let cool_down_duration = chrono::Duration::seconds(cool_down_seconds);
-                            if now - last_plan_timestamp < cool_down_duration {
-                                debug!("Cool down is not over yet");
-                                interval.tick().await;
-                                continue;
-                            } else {
-                                debug!("Cool down Finish");
+
+                            if let Some(cool_down_seconds) = cool_down.as_u64() {
+                                let cool_down_duration =
+                                    chrono::Duration::seconds(cool_down_seconds as i64);
+                                if now - last_plan_timestamp < cool_down_duration {
+                                    debug!("Cool down is not over yet");
+                                    interval.tick().await;
+                                    continue;
+                                } else {
+                                    debug!("Cool down Finish");
+                                }
                             }
                         }
                     }
