@@ -134,26 +134,20 @@ impl<'a> ScalingPlanner {
 
             // Run the loop every interval
             loop {
-                if !plan_metadata.is_empty() {
-                    let cool_down = plan_metadata.get("cool_down");
-                    if let Some(cool_down) = cool_down {
-                        debug!("Cool down is set to {:?}", cool_down);
+                if let Some(cool_down) = plan_metadata.get("cool_down") {
+                    debug!("Cool down is set to {:?}", cool_down);
 
-                        // apply cool down
-                        let shared_last_plan_timestamp = *shared_last_plan_timestamp.read().await;
-                        if let Some(last_plan_timestamp) = shared_last_plan_timestamp {
-                            let now = Utc::now();
+                    // apply cool down
+                    if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
+                        let now = Utc::now();
 
-                            if let Some(cool_down_seconds) = cool_down.as_u64() {
-                                let cool_down_duration =
-                                    chrono::Duration::seconds(cool_down_seconds as i64);
-                                if now - last_plan_timestamp < cool_down_duration {
-                                    debug!("Cool down is not over yet");
-                                    interval.tick().await;
-                                    continue;
-                                } else {
-                                    debug!("Cool down Finish");
-                                }
+                        if let Some(cool_down_seconds) = cool_down.as_u64() {
+                            let cool_down_duration =
+                                chrono::Duration::seconds(cool_down_seconds as i64);
+                            if now - last_plan_timestamp < cool_down_duration {
+                                debug!("Cool down is not over yet");
+                                interval.tick().await;
+                                continue;
                             }
                         }
                     }
