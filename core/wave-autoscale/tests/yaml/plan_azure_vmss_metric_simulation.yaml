@@ -11,7 +11,7 @@ metadata:
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
   expression: 'SELECT MAX(CPUUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = ''wave-test-cluster10'''
   period: 5
-  duration_seconds: 120
+  duration_seconds: 10000
   # TODO: support MetricStat
 ---
 kind: ScalingComponent
@@ -27,8 +27,10 @@ metadata:
 ---
 kind: ScalingPlan
 id: scaling_plan_azure_vmss_autoscaling
-title: "Scaling Plan for Azure VMSS Autoscaling"
-interval: 10000
+metadata:
+  title: "Scaling Plan for Azure VMSS Autoscaling"
+  cool_down: 20 # seconds
+  interval: 10000 # milliseconds
 plans:
   - id: scale-out-plan-1
     description: "Scale in if CPU usage is greater than 40%."

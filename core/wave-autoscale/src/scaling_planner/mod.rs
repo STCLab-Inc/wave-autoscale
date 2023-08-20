@@ -3,6 +3,7 @@ use crate::{
     metric_updater::SharedMetricUpdater, scaling_component::SharedScalingComponentManager,
 };
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use data_layer::{
     data_layer::DataLayer,
     types::{
@@ -49,6 +50,7 @@ pub struct ScalingPlanner {
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_id: Arc<RwLock<String>>,
+    last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
 }
@@ -65,6 +67,7 @@ impl<'a> ScalingPlanner {
             metric_updater,
             scaling_component_manager,
             last_plan_id: Arc::new(RwLock::new(String::new())),
+            last_plan_timestamp: Arc::new(RwLock::new(None)),
             data_layer,
             task: None,
         }
@@ -83,13 +86,19 @@ impl<'a> ScalingPlanner {
         let shared_metric_updater = self.metric_updater.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
         let shared_last_run = self.last_plan_id.clone();
+        let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer = self.data_layer.clone();
 
+        // metadata
+        let plan_metadata = scaling_plan_definition.metadata;
+
         // For plan_interval
-        let plan_interval = scaling_plan_definition
-            .interval
-            .unwrap_or(DEFAULT_PLAN_INTERVAL);
+        let plan_interval: u16 = plan_metadata
+            .get("interval")
+            .unwrap_or(&json!(DEFAULT_PLAN_INTERVAL))
+            .as_u64()
+            .unwrap_or(DEFAULT_PLAN_INTERVAL as u64) as u16;
         // plan_interval should be at least DEFAULT_PLAN_INTERVAL
         let plan_interval = if plan_interval < DEFAULT_PLAN_INTERVAL {
             DEFAULT_PLAN_INTERVAL
@@ -125,6 +134,24 @@ impl<'a> ScalingPlanner {
 
             // Run the loop every interval
             loop {
+                if let Some(cool_down) = plan_metadata.get("cool_down") {
+                    debug!("Cool down is set to {:?}", cool_down);
+
+                    // apply cool down
+                    if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
+                        let now = Utc::now();
+
+                        if let Some(cool_down_seconds) = cool_down.as_u64() {
+                            let cool_down_duration =
+                                chrono::Duration::seconds(cool_down_seconds as i64);
+                            if now - last_plan_timestamp < cool_down_duration {
+                                debug!("Cool down is not over yet");
+                                interval.tick().await;
+                                continue;
+                            }
+                        }
+                    }
+                }
                 {
                     // Get the metric values from the MetricUpdater. MetricUpdater fetches and keeps the values every interval.
                     let metric_values: HashMap<String, Value> = {
@@ -236,14 +263,6 @@ impl<'a> ScalingPlanner {
                         // TODO: Stabilization window(time)
                         // Check if the plan has already been executed
                         let scaling_plan_id = &plan.id;
-                        let res = {
-                            let shared_last_run_read = shared_last_run.read().await;
-                            *shared_last_run_read.clone() == *scaling_plan_id
-                        };
-                        if res {
-                            debug!("Scaling plan {} has already been executed", scaling_plan_id);
-                            continue;
-                        }
 
                         // Apply the scaling components
                         let scaling_components_metadata = &plan.scaling_components;
@@ -254,6 +273,14 @@ impl<'a> ScalingPlanner {
                         .await;
 
                         debug!("results - {:?}", results);
+
+                        // update last plan timestamp
+                        if !results.is_empty() {
+                            let mut shared_last_plan_timestamp =
+                                shared_last_plan_timestamp.write().await;
+                            *shared_last_plan_timestamp = Some(Utc::now());
+                            println!(" >> update last plan timestamp");
+                        }
 
                         // Update the last run
                         {
@@ -308,6 +335,9 @@ impl<'a> ScalingPlanner {
     pub fn get_last_plan_id(&self) -> Arc<RwLock<String>> {
         self.last_plan_id.clone()
     }
+    pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
+        self.last_plan_timestamp.clone()
+    }
 }
 
 #[cfg(test)]
@@ -355,8 +385,7 @@ mod tests {
             id: "test".to_string(),
             db_id: "".to_string(),
             kind: ObjectKind::ScalingPlan,
-            title: "Test Scaling Plan".to_string(),
-            interval: None,
+            metadata: HashMap::new(),
             plans,
         };
 
@@ -367,6 +396,41 @@ mod tests {
             data_layer.clone(),
         );
         (data_layer, scaling_planner)
+    }
+
+    #[test]
+    fn test_utc_calculated() {
+        let now = Utc::now();
+        let before_2_seconds = now - chrono::Duration::seconds(2);
+
+        assert!(now - before_2_seconds == chrono::Duration::seconds(2));
+    }
+
+    #[tokio::test]
+    async fn test_last_plan_timestamp() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: Some("*/2 * * * * * *".to_string()),
+            priority: 1,
+            scaling_components: vec![json!({"component_id": "test_component_id"})],
+            ui: None,
+        }])
+        .await;
+
+        scaling_planner.run();
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+        {
+            scaling_planner.stop();
+            let after_last_plan_timestamp = scaling_planner.get_last_plan_timestamp().clone();
+            let shared_after_last_plan_timestamp = after_last_plan_timestamp.read().await;
+            assert!(shared_after_last_plan_timestamp.is_some());
+        }
     }
 
     #[tokio::test]
