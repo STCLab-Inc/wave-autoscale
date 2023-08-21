@@ -41,7 +41,7 @@ fn default_web_ui_port() -> u16 {
     DEFAULT_WEB_UI_PORT
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct WaveConfig {
     // For data-layer
     #[serde(default = "default_db_url")]
