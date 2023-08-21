@@ -5,16 +5,14 @@
  *
  */
 use clap::Parser;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    #[arg(short, long)]
-    pub definition: Option<String>,
-    #[arg(short, long)]
-    pub config: Option<String>,
-    #[arg(short, long, default_value_t = 5)]
-    pub watch_duration: u64,
-    /// Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
-    #[arg(long)]
-    pub autoscaling_history_retention: Option<String>,
+    /// Read configuration from a yaml file. If not specified, the default config path './wave-config.yaml' will be used.
+    #[arg(short, long, default_value = "./wave-config.yaml")]
+    pub config: String,
+    /// Read definition from a yaml file. If not specified, the default definition path './definition.yaml' will be used.
+    #[arg(short, long, default_value = "./definition.yaml")]
+    pub definition: String,
 }
