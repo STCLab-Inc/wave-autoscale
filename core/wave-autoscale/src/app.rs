@@ -143,35 +143,6 @@ impl App {
         debug!("ScalingPlanners started: {}", number_of_plans);
     }
 
-    pub async fn run_with_watching(&mut self) {
-        debug!("run_with_watching");
-        // Start the cron job to remove the old Autoscaling History
-        let remove_autoscaling_history_duration =
-            self.wave_config.autoscaling_history_retention.clone();
-
-        debug!(
-            "remove_autoscaling_history_duration: {:?}",
-            remove_autoscaling_history_duration
-        );
-        if !remove_autoscaling_history_duration.is_empty() {
-            self.run_autoscaling_history_cron_job(remove_autoscaling_history_duration);
-        }
-
-        let watch_duration = self.wave_config.watch_definition_duration;
-        let mut watch_receiver = self.shared_data_layer.watch(watch_duration);
-        // Run this loop at once and then wait for changes
-        let mut once = false;
-        while !once || watch_receiver.changed().await.is_ok() {
-            if once {
-                let change = watch_receiver.borrow();
-                debug!("DataLayer changed: {:?}", change);
-            } else {
-                once = true;
-            }
-            self.run().await;
-        }
-    }
-
     pub fn get_data_layer(&self) -> Arc<DataLayer> {
         self.shared_data_layer.clone()
     }

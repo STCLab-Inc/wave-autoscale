@@ -12,8 +12,9 @@ tasks:
     deps:
       - "utils:test"
       - "data-layer:test"
+      - "api-server:test"
     env:
-      RUST_LOG: wave_controller=debug
+      RUST_LOG: wave_autoscale=debug
   test-aws-ecs-service-scaling:
     command: "cargo test -p wave-autoscale --test aws_ecs_service_scaling -- --nocapture"
     deps:
@@ -22,7 +23,7 @@ tasks:
       - "@globs(sources)"
       - "@globs(tests)"
     env:
-      RUST_LOG: wave_controller=debug
+      RUST_LOG: wave_autoscale=debug
   test-aws-lambda-function:
     command: "cargo test -p wave-autoscale --test aws_lambda_function -- --nocapture"
     deps:
@@ -81,8 +82,17 @@ tasks:
       - "--definition"
       - "./core/wave-autoscale/tests/yaml/plan_cloudwatch_ecs_ec2.yaml"
     env:
-      RUST_LOG: wave_controller=debug
-
+      RUST_LOG: wave_autoscale=debug
+  run-help:
+    command:
+      - "cargo"
+      - "run"
+      - "-p"
+      - "wave-autoscale"
+      - "--"
+      - "--help"
+    env:
+      RUST_LOG: wave_autoscale=debug
   # Build for Production
   # Linux
   build-aarch64-unknown-linux-gnu:
@@ -123,4 +133,4 @@ tasks:
     inputs:
       - "@globs(sources)"
     outputs:
-      - "/target/aarch64-apple-darwin/release/wave-controller"
+      - "/target/aarch64-apple-darwin/release/wave-autoscale"
