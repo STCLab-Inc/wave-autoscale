@@ -6,7 +6,6 @@ const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
 const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
 const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "1d";
-const DEFAULT_COLLECTORS_INFO: &str = "./collectors.yaml";
 const DEFAULT_API_HOST: &str = "0.0.0.0";
 const DEFAULT_API_PORT: u16 = 3024;
 const DEFAULT_WEB_UI: bool = false;
@@ -21,9 +20,6 @@ fn default_watch_definition_duration() -> u64 {
 }
 fn default_autoscaling_history_retention() -> String {
     DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string()
-}
-fn default_collectors_info() -> String {
-    DEFAULT_COLLECTORS_INFO.to_string()
 }
 fn default_api_host() -> String {
     DEFAULT_API_HOST.to_string()
@@ -41,6 +37,15 @@ fn default_web_ui_port() -> u16 {
     DEFAULT_WEB_UI_PORT
 }
 
+#[derive(Debug, PartialEq, Deserialize, Default, Clone)]
+struct DownloadUrlDefinition {
+    macos_x86_64: String,
+    macos_aarch64: String,
+    linux_x86_64: String,
+    linux_aarch64: String,
+    windows_x86_64: String,
+}
+
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct WaveConfig {
     // For data-layer
@@ -53,9 +58,6 @@ pub struct WaveConfig {
     // Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
     #[serde(default = "default_autoscaling_history_retention")]
     pub autoscaling_history_retention: String,
-    // For metrics
-    #[serde(default = "default_collectors_info")]
-    pub collectors_info: String,
     // For api-server
     #[serde(default = "default_api_host")]
     pub host: String,
@@ -68,6 +70,12 @@ pub struct WaveConfig {
     pub web_ui_host: String,
     #[serde(default = "default_web_ui_port")]
     pub web_ui_port: u16,
+
+    // For download url
+    #[serde(default)]
+    vector: DownloadUrlDefinition,
+    #[serde(default)]
+    telegraf: DownloadUrlDefinition,
 }
 
 impl Default for WaveConfig {
@@ -76,12 +84,13 @@ impl Default for WaveConfig {
             db_url: DEFAULT_DB_URL.to_string(),
             watch_definition_duration: DEFAULT_WATCH_DEFINITION_DURATION,
             autoscaling_history_retention: DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string(),
-            collectors_info: DEFAULT_COLLECTORS_INFO.to_string(),
             host: DEFAULT_API_HOST.to_string(),
             port: DEFAULT_API_PORT,
             web_ui: DEFAULT_WEB_UI,
             web_ui_host: DEFAULT_WEB_UI_HOST.to_string(),
             web_ui_port: DEFAULT_WEB_UI_PORT,
+            vector: DownloadUrlDefinition::default(),
+            telegraf: DownloadUrlDefinition::default(),
         }
     }
 }
@@ -110,6 +119,21 @@ impl WaveConfig {
         let wave_config = wave_config.unwrap();
         debug!("Config file parsed: {:?}", wave_config);
         wave_config
+    }
+    pub fn get_download_url(&self, name: &str) -> &str {
+        match name {
+            "vector_macos_x64_64" => self.vector.macos_x86_64.as_str(),
+            "vector_macos_aarch64" => self.vector.macos_aarch64.as_str(),
+            "vector_linux_x86_64" => self.vector.linux_x86_64.as_str(),
+            "vector_linux_aarch64" => self.vector.linux_aarch64.as_str(),
+            "vector_windows_x86_64" => self.vector.windows_x86_64.as_str(),
+            "telegraf_macos_x64_64" => self.telegraf.macos_x86_64.as_str(),
+            "telegraf_macos_aarch64" => self.telegraf.macos_aarch64.as_str(),
+            "telegraf_linux_x86_64" => self.telegraf.linux_x86_64.as_str(),
+            "telegraf_linux_aarch64" => self.telegraf.linux_aarch64.as_str(),
+            "telegraf_windows_x86_64" => self.telegraf.windows_x86_64.as_str(),
+            _ => "",
+        }
     }
 }
 

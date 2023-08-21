@@ -68,6 +68,7 @@ tar = { version = "0.4.38" }
 serde_yaml = "0.9.19"
 toml = { version = "0.7.4" }
 walkdir = { version = "2.3.3" }
+regex = { version = "1.8.4" }
 
 [dev-dependencies]
 handlebars = "4.3.7"

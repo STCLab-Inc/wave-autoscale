@@ -14,10 +14,8 @@ versionConstraint: ">=1.10.1"
 projects:
   # Rust based
   controller: "core/wave-autoscale"
-  wave-metrics: "core/wave-metrics"
   data-layer: "core/data-layer"
   api-server: "core/api-server"
-  cli: "core/wave-cli"
   utils: "core/utils"
   # Node based
   web-app: "core/web-app"

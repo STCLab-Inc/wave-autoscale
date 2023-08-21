@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Debug in executable 'controller:run-ecs-ec2'",
       "cargo": {
-        "args": ["build", "--bin=wave-controller", "--package=wave-autoscale"]
+        "args": ["build", "--bin=wave-autoscale", "--package=wave-autoscale"]
         /*
         "filter": {
           "name": "wave-autoscale",
@@ -37,25 +37,28 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'wave-controller'",
+      "name": "Debug executable 'wave-autoscale'",
       "cargo": {
-        "args": ["build", "--bin=wave-controller", "--package=wave-autoscale"],
+        "args": ["build", "--bin=wave-autoscale", "--package=wave-autoscale"],
         "filter": {
-          "name": "wave-controller",
+          "name": "wave-autoscale",
           "kind": "bin"
         }
       },
-      "args": [],
+      "env": {
+        "RUST_LOG": "debug"
+      },
+      "args": ["--config","./tests/config/wave-config.yaml"],
       "cwd": "${workspaceFolder}"
     },
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'wave-controller'",
+      "name": "Debug unit tests in executable 'wave-autoscale'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=wave-controller", "--package=wave-autoscale"],
+        "args": ["test", "--no-run", "--bin=wave-autoscale", "--package=wave-autoscale"],
         "filter": {
-          "name": "wave-controller",
+          "name": "wave-autoscale",
           "kind": "bin"
         }
       },

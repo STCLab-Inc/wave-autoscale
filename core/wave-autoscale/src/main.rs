@@ -8,6 +8,7 @@ mod metric_updater;
 mod scaling_component;
 mod scaling_planner;
 mod util;
+mod web_app_runner;
 
 use api_server::app::run_api_server;
 use args::Args;
@@ -43,18 +44,24 @@ async fn main() {
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let metric_collector_manager =
-        MetricCollectorManager::new(wave_config.collectors_info.as_str(), &output_url);
+    let metric_collector_manager = MetricCollectorManager::new(wave_config.clone(), &output_url);
 
     // Run API Server
     let shared_data_layer_for_api_server = shared_data_layer.clone();
     let wave_config_for_api_server = wave_config.clone();
-    let _api_server_handle = tokio::spawn(async move {
-        let _ = run_api_server(
-            wave_config_for_api_server,
-            shared_data_layer_for_api_server.clone(),
-        );
+    // https://stackoverflow.com/questions/62536566/how-can-i-create-a-tokio-runtime-inside-another-tokio-runtime-without-getting-th
+    tokio::task::spawn_blocking(move || {
+        let _ = run_api_server(wave_config_for_api_server, shared_data_layer_for_api_server);
     });
+
+    // Run Web App
+    if wave_config.web_ui {
+        let host = wave_config.host.clone();
+        let port = wave_config.port;
+        let _web_app_handle = tokio::spawn(async move {
+            let _ = web_app_runner::run_web_app(host.as_str(), port);
+        });
+    }
 
     // Run the main application(controller)
     let mut app = app::App::new(wave_config.clone(), shared_data_layer.clone()).await;

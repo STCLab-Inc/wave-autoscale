@@ -3,8 +3,6 @@ members = [
     "core/wave-autoscale",
     "core/api-server",
     "core/data-layer",
-    "core/wave-cli",
-    "core/wave-metrics",
     "core/utils",
 ]
 
