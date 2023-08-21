@@ -98,20 +98,15 @@ async fn delete_metric_by_id(
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::test_utils::get_app_state_for_test;
+
     use super::init;
-    use crate::app_state::get_app_state;
-    use actix_web::{http::StatusCode, test, web, App};
+    use actix_web::{http::StatusCode, test, App};
     use data_layer::{data_layer::DataLayer, MetricDefinition};
     use serde_json::json;
     use std::{collections::HashMap, error::Error};
 
     // Utility functions
-
-    async fn get_app_state_for_test() -> web::Data<super::AppState> {
-        let app_state = get_app_state("sqlite::memory:").await;
-        app_state.data_layer.sync("").await;
-        app_state
-    }
 
     async fn add_metrics_for_test(data_layer: &DataLayer) {
         let _ = data_layer
