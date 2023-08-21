@@ -21,6 +21,8 @@ Wave Autoscale is designed to overcome these challenges, providing a more tailor
 ---
 
 ## ⚙️ How Wave Autoscale Works ##
+![how-wave-autoscale-works](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/6749c87b-0ca7-4292-a1ad-129383590d13)
+
 Wave Autoscale works by letting users write down what they need for scaling. This includes [**scaling plan definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-plans) and [**scaling component definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-components). Within the scaling plan definitions, there are three ways to trigger scaling components:
 
 1. **Metric-based Events (Logical Expression in JavaScript)**: Users can write conditions using logical expressions in JavaScript that, when met, will initiate scaling.
@@ -36,7 +38,6 @@ Wave Autoscale works by letting users write down what they need for scaling. Thi
 3. **Custom Events (Custom Trigger by HTTP)**: Users can create their own triggers using HTTP, allowing for unique and specialized scaling actions.
 
 If a user wants to include measurements like traffic or usage, they can write down [**metric definitions**](https://www.waveautoscale.com/docs/guide/concepts/metrics). The system then looks at these instructions, especially the rules in the scaling plan definitions. When those rules are met, the scaling components are triggered. This means that the system can change and adjust automatically to different needs.
-
 
 ### Features
 
