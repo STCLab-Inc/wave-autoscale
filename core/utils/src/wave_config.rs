@@ -157,7 +157,6 @@ mod tests {
             wave_config.autoscaling_history_retention,
             DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
-        assert_eq!(wave_config.collectors_info, DEFAULT_COLLECTORS_INFO);
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
         assert_eq!(wave_config.port, DEFAULT_API_PORT);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);

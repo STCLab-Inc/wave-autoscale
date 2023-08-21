@@ -536,7 +536,7 @@ mod tests {
         // Remove wave.db
         let _ = std::fs::remove_file("./wave.db");
 
-        let wave_config = WaveConfig::new("./tests/config/wave_config.yaml");
+        let wave_config = WaveConfig::new("./tests/config/wave-config.yaml");
         MetricCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
     }
 
