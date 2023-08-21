@@ -51,7 +51,7 @@ mod data_layer {
     async fn test_run_watch() -> Result<()> {
         let data_layer = get_data_layer().await?;
 
-        let mut watch_receiver = data_layer.watch(1000);
+        let mut watch_receiver = data_layer.watch_definitions(1000);
         let verification = Arc::new(AtomicBool::new(false));
         let verification_clone = verification.clone();
 

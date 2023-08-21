@@ -142,7 +142,7 @@ impl DataLayer {
             }
         }
     }
-    pub fn watch(&self, watch_duration: u64) -> watch::Receiver<String> {
+    pub fn watch_definitions(&self, watch_duration: u64) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
         tokio::spawn(async move {
