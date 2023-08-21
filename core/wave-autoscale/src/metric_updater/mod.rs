@@ -98,7 +98,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_metric_updater() {
-        let data_layer = Arc::new(DataLayer::new("", "").await);
+        let data_layer = DataLayer::new("").await;
+        data_layer.sync("").await;
+        let data_layer = Arc::new(data_layer);
         let metric_definitions = vec![MetricDefinition {
             id: "metric1".to_string(),
             metadata: HashMap::new(),

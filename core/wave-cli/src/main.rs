@@ -21,6 +21,7 @@ const WAVE_API_SERVER: &str = "wave-api-server";
 const WAVE_WEB_APP: &str = "wave-web-app";
 const WAVE_METRICS: &str = "wave-metrics";
 const MINIMUM_NODE_VERSION: u32 = 14;
+const INTERVAL: u64 = 5;
 
 struct App {
     name: String,
@@ -29,7 +30,7 @@ struct App {
     envs: Option<HashMap<String, String>>,
 }
 
-fn run_app(app: &App) -> Child {
+fn run_app(app: &App) -> std::io::Result<Child> {
     let mut command = Command::new(&app.command);
     let command = if !app.args.is_empty() {
         command.args(&app.args)
@@ -41,31 +42,86 @@ fn run_app(app: &App) -> Child {
     } else {
         command
     };
-    command.spawn().unwrap()
+    command.spawn()
 }
 
 fn is_node_installed() -> bool {
     match Command::new("node").arg("--version").output() {
         Ok(output) => {
-            let output = String::from_utf8(output.stdout).unwrap();
-            info!("Node version: {}", output);
-            let regex = Regex::new(r"v(\d+)\.\d+\.\d+").unwrap();
-            if let Some(captured) = regex.captures(output.as_str()) {
-                if let Some(major_version) = captured.get(1) {
-                    info!("Node major version: {}", major_version.as_str());
-                    if let Ok(major_version) = major_version.as_str().parse::<u32>() {
-                        if major_version >= MINIMUM_NODE_VERSION {
-                            return true;
-                        }
-                    }
-                }
+            let Ok(output) = String::from_utf8(output.stdout) else {
+                return false;
+            };
+            debug!("Node version: {}", output);
+            let Ok(regex) = Regex::new(r"v(\d+)\.\d+\.\d+") else {
+                return false;
+            };
+            let Some(captured) = regex.captures(output.as_str()) else {
+                return false;
+            };
+            let Some(major_version) = captured.get(1) else {
+                return false;
+            };
+            debug!("Node major version: {}", major_version.as_str());
+            let Ok(major_version) = major_version.as_str().parse::<u32>() else {
+                return false;
+            };
+            if major_version < MINIMUM_NODE_VERSION {
+                return false;
             }
-            false
+            true
         }
         Err(_) => {
             // Failed to execute the command (e.g., "node" not found)
             false
         }
+    }
+}
+
+// Check config file exists and if not, use the default one
+fn get_config_file(config: Option<String>) -> String {
+    match config {
+        Some(config) => {
+            let config_path = std::path::Path::new(&config);
+            if !config_path.exists() {
+                error!("{} does not exist", config);
+                DEFAULT_CONFIG_FILE.to_string()
+            } else {
+                config
+            }
+        }
+        None => DEFAULT_CONFIG_FILE.to_string(),
+    }
+}
+
+// Check definition file exists and if not, use the default one
+fn get_definition_file(definition: Option<String>) -> String {
+    match definition {
+        Some(definition) => {
+            let definition_path = std::path::Path::new(&definition);
+            if !definition_path.exists() {
+                error!("{} does not exist", definition);
+                DEFAULT_DEFINITION_FILE.to_string()
+            } else {
+                definition
+            }
+        }
+        None => DEFAULT_DEFINITION_FILE.to_string(),
+    }
+}
+
+// Check collectors info file exists and if not, use the default one
+fn get_collectors_file(collectors_info: Option<String>) -> String {
+    match collectors_info {
+        Some(collectors_info) => {
+            let collectors_info_path = std::path::Path::new(&collectors_info);
+            if !collectors_info_path.exists() {
+                error!("{} does not exist", collectors_info);
+                DEFAULT_COLLECTORS_INFO.to_string()
+            } else {
+                collectors_info
+            }
+        }
+        None => DEFAULT_COLLECTORS_INFO.to_string(),
     }
 }
 
@@ -75,6 +131,9 @@ fn main() -> Result<()> {
 
     // Applications to run from wave-cli
     let mut apps: Vec<App> = Vec::new();
+
+    // Create a channel to receive the events.
+    let (watcher_tx, watcher_rx) = std::sync::mpsc::channel();
 
     // Parse command line arguments
     let args: Args = Args::parse();
@@ -86,58 +145,14 @@ fn main() -> Result<()> {
     let run_api_server = args.run_api_server;
     let run_web_app = args.run_web_app;
 
-    // Create a channel to receive the events.
-    let (watcher_tx, watcher_rx) = std::sync::mpsc::channel();
-
-    // Create a watcher object, delivering debounced events.
-    // The notification back-end is selected based on the platform.
-
-    let watcher_config = Config::default()
-        .with_compare_contents(true)
-        .with_poll_interval(Duration::from_secs(1));
-    let mut plan_file_watcher = PollWatcher::new(watcher_tx, watcher_config)?;
-
     // Check config file exists
-    let config_file = match config {
-        Some(config) => {
-            let config_path = std::path::Path::new(&config);
-            if !config_path.exists() {
-                error!("{} does not exist", config);
-                DEFAULT_CONFIG_FILE.to_string()
-            } else {
-                config
-            }
-        }
-        None => DEFAULT_CONFIG_FILE.to_string(),
-    };
+    let config_file = get_config_file(config);
 
     // Check definition file exists
-    let definition_file = match definition {
-        Some(definition) => {
-            let definition_path = std::path::Path::new(&definition);
-            if !definition_path.exists() {
-                error!("{} does not exist", definition);
-                DEFAULT_DEFINITION_FILE.to_string()
-            } else {
-                definition
-            }
-        }
-        None => DEFAULT_DEFINITION_FILE.to_string(),
-    };
+    let definition_file = get_definition_file(definition);
 
     // Check collectors info file exists
-    let collectors_info_file = match collectors_info {
-        Some(collectors_info) => {
-            let collectors_info_path = std::path::Path::new(&collectors_info);
-            if !collectors_info_path.exists() {
-                error!("{} does not exist", collectors_info);
-                DEFAULT_COLLECTORS_INFO.to_string()
-            } else {
-                collectors_info
-            }
-        }
-        None => DEFAULT_COLLECTORS_INFO.to_string(),
-    };
+    let collectors_info_file = get_collectors_file(collectors_info);
 
     // Check bin files exist
     let wave_autoscale_path = format!("./{}", WAVE_CONTROLLER);
@@ -147,6 +162,7 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
+    // Check only if run_metrics is true
     if run_metrics {
         let wave_metrics_path = format!("./{}", WAVE_METRICS);
         let wave_metrics_file = std::path::Path::new(wave_metrics_path.as_str());
@@ -156,6 +172,7 @@ fn main() -> Result<()> {
         }
     }
 
+    // Check only if run_api_server is true
     if run_api_server {
         let api_server_path = format!("./{}", WAVE_API_SERVER);
         let api_server_file = std::path::Path::new(api_server_path.as_str());
@@ -165,6 +182,7 @@ fn main() -> Result<()> {
         }
     }
 
+    // Check only if run_web_app is true
     if run_web_app {
         let web_app_path = format!("./{}", WAVE_WEB_APP);
         let web_app_file = std::path::Path::new(web_app_path.as_str());
@@ -182,24 +200,23 @@ fn main() -> Result<()> {
     }
 
     // Start wave-controller
-    let mut args_for_controller: Vec<String> = Vec::new();
+    let args_for_controller: Vec<String> = vec![
+        "--config".to_string(),
+        config_file.clone(),
+        "--definition".to_string(),
+        definition_file.clone(),
+    ];
 
-    let config_file_for_controller = config_file.clone();
-    if !config_file_for_controller.is_empty() {
-        args_for_controller.push("--config".to_string());
-        args_for_controller.push(config_file_for_controller);
-    }
-
-    let definition_file_for_controller = definition_file.clone();
-    if !definition_file_for_controller.is_empty() {
-        args_for_controller.push("--definition".to_string());
-        args_for_controller.push(definition_file_for_controller);
-
-        // Watch plan file
-        if watch_definition {
-            plan_file_watcher.watch(Path::new(&definition_file), RecursiveMode::Recursive)?;
-            info!("Watching plan file: {}", &definition_file);
-        }
+    // Watch plan file
+    if watch_definition {
+        // Create a watcher object, delivering debounced events.
+        // The notification back-end is selected based on the platform.
+        let watcher_config = Config::default()
+            .with_compare_contents(true)
+            .with_poll_interval(Duration::from_secs(1));
+        let mut definition_file_watcher = PollWatcher::new(watcher_tx, watcher_config)?;
+        definition_file_watcher.watch(Path::new(&definition_file), RecursiveMode::Recursive)?;
+        info!("Watching plan file: {}", &definition_file);
     }
 
     let wave_controller_command = format!("./{}", WAVE_CONTROLLER);
@@ -212,23 +229,15 @@ fn main() -> Result<()> {
 
     // Start wave-metrics
     if run_metrics {
-        let mut args_for_metrics: Vec<String> = Vec::new();
-        let config_file_for_metrics = config_file.clone();
-        if !config_file_for_metrics.is_empty() {
-            args_for_metrics.push("--config".to_string());
-            args_for_metrics.push(config_file_for_metrics);
-        }
-
-        let definition_file_for_metrics = definition_file.clone();
-        if !definition_file_for_metrics.is_empty() {
-            args_for_metrics.push("--definition".to_string());
-            args_for_metrics.push(definition_file_for_metrics);
-        }
-
-        if !collectors_info_file.is_empty() {
-            args_for_metrics.push("--collectors-info".to_string());
-            args_for_metrics.push(collectors_info_file);
-        }
+        let args_for_metrics: Vec<String> = vec![
+            "--config".to_string(),
+            config_file.clone(),
+            "--definition".to_string(),
+            definition_file,
+            "--collectors-info".to_string(),
+            collectors_info_file,
+            "--from-cli".to_string(),
+        ];
 
         let wave_metrics_command = format!("./{}", WAVE_METRICS);
         apps.push(App {
@@ -241,12 +250,7 @@ fn main() -> Result<()> {
 
     // Start wave-api-server
     if run_api_server {
-        let mut args_for_api_server: Vec<String> = Vec::new();
-        let config_file_for_api_server = config_file.clone();
-        if !config_file_for_api_server.is_empty() {
-            args_for_api_server.push("--config".to_string());
-            args_for_api_server.push(config_file_for_api_server);
-        }
+        let args_for_api_server: Vec<String> = vec!["--config".to_string(), config_file.clone()];
 
         let wave_api_server_command = format!("./{}", WAVE_API_SERVER);
         apps.push(App {
@@ -287,17 +291,22 @@ fn main() -> Result<()> {
     let mut running_apps: HashMap<String, Child> = HashMap::new();
     loop {
         {
+            // Start applications if not running
             for app in &apps {
                 if !running_apps.contains_key(&app.name) {
                     info!("Starting {}", app.name);
-                    let child = run_app(app);
+                    let Ok(child) = run_app(app) else {
+                        error!("Error starting {}", app.name);
+                        continue;
+                    };
                     running_apps.insert(app.name.clone(), child);
                 }
             }
         }
-        if watcher_rx.try_recv().is_ok() {
+        // Check if definition file has changed
+        if watch_definition && watcher_rx.try_recv().is_ok() {
             // TODO: event is not used
-            info!("Plan file has changed");
+            info!("Definition file has changed");
             if let Some(child) = running_apps.get_mut(WAVE_CONTROLLER) {
                 info!("Killing {}", WAVE_CONTROLLER);
                 let result = child.kill();
@@ -309,6 +318,7 @@ fn main() -> Result<()> {
             }
         }
         {
+            // Check if any application has exited
             let mut to_remove: Vec<String> = Vec::new();
             for (name, child) in &mut running_apps {
                 if let Some(exit_status) = child.try_wait().unwrap() {
@@ -327,8 +337,67 @@ fn main() -> Result<()> {
             break;
         }
 
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(INTERVAL));
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_config_file() {
+        // Not specified
+        let config_file = get_config_file(None);
+        assert_eq!(config_file, DEFAULT_CONFIG_FILE);
+
+        // Specified and exists
+        let existing_file = "../../tests/config/wave-config.yaml";
+        let config_file = get_config_file(Some(existing_file.to_string()));
+        assert_eq!(config_file, existing_file);
+
+        // Specified but does not exist
+        let config_file = get_config_file(Some("wave-config2.yaml".to_string()));
+        assert_eq!(config_file, DEFAULT_CONFIG_FILE);
+    }
+
+    #[test]
+    fn test_get_definition_file() {
+        // Not specified
+        let definition_file = get_definition_file(None);
+        assert_eq!(definition_file, DEFAULT_DEFINITION_FILE);
+
+        // Specified and exists
+        let existing_file = "./tests/yaml/definition.yaml";
+        let definition_file = get_definition_file(Some(existing_file.to_string()));
+        assert_eq!(definition_file, existing_file);
+
+        // Specified but does not exist
+        let definition_file = get_definition_file(Some("definition2.yaml".to_string()));
+        assert_eq!(definition_file, DEFAULT_DEFINITION_FILE);
+    }
+
+    #[test]
+    fn test_get_collectors_file() {
+        // Not specified
+        let collectors_info_file = get_collectors_file(None);
+        assert_eq!(collectors_info_file, DEFAULT_COLLECTORS_INFO);
+
+        // Specified and exists
+        let existing_file = "../wave-metrics/tests/collectors/collectors.yaml";
+        let collectors_info_file = get_collectors_file(Some(existing_file.to_string()));
+        assert_eq!(collectors_info_file, existing_file);
+
+        // Specified but does not exist
+        let collectors_info_file = get_collectors_file(Some("collectors2.yaml".to_string()));
+        assert_eq!(collectors_info_file, DEFAULT_COLLECTORS_INFO);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_is_node_installed() {
+        assert!(is_node_installed());
+    }
 }

@@ -108,7 +108,9 @@ mod tests {
     // Utility functions
 
     async fn get_app_state_for_test() -> web::Data<super::AppState> {
-        get_app_state("sqlite://:memory:").await
+        let app_state = get_app_state("sqlite::memory:").await;
+        app_state.data_layer.sync("").await;
+        app_state
     }
 
     async fn add_metrics_for_test(data_layer: &DataLayer) {

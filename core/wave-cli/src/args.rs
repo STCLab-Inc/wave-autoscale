@@ -5,6 +5,7 @@
  *
  */
 use clap::Parser;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
@@ -24,7 +25,7 @@ pub struct Args {
     #[arg(long)]
     pub collectors_info: Option<String>,
 
-    /// Run Wave Metrics
+    /// Run Wave Metrics. Wave Metrics collects metrics by collectors and writes to the database.
     #[arg(long)]
     pub run_metrics: bool,
 

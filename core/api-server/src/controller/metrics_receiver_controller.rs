@@ -132,7 +132,9 @@ mod tests {
     use actix_web::{http, test, web, App};
 
     async fn get_app_state_for_test() -> web::Data<super::AppState> {
-        get_app_state("sqlite://:memory:").await
+        let app_state = get_app_state("sqlite::memory:").await;
+        app_state.data_layer.sync("").await;
+        app_state
     }
 
     #[actix_web::test]

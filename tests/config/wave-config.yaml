@@ -1,5 +1,5 @@
 common:
-  db_url: sqlite://./tests/db/wave.db
+  db_url: sqlite://./wave.db
 
 wave_metrics:
   output:

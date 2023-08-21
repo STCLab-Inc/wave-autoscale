@@ -31,36 +31,36 @@ pub struct DataLayer {
 }
 
 impl DataLayer {
-    pub async fn new(sql_url: &str, definition_path: &str) -> Self {
+    pub async fn new(sql_url: &str) -> Self {
         let sql_url = if sql_url.is_empty() {
             DEFAULT_DB_URL
         } else {
             sql_url
         };
 
-        let data_layer = DataLayer {
+        DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
-        };
-        data_layer.migrate().await;
+        }
+    }
+
+    pub async fn sync(&self, definition_path: &str) {
+        self.migrate().await;
 
         // TODO: Validate the definition file before loading it into the database
-        if data_layer
-            .load_definition_file_into_database(definition_path)
-            .await
-            .is_err()
-        {
-            error!("Failed to load definition file into database");
+        if !definition_path.is_empty() && Path::new(definition_path).exists() {
+            let result = self
+                .load_definition_file_into_database(definition_path)
+                .await;
+            if result.is_err() {
+                error!(
+                    "Failed to load the definition file into the database: {:?}",
+                    result
+                );
+            }
         }
-        data_layer
     }
 
     async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
-        // Get the definition path not
-        let definition_path = if definition_path.is_empty() {
-            DEFAULT_DEFINITION_PATH
-        } else {
-            definition_path
-        };
         // Parse the plan_file
         let parser_result = read_definition_yaml_file(definition_path);
         if parser_result.is_err() {
@@ -151,7 +151,10 @@ impl DataLayer {
                 debug!("Watching...");
                 let query_string =
                     "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;";
-                let result_string = sqlx::query(query_string).fetch_all(&pool).await.unwrap();
+                let Ok(result_string) = sqlx::query(query_string).fetch_all(&pool).await else {
+                    error!("Failed to fetch updated_at from the database");
+                    continue;
+                };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
                     let updated_at: String = row.get(0);
@@ -754,7 +757,9 @@ mod tests {
         if remove_result.is_err() {
             println!("Error removing file: {:?}", remove_result);
         }
-        DataLayer::new(DEFAULT_DB_URL, "").await
+        let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
+        data_layer.sync("").await;
+        data_layer
     }
 
     fn get_autoscaling_history_definition() -> AutoscalingHistoryDefinition {
