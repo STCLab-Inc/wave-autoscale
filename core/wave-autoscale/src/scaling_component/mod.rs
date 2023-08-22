@@ -7,6 +7,7 @@ pub mod amazon_emr_ec2;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
+pub mod azure_functions_app;
 pub mod azure_vmss_autoscaling;
 pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
@@ -17,6 +18,7 @@ use self::{
     amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
     aws_lambda_function::LambdaFunctionScalingComponent,
+    azure_functions_app::AzureFunctionsAppScalingComponent,
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
@@ -89,6 +91,9 @@ impl ScalingComponentManager {
             }
             CloudRunServiceScalingComponent::SCALING_KIND => Ok(Box::new(
                 CloudRunServiceScalingComponent::new(cloned_defintion),
+            )),
+            AzureFunctionsAppScalingComponent::SCALING_KIND => Ok(Box::new(
+                AzureFunctionsAppScalingComponent::new(cloned_defintion),
             )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
