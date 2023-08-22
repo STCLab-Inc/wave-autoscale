@@ -71,13 +71,13 @@ If a user wants to include measurements like traffic or usage, they can write do
 ### Scaling Components
 |   |AWS|Google Cloud|Azure|
 |---|---|---|---|
-|Virtual Machine Group|✅ EC2 Autoscaling Group|✅ Managed Instance Group|✅ Azure Virtual Machine Scale Sets|
-|Container Service|✅ Amazon ECS|✅ Cloud Run|🚧 Azure Container Apps|
-|Kubernetes|✅ Amazon EKS (Deployment)|✅ Google Kubernetes Engine (Deployment)|✅ Managed Kubernetes Service (Deployment)|
-|Serverless Function|✅ AWS Lambda (Reserved Concurrency, Provisioned Concurrency)|✅ Cloud Functions |🚧 Azure Functions|
-|Database|✅ DynamoDB|||
-|Data Workloads|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
-|In-Memory Database|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
+|**Virtual Machine Group**|✅ EC2 Autoscaling Group|✅ Managed Instance Group|✅ Azure Virtual Machine Scale Sets|
+|**Container Service**|✅ Amazon ECS|✅ Cloud Run|🚧 Azure Container Apps|
+|**Kubernetes**|✅ Amazon EKS (Deployment)|✅ Google Kubernetes Engine (Deployment)|✅ Managed Kubernetes Service (Deployment)|
+|**Serverless Function**|✅ AWS Lambda (Reserved Concurrency, Provisioned Concurrency)|✅ Cloud Functions |🚧 Azure Functions|
+|**Database**|✅ DynamoDB|||
+|**Data Workloads**|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
+|**In-Memory Database**|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
 
 ### Metrics ###
 For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
