@@ -99,5 +99,10 @@ There are several notable projects offering unique capabilities. Here's a look a
 ### License ###
 This monorepo uses several licenses. See [LICENSE](https://github.com/STCLab-Inc/wave-autoscale/blob/main/LICENSE) for more details.
 
+### Founded by ###
+[<img src="https://github.com/STCLab-Inc/wave-autoscale/assets/114452/27050c41-adf7-4501-9246-a4facd0b7227" width=200 />](https://stclab.com)
+
 ---
 © [STCLab, Inc](https://stclab.com/).
+
+
