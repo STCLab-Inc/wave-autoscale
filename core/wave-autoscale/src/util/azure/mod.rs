@@ -4,6 +4,7 @@ use azure_core;
 use azure_core::auth::TokenCredential;
 use azure_identity::client_credentials_flow;
 use log::error;
+pub mod azure_funtions_app_helper;
 
 #[derive(Clone)]
 pub struct AzureCredential {
