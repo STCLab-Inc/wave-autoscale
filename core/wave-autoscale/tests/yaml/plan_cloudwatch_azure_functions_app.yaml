@@ -1,0 +1,62 @@
+---
+kind: Metric
+id: cloudwatch_concurrent_executions_cnt
+collector: telegraf
+metric_kind: cloudwatch
+metadata:
+  region: ap-northeast-2
+  # AWS Credentials using the local AWS credentials file(~/.aws/credentials)
+  profile: "default"
+  # Requested CloudWatch aggregation Period (required)
+  # Must be a multiple of 60s.
+  period: "2m"
+  # Collection Delay (required)
+  # Must account for metrics availability via CloudWatch API
+  delay: "2m"
+  # Recommended: use metric 'interval' that is a multiple of 'period' to avoid
+  # gaps or overlap in pulled data
+  interval: "1m"
+  namespaces: ["MicroSoft/AzureFunctions"]
+  metrics:
+    - names: ["Invocations"]
+      statistic_include: ["sample_count"]
+      dimensions:
+        - name: AppName
+          value: "functions-app-2"
+---
+kind: ScalingComponent
+id: scaling_component_azure_functions_app
+component_kind: azure-functions-app
+metadata:
+  client_id: CLIENT_ID
+  client_secret: CLIENT_SECRET
+  tenant_id: TENANT_ID
+  subscription_id: SUBSCRIPTION_ID
+  resource_group_name: RESOURCE_GROUP_NAME
+  app_name: functions-app-2
+---
+kind: ScalingPlan
+id: scaling_plan_azure_functions_app
+title: "Scaling Plan for Azure Functions App for Premium Plan"
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if concurrent executions value is greater than 10."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 10"
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_azure_functions_app
+        # JavaScript expression that returns an integer.
+        min_instance_count: 10
+        max_instance_count: 30
+  - id: scale-out-plan-2
+    description: "Scale out if concurrent executions value is greater than 2."
+    # JavaScript expression that returns a boolean value.
+    expression: "cloudwatch_concurrent_executions_cnt >= 2"
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_azure_functions_app
+        # JavaScript expression that returns an integer.
+        min_instance_count: 2
+        max_instance_count: 5
