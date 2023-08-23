@@ -82,8 +82,9 @@ If a user wants to include measurements like traffic or usage, they can write do
 ### Metrics ###
 For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
 
-- [Telegraf](https://github.com/influxdata/telegraf): With support for about 250 input plugins, Telegraf offers an extensive range of metric collection possibilities. It's known for its adaptability to various environments and ease of configuration. [The MIT license](https://github.com/influxdata/telegraf/blob/master/LICENSE). [Learn more about Telegraf input plugins.](https://docs.influxdata.com/telegraf/v1.27/plugins/)
-- [Vector](https://github.com/vectordotdev/vector): Supporting around 40 different sources, Vector provides a high-performance solution for collecting logs, metrics, and events. Its unified data model and strong reliability make it a valuable tool in monitoring and scaling. [The MPL 2.0 license](https://github.com/vectordotdev/vector/blob/master/LICENSE). [Learn more about Vector sources.](https://vector.dev/docs/reference/configuration/sources/)
+- [**Telegraf**](https://github.com/influxdata/telegraf): With support for about 250 input plugins, Telegraf offers an extensive range of metric collection possibilities. It's known for its adaptability to various environments and ease of configuration. [Learn more about Telegraf input plugins.](https://docs.influxdata.com/telegraf/v1.27/plugins/) [(The MIT license)](https://github.com/influxdata/telegraf/blob/master/LICENSE)
+- [**Vector**](https://github.com/vectordotdev/vector): Supporting around 40 different sources, Vector provides a high-performance solution for collecting logs, metrics, and events. Its unified data model and strong reliability make it a valuable tool in monitoring and scaling. [Learn more about Vector sources.](https://vector.dev/docs/reference/configuration/sources/) [(The MPL 2.0 license)](https://github.com/vectordotdev/vector/blob/master/LICENSE)
+
 
 These tools collectively empower Wave Autoscale to accurately monitor and adapt to the ever-changing demands of various cloud environments.
 
