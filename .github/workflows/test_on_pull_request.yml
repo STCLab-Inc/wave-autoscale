@@ -50,11 +50,13 @@ jobs:
       - name: Install Moonrepo
         uses: moonrepo/setup-moon-action@v1
 
+      - name: Install Clippy
+        run: rustup component add clippy
       # - name: Run audit
       #   run: moon run archiver:audit -f
 
       - name: Run lint
-        run: moon run :lint -f
+        run: moon run :lint
 
       - name: Run test
-        run: moon run :test -f
+        run: moon run :test
