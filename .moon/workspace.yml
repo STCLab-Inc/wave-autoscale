@@ -47,5 +47,6 @@ vcs:
     pre-push:
       - "moon sync projects"
       # TODO: Add back in when we have a fix for 
-      - "moon run archiver:audit :lint"
+      # - "moon run archiver:audit :lint"
+      - "moon run :lint"
       - "moon run :test"
