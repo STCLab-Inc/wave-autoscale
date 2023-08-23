@@ -739,6 +739,33 @@ impl DataLayer {
         }
         Ok(metric_values)
     }
+
+    // Get a latest metrics by collector from the database
+    pub async fn get_source_metrics_values_all_metric_ids(
+        &self,
+        read_before_ms: u64,
+    ) -> Result<Vec<serde_json::Value>> {
+        let offset_time = SystemTime::now() - Duration::from_millis(read_before_ms);
+        let ulid = Ulid::from_datetime(offset_time);
+        let query_string = "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= ?";
+        let result = sqlx::query(query_string)
+            .bind(ulid.to_string())
+            .fetch_all(&self.pool)
+            .await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        let mut metric_values: Vec<serde_json::Value> = Vec::new();
+        for row in result {
+            let metric_id: String = row.get("metric_id");
+            let id: String = row.get("id");
+            let json_value: String = row.get("json_value");
+            let json_value = json!({"metric_id": metric_id, "id": id, "json_value": json_value});
+            metric_values.append(&mut vec![json_value]);
+        }
+        Ok(metric_values)
+    }
 }
 
 #[cfg(test)]
