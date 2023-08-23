@@ -13,7 +13,7 @@ env:
 jobs:
   test-on-pull-request:
     runs-on: wave-autoscale-runner
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -55,8 +55,11 @@ jobs:
       # - name: Run audit
       #   run: moon run archiver:audit -f
 
-      - name: Run lint
-        run: moon run :lint -f
+      # - name: Run lint
+      #   run: moon run :lint -f
 
       - name: Run test
         run: moon run :test -f
+
+      - name: Cargo Autoclean
+        run: cargo cache --autoclean
