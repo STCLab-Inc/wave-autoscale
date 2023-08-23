@@ -1,5 +1,5 @@
 language: "rust"
-type: "application"
+type: "library"
 owners:
   defaultOwner: "@wave-autoscale-team"
 

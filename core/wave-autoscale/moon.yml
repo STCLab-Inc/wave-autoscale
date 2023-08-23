@@ -5,7 +5,8 @@ owners:
 
 dependsOn:
   - "data-layer"
-
+  - "api-server"
+  - "utils"
 tasks:
   test:
     command: "cargo nextest run -p wave-autoscale --test-threads=1"
