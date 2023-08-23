@@ -56,7 +56,7 @@ jobs:
       #   run: moon run archiver:audit -f
 
       - name: Run lint
-        run: moon run :lint
+        run: moon run :lint -f
 
       - name: Run test
-        run: moon run :test
+        run: moon run :test -f
