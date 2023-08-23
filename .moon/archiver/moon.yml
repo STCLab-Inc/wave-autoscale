@@ -10,6 +10,8 @@ tasks:
     command: "echo archiver"
   test:
     command: "echo archiver"
+  clean-cargo-cache:
+    command: "cargo cache --autosclean"
   archive-aarch64-apple-darwin:
     command: "./archive-script.sh"
     platform: "system"
