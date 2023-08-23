@@ -73,7 +73,7 @@ rust:
   version: "1.70.0"
 
   # List of Cargo binaries to install globally and make available to tasks.
-  bins: ["cargo-nextest", "cargo-clippy"]
+  bins: ["cargo-nextest"]
 
   # Sync the configured version above as a channel to the root `rust-toolchain.toml` config.
   syncToolchainConfig: true
