@@ -1,8 +1,8 @@
-use super::super::util::azure::azure_funtions_app_helper::{
-    call_patch_azure_functions_app, AzureFunctionsPatchAppSetting,
+use super::super::util::azure::{
+    azure_funtions_app_helper::{call_patch_azure_functions_app, AzureFunctionsPatchAppSetting},
+    AzureCredential,
 };
 use super::ScalingComponent;
-use crate::util::azure::AzureCredential;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
@@ -120,6 +120,7 @@ impl ScalingComponent for AzureFunctionsAppScalingComponent {
     }
 }
 
+// Create payload to patch azure functions app api
 fn create_payload(
     min_instance_count: Option<&str>,
     max_instance_count: Option<&str>,
