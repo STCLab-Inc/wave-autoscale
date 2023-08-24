@@ -341,49 +341,51 @@ fn context_global_get_func(
     metric_ids_values
         .iter()
         .for_each(|value| {
-            // filter by metric_id
-            if value.get("metric_id").and_then(Value::as_str) == Some(metric_id.as_str()) {
-                // filter by id
-                let map_id = value
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .ok_or(rquickjs::Error::Exception)
-                    .unwrap();
-                if map_id.to_string().ge(&ulid.to_string()) {
-                    // filter by name or tags
-                    let Some(json_value_str) = value.get("json_value") else {return;};
-                    let Some(json_value_str) = json_value_str.as_str() else {return;};
-                    let json_value_str = serde_json::from_str::<Value>(json_value_str)
-                        .map_err(|_| rquickjs::Error::Exception)
-                        .unwrap();
-                    let Some(json_values_arr) = json_value_str.as_array() else {return;};
-                    let _filter_json_values_arr: Vec<_> = json_values_arr
-                        .iter()
-                        .map(|json_value_item| {
-                            let result_bool = json_value_item.get("name").and_then(Value::as_str)
-                                == Some(name.as_str())
-                                && (tags.is_empty() || {
-                                    json_value_item
-                                        .get("tags")
-                                        .and_then(Value::as_object)
-                                        .map_or(false, |value_tags| {
-                                            tags.iter().all(|(key, value)| {
-                                                value_tags.get(key).and_then(Value::as_str)
-                                                    == Some(value.as_str())
-                                            })
-                                        })
-                                });
-                            if result_bool {
-                                let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
-                                    return;
-                                };
-                                target_value_arr
-                                    .append(&mut vec![json_vaule]);
-                            }
-                        })
-                        .collect();
-                }
+            // metric_id in the metric data should match the metric_id in the definition.
+            if value.get("metric_id").and_then(Value::as_str) != Some(metric_id.as_str()) {
+                return;
             }
+            let Some(map_id) = value
+                .get("id")
+                .and_then(Value::as_str) else {
+                    return;
+                };
+            // id in the metric data should be equal to or greater than the time defined before a period of period_sec.
+            if map_id.to_string().lt(&ulid.to_string()) {
+                return;
+            }
+            // find name or tags
+            let Some(json_value_str) = value.get("json_value") else {return;};
+            let Some(json_value_str) = json_value_str.as_str() else {return;};
+            let json_value_str = serde_json::from_str::<Value>(json_value_str)
+                .map_err(|_| rquickjs::Error::Exception)
+                .unwrap();
+            let Some(json_values_arr) = json_value_str.as_array() else {return;};
+            let _filter_json_values_arr: Vec<_> = json_values_arr
+                .iter()
+                .map(|json_value_item| {
+                    let result_bool = json_value_item.get("name").and_then(Value::as_str)
+                        == Some(name.as_str())
+                        && (tags.is_empty() || {
+                            json_value_item
+                                .get("tags")
+                                .and_then(Value::as_object)
+                                .map_or(false, |value_tags| {
+                                    tags.iter().all(|(key, value)| {
+                                        value_tags.get(key).and_then(Value::as_str)
+                                            == Some(value.as_str())
+                                    })
+                                })
+                        });
+                    if result_bool {
+                        let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
+                            return;
+                        };
+                        target_value_arr
+                            .append(&mut vec![json_vaule]);
+                    }
+                })
+                .collect();
         });
 
     let metric_stats = match stats {
