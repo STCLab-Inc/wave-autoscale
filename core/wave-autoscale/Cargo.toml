@@ -61,6 +61,8 @@ azure_core = "0.13.0"
 thiserror = { version = "1.0.44" }
 cron = { version = "0.12.0" }
 aws-sdk-emr = "0.25.1"
+ulid = { version = "1.0.0" }
+regex = "1.9.1"
 
 [dev-dependencies]
 handlebars = "4.3.7"
