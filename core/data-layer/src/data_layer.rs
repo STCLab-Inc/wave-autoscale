@@ -770,11 +770,9 @@ impl DataLayer {
 
 #[cfg(test)]
 mod tests {
-    use ulid::Ulid;
-
-    use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
-
     use super::DataLayer;
+    use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
+    use ulid::Ulid;
 
     async fn get_data_layer() -> DataLayer {
         const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
@@ -847,5 +845,36 @@ mod tests {
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_source_metrics_values_all_metric_ids() {
+        let data_layer = get_data_layer().await;
+
+        let json_value = r#"[{
+            "name": "test",
+            "tags": {
+                "tag1": "value1"
+            },
+            "value": 2.0
+        }]
+        "#;
+
+        // add a source metric
+        let add_source_metric = data_layer
+            .add_source_metric("vector", "source_metrics_test_1", json_value)
+            .await;
+        assert!(add_source_metric.is_ok());
+
+        // read source metric
+        let source_metrics = data_layer
+            .get_source_metrics_values_all_metric_ids(10 * 1000)
+            .await
+            .unwrap();
+        let source_metrics_filter_arr: Vec<&serde_json::Value> = source_metrics
+            .iter()
+            .filter(|value| value.get("metric_id").unwrap() == "source_metrics_test_1")
+            .collect();
+        assert!(!source_metrics_filter_arr.is_empty());
     }
 }
