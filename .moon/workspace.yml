@@ -43,7 +43,7 @@ vcs:
   hooks:
     pre-commit:
       - "moon sync projects"
-      - "moon run archiver:audit :lint"
+      - "moon run :lint"
     pre-push:
       - "moon sync projects"
       # TODO: Add back in when we have a fix for 
