@@ -62,4 +62,4 @@ jobs:
         run: moon run :test -f
 
       - name: Cargo Autoclean
-        run: moon run archiver:clean-cargo-cache
+        run: moon run archiver:clean-cargo-cache -f
