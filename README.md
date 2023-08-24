@@ -1,4 +1,4 @@
-## Wave Autoscale - Optimize Cloud Autoscaling: Peak Performance, Cost-Efficient
+## Wave Autoscale - Open-source Autoscaling Solution for Cloud Engineers
 
 ![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9afc3c9-53a3-4cd2-9696-5b4387abfc73)
 
