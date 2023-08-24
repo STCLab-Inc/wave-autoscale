@@ -59,7 +59,6 @@ mod test {
         let resp = call_azure_patch_virtual_machine_scale_sets_capacity(azure_vmss_setting).await;
         let result = resp.unwrap();
         let result_status = result.status();
-        let result_text = result.text();
         assert!(result_status.is_success());
     }
 
