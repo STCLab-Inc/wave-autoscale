@@ -22,6 +22,11 @@ use utils::wave_config::WaveConfig;
 
 #[tokio::main]
 async fn main() {
+    // Handle Ctrl+C Signal
+    let _ = ctrlc::set_handler(move || {
+        std::process::exit(0);
+    });
+
     // Initialize logger
     env_logger::init();
 
