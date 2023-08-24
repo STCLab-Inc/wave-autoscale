@@ -1,4 +1,4 @@
-## Wave Autoscale - Optimize Cloud Autoscaling: Peak Performance, Cost-Efficient
+## Wave Autoscale - Open-source Autoscaling Solution for Cloud Engineers
 
 ![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9afc3c9-53a3-4cd2-9696-5b4387abfc73)
 
@@ -17,8 +17,6 @@ Though cloud service providers such as AWS, Google Cloud, and Azure offer some a
 - **Customized Scaling for Machine Learning Workloads**: Machine learning workloads may require specific scaling strategies based on the data input size, model complexity, and processing requirements. Wave Autoscale offers data-driven allocation, allowing engineers to define custom scaling plans that align with the unique demands of ML applications.
 
 Wave Autoscale is designed to overcome these challenges, providing a more tailored and responsive approach to autoscaling that aligns with both technical complexities and business needs.
-
----
 
 ## ⚙️ How Wave Autoscale Works ##
 ![how-wave-autoscale-works](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/6749c87b-0ca7-4292-a1ad-129383590d13)
@@ -65,20 +63,19 @@ If a user wants to include measurements like traffic or usage, they can write do
 - **Player-focused allocation** for game servers based on player activity and demand
 
 
----
 
 ## 🔗 Integrations ##
 
 ### Scaling Components
 |   |AWS|Google Cloud|Azure|
 |---|---|---|---|
-|**Virtual Machine Group**|✅ EC2 Autoscaling Group|✅ Managed Instance Group|✅ Azure Virtual Machine Scale Sets|
-|**Container Service**|✅ Amazon ECS|✅ Cloud Run|🚧 Azure Container Apps|
-|**Kubernetes**|✅ Amazon EKS (Deployment)|✅ Google Kubernetes Engine (Deployment)|✅ Managed Kubernetes Service (Deployment)|
-|**Serverless Function**|✅ AWS Lambda (Reserved Concurrency, Provisioned Concurrency)|✅ Cloud Functions |🚧 Azure Functions|
-|**Database**|✅ DynamoDB|||
-|**Data Workloads**|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
-|**In-Memory Database**|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
+|Virtual Machine Group|✅ EC2 Autoscaling Group|✅ Managed Instance Group|✅ Azure Virtual Machine Scale Sets|
+|Container Service|✅ Amazon ECS|✅ Cloud Run|🚧 Azure Container Apps|
+|Kubernetes|✅ Amazon EKS (Deployment)|✅ Google Kubernetes Engine (Deployment)|✅ Managed Kubernetes Service (Deployment)|
+|Serverless Function|✅ AWS Lambda (Reserved Concurrency, Provisioned Concurrency)|✅ Cloud Functions |✅ Azure Functions|
+|Database|✅ DynamoDB|||
+|Data Workloads|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
+|In-Memory Database|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
 
 ### Metrics ###
 For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
@@ -89,7 +86,7 @@ For collecting metrics related to traffic or usage, Wave Autoscale leverages the
 
 These tools collectively empower Wave Autoscale to accurately monitor and adapt to the ever-changing demands of various cloud environments.
 
----
+
 ## 📄 Information ##
 
 ### Similar Projects ### 
@@ -97,13 +94,23 @@ There are several notable projects offering unique capabilities. Here's a look a
 
 - KEDA (Kubernetes Event-Driven Autoscaling): KEDA is a prominent open-source project that focuses on event-driven autoscaling for Kubernetes workloads. It supports a wide variety of event sources and is designed to seamlessly work with Kubernetes deployments. [Learn more about KEDA.](https://keda.sh/)
 
-### License ###
-This monorepo uses several licenses. See [LICENSE](https://github.com/STCLab-Inc/wave-autoscale/blob/main/LICENSE) for more details.
-
 ### Founded by ###
 [<img src="https://github.com/STCLab-Inc/wave-autoscale/assets/114452/27050c41-adf7-4501-9246-a4facd0b7227" width=200 />](https://stclab.com)
 
----
-© [STCLab, Inc](https://stclab.com/).
+## License
 
+```
+Copyright 2023 STCLab, Inc.
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
