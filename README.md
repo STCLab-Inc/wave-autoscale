@@ -1,6 +1,6 @@
 ## Wave Autoscale - Open-source Autoscaling Solution for Cloud Engineers
 
-![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9afc3c9-53a3-4cd2-9696-5b4387abfc73)
+![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/3b403fa2-52ec-4f29-841f-e48815a0208b)
 
 
 - Website: https://waveautoscale.com
@@ -19,7 +19,7 @@ Though cloud service providers such as AWS, Google Cloud, and Azure offer some a
 Wave Autoscale is designed to overcome these challenges, providing a more tailored and responsive approach to autoscaling that aligns with both technical complexities and business needs.
 
 ## ⚙️ How Wave Autoscale Works ##
-![how-wave-autoscale-works](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/6749c87b-0ca7-4292-a1ad-129383590d13)
+![how-wave-autoscale-works](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b4945330-32e0-4591-b810-56f0d6b5e894)
 
 Wave Autoscale works by letting users write down what they need for scaling. This includes [**scaling plan definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-plans) and [**scaling component definitions**](https://www.waveautoscale.com/docs/guide/concepts/scaling-components). Within the scaling plan definitions, there are three ways to trigger scaling components:
 
@@ -77,6 +77,7 @@ If a user wants to include measurements like traffic or usage, they can write do
 |Data Workloads|✅ Amazon EMR on EC2|🚧 Cloud Dataproc||
 |In-Memory Database|🚧 Amazon ElastiCache|🚧 Memorystore|🚧 Cache for Redis|
 
+
 ### Metrics ###
 For collecting metrics related to traffic or usage, Wave Autoscale leverages the capabilities of open-source tools Telegraf and Vector.
 
@@ -94,7 +95,10 @@ There are several notable projects offering unique capabilities. Here's a look a
 - KEDA (Kubernetes Event-Driven Autoscaling): KEDA is a prominent open-source project that focuses on event-driven autoscaling for Kubernetes workloads. It supports a wide variety of event sources and is designed to seamlessly work with Kubernetes deployments. [Learn more about KEDA.](https://keda.sh/)
 
 ### Founded by ###
-[<img src="https://github.com/STCLab-Inc/wave-autoscale/assets/114452/27050c41-adf7-4501-9246-a4facd0b7227" width=200 />](https://stclab.com)
+
+[<img src="https://github.com/STCLab-Inc/wave-autoscale/assets/114452/2dd6b2b4-1a96-4684-aa74-a2dd8bf70bad" width=200 />](https://stclab.com)
+
+[STCLab Homepage](https://surffy.io)
 
 ## License
 
@@ -112,4 +116,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
 ```
+
