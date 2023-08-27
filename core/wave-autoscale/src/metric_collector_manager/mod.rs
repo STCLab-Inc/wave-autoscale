@@ -1,4 +1,3 @@
-use self::collector_definition::CollectorDefinition;
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -8,18 +7,16 @@ use std::io::Write;
 use std::{cmp::min, collections::HashMap};
 use tar::Archive;
 use utils::process::{run_processes, AppInfo};
-mod collector_definition;
+use utils::wave_config::WaveConfig;
 pub struct MetricCollectorManager {
-    collector_definition: CollectorDefinition,
+    wave_config: WaveConfig,
     output_url: String,
 }
 
 impl MetricCollectorManager {
-    pub fn new(collectors_file: &str, output_url: &str) -> Self {
-        let file = std::fs::File::open(collectors_file).unwrap();
-        let collector_definition: CollectorDefinition = serde_yaml::from_reader(file).unwrap();
+    pub fn new(wave_config: WaveConfig, output_url: &str) -> Self {
         Self {
-            collector_definition,
+            wave_config,
             output_url: output_url.to_string(),
         }
     }
@@ -122,9 +119,7 @@ impl MetricCollectorManager {
             // Download the file
 
             // Example: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-pc-windows-msvc.zip
-            let download_url = self
-                .collector_definition
-                .get_download_url(&collector_os_arch);
+            let download_url = self.wave_config.get_download_url(&collector_os_arch);
 
             // Example: vector-0.30.0-x86_64-pc-windows-msvc.zip
             let download_filename = download_url.split('/').last().unwrap();
@@ -541,10 +536,8 @@ mod tests {
         // Remove wave.db
         let _ = std::fs::remove_file("./wave.db");
 
-        MetricCollectorManager::new(
-            "./tests/collectors/collectors.yaml",
-            "http://localhost:3024/api/metrics-receiver",
-        )
+        let wave_config = WaveConfig::new("./tests/config/wave-config.yaml");
+        MetricCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
     }
 
     // Test whether it fetchs the os and arch correctly

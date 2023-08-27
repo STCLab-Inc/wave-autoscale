@@ -467,7 +467,9 @@ mod tests {
         plans: Vec<PlanItemDefinition>,
     ) -> (Arc<DataLayer>, ScalingPlanner) {
         // Initialize DataLayer
-        let data_layer = Arc::new(DataLayer::new("", "").await);
+        let data_layer = DataLayer::new("").await;
+        data_layer.sync("").await;
+        let data_layer = Arc::new(data_layer);
         // Create a MetricDefinition
         let metric_definitions = vec![MetricDefinition {
             id: METRIC_DEFINTION_ID.to_string(),

@@ -1,14 +1,8 @@
-common:
-  db_url: sqlite://./wave.db
-
-wave_metrics:
-  output:
-    url: http://localhost:8081/api/metrics-receiver
-
-wave_api_server:
-  host: localhost
-  port: 8081
-
-wave_web_app:
-  host: localhost
-  port: 3005
+db_url: sqlite://./wave.db
+host: 0.0.0.0
+port: 3024
+watch_definition_duration: 5000
+autoscaling_history_retention: '1d'
+web_ui: false
+web_ui_host: 0.0.0.0
+web_ui_port: 3025

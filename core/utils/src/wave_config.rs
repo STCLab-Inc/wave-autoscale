@@ -3,67 +3,96 @@ use serde::Deserialize;
 use std::fs::File;
 
 const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
+const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
+const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
+const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "1d";
+const DEFAULT_API_HOST: &str = "0.0.0.0";
 const DEFAULT_API_PORT: u16 = 3024;
-#[derive(Debug, PartialEq, Deserialize)]
-pub struct CommonConfig {
-    #[serde(default)]
-    pub db_url: String,
+const DEFAULT_WEB_UI: bool = false;
+const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
+const DEFAULT_WEB_UI_PORT: u16 = 3025;
+
+fn default_db_url() -> String {
+    DEFAULT_DB_URL.to_string()
+}
+fn default_watch_definition_duration() -> u64 {
+    DEFAULT_WATCH_DEFINITION_DURATION
+}
+fn default_autoscaling_history_retention() -> String {
+    DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string()
+}
+fn default_api_host() -> String {
+    DEFAULT_API_HOST.to_string()
+}
+fn default_api_port() -> u16 {
+    DEFAULT_API_PORT
+}
+fn default_web_ui() -> bool {
+    DEFAULT_WEB_UI
+}
+fn default_web_ui_host() -> String {
+    DEFAULT_WEB_UI_HOST.to_string()
+}
+fn default_web_ui_port() -> u16 {
+    DEFAULT_WEB_UI_PORT
 }
 
-impl Default for CommonConfig {
-    fn default() -> Self {
-        CommonConfig {
-            db_url: "sqlite://./wave.db".to_string(),
-        }
-    }
+#[derive(Debug, PartialEq, Deserialize, Default, Clone)]
+struct DownloadUrlDefinition {
+    macos_x86_64: String,
+    macos_aarch64: String,
+    linux_x86_64: String,
+    linux_aarch64: String,
+    windows_x86_64: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Default)]
-pub struct WaveMetricsConfig {
-    #[serde(default)]
-    pub output: WaveMetricsOutputConfig,
-}
-
-#[derive(Debug, PartialEq, Deserialize)]
-pub struct WaveMetricsOutputConfig {
-    #[serde(default)]
-    pub url: String,
-}
-
-impl Default for WaveMetricsOutputConfig {
-    fn default() -> Self {
-        WaveMetricsOutputConfig {
-            url: format!("http://localhost:{}/api/metrics-receiver", DEFAULT_API_PORT),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize)]
-pub struct WaveApiServerConfig {
-    #[serde(default)]
-    pub host: String,
-    #[serde(default)]
-    pub port: u16,
-}
-
-impl Default for WaveApiServerConfig {
-    fn default() -> Self {
-        WaveApiServerConfig {
-            host: "0.0.0.0".to_string(),
-            port: DEFAULT_API_PORT,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize, Default)]
+#[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct WaveConfig {
-    // pub config: Mapping,
+    // For data-layer
+    #[serde(default = "default_db_url")]
+    pub db_url: String,
+    // For the controller
+    // milliseconds
+    #[serde(default = "default_watch_definition_duration")]
+    pub watch_definition_duration: u64,
+    // Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
+    #[serde(default = "default_autoscaling_history_retention")]
+    pub autoscaling_history_retention: String,
+    // For api-server
+    #[serde(default = "default_api_host")]
+    pub host: String,
+    #[serde(default = "default_api_port")]
+    pub port: u16,
+    // For web-app
+    #[serde(default = "default_web_ui")]
+    pub web_ui: bool,
+    #[serde(default = "default_web_ui_host")]
+    pub web_ui_host: String,
+    #[serde(default = "default_web_ui_port")]
+    pub web_ui_port: u16,
+
+    // For download url
     #[serde(default)]
-    pub common: CommonConfig,
+    vector: DownloadUrlDefinition,
     #[serde(default)]
-    pub wave_metrics: WaveMetricsConfig,
-    #[serde(default)]
-    pub wave_api_server: WaveApiServerConfig,
+    telegraf: DownloadUrlDefinition,
+}
+
+impl Default for WaveConfig {
+    fn default() -> Self {
+        WaveConfig {
+            db_url: DEFAULT_DB_URL.to_string(),
+            watch_definition_duration: DEFAULT_WATCH_DEFINITION_DURATION,
+            autoscaling_history_retention: DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string(),
+            host: DEFAULT_API_HOST.to_string(),
+            port: DEFAULT_API_PORT,
+            web_ui: DEFAULT_WEB_UI,
+            web_ui_host: DEFAULT_WEB_UI_HOST.to_string(),
+            web_ui_port: DEFAULT_WEB_UI_PORT,
+            vector: DownloadUrlDefinition::default(),
+            telegraf: DownloadUrlDefinition::default(),
+        }
+    }
 }
 
 impl WaveConfig {
@@ -91,6 +120,21 @@ impl WaveConfig {
         debug!("Config file parsed: {:?}", wave_config);
         wave_config
     }
+    pub fn get_download_url(&self, name: &str) -> &str {
+        match name {
+            "vector_macos_x64_64" => self.vector.macos_x86_64.as_str(),
+            "vector_macos_aarch64" => self.vector.macos_aarch64.as_str(),
+            "vector_linux_x86_64" => self.vector.linux_x86_64.as_str(),
+            "vector_linux_aarch64" => self.vector.linux_aarch64.as_str(),
+            "vector_windows_x86_64" => self.vector.windows_x86_64.as_str(),
+            "telegraf_macos_x64_64" => self.telegraf.macos_x86_64.as_str(),
+            "telegraf_macos_aarch64" => self.telegraf.macos_aarch64.as_str(),
+            "telegraf_linux_x86_64" => self.telegraf.linux_x86_64.as_str(),
+            "telegraf_linux_aarch64" => self.telegraf.linux_aarch64.as_str(),
+            "telegraf_windows_x86_64" => self.telegraf.windows_x86_64.as_str(),
+            _ => "",
+        }
+    }
 }
 
 #[cfg(test)]
@@ -102,37 +146,21 @@ mod tests {
     }
 
     #[test]
-    fn test_common() {
+    fn test_watch_definition_duration() {
         let wave_config = get_wave_config();
-        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
-    }
-
-    #[test]
-    fn test_wave_metrics() {
-        let wave_config = get_wave_config();
-        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
+        assert_eq!(wave_config.db_url, DEFAULT_DB_URL);
         assert_eq!(
-            wave_config.wave_metrics.output.url,
-            "http://localhost:8081/api/metrics-receiver"
+            wave_config.watch_definition_duration,
+            DEFAULT_WATCH_DEFINITION_DURATION
         );
-    }
-
-    #[test]
-    fn test_wave_api_server() {
-        let wave_config = get_wave_config();
-        assert_eq!(wave_config.wave_api_server.host, "localhost");
-        assert_eq!(wave_config.wave_api_server.port, 8081);
-    }
-
-    #[test]
-    fn test_default() {
-        let wave_config = WaveConfig::new("");
-        assert_eq!(wave_config.common.db_url, "sqlite://./wave.db");
         assert_eq!(
-            wave_config.wave_metrics.output.url,
-            "http://localhost:3024/api/metrics-receiver"
+            wave_config.autoscaling_history_retention,
+            DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
-        assert_eq!(wave_config.wave_api_server.host, "0.0.0.0");
-        assert_eq!(wave_config.wave_api_server.port, 3024);
+        assert_eq!(wave_config.host, DEFAULT_API_HOST);
+        assert_eq!(wave_config.port, DEFAULT_API_PORT);
+        assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
+        assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
+        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
     }
 }

@@ -14,7 +14,8 @@ mod simulation_test {
     #[ignore]
     async fn test_simulation() {
         init();
-        let data_layer = DataLayer::new("sqlite://../../tests/db/wave.db", "").await;
+        let data_layer = DataLayer::new("sqlite://../../tests/db/wave.db").await;
+        data_layer.sync("").await;
         let collector = "vector";
         let metric_id = "cloudwatch_dynamodb_id";
 

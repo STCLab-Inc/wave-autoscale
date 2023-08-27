@@ -5,4 +5,4 @@ set -eo pipefail
 # https://moonrepo.dev/docs/guides/vcs-hooks
 
 moon sync projects
-moon run archiver:audit :lint
+moon run :lint

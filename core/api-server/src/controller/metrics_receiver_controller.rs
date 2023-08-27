@@ -128,12 +128,8 @@ async fn post_metrics_receiver(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app_state::get_app_state;
-    use actix_web::{http, test, web, App};
-
-    async fn get_app_state_for_test() -> web::Data<super::AppState> {
-        get_app_state("sqlite://:memory:").await
-    }
+    use crate::utils::test_utils::get_app_state_for_test;
+    use actix_web::{http, test, App};
 
     #[actix_web::test]
     async fn test_post_metrics_receiver_vector() {

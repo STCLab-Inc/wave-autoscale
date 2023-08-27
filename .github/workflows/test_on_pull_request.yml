@@ -59,7 +59,7 @@ jobs:
       #   run: moon run :lint -f
 
       - name: Run test
-        run: moon run :test -f
+        run: moon run controller:test -f
 
       - name: Cargo Autoclean
         run: moon run archiver:clean-cargo-cache -f

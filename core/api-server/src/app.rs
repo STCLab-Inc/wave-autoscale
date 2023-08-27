@@ -1,10 +1,12 @@
-use crate::{app_state::get_app_state, args::Args, controller};
+use crate::{app_state::get_app_state, controller};
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
-use clap::Parser;
-use dotenvy::dotenv;
-use log::info;
-use std::time::{SystemTime, UNIX_EPOCH};
+use data_layer::data_layer::DataLayer;
+use log::{debug, info};
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use utils::wave_config::WaveConfig;
 
 async fn ping() -> String {
@@ -16,22 +18,19 @@ async fn ping() -> String {
 }
 
 #[tokio::main]
-pub async fn run_server() -> std::io::Result<()> {
-    dotenv().ok();
-
-    // Parse command line arguments
-    let args: Args = Args::parse();
-
+pub async fn run_api_server(
+    wave_config: WaveConfig,
+    shared_data_layer: Arc<DataLayer>,
+) -> std::io::Result<()> {
     // Read arguments
-    let config = args.config.clone().unwrap_or_default();
-    let wave_config = WaveConfig::new(config.as_str());
-    let host = wave_config.wave_api_server.host;
-    let port = wave_config.wave_api_server.port;
-    let db_url = wave_config.common.db_url;
+    let host = wave_config.host;
+    let port = wave_config.port;
 
+    debug!("host: {}", host);
     // Run HTTP Server
-    let app_state = get_app_state(db_url.as_str()).await;
+    let app_state = get_app_state(shared_data_layer);
 
+    debug!("app_state");
     let http_server = HttpServer::new(move || {
         let cors = Cors::permissive().max_age(3600);
 
@@ -46,16 +45,19 @@ pub async fn run_server() -> std::io::Result<()> {
             .configure(controller::init_autoscaling_history_controller)
             .configure(controller::init_metrics_receiver_controller)
     })
+    .workers(1)
     .bind((host.clone(), port));
 
-    // Server structure implements Future.
-    let server = match http_server {
-        Ok(server) => server.run(),
-        Err(error) => {
-            panic!("There was a problem opening the file: {:?}", error)
-        }
-    };
+    if http_server.is_err() {
+        panic!(
+            "There was a problem opening the file: {:?}",
+            http_server.err().unwrap()
+        )
+    }
+    let http_server = http_server.unwrap();
+    let _ = http_server.run().await;
 
     info!("It's up! {}:{}", host, port);
-    server.await
+    // server.await
+    Ok(())
 }

@@ -26,18 +26,6 @@ archive/
 db/
 wave.db
 :memory:
-
-# core/wave-cli
-core/wave-cli/wave-api-server
-core/wave-cli/wave-controller
-core/wave-cli/wave-metrics
-core/wave-cli/wave-web-app/
-core/wave-cli/telegraf*
-core/wave-cli/vector*
-
-# core/wave-metrics
-core/wave-metrics/telegraf*
-core/wave-metrics/vector*
 telegraf*/
 vector*/
 

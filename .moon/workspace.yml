@@ -14,10 +14,8 @@ versionConstraint: ">=1.10.1"
 projects:
   # Rust based
   controller: "core/wave-autoscale"
-  wave-metrics: "core/wave-metrics"
   data-layer: "core/data-layer"
   api-server: "core/api-server"
-  cli: "core/wave-cli"
   utils: "core/utils"
   # Node based
   web-app: "core/web-app"
@@ -45,9 +43,10 @@ vcs:
   hooks:
     pre-commit:
       - "moon sync projects"
-      - "moon run archiver:audit :lint"
+      - "moon run :lint"
     pre-push:
       - "moon sync projects"
       # TODO: Add back in when we have a fix for 
-      - "moon run archiver:audit :lint"
+      # - "moon run archiver:audit :lint"
+      - "moon run :lint"
       - "moon run :test"

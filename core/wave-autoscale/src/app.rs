@@ -33,14 +33,12 @@ definitions, scaling plan definitions, and slo definitions.
 * The scaling component manager is responsible for managing the scaling components.
 */
 use crate::{
-    args,
     metric_updater::{MetricUpdater, SharedMetricUpdater},
     scaling_component::{ScalingComponentManager, SharedScalingComponentManager},
     scaling_planner::scaling_planner_manager::{
         ScalingPlannerManager, SharedScalingPlannerManager,
     },
 };
-use args::Args;
 use data_layer::data_layer::DataLayer;
 use log::{debug, error};
 use std::sync::Arc;
@@ -48,7 +46,7 @@ use tokio::time::sleep;
 use utils::wave_config::WaveConfig;
 
 pub struct App {
-    args: Args,
+    wave_config: WaveConfig,
     shared_data_layer: Arc<DataLayer>,
     shared_metric_updater: SharedMetricUpdater,
     shared_scaling_component_manager: SharedScalingComponentManager,
@@ -57,26 +55,9 @@ pub struct App {
 }
 
 impl App {
-    pub async fn new(args: Args) -> Self {
-        // Read arguments
-        let definition = args.definition.clone().unwrap_or_default();
-        let config = args.config.clone().unwrap_or_default();
-
-        // Read config file
-        let config_result = WaveConfig::new(config.as_str());
-        let db_url = config_result.common.db_url.clone();
-
-        // Create DataLayer
-        let data_layer = DataLayer::new(db_url.as_str(), definition.as_str()).await;
-        // Do not need RwLock or Mutex because the DataLayer is read-only.
-        let shared_data_layer = Arc::new(data_layer);
-
+    pub async fn new(wave_config: WaveConfig, shared_data_layer: Arc<DataLayer>) -> Self {
         // Create MetricUpdater
         let shared_metric_updater = MetricUpdater::new_shared(shared_data_layer.clone(), 1000);
-
-        // Create MetricAdapterManager
-        // let shared_metric_adapter_manager =
-        //     metric_ad
 
         // Create ScalingComponentManager
         let shared_scaling_component_manager = ScalingComponentManager::new_shared();
@@ -90,7 +71,7 @@ impl App {
 
         // Create App
         App {
-            args,
+            wave_config,
             shared_data_layer,
             shared_metric_updater,
             shared_scaling_component_manager,
@@ -160,37 +141,6 @@ impl App {
             manager_writer.run();
         }
         debug!("ScalingPlanners started: {}", number_of_plans);
-    }
-
-    pub async fn run_with_watching(&mut self) {
-        debug!("run_with_watching");
-        // Start the cron job to remove the old Autoscaling History
-        let remove_autoscaling_history_duration = self.args.autoscaling_history_retention.clone();
-
-        debug!(
-            "remove_autoscaling_history_duration: {:?}",
-            remove_autoscaling_history_duration
-        );
-        match remove_autoscaling_history_duration {
-            Some(duration_string) if !duration_string.is_empty() => {
-                self.run_autoscaling_history_cron_job(duration_string);
-            }
-            _ => {}
-        }
-
-        let watch_duration = self.args.watch_duration;
-        let mut watch_receiver = self.shared_data_layer.watch(watch_duration);
-        // Run this loop at once and then wait for changes
-        let mut once = false;
-        while !once || watch_receiver.changed().await.is_ok() {
-            if once {
-                let change = watch_receiver.borrow();
-                debug!("DataLayer changed: {:?}", change);
-            } else {
-                once = true;
-            }
-            self.run().await;
-        }
     }
 
     pub fn get_data_layer(&self) -> Arc<DataLayer> {
