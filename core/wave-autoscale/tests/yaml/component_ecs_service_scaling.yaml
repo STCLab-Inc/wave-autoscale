@@ -4,8 +4,8 @@ id: aws_ecs_ec2_service_scaling_server
 component_kind: amazon-ecs
 metadata:
   region: ap-northeast-3
-  access_key: AKIA5TOD4EBPND6KWUE6
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   cluster_name: wave-test-cluster10
   service_name: wave-test-cluster10-service3
 ---
@@ -14,7 +14,7 @@ id: aws_ecs_fargate_service_scaling_server
 component_kind: amazon-ecs
 metadata:
   region: ap-northeast-3
-  access_key: AKIA5TOD4EBPND6KWUE6
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   cluster_name: wave-test-cluster3
   service_name: wave-test-cluster3-service

@@ -4,8 +4,8 @@ id: cloudwatch_concurrent_executions_cnt
 metric_kind: cloudwatch-data
 metadata:
   region: ap-northeast-3
-  access_key: AKIA5TOD4EBPANTGF4XJ
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   polling_interval: 30000
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
@@ -18,8 +18,8 @@ id: scaling_component_lambda_function
 component_kind: aws-lambda
 metadata:
   region: ap-northeast-3
-  access_key: AKIA5TOD4EBPANTGF4XJ
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   function_name: test-lambda-function
   qualifier: latest
 ---

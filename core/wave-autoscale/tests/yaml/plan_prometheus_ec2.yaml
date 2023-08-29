@@ -14,8 +14,8 @@ id: ec2_autoscaling_api_server
 component_kind: aws-ec2-autoscaling
 metadata:
   region: ap-northeast-2
-  access_key: AKIAU7BQ6ZTCA2XGEZNN
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   asg_name: tf-wa-20230322020900305100000006
 ---
 kind: ScalingPlan
