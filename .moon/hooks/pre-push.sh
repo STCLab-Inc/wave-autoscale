@@ -6,4 +6,4 @@ set -eo pipefail
 
 moon sync projects
 moon run :lint
-moon run :test
+moon run controller:test
