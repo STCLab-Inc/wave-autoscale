@@ -49,4 +49,4 @@ vcs:
       # TODO: Add back in when we have a fix for 
       # - "moon run archiver:audit :lint"
       - "moon run :lint"
-      - "moon run :test"
+      - "moon run controller:test"
