@@ -20,8 +20,8 @@ id: amazon_emr_ec2_server_instance_fleet
 component_kind: amazon-emr-ec2
 metadata:
   region: ap-northeast-1
-  access_key: AKIA5TOD4EBPND6KWUE6
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   cluster_id: j-2T6BQIJU088IA
   instance_group_id: if-3U3AS4Q3S5DME
 ---

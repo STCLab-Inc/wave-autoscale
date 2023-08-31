@@ -4,7 +4,7 @@ id: lambda_function
 component_kind: aws-lambda
 metadata:
   region: ap-northeast-3
-  access_key: AKIA5TOD4EBPANTGF4XJ
-  secret_key: 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
+  access_key: {{ env.access_key }}
+  secret_key: {{ env.secret_key }}
   function_name: test-lambda-function
   qualifier: latest
