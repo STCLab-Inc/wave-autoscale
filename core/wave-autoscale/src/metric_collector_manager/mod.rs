@@ -519,7 +519,9 @@ impl MetricCollectorManager {
             collector_processes.push(telegraf_app_info);
         }
         if !collector_processes.is_empty() {
-            run_processes(&collector_processes);
+            tokio::spawn(async move {
+                run_processes(&collector_processes);
+            });
         }
     }
 }
