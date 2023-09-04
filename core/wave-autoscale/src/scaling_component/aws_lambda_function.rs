@@ -37,15 +37,11 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
         let metadata: HashMap<String, Value> = self.definition.metadata.clone();
 
         if let (
-            Some(Value::String(access_key)),
-            Some(Value::String(secret_key)),
             Some(Value::String(region)),
             Some(Value::String(function_name)),
             reserved_concurrency,
             provisioned_concurrency,
         ) = (
-            metadata.get("access_key"),
-            metadata.get("secret_key"),
             metadata.get("region"),
             metadata.get("function_name"),
             params
@@ -57,14 +53,15 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
                 .and_then(Value::as_i64)
                 .map(|v| v as i32),
         ) {
-            let config = get_aws_config(
-                Some(region.to_string()),
-                Some(access_key.to_string()),
-                Some(secret_key.to_string()),
-                None,
-                None,
-            )
-            .await;
+            let access_key = metadata
+                .get("access_key")
+                .map(|access_key| access_key.to_string());
+            let secret_key = metadata
+                .get("secret_key")
+                .map(|secret_key| secret_key.to_string());
+
+            let config =
+                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
             if config.is_err() {
                 let config_err = config.err().unwrap();
                 return Err(anyhow::anyhow!(config_err));

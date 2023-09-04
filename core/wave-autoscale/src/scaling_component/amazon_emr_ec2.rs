@@ -37,8 +37,6 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
 
         if let (
             Some(Value::String(region)),
-            Some(Value::String(access_key)),
-            Some(Value::String(secret_key)),
             Some(Value::String(cluster_id)),
             Some(Value::String(instance_group_id)),
             instance_count,
@@ -49,8 +47,6 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
             spot_timeout_duration_minutes, // timeout duration: min 5 / max 10,080 (7days)
         ) = (
             metadata.get("region"),
-            metadata.get("access_key"),
-            metadata.get("secret_key"),
             metadata.get("cluster_id"),
             metadata.get("instance_group_id"),
             params.get("instance_count").and_then(Value::as_u64),
@@ -64,14 +60,15 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
                 .get("spot_timeout_duration_minutes")
                 .and_then(Value::as_u64),
         ) {
-            let config = get_aws_config(
-                Some(region.to_string()),
-                Some(access_key.to_string()),
-                Some(secret_key.to_string()),
-                None,
-                None,
-            )
-            .await;
+            let access_key = metadata
+                .get("access_key")
+                .map(|access_key| access_key.to_string());
+            let secret_key = metadata
+                .get("secret_key")
+                .map(|secret_key| secret_key.to_string());
+
+            let config =
+                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
             if config.is_err() {
                 let config_err = config.err().unwrap();
                 error!("EMR - EC2 :: get_aws_config: {:?}", config_err);

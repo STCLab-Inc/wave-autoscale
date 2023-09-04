@@ -33,27 +33,20 @@ impl ScalingComponent for EC2AutoScalingComponent {
     async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
         let metadata = self.definition.metadata.clone();
 
-        if let (
-            Some(Value::String(asg_name)),
-            Some(Value::String(access_key)),
-            Some(Value::String(secret_key)),
-            Some(Value::String(region)),
-            Some(desired),
-        ) = (
+        if let (Some(Value::String(asg_name)), Some(Value::String(region)), Some(desired)) = (
             metadata.get("asg_name"),
-            metadata.get("access_key"),
-            metadata.get("secret_key"),
             metadata.get("region"),
             params.get("desired").and_then(Value::as_i64),
         ) {
-            let config = get_aws_config(
-                Some(region.to_string()),
-                Some(access_key.to_string()),
-                Some(secret_key.to_string()),
-                None,
-                None,
-            )
-            .await;
+            let access_key = metadata
+                .get("access_key")
+                .map(|access_key| access_key.to_string());
+            let secret_key = metadata
+                .get("secret_key")
+                .map(|secret_key| secret_key.to_string());
+
+            let config =
+                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
             if config.is_err() {
                 let config_err = config.err().unwrap();
                 return Err(anyhow::anyhow!(config_err));
@@ -89,7 +82,37 @@ impl ScalingComponent for EC2AutoScalingComponent {
             }
             Ok(())
         } else {
+            println!(" >> Invalid metadata");
             Err(anyhow::anyhow!("Invalid metadata"))
         }
+    }
+}
+
+#[test]
+fn test() {
+    let mut metadata: HashMap<String, Value> = HashMap::new();
+    metadata.insert(
+        "region".to_string(),
+        Value::String("ap-northeast-3".to_string()),
+    );
+    metadata.insert(
+        "asg_name".to_string(),
+        Value::String("wave-ec2-as".to_string()),
+    );
+
+    let mut params: HashMap<String, Value> = HashMap::new();
+    params.insert("desired".to_string(), json!(2));
+
+    if let (Some(Value::String(_asg_name)), Some(Value::String(_region)), Some(_desired)) = (
+        metadata.get("asg_name"),
+        metadata.get("region"),
+        params.get("desired").and_then(Value::as_i64),
+    ) {
+        let access_key = metadata.get("access_key");
+        let secret_key = metadata.get("secret_key");
+        assert_eq!(access_key, None);
+        assert_eq!(secret_key, None);
+    } else {
+        assert!(false);
     }
 }

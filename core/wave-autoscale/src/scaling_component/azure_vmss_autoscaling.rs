@@ -38,26 +38,30 @@ impl ScalingComponent for VMSSAutoScalingComponent {
     async fn apply(&self, params: HashMap<String, serde_json::Value>) -> anyhow::Result<()> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
         if let (
-            Some(serde_json::Value::String(client_id)),
-            Some(serde_json::Value::String(client_secret)),
-            Some(serde_json::Value::String(tenant_id)),
             Some(serde_json::Value::String(subscription_id)),
             Some(serde_json::Value::String(resource_group_name)),
             Some(serde_json::Value::String(vm_scale_set_name)),
             Some(capacity),
         ) = (
-            metadata.get("client_id"),
-            metadata.get("client_secret"),
-            metadata.get("tenant_id"),
             metadata.get("subscription_id"),
             metadata.get("resource_group_name"),
             metadata.get("vm_scale_set_name"),
             params.get("capacity").and_then(serde_json::Value::as_u64),
         ) {
+            let client_id = metadata
+                .get("client_id")
+                .map(|client_id| client_id.to_string());
+            let client_secret = metadata
+                .get("client_secret")
+                .map(|client_secret| client_secret.to_string());
+            let tenant_id = metadata
+                .get("tenant_id")
+                .map(|tenant_id| tenant_id.to_string());
+
             let azure_credential = AzureCredential {
-                client_id: Some(client_id.to_string()),
-                client_secret: Some(client_secret.to_string()),
-                tenant_id: Some(tenant_id.to_string()),
+                client_id,
+                client_secret,
+                tenant_id,
             };
             let azure_vmss_setting = AzureVmssSetting {
                 azure_credential: azure_credential.clone(),
