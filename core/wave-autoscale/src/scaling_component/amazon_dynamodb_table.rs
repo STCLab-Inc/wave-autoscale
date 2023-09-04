@@ -443,8 +443,6 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
-            Some(serde_json::Value::String(access_key)),
-            Some(serde_json::Value::String(secret_key)),
             Some(serde_json::Value::String(region)),
             Some(serde_json::Value::String(table_name)),
             capacity_mode,
@@ -459,8 +457,6 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
             write_min_capacity,
             write_max_capacity,
         ) = (
-            metadata.get("access_key"),
-            metadata.get("secret_key"),
             metadata.get("region"),
             metadata.get("table_name"),
             params
@@ -504,14 +500,15 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
                 .and_then(serde_json::Value::as_i64)
                 .map(|v| v as i32),
         ) {
-            let config = get_aws_config(
-                Some(region.to_string()),
-                Some(access_key.to_string()),
-                Some(secret_key.to_string()),
-                None,
-                None,
-            )
-            .await;
+            let access_key = metadata
+                .get("access_key")
+                .map(|access_key| access_key.to_string());
+            let secret_key = metadata
+                .get("secret_key")
+                .map(|secret_key| secret_key.to_string());
+
+            let config =
+                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
             if config.is_err() {
                 let config_err = config.err().unwrap();
                 return Err(anyhow::anyhow!(config_err));
