@@ -99,31 +99,20 @@ fn test() {
         "asg_name".to_string(),
         Value::String("wave-ec2-as".to_string()),
     );
-    // metadata.insert("access_key".to_string(), Value::Null);
-    // metadata.insert("secret_key".to_string(), Value::Null);
-    println!(" >> EC2 metadata - {:?}", metadata.clone());
 
     let mut params: HashMap<String, Value> = HashMap::new();
     params.insert("desired".to_string(), json!(2));
-    println!(" >> EC2 params - {:?}", params.clone());
 
-    if let (
-        Some(Value::String(_asg_name)),
-        // Some(_access_key),
-        // Some(_secret_key),
-        Some(Value::String(_region)),
-        Some(_desired),
-    ) = (
+    if let (Some(Value::String(_asg_name)), Some(Value::String(_region)), Some(_desired)) = (
         metadata.get("asg_name"),
-        // metadata.get("access_key"),
-        // metadata.get("secret_key"),
         metadata.get("region"),
         params.get("desired").and_then(Value::as_i64),
     ) {
-        let _access_key = metadata.get("access_key");
-        let _secret_key = metadata.get("secret_key");
-        println!("ok");
+        let access_key = metadata.get("access_key");
+        let secret_key = metadata.get("secret_key");
+        assert_eq!(access_key, None);
+        assert_eq!(secret_key, None);
     } else {
-        println!("err");
+        assert!(false);
     }
 }
