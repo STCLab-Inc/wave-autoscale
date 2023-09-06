@@ -1,6 +1,6 @@
-## Wave Autoscale - Open-source Autoscaling Solution for Cloud Engineers
+## Wave Autoscale - Open-source Traffic & Scaling Automation
 
-![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/3b403fa2-52ec-4f29-841f-e48815a0208b)
+![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/76df15ee-2efc-40e9-a142-3a2551435b37)
 
 
 - Website: https://waveautoscale.com
