@@ -171,7 +171,11 @@ impl<'a> ScalingPlanner {
                             rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
                                 let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
                                 let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let tags = args.get::<String, HashMap<String, String>>("tags".to_string()).map_err(|_| rquickjs::Error::Exception)?;
+                                let tags = args.get::<String, HashMap<String, String>>("tags".to_string());
+                                let tags = match tags {
+                                    Ok(tags) => tags,
+                                    Err(_) => HashMap::new()
+                                };
                                 let stats = args.get::<String, String>("stats".to_string()).map_err(|_| rquickjs::Error::Exception)?;
                                 let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| rquickjs::Error::Exception)?;
                                 context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
