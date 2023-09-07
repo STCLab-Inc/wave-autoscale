@@ -429,6 +429,10 @@ impl MetricCollectorManager {
                 "data_format".to_string(),
                 toml::Value::String("json".to_string()),
             );
+            let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
+                continue;
+            };
+            output_metric.insert("tagpass".to_string(), required_tags);
             outputs_http.push(toml::Value::Table(output_metric));
         }
 
