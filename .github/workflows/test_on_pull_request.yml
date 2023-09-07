@@ -52,6 +52,18 @@ jobs:
 
       - name: Install Clippy
         run: rustup component add clippy
+      
+      # WORKAROUND: moon 1.13.2 has a bug of cargo binstall
+      - name: Install BInstall
+        run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+      
+      - name: Install cargo-nextest
+        run: cargo binstall -y cargo-nextest
+      
+      - name: Install cargo-cache
+        run: cargo binstall -y cargo-cache
+      ## END OF WORKAROUND
+
       # - name: Run audit
       #   run: moon run archiver:audit -f
 
