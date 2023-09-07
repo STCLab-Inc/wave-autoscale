@@ -96,12 +96,20 @@ async fn post_metrics_receiver(
             };
 
             for (field_name, field_value) in fields {
-                json_value.push(json!(
-                {
-                    "name": format!("{}_{}", metric_name, field_name),
-                    "tags": metric_tags,
-                    "value": field_value
-                }));
+                if metric_tags.is_none() {
+                    continue;
+                }
+                let Some(metric_tags_id) = metric_tags.unwrap().get("metric_id") else {
+                    continue;
+                };
+                if metric_tags_id.eq(&metric_id) {
+                    json_value.push(json!(
+                    {
+                        "name": format!("{}_{}", metric_name, field_name),
+                        "tags": metric_tags,
+                        "value": field_value
+                    }));
+                }
             }
         }
     } else {
