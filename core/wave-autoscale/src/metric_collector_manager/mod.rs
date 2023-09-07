@@ -388,12 +388,6 @@ impl MetricCollectorManager {
             // Create a input
             let mut input_metric = toml::value::Table::new();
 
-            // namepass = "metric_id"
-            input_metric.insert(
-                "name_override".to_string(),
-                metric_definition.id.clone().into(),
-            );
-
             // Add metadata to the source
             for (key, value) in &metric_definition.metadata {
                 let Ok(value) = serde_json::from_str::<toml::Value>(value.to_string().as_str()) else {
@@ -401,6 +395,9 @@ impl MetricCollectorManager {
                 };
                 input_metric.insert(key.to_string(), value);
             }
+
+            input_metric =
+                add_telegraf_input_required_tags(input_metric, metric_definition.id.to_string());
 
             // e.g. metric_kind: cloudwatch
             let kind = metric_definition.metric_kind.to_string();
@@ -417,10 +414,6 @@ impl MetricCollectorManager {
 
             // Create a output
             let mut output_metric = toml::value::Table::new();
-            output_metric.insert(
-                "namepass".to_string(),
-                toml::Value::Array(vec![metric_definition.id.clone().into()]),
-            );
             output_metric.insert(
                 "url".to_string(),
                 toml::Value::String(format!(
@@ -526,6 +519,27 @@ impl MetricCollectorManager {
     }
 }
 
+fn add_telegraf_input_required_tags(
+    mut input_metric: toml::map::Map<String, toml::value::Value>,
+    metric_id: String,
+) -> toml::map::Map<String, toml::value::Value> {
+    if input_metric.contains_key("tags") && input_metric.get("tags").is_some() {
+        let input_metric_tags = input_metric.get("tags").unwrap();
+        let input_metric_tags = input_metric_tags.as_table().unwrap();
+
+        let mut new_map = toml::value::Table::new();
+        new_map = input_metric_tags.clone();
+        new_map.insert("metric_id".to_string(), toml::Value::String(metric_id));
+        input_metric.insert("tags".to_string(), toml::Value::Table(new_map.clone()));
+    } else {
+        let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : metric_id }).to_string().as_str()) else {
+            return input_metric;
+        };
+        input_metric.insert("tags".to_string(), required_tags);
+    }
+    input_metric
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -540,6 +554,41 @@ mod tests {
 
         let wave_config = WaveConfig::new("./tests/config/wave-config.yaml");
         MetricCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
+    }
+
+    #[test]
+    fn test_add_telegraf_input_required_tags_empty_tags() {
+        let metric_id = "metric_id_1".to_string();
+        let mut input_metric = toml::value::Table::new();
+        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
+        let tags = input_metric.get("tags").unwrap();
+        assert!(tags
+            .as_table()
+            .unwrap()
+            .get("metric_id")
+            .unwrap()
+            .eq(&toml::Value::String(metric_id)));
+        assert_eq!(tags.as_table().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_add_telegraf_input_required_tags_add_tags() {
+        let metric_id = "metric_id_1".to_string();
+        let mut input_metric = toml::value::Table::new();
+
+        let mut input_tags = toml::value::Table::new();
+        input_tags.insert("tag_1".to_string(), toml::Value::String(metric_id.clone()));
+        input_metric.insert("tags".to_string(), toml::Value::Table(input_tags.clone()));
+
+        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
+        let tags = input_metric.get("tags").unwrap();
+        assert!(tags
+            .as_table()
+            .unwrap()
+            .get("metric_id")
+            .unwrap()
+            .eq(&toml::Value::String(metric_id)));
+        assert_eq!(tags.as_table().unwrap().len(), 2);
     }
 
     // Test whether it fetchs the os and arch correctly
