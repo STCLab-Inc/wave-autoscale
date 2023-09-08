@@ -62,7 +62,13 @@ jobs:
       
       - name: Install cargo-cache
         run: cargo binstall -y cargo-cache
+      
+      - name: Install cargo-deny
+        run: cargo binstall -y cargo-deny
       ## END OF WORKAROUND
+
+      - name: Cargo-deny Check (Licenses, Bans)
+        run: cargo deny check licenses ban
 
       # - name: Run audit
       #   run: moon run archiver:audit -f
