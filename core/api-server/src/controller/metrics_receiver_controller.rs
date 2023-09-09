@@ -68,9 +68,7 @@ async fn post_metrics_receiver(
             let metric = metric.unwrap();
             let metric_name = metric.get("name");
             let metric_tags = metric.get("tags");
-            let metric_value = metric
-                .get("counter")
-                .and_then(|counter| counter.get("value"));
+            let metric_value = metric.get("gauge").and_then(|gauge| gauge.get("value"));
 
             json_value.push(json!(
             {
@@ -146,7 +144,7 @@ mod tests {
                             "tags": {
                                 "tag1": "value1"
                             },
-                            "counter": {
+                            "gauge": {
                                 "value": 1
                             }
                         }
@@ -205,7 +203,7 @@ mod tests {
                             "tags": {
                                 "tag1": "value1"
                             },
-                            "counter": {
+                            "gauge": {
                                 "value": 1
                             }
                         }
