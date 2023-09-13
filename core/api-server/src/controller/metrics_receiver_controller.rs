@@ -68,13 +68,22 @@ async fn post_metrics_receiver(
             let metric = metric.unwrap();
             let metric_name = metric.get("name");
             let metric_tags = metric.get("tags");
-            let metric_value = metric.get("gauge").and_then(|gauge| gauge.get("value"));
+            let metric_value_gauge = metric.get("gauge").and_then(|gauge| gauge.get("value"));
+            let metric_value_counter = metric
+                .get("counter")
+                .and_then(|counter| counter.get("value"));
+            let mut metric_value = metric_value_counter;
+            if metric_value.is_none() {
+                metric_value = metric_value_gauge;
+            }
+            let timestamp = metric.get("timestamp");
 
             json_value.push(json!(
             {
                 "name": metric_name,
                 "tags": metric_tags,
-                "value": metric_value
+                "timestamp": timestamp,
+                "value": metric_value,
             }));
         }
     } else if collector == "telegraf" {
@@ -92,13 +101,15 @@ async fn post_metrics_receiver(
             let Some(fields) = metric.get("fields").and_then(serde_json::Value::as_object) else {
                 continue;
             };
+            let timestamp = metric.get("timestamp");
 
             for (field_name, field_value) in fields {
                 json_value.push(json!(
                 {
                     "name": format!("{}_{}", metric_name, field_name),
                     "tags": metric_tags,
-                    "value": field_value
+                    "value": field_value,
+                    "timestamp": timestamp,
                 }));
             }
         }
