@@ -1,0 +1,42 @@
+---
+kind: Metric
+id: prometheus_scrape_1
+collector: vector
+metric_kind: prometheus_scrape
+metadata:
+  endpoints:
+    - http://prometheus-simulation.waveautoscale.io:9090/federate
+  query:
+    "match[]":
+      - "nginx3_connections_waiting"
+  scrape_interval_secs: 10
+---
+kind: ScalingComponent
+id: ec2_autoscaling_server
+component_kind: aws-ec2-autoscaling
+metadata:
+  region: ap-northeast-3
+  asg_name: wave-ec2-as-nginx
+---
+kind: ScalingPlan
+id: scaling_plan_aws_asg_autoscaling
+metadata:
+  title: "Scaling Plan for AWS EC2 Autoscaling"
+  cool_down: 300 # seconds
+  interval: 10000 # milliseconds
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if nginx connections_waiting is greater than 1800."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'prometheus_scrape_1',
+        name: 'nginx3_connections_waiting',
+        stats: 'max',
+        period_sec: 15
+      }) >= 1800
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: ec2_autoscaling_server
+        desired: 2
