@@ -164,10 +164,15 @@ pub fn target_value_expression_regex_filter(
 }
 
 pub async fn get_target_value_result(
-    context: rquickjs::AsyncContext,
     target_value_expression: &str,
     target_value_map: HashMap<String, i64>,
 ) -> Result<i64, anyhow::Error> {
+    let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
+        return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::new() error"));
+    };
+    let Result::Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
+        return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::full() error"));
+    };
     rquickjs::async_with!(context => |ctx| {
         target_value_map.iter().for_each(|(target_value_key, target_value_value)| {
             let _ = ctx.globals().set(
@@ -230,12 +235,6 @@ mod test {
 
     #[tokio::test]
     async fn test_evaluation_target_value() {
-        let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-            return;
-        };
-        let Result::Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-            return;
-        };
         let target_value_key_array = TestComponentTargetValue::iter()
             .map(|value| value.to_string())
             .collect::<Vec<String>>();
@@ -252,31 +251,23 @@ mod test {
             }
         }
         assert_eq!(
-            get_target_value_result(
-                context.clone(),
-                target_value_expression,
-                target_value_map.clone()
-            )
-            .await
-            .unwrap(),
+            get_target_value_result(target_value_expression, target_value_map.clone())
+                .await
+                .unwrap(),
             4
         );
 
         let target_value_expression2 = "2 * 4";
         assert_eq!(
-            get_target_value_result(
-                context.clone(),
-                target_value_expression2,
-                target_value_map.clone()
-            )
-            .await
-            .unwrap(),
+            get_target_value_result(target_value_expression2, target_value_map.clone())
+                .await
+                .unwrap(),
             8
         );
 
         let target_value_expression3 = "4 * 4";
         assert_eq!(
-            get_target_value_result(context.clone(), target_value_expression3, HashMap::new())
+            get_target_value_result(target_value_expression3, HashMap::new())
                 .await
                 .unwrap(),
             16

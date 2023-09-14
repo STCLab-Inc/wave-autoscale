@@ -51,12 +51,6 @@ impl ScalingComponent for EC2AutoScalingComponent {
     }
     async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
         let metadata = self.definition.metadata.clone();
-        let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-            return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::new() error"));
-        };
-        let Result::Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-            return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::full() error"));
-        };
 
         if let (
             Some(Value::String(asg_name)),
@@ -98,13 +92,11 @@ impl ScalingComponent for EC2AutoScalingComponent {
             };
 
             // evaluate target value
-            let desired = get_target_value_result(
-                context.clone(),
-                desired,
-                target_value_map.unwrap().clone(),
-            )
-            .await
-            .unwrap();
+            let desired = get_target_value_result(desired, target_value_map.unwrap().clone()).await;
+            if desired.is_err() {
+                return Err(desired.unwrap_err());
+            }
+            let desired = desired.unwrap();
 
             let mut result = client
                 .update_auto_scaling_group()
@@ -147,46 +139,27 @@ async fn get_target_value_map(
 ) -> Result<HashMap<String, i64>, anyhow::Error> {
     let mut target_value_map: HashMap<String, i64> = HashMap::new();
     for target_value in target_value_array {
+        let mut target_value_kind = EC2ComponentTargetValue::Desired;
         if target_value.eq(&format!("${}", EC2ComponentTargetValue::Desired)) {
-            let Some(desired_capacity) = get_auto_scaling_group_capacity(
-                client.clone(),
-                asg_name.clone(),
-                EC2ComponentTargetValue::Desired
-            )
-            .await
-                else {
-                return Err(anyhow::anyhow!(
-                    "Failed to get auto scaling group desired capacity"
-                ));
-            };
-            target_value_map.insert(target_value.clone(), desired_capacity as i64);
+            target_value_kind = EC2ComponentTargetValue::Desired;
         } else if target_value.eq(&format!("${}", EC2ComponentTargetValue::Min)) {
-            let Some(min_capacity) = get_auto_scaling_group_capacity(
-                client.clone(),
-                asg_name.clone(),
-                EC2ComponentTargetValue::Min
-            )
-            .await
-                else {
-                return Err(anyhow::anyhow!(
-                    "Failed to get auto scaling group min capacity"
-                ));
-            };
-            target_value_map.insert(target_value.clone(), min_capacity as i64);
+            target_value_kind = EC2ComponentTargetValue::Min;
         } else if target_value.eq(&format!("${}", EC2ComponentTargetValue::Max)) {
-            let Some(max_capacity) = get_auto_scaling_group_capacity(
-                client.clone(),
-                asg_name.clone(),
-                EC2ComponentTargetValue::Max
-            )
-            .await
-                else {
-                return Err(anyhow::anyhow!(
-                    "Failed to get auto scaling group max capacity"
-                ));
-            };
-            target_value_map.insert(target_value.clone(), max_capacity as i64);
+            target_value_kind = EC2ComponentTargetValue::Max;
         }
+
+        let Some(desired_capacity) = get_auto_scaling_group_capacity(
+            client.clone(),
+            asg_name.clone(),
+            target_value_kind
+        )
+        .await
+            else {
+            return Err(anyhow::anyhow!(
+                "Failed to get auto scaling group capacity"
+            ));
+        };
+        target_value_map.insert(target_value.clone(), desired_capacity as i64);
     }
     Ok(target_value_map)
 }
