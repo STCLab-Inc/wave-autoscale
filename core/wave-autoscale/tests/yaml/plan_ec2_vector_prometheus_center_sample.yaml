@@ -39,4 +39,5 @@ plans:
     priority: 1
     scaling_components:
       - component_id: ec2_autoscaling_server
-        desired: 2
+        desired: $desired * $min + ($max/2) + 1 # desired: 2
+        # $desired: 1, $min: 0, $max: 3

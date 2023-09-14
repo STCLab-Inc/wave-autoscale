@@ -146,3 +146,142 @@ impl ScalingComponentManager {
         }
     }
 }
+
+pub fn target_value_expression_regex_filter(
+    target_value_expression: &str,
+    target_value_key_array: Vec<String>,
+) -> Vec<String> {
+    let pattern = r"\$(".to_string() + &target_value_key_array.join("|") + r")";
+    let re = regex::Regex::new(&pattern).unwrap();
+    let mut result_vec = vec![];
+    for mat in re.find_iter(target_value_expression) {
+        let match_value = mat.as_str().to_string();
+        if !result_vec.contains(&match_value) {
+            result_vec.push(mat.as_str().to_string());
+        }
+    }
+    result_vec
+}
+
+pub async fn get_target_value_result(
+    context: rquickjs::AsyncContext,
+    target_value_expression: &str,
+    target_value_map: HashMap<String, i64>,
+) -> Result<i64, anyhow::Error> {
+    rquickjs::async_with!(context => |ctx| {
+        target_value_map.iter().for_each(|(target_value_key, target_value_value)| {
+            let _ = ctx.globals().set(
+                target_value_key, target_value_value
+            );
+        })
+    })
+    .await;
+
+    let target_value_result = rquickjs::async_with!(context => |ctx| {
+        let Result::Ok(result) = ctx.eval::<i64, _>(target_value_expression) else {
+            return Err(anyhow::anyhow!("Invalid target value"));
+        };
+        Ok(result)
+    })
+    .await;
+
+    target_value_result
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use strum::IntoEnumIterator;
+    use strum_macros::EnumIter;
+
+    #[derive(Debug, EnumIter)]
+    enum TestComponentTargetValue {
+        Test1,
+        Test2,
+    }
+    impl std::fmt::Display for TestComponentTargetValue {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                TestComponentTargetValue::Test1 => write!(f, "test1"),
+                TestComponentTargetValue::Test2 => write!(f, "test2"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_target_value_expression_regex_filter() {
+        let target_value_expression = "$test1 + 2 + $test2";
+        let target_value_key_array = TestComponentTargetValue::iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<String>>();
+        assert_eq!(
+            target_value_expression_regex_filter(
+                target_value_expression,
+                target_value_key_array.clone()
+            ),
+            vec!["$test1", "$test2"]
+        );
+
+        let target_value_expression2 = "1";
+        assert!(target_value_expression_regex_filter(
+            target_value_expression2,
+            target_value_key_array
+        )
+        .is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_evaluation_target_value() {
+        let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
+            return;
+        };
+        let Result::Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
+            return;
+        };
+        let target_value_key_array = TestComponentTargetValue::iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<String>>();
+
+        let target_value_expression = "($test1 * 2) + $test2";
+        let mut target_value_map = HashMap::new();
+        for target_value_key in
+            target_value_expression_regex_filter(target_value_expression, target_value_key_array)
+        {
+            if target_value_key.eq(&format!("${}", TestComponentTargetValue::Test1)) {
+                target_value_map.insert(target_value_key, 1);
+            } else if target_value_key.eq(&format!("${}", TestComponentTargetValue::Test2)) {
+                target_value_map.insert(target_value_key, 2);
+            }
+        }
+        assert_eq!(
+            get_target_value_result(
+                context.clone(),
+                target_value_expression,
+                target_value_map.clone()
+            )
+            .await
+            .unwrap(),
+            4
+        );
+
+        let target_value_expression2 = "2 * 4";
+        assert_eq!(
+            get_target_value_result(
+                context.clone(),
+                target_value_expression2,
+                target_value_map.clone()
+            )
+            .await
+            .unwrap(),
+            8
+        );
+
+        let target_value_expression3 = "4 * 4";
+        assert_eq!(
+            get_target_value_result(context.clone(), target_value_expression3, HashMap::new())
+                .await
+                .unwrap(),
+            16
+        );
+    }
+}

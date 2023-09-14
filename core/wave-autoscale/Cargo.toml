@@ -72,6 +72,8 @@ walkdir = { version = "2.3.3" }
 ulid = { version = "1.0.0" }
 regex = { version = "1.9.1" }
 ctrlc = { version = "3.4.0" }
+strum = { version = "0.25.0" }
+strum_macros = { version = "0.25.0" }
 
 [dev-dependencies]
 handlebars = "4.3.7"
