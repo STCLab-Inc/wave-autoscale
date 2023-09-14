@@ -60,21 +60,21 @@ impl K8sDeploymentScalingComponent {
  * updatedReplicas - This represents the total number of non-terminated pods targeted by this deployment that have the desired template spec.
 */
 #[derive(Debug, EnumIter)]
-enum EKSComponentTargetValue {
+enum K8sComponentTargetValue {
     Replicas,
     UnavailableReplicas,
     AvailableReplicas,
     ReadyReplicas,
     UpdatedReplicas,
 }
-impl std::fmt::Display for EKSComponentTargetValue {
+impl std::fmt::Display for K8sComponentTargetValue {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            EKSComponentTargetValue::Replicas => write!(f, "replicas"),
-            EKSComponentTargetValue::UnavailableReplicas => write!(f, "unavailable_replicas"),
-            EKSComponentTargetValue::AvailableReplicas => write!(f, "available_replicas"),
-            EKSComponentTargetValue::ReadyReplicas => write!(f, "ready_replicas"),
-            EKSComponentTargetValue::UpdatedReplicas => write!(f, "updated_replicas"),
+            K8sComponentTargetValue::Replicas => write!(f, "replicas"),
+            K8sComponentTargetValue::UnavailableReplicas => write!(f, "unavailable_replicas"),
+            K8sComponentTargetValue::AvailableReplicas => write!(f, "available_replicas"),
+            K8sComponentTargetValue::ReadyReplicas => write!(f, "ready_replicas"),
+            K8sComponentTargetValue::UpdatedReplicas => write!(f, "updated_replicas"),
         }
     }
 }
@@ -114,7 +114,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             let client = client.unwrap();
 
             // check target value contains enum variables
-            let target_value_key_array = EKSComponentTargetValue::iter()
+            let target_value_key_array = K8sComponentTargetValue::iter()
                 .map(|value| value.to_string())
                 .collect::<Vec<String>>();
             let target_value_array =
@@ -189,20 +189,20 @@ async fn get_target_value_map(
 ) -> Result<HashMap<String, i64>, anyhow::Error> {
     let mut target_value_map: HashMap<String, i64> = HashMap::new();
     for target_value in target_value_array {
-        let mut target_value_kind = EKSComponentTargetValue::Replicas;
-        if target_value.eq(&format!("${}", EKSComponentTargetValue::Replicas)) {
-            target_value_kind = EKSComponentTargetValue::Replicas;
-        } else if target_value.eq(&format!("${}", EKSComponentTargetValue::AvailableReplicas)) {
-            target_value_kind = EKSComponentTargetValue::AvailableReplicas;
+        let mut target_value_kind = K8sComponentTargetValue::Replicas;
+        if target_value.eq(&format!("${}", K8sComponentTargetValue::Replicas)) {
+            target_value_kind = K8sComponentTargetValue::Replicas;
+        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::AvailableReplicas)) {
+            target_value_kind = K8sComponentTargetValue::AvailableReplicas;
         } else if target_value.eq(&format!(
             "${}",
-            EKSComponentTargetValue::UnavailableReplicas
+            K8sComponentTargetValue::UnavailableReplicas
         )) {
-            target_value_kind = EKSComponentTargetValue::UnavailableReplicas;
-        } else if target_value.eq(&format!("${}", EKSComponentTargetValue::ReadyReplicas)) {
-            target_value_kind = EKSComponentTargetValue::ReadyReplicas;
-        } else if target_value.eq(&format!("${}", EKSComponentTargetValue::UpdatedReplicas)) {
-            target_value_kind = EKSComponentTargetValue::UpdatedReplicas;
+            target_value_kind = K8sComponentTargetValue::UnavailableReplicas;
+        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::ReadyReplicas)) {
+            target_value_kind = K8sComponentTargetValue::ReadyReplicas;
+        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::UpdatedReplicas)) {
+            target_value_kind = K8sComponentTargetValue::UpdatedReplicas;
         }
 
         let replicas = get_deployment_replicas(
@@ -224,7 +224,7 @@ async fn get_deployment_replicas(
     client: Client,
     namespace: &str,
     deployment_name: &str,
-    kind: EKSComponentTargetValue,
+    kind: K8sComponentTargetValue,
 ) -> Result<i32, anyhow::Error> {
     let deployment_api: Api<Deployment> = Api::namespaced(client, namespace);
 
@@ -239,13 +239,13 @@ async fn get_deployment_replicas(
         return Err(anyhow::anyhow!("Failed to get deployment - status none"));
     }
     let status = match kind {
-        EKSComponentTargetValue::Replicas => deployment_status.unwrap().replicas,
-        EKSComponentTargetValue::UnavailableReplicas => {
+        K8sComponentTargetValue::Replicas => deployment_status.unwrap().replicas,
+        K8sComponentTargetValue::UnavailableReplicas => {
             deployment_status.unwrap().unavailable_replicas
         }
-        EKSComponentTargetValue::AvailableReplicas => deployment_status.unwrap().available_replicas,
-        EKSComponentTargetValue::ReadyReplicas => deployment_status.unwrap().ready_replicas,
-        EKSComponentTargetValue::UpdatedReplicas => deployment_status.unwrap().updated_replicas,
+        K8sComponentTargetValue::AvailableReplicas => deployment_status.unwrap().available_replicas,
+        K8sComponentTargetValue::ReadyReplicas => deployment_status.unwrap().ready_replicas,
+        K8sComponentTargetValue::UpdatedReplicas => deployment_status.unwrap().updated_replicas,
     };
     if status.is_none() {
         // return Err(anyhow::anyhow!("Failed to get deployment - status none"));
@@ -277,7 +277,7 @@ mod test {
             client.unwrap(),
             get_data().1.as_str(),
             get_data().2.as_str(),
-            EKSComponentTargetValue::Replicas,
+            K8sComponentTargetValue::Replicas,
         )
         .await;
         assert!(replicas.unwrap() > 0);
@@ -286,7 +286,7 @@ mod test {
             client.unwrap(),
             get_data().1.as_str(),
             get_data().2.as_str(),
-            EKSComponentTargetValue::UnavailableReplicas,
+            K8sComponentTargetValue::UnavailableReplicas,
         )
         .await;
         assert!(unavailable_replicas.unwrap() >= 0);
