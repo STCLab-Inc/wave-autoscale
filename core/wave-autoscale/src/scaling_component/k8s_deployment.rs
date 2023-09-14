@@ -262,13 +262,14 @@ mod test {
 
     fn get_data() -> (String, String, String, String) {
         (
-            "https://3AAD8E2817F0CB2492BCD34FA32CAC09.gr7.ap-northeast-2.eks.amazonaws.com".to_string(),        // api_server_endpoint
-            "default".to_string(), // namespace
-            "echo".to_string(),    // name
-            "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJU0JEVXNQc3ZkY013RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TXpBNU1UUXdOREkxTlROYUZ3MHpNekE1TVRFd05ESTFOVE5hTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURpQjBiNHZzT29Nd0x0OXVpOTU4L2xrWDhUMTJ6REF3SUVXNE92WTJwb2lOazZOSnpUcEgwOU1HaGsKdzYvWXhabndobitoNVFEUitDdG1vSGx0T2xpUVdleXI3Tm5nLzl3elBtMTl6NE9qS3M3T1hKT2l1dThJRGQzeQpzTU44NVF3RC9BTWJqb1hkSlFNZmVGOWZ0QjVxdXFPTGVVeVBmdVVyZGZTYW1Lak5oaHFYWHVRR0pabXordWthCng1NjBpUTJhVklzUlFNWmp4QUlzU2lZcmU2SitsL3pOck5PZUhSeEhxa2ZDNWRaZXRTK3paaG5HaXQvMEVjK3MKWnQ4T085R2RtL2k3THdJMWRHVFdkVmhEWTAvbzJBNmZLSXBjMjUvaFR0QUJiYW5ZQ2NpWEJDVkVwaVJ3SkFZdQpuT1VnZjNSa1JqUE1DUkhXaFVwb0NIUHJlb2EzQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRai9ScnBIRG4zQlNJWEZPYXRpbzV1WHQwRzREQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQnE0VmNqS0xsawpFckZjM0VTMFh1VjM0aTZZSWJtdXhaV2FodmZuUk1pTUR4QklNRE5oWDZPWDFVTDNncmhuejZRQVpwV0VMa3JsCml5U0Z0T1MzWk9rTmZRWWZET3haUGVZbkVNMHRNY3BXbER1OW1MY21WWWNWWTZVR3o4OWoyRlg4Qm9UREQ5b0EKZlU1cGhzdmpBREVJaktEM1V3SHhYYWpGd0FZL2Y4SXZvWXRzVVcvQityRlR6MlUydnduVjFaZjlHaFZGNSs4RwovbEgxV3AxSW5rWjltbno0U1NQdWRvWDZiZXBNNGxOeDRpYnRTNzcvSXJpZGFaT1MyTTZpNDdtMVRLL1lFbk9PCit3ME5nOHkwa3o4Yk04NmV5V3QveHJJSWN0ZndmNzB3UUlBQUxnU1RvWjB3NEdtbmpvV1ZHT3dVK0ViRDI5eXUKcXJRSnVmUXhvdHVPCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K".to_string(),        // ca_cert
+            "api_server_endpoint".to_string(), // api_server_endpoint
+            "default".to_string(),             // namespace
+            "echo".to_string(),                // name
+            "ca_cert".to_string(),             // ca_cert
         )
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_get_deployment_replicas() {
         let client = Client::try_default().await;
@@ -291,7 +292,7 @@ mod test {
         assert!(unavailable_replicas.unwrap() >= 0);
     }
 
-    // #[ignore]
+    #[ignore]
     #[tokio::test]
     async fn test_k8s_deployment() {
         let mut scaling_component_metadata = HashMap::new();
