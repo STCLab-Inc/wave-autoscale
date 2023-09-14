@@ -3,6 +3,7 @@
  */
 mod app;
 mod args;
+mod kubernetes;
 mod metric_collector_manager;
 mod metric_updater;
 mod scaling_component;
@@ -83,6 +84,12 @@ async fn main() {
     } else {
         None
     };
+
+    // Kubernetes Custom Controller Mode
+    // if wave_config.kubernetes {
+    if true {
+        kubernetes::run_kubernetes().await;
+    }
 
     // Run this loop at once and then wait for changes
     let mut once = false;

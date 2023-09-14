@@ -11,6 +11,7 @@ const DEFAULT_API_PORT: u16 = 3024;
 const DEFAULT_WEB_UI: bool = false;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
+const DEFAULT_KUBERNETES: bool = false;
 
 fn default_db_url() -> String {
     DEFAULT_DB_URL.to_string()
@@ -35,6 +36,9 @@ fn default_web_ui_host() -> String {
 }
 fn default_web_ui_port() -> u16 {
     DEFAULT_WEB_UI_PORT
+}
+fn default_kubernetes() -> bool {
+    DEFAULT_KUBERNETES
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default, Clone)]
@@ -71,6 +75,9 @@ pub struct WaveConfig {
     #[serde(default = "default_web_ui_port")]
     pub web_ui_port: u16,
 
+    // For Kubernetes
+    pub kubernetes: bool,
+
     // For download url
     #[serde(default)]
     vector: DownloadUrlDefinition,
@@ -89,6 +96,7 @@ impl Default for WaveConfig {
             web_ui: DEFAULT_WEB_UI,
             web_ui_host: DEFAULT_WEB_UI_HOST.to_string(),
             web_ui_port: DEFAULT_WEB_UI_PORT,
+            kubernetes: DEFAULT_KUBERNETES,
             vector: DownloadUrlDefinition::default(),
             telegraf: DownloadUrlDefinition::default(),
         }

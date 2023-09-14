@@ -1,5 +1,6 @@
 pub mod app;
 pub mod args;
+pub mod kubernetes;
 pub mod metric_collector_manager;
 pub mod metric_updater;
 pub mod scaling_component;
