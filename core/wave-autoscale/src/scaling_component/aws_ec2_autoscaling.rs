@@ -277,6 +277,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_get_target_value_map() {
         let config = get_aws_config(Some(get_data().0), None, None, None, None).await;
@@ -292,6 +293,7 @@ mod test {
         assert!(map.contains_key("$desired"));
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_aws_ec2_autoscaling() {
         let mut scaling_component_metadata = HashMap::new();

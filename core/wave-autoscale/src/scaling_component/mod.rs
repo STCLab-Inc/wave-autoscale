@@ -177,15 +177,13 @@ pub async fn get_target_value_result(
     })
     .await;
 
-    let target_value_result = rquickjs::async_with!(context => |ctx| {
+    rquickjs::async_with!(context => |ctx| {
         let Result::Ok(result) = ctx.eval::<i64, _>(target_value_expression) else {
             return Err(anyhow::anyhow!("Invalid target value"));
         };
         Ok(result)
     })
-    .await;
-
-    target_value_result
+    .await
 }
 
 #[cfg(test)]
