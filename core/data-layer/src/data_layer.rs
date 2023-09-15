@@ -21,7 +21,6 @@ use tokio::sync::watch;
 use ulid::Ulid;
 use uuid::Uuid;
 
-const DEFAULT_DEFINITION_PATH: &str = "./plan.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 
 #[derive(Debug)]
