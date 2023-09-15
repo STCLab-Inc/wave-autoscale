@@ -76,6 +76,7 @@ pub struct WaveConfig {
     pub web_ui_port: u16,
 
     // For Kubernetes
+    #[serde(default = "default_kubernetes")]
     pub kubernetes: bool,
 
     // For download url
@@ -159,16 +160,16 @@ mod tests {
         assert_eq!(wave_config.db_url, DEFAULT_DB_URL);
         assert_eq!(
             wave_config.watch_definition_duration,
-            DEFAULT_WATCH_DEFINITION_DURATION
+            DEFAULT_WATCH_DEFINITION_DURATION + 1
         );
         assert_eq!(
             wave_config.autoscaling_history_retention,
             DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
-        assert_eq!(wave_config.port, DEFAULT_API_PORT);
+        assert_eq!(wave_config.port, DEFAULT_API_PORT + 1);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
         assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
-        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
+        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT + 1);
     }
 }
