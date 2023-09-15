@@ -147,14 +147,14 @@ impl ScalingComponentManager {
     }
 }
 
-pub fn target_value_expression_regex_filter(
-    target_value_expression: &str,
-    target_value_key_array: Vec<String>,
+pub fn filter_current_state_in_expression(
+    expression: &str,
+    current_state_key_array: Vec<String>,
 ) -> Vec<String> {
-    let pattern = r"\$(".to_string() + &target_value_key_array.join("|") + r")";
+    let pattern = r"\$(".to_string() + &current_state_key_array.join("|") + r")";
     let re = regex::Regex::new(&pattern).unwrap();
     let mut result_vec = vec![];
-    for mat in re.find_iter(target_value_expression) {
+    for mat in re.find_iter(expression) {
         let match_value = mat.as_str().to_string();
         if !result_vec.contains(&match_value) {
             result_vec.push(mat.as_str().to_string());
@@ -163,9 +163,9 @@ pub fn target_value_expression_regex_filter(
     result_vec
 }
 
-pub async fn get_target_value_result(
-    target_value_expression: &str,
-    target_value_map: HashMap<String, i64>,
+pub async fn evaluate_expression_with_current_state(
+    expression: &str,
+    current_state_map: HashMap<String, i64>,
 ) -> Result<i64, anyhow::Error> {
     let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
         return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::new() error"));
@@ -174,16 +174,16 @@ pub async fn get_target_value_result(
         return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::full() error"));
     };
     rquickjs::async_with!(context => |ctx| {
-        target_value_map.iter().for_each(|(target_value_key, target_value_value)| {
+        current_state_map.iter().for_each(|(current_state_key, current_state_value)| {
             let _ = ctx.globals().set(
-                target_value_key, target_value_value
+                current_state_key, current_state_value
             );
         })
     })
     .await;
 
     rquickjs::async_with!(context => |ctx| {
-        let Result::Ok(result) = ctx.eval::<i64, _>(target_value_expression) else {
+        let Result::Ok(result) = ctx.eval::<i64, _>(expression) else {
             return Err(anyhow::anyhow!("Invalid target value"));
         };
         Ok(result)
@@ -212,62 +212,57 @@ mod test {
     }
 
     #[test]
-    fn test_target_value_expression_regex_filter() {
-        let target_value_expression = "$test1 + 2 + $test2";
-        let target_value_key_array = TestComponentTargetValue::iter()
+    fn test_filter_current_state_in_expression() {
+        let expression = "$test1 + 2 + $test2";
+        let current_state_key_array = TestComponentTargetValue::iter()
             .map(|value| value.to_string())
             .collect::<Vec<String>>();
         assert_eq!(
-            target_value_expression_regex_filter(
-                target_value_expression,
-                target_value_key_array.clone()
-            ),
+            filter_current_state_in_expression(expression, current_state_key_array.clone()),
             vec!["$test1", "$test2"]
         );
 
-        let target_value_expression2 = "1";
-        assert!(target_value_expression_regex_filter(
-            target_value_expression2,
-            target_value_key_array
-        )
-        .is_empty());
+        let expression2 = "1";
+        assert!(
+            filter_current_state_in_expression(expression2, current_state_key_array).is_empty()
+        );
     }
 
     #[tokio::test]
-    async fn test_evaluation_target_value() {
-        let target_value_key_array = TestComponentTargetValue::iter()
+    async fn test_evaluation_current_state() {
+        let current_state_key_array = TestComponentTargetValue::iter()
             .map(|value| value.to_string())
             .collect::<Vec<String>>();
 
-        let target_value_expression = "($test1 * 2) + $test2";
-        let mut target_value_map = HashMap::new();
-        for target_value_key in
-            target_value_expression_regex_filter(target_value_expression, target_value_key_array)
+        let expression = "($test1 * 2) + $test2";
+        let mut current_state_map = HashMap::new();
+        for current_state_key in
+            filter_current_state_in_expression(expression, current_state_key_array)
         {
-            if target_value_key.eq(&format!("${}", TestComponentTargetValue::Test1)) {
-                target_value_map.insert(target_value_key, 1);
-            } else if target_value_key.eq(&format!("${}", TestComponentTargetValue::Test2)) {
-                target_value_map.insert(target_value_key, 2);
+            if current_state_key.eq(&format!("${}", TestComponentTargetValue::Test1)) {
+                current_state_map.insert(current_state_key, 1);
+            } else if current_state_key.eq(&format!("${}", TestComponentTargetValue::Test2)) {
+                current_state_map.insert(current_state_key, 2);
             }
         }
         assert_eq!(
-            get_target_value_result(target_value_expression, target_value_map.clone())
+            evaluate_expression_with_current_state(expression, current_state_map.clone())
                 .await
                 .unwrap(),
             4
         );
 
-        let target_value_expression2 = "2 * 4";
+        let expression2 = "2 * 4";
         assert_eq!(
-            get_target_value_result(target_value_expression2, target_value_map.clone())
+            evaluate_expression_with_current_state(expression2, current_state_map.clone())
                 .await
                 .unwrap(),
             8
         );
 
-        let target_value_expression3 = "4 * 4";
+        let expression3 = "4 * 4";
         assert_eq!(
-            get_target_value_result(target_value_expression3, HashMap::new())
+            evaluate_expression_with_current_state(expression3, HashMap::new())
                 .await
                 .unwrap(),
             16

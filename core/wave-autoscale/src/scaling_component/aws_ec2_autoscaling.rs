@@ -1,5 +1,5 @@
 use super::ScalingComponent;
-use super::{get_target_value_result, target_value_expression_regex_filter};
+use super::{evaluate_expression_with_current_state, filter_current_state_in_expression};
 use crate::util::aws::get_aws_config;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
@@ -78,21 +78,23 @@ impl ScalingComponent for EC2AutoScalingComponent {
             let config = config.unwrap();
             let client = Client::new(&config);
 
-            let target_value_key_array = EC2ComponentTargetValue::iter()
+            let current_state_key_array = EC2ComponentTargetValue::iter()
                 .map(|value| value.to_string())
                 .collect::<Vec<String>>();
             // check target value contains enum variables
-            let target_value_array =
-                target_value_expression_regex_filter(desired, target_value_key_array);
+            let current_state_array =
+                filter_current_state_in_expression(desired, current_state_key_array);
             // save target value to map
-            let target_value_map =
-                get_target_value_map(target_value_array, client.clone(), asg_name.clone()).await;
-            if target_value_map.is_err() {
-                return Err(target_value_map.unwrap_err());
+            let current_state_map =
+                get_current_state_map(current_state_array, client.clone(), asg_name.clone()).await;
+            if current_state_map.is_err() {
+                return Err(current_state_map.unwrap_err());
             };
 
             // evaluate target value
-            let desired = get_target_value_result(desired, target_value_map.unwrap().clone()).await;
+            let desired =
+                evaluate_expression_with_current_state(desired, current_state_map.unwrap().clone())
+                    .await;
             if desired.is_err() {
                 return Err(desired.unwrap_err());
             }
@@ -132,26 +134,26 @@ impl ScalingComponent for EC2AutoScalingComponent {
     }
 }
 
-async fn get_target_value_map(
-    target_value_array: Vec<String>,
+async fn get_current_state_map(
+    current_state_array: Vec<String>,
     client: Client,
     asg_name: String,
 ) -> Result<HashMap<String, i64>, anyhow::Error> {
-    let mut target_value_map: HashMap<String, i64> = HashMap::new();
-    for target_value in target_value_array {
-        let mut target_value_kind = EC2ComponentTargetValue::Desired;
-        if target_value.eq(&format!("${}", EC2ComponentTargetValue::Desired)) {
-            target_value_kind = EC2ComponentTargetValue::Desired;
-        } else if target_value.eq(&format!("${}", EC2ComponentTargetValue::Min)) {
-            target_value_kind = EC2ComponentTargetValue::Min;
-        } else if target_value.eq(&format!("${}", EC2ComponentTargetValue::Max)) {
-            target_value_kind = EC2ComponentTargetValue::Max;
+    let mut current_state_map: HashMap<String, i64> = HashMap::new();
+    for current_state in current_state_array {
+        let mut current_state_kind = EC2ComponentTargetValue::Desired;
+        if current_state.eq(&format!("${}", EC2ComponentTargetValue::Desired)) {
+            current_state_kind = EC2ComponentTargetValue::Desired;
+        } else if current_state.eq(&format!("${}", EC2ComponentTargetValue::Min)) {
+            current_state_kind = EC2ComponentTargetValue::Min;
+        } else if current_state.eq(&format!("${}", EC2ComponentTargetValue::Max)) {
+            current_state_kind = EC2ComponentTargetValue::Max;
         }
 
         let Some(desired_capacity) = get_auto_scaling_group_capacity(
             client.clone(),
             asg_name.clone(),
-            target_value_kind
+            current_state_kind
         )
         .await
             else {
@@ -159,9 +161,9 @@ async fn get_target_value_map(
                 "Failed to get auto scaling group capacity"
             ));
         };
-        target_value_map.insert(target_value.clone(), desired_capacity as i64);
+        current_state_map.insert(current_state.clone(), desired_capacity as i64);
     }
-    Ok(target_value_map)
+    Ok(current_state_map)
 }
 
 async fn get_auto_scaling_group_capacity(
@@ -177,22 +179,15 @@ async fn get_auto_scaling_group_capacity(
     if describe_auto_scaling_groups.is_err() {
         return None;
     }
+    let describe_groups = describe_auto_scaling_groups.unwrap();
+    let Some(group) = describe_groups.auto_scaling_groups() else {
+        return None;
+    };
+    let group = group[0].clone();
     match kind {
-        EC2ComponentTargetValue::Desired => describe_auto_scaling_groups
-            .unwrap()
-            .auto_scaling_groups()
-            .unwrap()[0]
-            .desired_capacity(),
-        EC2ComponentTargetValue::Min => describe_auto_scaling_groups
-            .unwrap()
-            .auto_scaling_groups()
-            .unwrap()[0]
-            .min_size(),
-        EC2ComponentTargetValue::Max => describe_auto_scaling_groups
-            .unwrap()
-            .auto_scaling_groups()
-            .unwrap()[0]
-            .max_size(),
+        EC2ComponentTargetValue::Desired => group.desired_capacity(),
+        EC2ComponentTargetValue::Min => group.min_size(),
+        EC2ComponentTargetValue::Max => group.max_size(),
     }
 }
 
@@ -252,10 +247,10 @@ mod test {
 
     #[ignore]
     #[tokio::test]
-    async fn test_get_target_value_map() {
+    async fn test_get_current_state_map() {
         let config = get_aws_config(Some(get_data().0), None, None, None, None).await;
         let client = Client::new(&config.unwrap());
-        let map = get_target_value_map(
+        let map = get_current_state_map(
             vec!["$min".to_string(), "$desired".to_string()],
             client,
             get_data().1,

@@ -14,7 +14,7 @@
  *
  */
 use super::ScalingComponent;
-use super::{get_target_value_result, target_value_expression_regex_filter};
+use super::{evaluate_expression_with_current_state, filter_current_state_in_expression};
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
@@ -114,26 +114,29 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             let client = client.unwrap();
 
             // check target value contains enum variables
-            let target_value_key_array = K8sComponentTargetValue::iter()
+            let current_state_key_array = K8sComponentTargetValue::iter()
                 .map(|value| value.to_string())
                 .collect::<Vec<String>>();
-            let target_value_array =
-                target_value_expression_regex_filter(replicas, target_value_key_array);
+            let current_state_array =
+                filter_current_state_in_expression(replicas, current_state_key_array);
             // save target value to map
-            let target_value_map = get_target_value_map(
-                target_value_array,
+            let current_state_map = get_current_state_map(
+                current_state_array,
                 client.clone(),
                 namespace.to_string(),
                 name.to_string(),
             )
             .await;
-            if target_value_map.is_err() {
-                return Err(target_value_map.unwrap_err());
+            if current_state_map.is_err() {
+                return Err(current_state_map.unwrap_err());
             };
 
             // evaluate target value
-            let replicas =
-                get_target_value_result(replicas, target_value_map.unwrap().clone()).await;
+            let replicas = evaluate_expression_with_current_state(
+                replicas,
+                current_state_map.unwrap().clone(),
+            )
+            .await;
             if replicas.is_err() {
                 return Err(replicas.unwrap_err());
             };
@@ -181,43 +184,43 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
     }
 }
 
-async fn get_target_value_map(
-    target_value_array: Vec<String>,
+async fn get_current_state_map(
+    current_state_array: Vec<String>,
     client: Client,
     namespace: String,
     deployment_name: String,
 ) -> Result<HashMap<String, i64>, anyhow::Error> {
-    let mut target_value_map: HashMap<String, i64> = HashMap::new();
-    for target_value in target_value_array {
-        let mut target_value_kind = K8sComponentTargetValue::Replicas;
-        if target_value.eq(&format!("${}", K8sComponentTargetValue::Replicas)) {
-            target_value_kind = K8sComponentTargetValue::Replicas;
-        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::AvailableReplicas)) {
-            target_value_kind = K8sComponentTargetValue::AvailableReplicas;
-        } else if target_value.eq(&format!(
+    let mut current_state_map: HashMap<String, i64> = HashMap::new();
+    for current_state in current_state_array {
+        let mut current_state_kind = K8sComponentTargetValue::Replicas;
+        if current_state.eq(&format!("${}", K8sComponentTargetValue::Replicas)) {
+            current_state_kind = K8sComponentTargetValue::Replicas;
+        } else if current_state.eq(&format!("${}", K8sComponentTargetValue::AvailableReplicas)) {
+            current_state_kind = K8sComponentTargetValue::AvailableReplicas;
+        } else if current_state.eq(&format!(
             "${}",
             K8sComponentTargetValue::UnavailableReplicas
         )) {
-            target_value_kind = K8sComponentTargetValue::UnavailableReplicas;
-        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::ReadyReplicas)) {
-            target_value_kind = K8sComponentTargetValue::ReadyReplicas;
-        } else if target_value.eq(&format!("${}", K8sComponentTargetValue::UpdatedReplicas)) {
-            target_value_kind = K8sComponentTargetValue::UpdatedReplicas;
+            current_state_kind = K8sComponentTargetValue::UnavailableReplicas;
+        } else if current_state.eq(&format!("${}", K8sComponentTargetValue::ReadyReplicas)) {
+            current_state_kind = K8sComponentTargetValue::ReadyReplicas;
+        } else if current_state.eq(&format!("${}", K8sComponentTargetValue::UpdatedReplicas)) {
+            current_state_kind = K8sComponentTargetValue::UpdatedReplicas;
         }
 
         let replicas = get_deployment_replicas(
             client.clone(),
             &namespace,
             &deployment_name,
-            target_value_kind,
+            current_state_kind,
         )
         .await;
         if replicas.is_err() {
             return Err(replicas.unwrap_err());
         };
-        target_value_map.insert(target_value.clone(), replicas.unwrap() as i64);
+        current_state_map.insert(current_state.clone(), replicas.unwrap() as i64);
     }
-    Ok(target_value_map)
+    Ok(current_state_map)
 }
 
 async fn get_deployment_replicas(
