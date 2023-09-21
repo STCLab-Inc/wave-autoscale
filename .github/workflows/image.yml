@@ -13,6 +13,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        timeout-minutes: 1
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -29,7 +32,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: waveautoscale/wave-autoscale:latest
+          tags: ${{ env.DOCKER_IMAGE_TAG }}:latest
           cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache
           cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache,mode=max
           labels: |
