@@ -8,7 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  build-and-push:
     runs-on: wave-autoscale-build-runner
     timeout-minutes: 30
 
@@ -27,16 +27,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            waveautoscale/wave-autoscale:latest
-            waveautoscale/wave-autoscale:${{ github.event.release.tag_name }}
+          tags: waveautoscale/wave-autoscale:latest, waveautoscale/wave-autoscale:${{ github.event.release.tag_name }}
+          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache
+          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
-            org.opencontainers.image.description=Wave Autoscale is a open-source traffic & scaling automation tool.
-            org.opencontainers.image.url=https://waveautoscale.com
+            org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
+            org.opencontainers.image.url="https://waveautoscale.com"
