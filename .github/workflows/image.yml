@@ -11,7 +11,7 @@ jobs:
   build-and-push:
     runs-on: wave-autoscale-build-runner
     timeout-minutes: 30
-
+    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
