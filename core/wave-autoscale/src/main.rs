@@ -85,12 +85,6 @@ async fn main() {
         None
     };
 
-    // Kubernetes Custom Controller Mode
-    // if wave_config.kubernetes {
-    if true {
-        kubernetes::run_kubernetes().await;
-    }
-
     // Run this loop at once and then wait for changes
     let mut once = false;
     while !once
