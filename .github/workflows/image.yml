@@ -33,7 +33,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: waveautoscale/wave-autoscale:latest, waveautoscale/wave-autoscale:${{ github.event.release.tag_name }}
+          tags: waveautoscale/wave-autoscale:latest
           cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache
           cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache,mode=max
           labels: |
