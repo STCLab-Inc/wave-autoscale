@@ -32,7 +32,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ var.DOCKER_IMAGE_TAG }}:latest
+          tags: ${{ vars.DOCKER_IMAGE_TAG }}:latest
           cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache
           cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache,mode=max
           labels: |
