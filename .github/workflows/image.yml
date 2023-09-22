@@ -82,7 +82,6 @@ jobs:
 
       - name: Create and push Docker manifest
         run: |
-          docker manifest create ${{ vars.DOCKER_IMAGE_TAG }}:test \
-            --amend ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 \
-            --amend ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          docker manifest push ${{ vars.DOCKER_IMAGE_TAG }}:test
+          docker buildx imagetools create ${{ vars.DOCKER_IMAGE_TAG }}:test \
+            ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 \
+            ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
