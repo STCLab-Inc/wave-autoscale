@@ -157,7 +157,6 @@ impl DataLayer {
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
                     let updated_at: String = row.get(0);
-                    debug!("{:?}", updated_at);
                     updated_at_hash_string.push_str(&updated_at);
                 }
                 if lastest_updated_at_hash != updated_at_hash_string {
@@ -189,7 +188,7 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, collector, metric_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (collector, metric_kind, metadata, updated_at) = (?,?,?,?)";
+                "INSERT INTO metric (db_id, id, collector, metric_kind, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metric_kind, metadata, updated_at) = ($8,$9,$10,$11)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -239,7 +238,7 @@ impl DataLayer {
     // Get a metric from the database
     pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
         let query_string =
-            "SELECT db_id, id, collector, metric_kind, metadata FROM metric WHERE db_id=?";
+            "SELECT db_id, id, collector, metric_kind, metadata FROM metric WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             // Do not use fetch_one because it expects exact one result. If not, it will return an error
@@ -273,7 +272,7 @@ impl DataLayer {
     }
     // Delete a metric
     pub async fn delete_metric(&self, db_id: String) -> Result<AnyQueryResult> {
-        let query_string = "DELETE FROM metric WHERE db_id=?";
+        let query_string = "DELETE FROM metric WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .execute(&self.pool)
@@ -291,7 +290,7 @@ impl DataLayer {
     pub async fn update_metric(&self, metric: MetricDefinition) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
-            "UPDATE metric SET id=?, collector=?, metric_kind=?, metadata=?, updated_at=? WHERE db_id=?";
+            "UPDATE metric SET id=$1, collector=$2, metric_kind=$3, metadata=$4, updated_at=$5 WHERE db_id=$6";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
@@ -322,7 +321,7 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = (?,?)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = ($7,$8)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -371,7 +370,7 @@ impl DataLayer {
         db_id: String,
     ) -> Result<ScalingComponentDefinition> {
         let query_string =
-            "SELECT db_id, id, component_kind, metadata FROM scaling_component WHERE db_id=?";
+            "SELECT db_id, id, component_kind, metadata FROM scaling_component WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -400,7 +399,7 @@ impl DataLayer {
     }
     // Delete a scaling component
     pub async fn delete_scaling_component(&self, db_id: String) -> Result<AnyQueryResult> {
-        let query_string = "DELETE FROM scaling_component WHERE db_id=?";
+        let query_string = "DELETE FROM scaling_component WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .execute(&self.pool)
@@ -421,7 +420,7 @@ impl DataLayer {
     ) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
         let query_string =
-            "UPDATE scaling_component SET id=?, component_kind=?, metadata=?, updated_at=? WHERE db_id=?";
+            "UPDATE scaling_component SET id=$1, component_kind=$2, metadata=$3, updated_at=$4 WHERE db_id=$5";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
@@ -448,7 +447,7 @@ impl DataLayer {
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, created_at, updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = (?,?)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = ($7, $8)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -492,7 +491,7 @@ impl DataLayer {
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
-        let query_string = "SELECT db_id, id, metadata, plans FROM plan WHERE db_id=?";
+        let query_string = "SELECT db_id, id, metadata, plans FROM plan WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -521,7 +520,7 @@ impl DataLayer {
     }
     // Delete a plan
     pub async fn delete_plan(&self, db_id: String) -> Result<AnyQueryResult> {
-        let query_string = "DELETE FROM plan WHERE db_id=?";
+        let query_string = "DELETE FROM plan WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .execute(&self.pool)
@@ -539,7 +538,8 @@ impl DataLayer {
     pub async fn update_plan(&self, plan: ScalingPlanDefinition) -> Result<AnyQueryResult> {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
         let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-        let query_string = "UPDATE plan SET id=?, metadata=?, plans=?, updated_at=? WHERE db_id=?";
+        let query_string =
+            "UPDATE plan SET id=$1, metadata=$2, plans=$3, updated_at=$4 WHERE db_id=$5";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
@@ -565,7 +565,7 @@ impl DataLayer {
         &self,
         autoscaling_history: AutoscalingHistoryDefinition,
     ) -> Result<()> {
-        let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message) VALUES (?,?,?,?,?,?,?)";
+        let query_string = "INSERT INTO autoscaling_history (id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message) VALUES ($1,$2,$3,$4,$5,$6,$7)";
         let id = Ulid::new().to_string();
         let result = sqlx::query(query_string)
             // INTO
@@ -578,6 +578,7 @@ impl DataLayer {
             .bind(autoscaling_history.fail_message)
             .execute(&self.pool)
             .await;
+
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
@@ -589,7 +590,7 @@ impl DataLayer {
         plan_id: String,
     ) -> Result<Vec<AutoscalingHistoryDefinition>> {
         let mut autoscaling_history: Vec<AutoscalingHistoryDefinition> = Vec::new();
-        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE plan_id=?";
+        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE plan_id=$1";
         let result = sqlx::query(query_string)
             .bind(plan_id)
             .fetch_all(&self.pool)
@@ -628,7 +629,7 @@ impl DataLayer {
         let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
 
         // Query
-        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE id BETWEEN ? AND ?";
+        let query_string = "SELECT id, plan_db_id, plan_id, plan_item_json, metric_values_json, metadata_values_json, fail_message FROM autoscaling_history WHERE id BETWEEN $1 AND $2";
         let result = sqlx::query(query_string)
             .bind(from)
             .bind(to)
@@ -660,7 +661,7 @@ impl DataLayer {
         let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
 
         // Query
-        let query_string = "DELETE FROM autoscaling_history WHERE id <= ?";
+        let query_string = "DELETE FROM autoscaling_history WHERE id <= $1";
         let result = sqlx::query(query_string).bind(to).execute(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -688,7 +689,7 @@ impl DataLayer {
         // }
         //
         let query_string =
-            "INSERT INTO source_metrics (id, collector, metric_id, json_value) VALUES (?,?,?,?)";
+            "INSERT INTO source_metrics (id, collector, metric_id, json_value) VALUES ($1,$2,$3,$4)";
         // ULID as id instead of UUID because of the time based sorting
         let id = Ulid::new().to_string();
         let result = sqlx::query(query_string)
@@ -699,6 +700,7 @@ impl DataLayer {
             .bind(json_value)
             .execute(&self.pool)
             .await;
+        debug!("result: {:?}", result);
         if result.is_err() {
             let error_message = result.err().unwrap().to_string();
             error!("Error: {}", error_message);
@@ -718,7 +720,7 @@ impl DataLayer {
         let offset_time = SystemTime::now() - Duration::from_millis(time_greater_than);
         let ulid = Ulid::from_datetime(offset_time);
         let query_string =
-            "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= ? and metric_id in (?) ORDER BY id DESC LIMIT 1";
+            "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= $1 and metric_id in ($2) ORDER BY id DESC LIMIT 1";
         let metric_ids = metric_ids.join(",");
         let result = sqlx::query(query_string)
             .bind(ulid.to_string())
@@ -746,7 +748,7 @@ impl DataLayer {
     ) -> Result<Vec<serde_json::Value>> {
         let offset_time = SystemTime::now() - Duration::from_millis(read_before_ms);
         let ulid = Ulid::from_datetime(offset_time);
-        let query_string = "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= ?";
+        let query_string = "SELECT metric_id, id, json_value FROM source_metrics WHERE id >= $1";
         let result = sqlx::query(query_string)
             .bind(ulid.to_string())
             .fetch_all(&self.pool)
@@ -773,7 +775,13 @@ mod tests {
     use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
     use ulid::Ulid;
 
-    async fn get_data_layer() -> DataLayer {
+    fn init_log() {
+        let _ = env_logger::builder()
+            .is_test(true)
+            .filter_level(log::LevelFilter::Debug)
+            .try_init();
+    }
+    async fn get_data_layer_with_sqlite() -> DataLayer {
         const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
         // Delete the test db if it exists
         let path = std::path::Path::new(DEFAULT_DB_URL.trim_start_matches("sqlite://"));
@@ -781,6 +789,13 @@ mod tests {
         if remove_result.is_err() {
             println!("Error removing file: {:?}", remove_result);
         }
+        let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
+        data_layer.sync("").await;
+        data_layer
+    }
+
+    async fn get_data_layer_with_postgres() -> DataLayer {
+        const DEFAULT_DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
         let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
         data_layer.sync("").await;
         data_layer
@@ -803,13 +818,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_autoscaling_history() {
-        let data_layer = get_data_layer().await;
+        init_log();
+        let data_layer = get_data_layer_with_sqlite().await;
+        test_autoscaling_history_with_data_layer(data_layer).await;
 
+        let data_layer = get_data_layer_with_postgres().await;
+        test_autoscaling_history_with_data_layer(data_layer).await;
+    }
+
+    async fn test_autoscaling_history_with_data_layer(data_layer: DataLayer) {
         // Add a AutoscalingHistory to the database
         let autoscaling_history_definition = get_autoscaling_history_definition();
+        println!(
+            "autoscaling_history_definition: {:?}",
+            autoscaling_history_definition
+        );
         let result = data_layer
             .add_autoscaling_history(autoscaling_history_definition.clone())
             .await;
+        debug!("result: {:?}", result);
         assert!(result.is_ok());
 
         // Get a AutoscalingHistory from the database
@@ -848,8 +875,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_source_metrics_values_all_metric_ids() {
-        let data_layer = get_data_layer().await;
+        init_log();
+        let data_layer = get_data_layer_with_sqlite().await;
+        test_get_source_metrics_values_all_metric_ids_with_data_layer(data_layer).await;
 
+        let data_layer = get_data_layer_with_postgres().await;
+        test_get_source_metrics_values_all_metric_ids_with_data_layer(data_layer).await;
+    }
+    async fn test_get_source_metrics_values_all_metric_ids_with_data_layer(data_layer: DataLayer) {
         let json_value = r#"[{
             "name": "test",
             "tags": {

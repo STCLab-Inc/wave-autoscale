@@ -34,7 +34,14 @@ mod data_layer {
         read_definition_yaml_file(yaml_file_path)
     }
 
-    async fn get_data_layer() -> Result<DataLayer> {
+    async fn get_data_layer_with_postgres() -> Result<DataLayer> {
+        const TEST_DB: &str = "postgresql://postgres:postgres@localhost:5432/postgres";
+        let data_layer = DataLayer::new(TEST_DB).await;
+        data_layer.sync("").await;
+        Ok(data_layer)
+    }
+
+    async fn get_data_layer_with_sqlite() -> Result<DataLayer> {
         const TEST_DB: &str = "sqlite://./tests/temp/test.db";
         // Delete the test db if it exists
         let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
@@ -49,8 +56,15 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_run_watch() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_run_watch_with_data_layer(data_layer).await?;
 
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_run_watch_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_run_watch_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let mut watch_receiver = data_layer.watch_definitions(1000);
         let verification = Arc::new(AtomicBool::new(false));
         let verification_clone = verification.clone();
@@ -76,7 +90,6 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        println!("changed values - 1");
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
         data_layer
@@ -88,7 +101,6 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        println!("changed values - 2");
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
         data_layer
@@ -100,7 +112,6 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        println!("changed values - 3");
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
         // TODO: Add more tests
@@ -110,13 +121,24 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_metrics() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_metrics_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_metrics_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_metrics_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.metric_definitions.len(),
             EXPECTED_METRICS_COUNT,
             "Unexpected metrics count"
         );
+
+        // Clean the metrics
+        let _ = data_layer.delete_all_metrics().await;
 
         // Add the metrics
         let add_metrics_result = data_layer
@@ -190,13 +212,24 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_scaling_components() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_scaling_components_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_scaling_components_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_scaling_components_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.scaling_component_definitions.len(),
             EXPECTED_SCALING_COMPONENTS_COUNT,
             "Unexpected metrics count"
         );
+        // Clean the scaling components
+        let _ = data_layer.delete_all_scaling_components().await;
+
         // Add the scaling components
         let add_scaling_components_result = data_layer
             .add_scaling_components(result.scaling_component_definitions.clone())
@@ -260,13 +293,23 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_scaling_plans() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_scaling_plans_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_scaling_plans_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_scaling_plans_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.scaling_plan_definitions.len(),
             EXPECTED_SCALING_PLANS_COUNT,
             "Unexpected metrics count"
         );
+        // Clean the scaling plans
+        let _ = data_layer.delete_all_plans().await;
 
         // Add the scaling plans
         let add_scaling_plans_result = data_layer

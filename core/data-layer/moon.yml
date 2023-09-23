@@ -4,8 +4,27 @@ owners:
   defaultOwner: "@wave-autoscale-team"
 
 tasks:
-  test:
+  clear-postgres:
+    command: "docker rm -f wapostgres"
+    platform: "system"
+  prepare-postgres:
+    command: "docker run --name wapostgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -d postgres"
+    platform: "system"
+  test-nextest:
     command: "cargo nextest run -p data-layer --test-threads=1"
+    env:
+      # RUST_LOG: data_layer=debug
+      RUST_LOG: debug
+  test:
+    command: "echo 'Done Tests'"
+    platform: "system"
+    deps:
+      - "clear-postgres"
+      - "prepare-postgres"
+      - "test-nextest"
+      - "clear-postgres"
+    options:
+      runDepsInParallel: false
     env:
       RUST_LOG: data_layer=debug
   test-history:
