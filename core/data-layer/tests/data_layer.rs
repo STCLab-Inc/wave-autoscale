@@ -10,9 +10,10 @@ mod data_layer {
     use data_layer::{
         data_layer::DataLayer,
         reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
-        types::object_kind::ObjectKind,
-        MetricDefinition, ScalingComponentDefinition,
+        types::{object_kind::ObjectKind, plan_item_definition::PlanItemDefinition},
+        MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
     };
+    use log::debug;
     use rand::Rng;
     use serde_json::json;
     use std::{
@@ -70,19 +71,16 @@ mod data_layer {
         let verification_clone = verification.clone();
 
         tokio::spawn(async move {
-            println!("Waiting for watch result");
-            if watch_receiver.changed().await.is_ok() {
-                println!("Received watch result");
+            while watch_receiver.changed().await.is_ok() {
                 let result = watch_receiver.borrow();
-                println!("Received watch result: {:?}", result);
+                debug!("Received watch result: {:?}", result);
                 verification_clone.store(true, Ordering::Release);
             }
         });
-        // sleep
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        // First, add the metrics. It should not trigger the watch
         data_layer
             .add_metrics(vec![MetricDefinition {
-                id: "test".to_string(),
+                id: "test1".to_string(),
                 db_id: "test".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
@@ -90,8 +88,25 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
+        // Second shot of adding a metric definition, it should trigger the watch
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        data_layer
+            .add_metrics(vec![MetricDefinition {
+                id: "test2".to_string(),
+                db_id: "test".to_string(),
+                kind: ObjectKind::Metric,
+                collector: "vector".to_string(),
+                metric_kind: "test".to_string(),
+                metadata: HashMap::new(),
+            }])
+            .await?;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
+
+        // Add a scaling component, it should trigger the watch
         data_layer
             .add_scaling_components(vec![ScalingComponentDefinition {
                 id: "test".to_string(),
@@ -101,21 +116,37 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
 
-        data_layer
-            .add_scaling_components(vec![ScalingComponentDefinition {
-                id: "test2".to_string(),
-                db_id: "test2".to_string(),
-                component_kind: "test".to_string(),
-                kind: ObjectKind::ScalingComponent,
+        // Add a scaling plan, it should trigger the watch
+        let _ = data_layer
+            .add_plans(vec![ScalingPlanDefinition {
+                id: "test".to_string(),
+                db_id: "test".to_string(),
+                kind: ObjectKind::ScalingPlan,
                 metadata: HashMap::new(),
+                plans: vec![PlanItemDefinition {
+                    id: "test".to_string(),
+                    description: None,
+                    expression: None,
+                    cron_expression: None,
+                    ui: None,
+                    priority: 1,
+                    scaling_components: vec![json!({
+                        "name": "test",
+                        "value": 1
+                    })],
+                }],
             }])
-            .await?;
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
 
-        // TODO: Add more tests
-        // assert!(verification.load(Ordering::Acquire));
         Ok(())
     }
 

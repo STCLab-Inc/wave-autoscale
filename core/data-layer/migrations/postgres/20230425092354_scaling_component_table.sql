@@ -3,6 +3,6 @@ CREATE TABLE scaling_component (
   id TEXT UNIQUE,
   component_kind TEXT NOT NULL,
   metadata TEXT,
-  created_at timestamp,
-  updated_at timestamp
+  created_at timestamptz,
+  updated_at timestamptz
 );

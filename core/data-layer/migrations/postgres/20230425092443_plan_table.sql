@@ -5,6 +5,6 @@ CREATE TABLE
     priority INTEGER,
     metadata TEXT,
     plans TEXT,
-    created_at timestamp,
-    updated_at timestamp
+    created_at timestamptz,
+    updated_at timestamptz
   );

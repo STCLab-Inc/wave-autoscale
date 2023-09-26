@@ -4,6 +4,6 @@ CREATE TABLE metric (
   collector TEXT,
   metric_kind TEXT NOT NULL,
   metadata TEXT,
-  created_at timestamp,
-  updated_at timestamp
+  created_at timestamptz,
+  updated_at timestamptz
 );

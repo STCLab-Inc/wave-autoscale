@@ -120,6 +120,7 @@ impl DataLayer {
             .unwrap()
     }
     async fn migrate(&self) {
+        debug!("Database type: {:?}", self.pool.any_kind());
         match &self.pool.any_kind() {
             AnyKind::Postgres => {
                 sqlx::migrate!("migrations/postgres")
@@ -134,31 +135,46 @@ impl DataLayer {
                     .unwrap();
             }
             AnyKind::MySql => {
-                sqlx::migrate!("migrations/mysql")
-                    .run(&self.pool)
-                    .await
-                    .unwrap();
+                // Return error because MySQL is not supported yet
+                panic!("MySQL is not supported yet");
             }
         }
     }
-    pub fn watch_definitions(&self, watch_duration: u64) -> watch::Receiver<String> {
+    pub fn watch_definitions(&self, watch_duration_ms: u64) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
+        let database_kind = self.pool.any_kind();
+
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
             loop {
+                // 1 second
+                tokio::time::sleep(tokio::time::Duration::from_millis(watch_duration_ms)).await;
                 debug!("Watching...");
-                let query_string =
-                    "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;";
-                let Ok(result_string) = sqlx::query(query_string).fetch_all(&pool).await else {
-                    error!("Failed to fetch updated_at from the database");
+                // REFACTOR: Use type state pattern to avoid this match
+                let query_string = match database_kind {
+                    AnyKind::Postgres => {
+                        "(SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1)"
+                    }
+                    AnyKind::Sqlite => {
+                        "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;"
+                    }
+                    AnyKind::MySql => {
+                        // Return error because MySQL is not supported yet
+                        panic!("MySQL is not supported yet");
+                    }
+                };
+                let result = sqlx::query(query_string).fetch_all(&pool).await;
+                let Ok(result_string) = result else {
+                    error!("Failed to fetch updated_at from the database, result: {:?}", result.err().unwrap());
                     continue;
                 };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
-                    let updated_at: String = row.get(0);
-                    updated_at_hash_string.push_str(&updated_at);
+                    let updated_at: chrono::DateTime<Utc> = row.get(0);
+                    updated_at_hash_string.push_str(&updated_at.to_string());
                 }
+
                 if lastest_updated_at_hash != updated_at_hash_string {
                     // Send signals after the first time
                     if !lastest_updated_at_hash.is_empty() {
@@ -175,8 +191,6 @@ impl DataLayer {
                     lastest_updated_at_hash = updated_at_hash_string;
                     debug!("Updated at hash changed");
                 }
-                // 1 second
-                tokio::time::sleep(tokio::time::Duration::from_secs(watch_duration)).await;
             }
         });
         notify_receiver
@@ -787,7 +801,7 @@ mod tests {
         let path = std::path::Path::new(DEFAULT_DB_URL.trim_start_matches("sqlite://"));
         let remove_result = std::fs::remove_file(path);
         if remove_result.is_err() {
-            println!("Error removing file: {:?}", remove_result);
+            error!("Error removing file: {:?}", remove_result);
         }
         let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
         data_layer.sync("").await;
@@ -829,7 +843,7 @@ mod tests {
     async fn test_autoscaling_history_with_data_layer(data_layer: DataLayer) {
         // Add a AutoscalingHistory to the database
         let autoscaling_history_definition = get_autoscaling_history_definition();
-        println!(
+        error!(
             "autoscaling_history_definition: {:?}",
             autoscaling_history_definition
         );
