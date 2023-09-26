@@ -112,6 +112,9 @@ impl WaveConfig {
             config_path
         };
 
+        // Confirm the current directory
+        let current = std::env::current_dir();
+        debug!("Current directory: {:?}", current);
         debug!("Reading config file: {}", config_path);
         // Read the file of the path
         let file = File::open(config_path);
