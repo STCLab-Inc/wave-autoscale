@@ -31,8 +31,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64
-          # cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64
-          # cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64
+          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
@@ -60,8 +60,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          # cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64
-          # cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64,mode=max
+          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64
+          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
@@ -82,6 +82,6 @@ jobs:
 
       - name: Create and push Docker manifest
         run: |
-          docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:test \
+          docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:test-${{ github.sha }} \
             ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 \
             ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
