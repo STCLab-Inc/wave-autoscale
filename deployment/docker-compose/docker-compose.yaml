@@ -1,6 +1,6 @@
 services:
   wave-autoscale:
-    image: "waveautoscale/wave-autoscale:latest"
+    image: "waveautoscale/wave-autoscale:test"
     ports:
       - "3024:3024"
       - "3025:3025"

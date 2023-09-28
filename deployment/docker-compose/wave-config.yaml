@@ -1,4 +1,4 @@
-db_url: postgresql://postgres:postgres@postgres:5432/postgres
+db_url: postgresql://postgres:postgres@localhost:5432/postgres
 host: localhost
 port: 3024
 watch_definition_duration: 5000
