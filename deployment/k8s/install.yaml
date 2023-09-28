@@ -1,19 +1,21 @@
+---
+# Source: wave-autoscale/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wave-config
   labels:
-    app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: "0.0.13"
+    app.kubernetes.io/name: wave-autoscale-config
+    app.kubernetes.io/version: 0.0.13
     app.kubernetes.io/component: config
     app.kubernetes.io/part-of: wave-autoscale
 data:
   wave-config.yaml: |
-    db_url: postgres://postgres:postgres@localhost:5432/postgres
+    db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
     host: localhost
     port: 3024
     watch_definition_duration: 5000
-    autoscaling_history_retention: "1d"
+    autoscaling_history_retention: 1d
     web_ui: false
     web_ui_host: 0.0.0.0
     web_ui_port: 3025
@@ -30,15 +32,15 @@ data:
       linux_x86_64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_linux_amd64.tar.gz
       linux_aarch64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_linux_arm64.tar.gz
       windows_x86_64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_windows_amd64.zip
-
 ---
+# Source: wave-autoscale/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wave-definitions
   labels:
-    app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: "0.0.13"
+    app.kubernetes.io/name: wave-autoscale-definitions
+    app.kubernetes.io/version: 0.0.13
     app.kubernetes.io/component: definitions
     app.kubernetes.io/part-of: wave-autoscale
 data:
@@ -46,28 +48,14 @@ data:
     # Your definitions.yaml content here.
     # See https://docs.waveautoscale.com/definitions/ for more information.
 ---
-# apiVersion: v1
-# kind: PersistentVolume
-# metadata:
-#   name: wa-pv
-#   labels:
-#     app.kubernetes.io/name: wave-autoscale
-#     app.kubernetes.io/version: "0.0.13"
-#     app.kubernetes.io/component: data
-#     app.kubernetes.io/part-of: wave-autoscale
-# spec:
-#   capacity:
-#     storage: 10Gi
-#   accessModes:
-#     - ReadWriteOnce
-# ---
+# Source: wave-autoscale/templates/deployment-postgres.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wa-pvc
   labels:
-    app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: "0.0.13"
+    app.kubernetes.io/name: wave-autoscale-postgres-pvc
+    app.kubernetes.io/version: 0.0.13
     app.kubernetes.io/component: data
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -77,27 +65,61 @@ spec:
     requests:
       storage: 10Gi
 ---
+# Source: wave-autoscale/templates/deployment-postgres.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wave-autoscale-postgres-service
+  labels:
+    app.kubernetes.io/name: wave-autoscale-postgres-service
+    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/component: service
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  selector:
+    app.kubernetes.io/name: wave-autoscale-postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+# Source: wave-autoscale/templates/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wave-autoscale-lb-service
+  labels:
+    app.kubernetes.io/name: wave-autoscale-lb-service
+    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/component: service
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  selector:
+    app.kubernetes.io/name: wave-autoscale
+  ports:
+    - protocol: TCP
+      port: 3024
+      targetPort: 3024
+---
+# Source: wave-autoscale/templates/deployment-postgres.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wave-autoscale
+  name: wave-autoscale-postgres
   labels:
-    app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: "0.0.13"
-    app.kubernetes.io/component: core
+    app.kubernetes.io/name: wave-autoscale-postgres
+    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/component: database
     app.kubernetes.io/part-of: wave-autoscale
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: wave-autoscale
+      app.kubernetes.io/name: wave-autoscale-postgres
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: wave-autoscale
-        app.kubernetes.io/version: "0.0.13"
-        app.kubernetes.io/component: core
-        app.kubernetes.io/part-of: wave-autoscale
+        app.kubernetes.io/name: wave-autoscale-postgres
     spec:
       containers:
         - name: postgres
@@ -115,8 +137,37 @@ spec:
             - name: postgresdb
               mountPath: /var/lib/postgresql/data
               subPath: postgresdb
+      volumes:
+        - name: postgresdb
+          persistentVolumeClaim:
+            claimName: wa-pvc
+---
+# Source: wave-autoscale/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wave-autoscale
+  labels:
+    app.kubernetes.io/name: wave-autoscale
+    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/component: core
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wave-autoscale
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wave-autoscale
+        app.kubernetes.io/version: 0.0.13
+        app.kubernetes.io/component: core
+        app.kubernetes.io/part-of: wave-autoscale
+    spec:
+      containers:
         - name: wave-autoscale
-          image: waveautoscale/wave-autoscale:test
+          image: waveautoscale/wave-autoscale:latest
           command: ["./wave-autoscale"]
           args:
             [
@@ -139,23 +190,3 @@ spec:
         - name: wave-definitions-volume
           configMap:
             name: wave-definitions
-        - name: postgresdb
-          persistentVolumeClaim:
-            claimName: wa-pvc
-# ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: wave-autoscale-api
-#   labels:
-#     app.kubernetes.io/name: wave-autoscale
-#     app.kubernetes.io/version: "0.0.13"
-#     app.kubernetes.io/component: service
-#     app.kubernetes.io/part-of: wave-autoscale
-# spec:
-#   selector:
-#     app.kubernetes.io/name: wave-autoscale
-#   ports:
-#     - protocol: TCP
-#       port: 80
-#       targetPort: <YOUR_CONTAINER_PORT>
