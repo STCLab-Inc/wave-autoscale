@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wave-config
+  labels:
+    app.kubernetes.io/name: wave-autoscale-config
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: config
+    app.kubernetes.io/part-of: wave-autoscale
+data:
+  wave-config.yaml: |
+    db_url: {{ .Values.config.db_url }}
+    host: {{ .Values.config.host }}
+    port: {{ .Values.config.port }}
+    watch_definition_duration: {{ .Values.config.watch_definition_duration }}
+    autoscaling_history_retention: {{ .Values.config.autoscaling_history_retention }}
+    web_ui: {{ .Values.config.web_ui }}
+    web_ui_host: {{ .Values.config.web_ui_host }}
+    web_ui_port: {{ .Values.config.web_ui_port }}
+
+    vector:
+      macos_x86_64: {{ .Values.config.vector.macos_x86_64 }}
+      macos_aarch64: {{ .Values.config.vector.macos_aarch64 }}
+      linux_x86_64: {{ .Values.config.vector.linux_x86_64 }}
+      linux_aarch64: {{ .Values.config.vector.linux_aarch64 }}
+      windows_x86_64: {{ .Values.config.vector.windows_x86_64 }}
+    telegraf:
+      macos_x86_64: {{ .Values.config.telegraf.macos_x86_64 }}
+      macos_aarch64: {{ .Values.config.telegraf.macos_aarch64 }}
+      linux_x86_64: {{ .Values.config.telegraf.linux_x86_64 }}
+      linux_aarch64: {{ .Values.config.telegraf.linux_aarch64 }}
+      windows_x86_64: {{ .Values.config.telegraf.windows_x86_64 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wave-definitions
+  labels:
+    app.kubernetes.io/name: wave-autoscale-definitions
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: definitions
+    app.kubernetes.io/part-of: wave-autoscale
+data:
+  definitions.yaml: |
+    # Your definitions.yaml content here.
+    # See https://docs.waveautoscale.com/definitions/ for more information.

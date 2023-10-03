@@ -63,6 +63,7 @@ azure_core = "0.13.0"
 thiserror = { version = "1.0.44" }
 cron = { version = "0.12.0" }
 aws-sdk-emr = "0.25.1"
+futures = "0.3"
 futures-util = "0.3.14"
 flate2 = { version = "1.0.26" }
 tar = { version = "0.4.38" }

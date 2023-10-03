@@ -31,3 +31,6 @@ vector*/
 
 # VSCode
 .vscode/
+
+# Deployment
+deployment/docker-compose/postgres-data

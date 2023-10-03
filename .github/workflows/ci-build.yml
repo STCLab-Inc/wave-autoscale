@@ -1,11 +1,13 @@
-name: test_on_pull_request
+name: Integration tests
 run-name: ${{ github.actor }} has created a pull request
 on:
   pull_request:
-    branches: ["main"]
+    branches:
+      - 'main'
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches:
+      - 'main'
+      - 'release-*'
 
 env:
   CARGO_TERM_COLOR: always

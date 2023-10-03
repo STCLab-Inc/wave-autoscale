@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wave-autoscale
+  labels:
+    app.kubernetes.io/name: wave-autoscale
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: core
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wave-autoscale
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wave-autoscale
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/component: core
+        app.kubernetes.io/part-of: wave-autoscale
+    spec:
+      containers:
+        - name: wave-autoscale
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          command: ["./wave-autoscale"]
+          args:
+            [
+              "--config",
+              "/usr/src/wave-autoscale/wave-config.yaml",
+              "--definition",
+              "/usr/src/wave-autoscale/definitions.yaml",
+            ]
+          volumeMounts:
+            - name: wave-config-volume
+              mountPath: /usr/src/wave-autoscale/wave-config.yaml
+              subPath: wave-config.yaml
+            - name: wave-definitions-volume
+              mountPath: /usr/src/wave-autoscale/definitions.yaml
+              subPath: definitions.yaml
+      volumes:
+        - name: wave-config-volume
+          configMap:
+            name: wave-config
+        - name: wave-definitions-volume
+          configMap:
+            name: wave-definitions
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wave-autoscale-lb-service
+  labels:
+    app.kubernetes.io/name: wave-autoscale-lb-service
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: service
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  selector:
+    app.kubernetes.io/name: wave-autoscale
+  ports:
+    - protocol: TCP
+      port: {{ .Values.config.port }}
+      targetPort: {{ .Values.config.port }}

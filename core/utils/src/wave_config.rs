@@ -11,6 +11,7 @@ const DEFAULT_API_PORT: u16 = 3024;
 const DEFAULT_WEB_UI: bool = false;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
+const DEFAULT_KUBERNETES: bool = false;
 
 fn default_db_url() -> String {
     DEFAULT_DB_URL.to_string()
@@ -35,6 +36,9 @@ fn default_web_ui_host() -> String {
 }
 fn default_web_ui_port() -> u16 {
     DEFAULT_WEB_UI_PORT
+}
+fn default_kubernetes() -> bool {
+    DEFAULT_KUBERNETES
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default, Clone)]
@@ -71,6 +75,10 @@ pub struct WaveConfig {
     #[serde(default = "default_web_ui_port")]
     pub web_ui_port: u16,
 
+    // For Kubernetes
+    #[serde(default = "default_kubernetes")]
+    pub kubernetes: bool,
+
     // For download url
     #[serde(default)]
     vector: DownloadUrlDefinition,
@@ -89,6 +97,7 @@ impl Default for WaveConfig {
             web_ui: DEFAULT_WEB_UI,
             web_ui_host: DEFAULT_WEB_UI_HOST.to_string(),
             web_ui_port: DEFAULT_WEB_UI_PORT,
+            kubernetes: DEFAULT_KUBERNETES,
             vector: DownloadUrlDefinition::default(),
             telegraf: DownloadUrlDefinition::default(),
         }
@@ -103,6 +112,9 @@ impl WaveConfig {
             config_path
         };
 
+        // Confirm the current directory
+        let current = std::env::current_dir();
+        debug!("Current directory: {:?}", current);
         debug!("Reading config file: {}", config_path);
         // Read the file of the path
         let file = File::open(config_path);
@@ -151,16 +163,16 @@ mod tests {
         assert_eq!(wave_config.db_url, DEFAULT_DB_URL);
         assert_eq!(
             wave_config.watch_definition_duration,
-            DEFAULT_WATCH_DEFINITION_DURATION
+            DEFAULT_WATCH_DEFINITION_DURATION + 1
         );
         assert_eq!(
             wave_config.autoscaling_history_retention,
             DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
-        assert_eq!(wave_config.port, DEFAULT_API_PORT);
+        assert_eq!(wave_config.port, DEFAULT_API_PORT + 1);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
         assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
-        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
+        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT + 1);
     }
 }

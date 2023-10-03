@@ -79,7 +79,7 @@ tasks:
       - "wave-autoscale"
       - "--"
       - "--config"
-      - "./tests/config/wave-config.yaml"
+      - "tests/config/wave-config.yaml"
       # - "--definition"
       # - "./core/wave-autoscale/tests/yaml/plan_cloudwatch_ecs_ec2.yaml"
     env:

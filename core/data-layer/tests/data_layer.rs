@@ -10,9 +10,10 @@ mod data_layer {
     use data_layer::{
         data_layer::DataLayer,
         reader::wave_definition_reader::{read_definition_yaml_file, ParserResult},
-        types::object_kind::ObjectKind,
-        MetricDefinition, ScalingComponentDefinition,
+        types::{object_kind::ObjectKind, plan_item_definition::PlanItemDefinition},
+        MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
     };
+    use log::debug;
     use rand::Rng;
     use serde_json::json;
     use std::{
@@ -34,7 +35,14 @@ mod data_layer {
         read_definition_yaml_file(yaml_file_path)
     }
 
-    async fn get_data_layer() -> Result<DataLayer> {
+    async fn get_data_layer_with_postgres() -> Result<DataLayer> {
+        const TEST_DB: &str = "postgresql://postgres:postgres@localhost:5432/postgres";
+        let data_layer = DataLayer::new(TEST_DB).await;
+        data_layer.sync("").await;
+        Ok(data_layer)
+    }
+
+    async fn get_data_layer_with_sqlite() -> Result<DataLayer> {
         const TEST_DB: &str = "sqlite://./tests/temp/test.db";
         // Delete the test db if it exists
         let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
@@ -49,26 +57,30 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_run_watch() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_run_watch_with_data_layer(data_layer).await?;
 
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_run_watch_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_run_watch_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let mut watch_receiver = data_layer.watch_definitions(1000);
         let verification = Arc::new(AtomicBool::new(false));
         let verification_clone = verification.clone();
 
         tokio::spawn(async move {
-            println!("Waiting for watch result");
-            if watch_receiver.changed().await.is_ok() {
-                println!("Received watch result");
+            while watch_receiver.changed().await.is_ok() {
                 let result = watch_receiver.borrow();
-                println!("Received watch result: {:?}", result);
+                debug!("Received watch result: {:?}", result);
                 verification_clone.store(true, Ordering::Release);
             }
         });
-        // sleep
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        // First, add the metrics. It should not trigger the watch
         data_layer
             .add_metrics(vec![MetricDefinition {
-                id: "test".to_string(),
+                id: "test1".to_string(),
                 db_id: "test".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
@@ -76,9 +88,25 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        println!("changed values - 1");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
+        // Second shot of adding a metric definition, it should trigger the watch
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        data_layer
+            .add_metrics(vec![MetricDefinition {
+                id: "test2".to_string(),
+                db_id: "test".to_string(),
+                kind: ObjectKind::Metric,
+                collector: "vector".to_string(),
+                metric_kind: "test".to_string(),
+                metadata: HashMap::new(),
+            }])
+            .await?;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
+
+        // Add a scaling component, it should trigger the watch
         data_layer
             .add_scaling_components(vec![ScalingComponentDefinition {
                 id: "test".to_string(),
@@ -88,35 +116,60 @@ mod data_layer {
                 metadata: HashMap::new(),
             }])
             .await?;
-        println!("changed values - 2");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
 
-        data_layer
-            .add_scaling_components(vec![ScalingComponentDefinition {
-                id: "test2".to_string(),
-                db_id: "test2".to_string(),
-                component_kind: "test".to_string(),
-                kind: ObjectKind::ScalingComponent,
+        // Add a scaling plan, it should trigger the watch
+        let _ = data_layer
+            .add_plans(vec![ScalingPlanDefinition {
+                id: "test".to_string(),
+                db_id: "test".to_string(),
+                kind: ObjectKind::ScalingPlan,
                 metadata: HashMap::new(),
+                plans: vec![PlanItemDefinition {
+                    id: "test".to_string(),
+                    description: None,
+                    expression: None,
+                    cron_expression: None,
+                    ui: None,
+                    priority: 1,
+                    scaling_components: vec![json!({
+                        "name": "test",
+                        "value": 1
+                    })],
+                }],
             }])
-            .await?;
-        println!("changed values - 3");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        let changed = verification.load(Ordering::Acquire);
+        assert!(changed);
+        verification.store(false, Ordering::Release);
 
-        // TODO: Add more tests
-        // assert!(verification.load(Ordering::Acquire));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_metrics() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_metrics_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_metrics_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_metrics_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.metric_definitions.len(),
             EXPECTED_METRICS_COUNT,
             "Unexpected metrics count"
         );
+
+        // Clean the metrics
+        let _ = data_layer.delete_all_metrics().await;
 
         // Add the metrics
         let add_metrics_result = data_layer
@@ -190,13 +243,24 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_scaling_components() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_scaling_components_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_scaling_components_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_scaling_components_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.scaling_component_definitions.len(),
             EXPECTED_SCALING_COMPONENTS_COUNT,
             "Unexpected metrics count"
         );
+        // Clean the scaling components
+        let _ = data_layer.delete_all_scaling_components().await;
+
         // Add the scaling components
         let add_scaling_components_result = data_layer
             .add_scaling_components(result.scaling_component_definitions.clone())
@@ -260,13 +324,23 @@ mod data_layer {
 
     #[tokio::test]
     async fn test_scaling_plans() -> Result<()> {
-        let data_layer = get_data_layer().await?;
+        let data_layer = get_data_layer_with_postgres().await?;
+        test_scaling_plans_with_data_layer(data_layer).await?;
+
+        let data_layer = get_data_layer_with_sqlite().await?;
+        test_scaling_plans_with_data_layer(data_layer).await?;
+
+        Ok(())
+    }
+    async fn test_scaling_plans_with_data_layer(data_layer: DataLayer) -> Result<()> {
         let result = read_example_yaml_file()?;
         assert_eq!(
             result.scaling_plan_definitions.len(),
             EXPECTED_SCALING_PLANS_COUNT,
             "Unexpected metrics count"
         );
+        // Clean the scaling plans
+        let _ = data_layer.delete_all_plans().await;
 
         // Add the scaling plans
         let add_scaling_plans_result = data_layer

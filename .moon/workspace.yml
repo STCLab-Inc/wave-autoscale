@@ -21,6 +21,7 @@ projects:
   web-app: "core/web-app"
   # For building
   archiver: ".moon/archiver"
+  deployment: "deployment"
 
 codeowners:
   syncOnRun: true
