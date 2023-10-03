@@ -1,3 +1,3 @@
-third-party-licenses.html linguist-vendored
+* linguist-vendored
 *.rs linguist-vendored=false
 *.ts linguist-vendored=false
