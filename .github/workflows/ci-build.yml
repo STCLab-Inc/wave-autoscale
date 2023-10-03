@@ -41,7 +41,7 @@ jobs:
       - name: Set up moon cache
         uses: actions/cache@v3
         continue-on-error: false
-        timeout-minutes: 5
+        timeout-minutes: 10
         with:
           path: |
             .moon/cache/

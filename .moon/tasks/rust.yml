@@ -23,8 +23,3 @@ tasks:
     deps:
       - "lint"
       - "clean-db"
-  run:
-    deps:
-      - "test"
-    options:
-      runFromWorkspaceRoot: true

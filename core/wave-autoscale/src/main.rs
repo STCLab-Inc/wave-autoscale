@@ -3,7 +3,6 @@
  */
 mod app;
 mod args;
-mod kubernetes;
 mod metric_collector_manager;
 mod metric_updater;
 mod scaling_component;

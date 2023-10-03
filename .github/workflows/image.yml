@@ -1,9 +1,12 @@
 name: Publish Docker Image
 on:
-  release:
-    types: [published]
   workflow_dispatch:
-
+    inputs:
+      version:
+        description: 'Version to publish'
+        required: true
+        default: 'latest'
+        
 env:
   CARGO_TERM_COLOR: always
 
@@ -82,6 +85,6 @@ jobs:
 
       - name: Create and push Docker manifest
         run: |
-          docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:test-${{ github.sha }} \
+          docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} \
             ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 \
             ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
