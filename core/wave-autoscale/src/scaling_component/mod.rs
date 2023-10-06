@@ -7,6 +7,7 @@ pub mod amazon_emr_ec2;
 pub mod aws_ec2_autoscaling;
 pub mod aws_ecs_service_scaling;
 pub mod aws_lambda_function;
+pub mod aws_wafv2;
 pub mod azure_functions_app;
 pub mod azure_vmss_autoscaling;
 pub mod gcp_mig_autoscaling;

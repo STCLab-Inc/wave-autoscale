@@ -33,6 +33,7 @@ aws-sdk-lambda = "0.25.1"
 aws-sdk-dynamodb = "0.25.1"
 aws-sdk-applicationautoscaling = "0.25.1"
 aws-sdk-cloudwatch = "0.25.1"
+aws-sdk-wafv2 = "0.25.1"
 quick-js = { version = "0.4.1" }
 chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
 aws-smithy-types-convert = { version = "0.55.0", features = ["convert-chrono"] }
