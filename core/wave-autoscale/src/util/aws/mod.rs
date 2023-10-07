@@ -10,7 +10,7 @@ use super::aws_region::get_aws_region_static_str;
 use aws_config::{meta::region::RegionProviderChain, SdkConfig};
 use aws_credential_types::Credentials;
 use log::debug;
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 use thiserror::Error;
 
 const PROVIDER_NAME: &str = "wave-autoscale";
@@ -19,6 +19,22 @@ const PROVIDER_NAME: &str = "wave-autoscale";
 pub enum GetAwsConfigError {
     #[error("Failed to get AWS region: {0}")]
     GetAwsRegionError(String),
+}
+
+pub async fn get_aws_config_with_metadata(
+    metadata: &HashMap<String, serde_json::Value>,
+) -> Result<SdkConfig, GetAwsConfigError> {
+    let access_key = metadata
+        .get("access_key")
+        .map(|access_key| access_key.to_string());
+    let secret_key = metadata
+        .get("secret_key")
+        .map(|secret_key| secret_key.to_string());
+    let region: Option<String> = metadata
+        .get("region")
+        .and_then(|region| region.as_str().map(|region| region.to_string()));
+
+    get_aws_config(region, access_key, secret_key, None, None).await
 }
 
 pub async fn get_aws_config(
@@ -35,6 +51,8 @@ pub async fn get_aws_config(
     // 3. Web Identity Token credentials from the environment or container (including EKS)
     // 4. ECS Container Credentials (IAM roles for tasks)
     // 5. EC2 Instance Metadata Service (IAM Roles attached to instance)
+
+    // Sep 5 2023: SSO Login is not working (https://github.com/awslabs/smithy-rs/pull/2917)
 
     // Region
     let region_provider = if let Some(region) = region {
