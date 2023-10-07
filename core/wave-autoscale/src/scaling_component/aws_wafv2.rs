@@ -126,7 +126,8 @@ mod test {
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]
-    async fn apply_test() {
+    #[ignore]
+    async fn test_apply() {
         let scaling_definition = ScalingComponentDefinition {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db_id"),
@@ -165,7 +166,50 @@ mod test {
         let lambda_function_scaling_component = AWSWAFv2ScalingComponent::new(scaling_definition)
             .apply(params)
             .await;
-        println!("{:?}", lambda_function_scaling_component);
         assert!(lambda_function_scaling_component.is_ok());
+    }
+    #[tokio::test]
+    #[ignore]
+    async fn test_apply_with_invalid_metadata() {
+        // Invalid info of web acl
+        let scaling_definition = ScalingComponentDefinition {
+            kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
+            db_id: String::from("db_id"),
+            id: String::from("scaling-id"),
+            component_kind: String::from("aws-wafv2"),
+            metadata: HashMap::from([
+                (
+                    "region".to_string(),
+                    serde_json::Value::String("ap-northeast-1".to_string()),
+                ),
+                (
+                    "web_acl_id".to_string(),
+                    serde_json::Value::String("4eb74b24-2c47-426c-96bf-608a103f710f".to_string()),
+                ),
+                (
+                    "web_acl_name".to_string(),
+                    serde_json::Value::String("wa-acl-invalid".to_string()),
+                ),
+                (
+                    "scope".to_string(),
+                    serde_json::Value::String("regional".to_string()),
+                ),
+            ]),
+        };
+
+        let params = HashMap::from([
+            (
+                "rule_name".to_string(),
+                serde_json::Value::String("rate-limit-count-all".to_string()),
+            ),
+            (
+                "rate_limit".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(100)),
+            ),
+        ]);
+        let lambda_function_scaling_component = AWSWAFv2ScalingComponent::new(scaling_definition)
+            .apply(params)
+            .await;
+        assert!(lambda_function_scaling_component.is_err());
     }
 }
