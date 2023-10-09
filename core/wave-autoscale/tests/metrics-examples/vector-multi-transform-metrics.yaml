@@ -1,0 +1,30 @@
+# source: https://vector.dev/docs/reference/configuration/sources/prometheus_scrape/#query
+# transform: https://vector.dev/docs/reference/configuration/transforms/metric_to_log/
+# transform: https://vector.dev/docs/reference/configuration/transforms/filter/
+---
+kind: Metric
+id: vector_host_metrics
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: prometheus_scrape
+      endpoints: ["http://34.64.190.189:9090/federate"]
+      scrape_interval_secs: 30
+      query:
+        "match[]":
+          [
+            'istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}',
+          ]
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: metric_to_log
+    my_transforms_id_2:
+      inputs: ["my_transforms_id_1"]
+      type: filter
+      condition: '.name != "istio_request_duration_milliseconds_sum"'
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: my_transforms_id_2 # last transform id or source id

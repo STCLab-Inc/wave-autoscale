@@ -213,40 +213,46 @@ impl MetricCollectorManager {
          *
          */
         // Create a TOML value representing your data structure
-        let mut root = toml::value::Table::new();
-        let mut sources = toml::value::Table::new();
-        let mut sinks = toml::value::Table::new();
+        // let mut root = toml::value::Table::new();
+        // let mut sources = toml::value::Table::new();
+        // let mut sinks = toml::value::Table::new();
 
+        let mut root_toml = "".to_string();
         // Create a TOML array representing the metric definitions
         for metric_definition in metric_definitions {
             if metric_definition.collector != "vector" {
                 continue;
             }
 
-            // Create a source
-            let mut sources_metric = toml::value::Table::new();
-            sources_metric.insert(
-                "type".to_string(),
-                toml::Value::String(metric_definition.metric_kind.to_string()),
-            );
-            // Add metadata to the source
-            for (key, value) in &metric_definition.metadata {
-                let value = serde_json::from_str(value.to_string().as_str());
-                if let Ok(value) = value {
-                    sources_metric.insert(key.to_string(), value);
-                }
-            }
-            sources.insert(
-                metric_definition.id.clone(),
-                toml::Value::Table(sources_metric),
-            );
+            // metadata.sinks remove
+            let mut metadata = metric_definition.metadata.clone();
+            metadata.remove("sinks");
 
-            // Create a sink
+            // convert metric_definition.metadata to toml
+            let metadata_toml =
+                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
+
+            let sinks = metric_definition.metadata.get("sinks").unwrap();
+
+            // find sinks intput
+            let mut sinks_input = "";
+            sinks.as_object().unwrap().keys().for_each(|key| {
+                let sinks_type_data = sinks.get(key).unwrap().get("type");
+                let sinks_inputs_data = sinks.get(key).unwrap().get("inputs");
+                if sinks_type_data.unwrap() == "wave-autoscale" {
+                    sinks_input = sinks_inputs_data.unwrap().as_str().unwrap();
+                }
+            });
+            if sinks_input.is_empty() {
+                continue;
+            }
+
+            // make new sinks
             let mut sinks_metric = toml::value::Table::new();
             sinks_metric.insert("type".to_string(), toml::Value::String("http".to_string()));
             sinks_metric.insert(
                 "inputs".to_string(),
-                toml::Value::Array(vec![toml::Value::String(metric_definition.id.clone())]),
+                toml::Value::Array(vec![toml::Value::String(sinks_input.to_string())]),
             );
             sinks_metric.insert(
                 "uri".to_string(),
@@ -276,17 +282,80 @@ impl MetricCollectorManager {
             sinks_metric.insert("encoding".to_string(), toml::Value::Table(encoding));
 
             let sink_metric_id = format!("output_{}", metric_definition.id);
-            sinks.insert(sink_metric_id, toml::Value::Table(sinks_metric));
+            let mut sinks_toml = toml::value::Table::new();
+            sinks_toml.insert(sink_metric_id, toml::Value::Table(sinks_metric));
+            let mut root_sinks_toml = toml::value::Table::new();
+            root_sinks_toml.insert("sinks".to_string(), toml::Value::Table(sinks_toml));
+
+            let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
+            let root_sinks_toml_str = toml::to_string(&root_sinks_toml).unwrap();
+
+            root_toml = root_toml + "\n" + &metadata_toml_str + "\n" + &root_sinks_toml_str + "\n";
+
+            // // Create a source
+            // let mut sources_metric = toml::value::Table::new();
+            // sources_metric.insert(
+            //     "type".to_string(),
+            //     toml::Value::String(metric_definition.metric_kind.to_string()),
+            // );
+            // // Add metadata to the source
+            // for (key, value) in &metric_definition.metadata {
+            //     let value = serde_json::from_str(value.to_string().as_str());
+            //     if let Ok(value) = value {
+            //         sources_metric.insert(key.to_string(), value);
+            //     }
+            // }
+            // sources.insert(
+            //     metric_definition.id.clone(),
+            //     toml::Value::Table(sources_metric),
+            // );
+
+            // // Create a sink
+            // let mut sinks_metric = toml::value::Table::new();
+            // sinks_metric.insert("type".to_string(), toml::Value::String("http".to_string()));
+            // sinks_metric.insert(
+            //     "inputs".to_string(),
+            //     toml::Value::Array(vec![toml::Value::String(metric_definition.id.clone())]),
+            // );
+            // sinks_metric.insert(
+            //     "uri".to_string(),
+            //     toml::Value::String(format!(
+            //         "{}?metric_id={}&collector=vector",
+            //         self.output_url, metric_definition.id
+            //     )),
+            // );
+            // sinks_metric.insert(
+            //     "method".to_string(),
+            //     toml::Value::String("post".to_string()),
+            // );
+            // sinks_metric.insert(
+            //     "compression".to_string(),
+            //     toml::Value::String("gzip".to_string()),
+            // );
+            // sinks_metric.insert(
+            //     "payload_prefix".to_string(),
+            //     toml::Value::String("{\"metrics\": ".to_string()),
+            // );
+            // sinks_metric.insert(
+            //     "payload_suffix".to_string(),
+            //     toml::Value::String("}".to_string()),
+            // );
+            // let mut encoding = toml::value::Table::new();
+            // encoding.insert("codec".to_string(), toml::Value::String("json".to_string()));
+            // sinks_metric.insert("encoding".to_string(), toml::Value::Table(encoding));
+
+            // let sink_metric_id = format!("output_{}", metric_definition.id);
+            // sinks.insert(sink_metric_id, toml::Value::Table(sinks_metric));
         }
-        root.insert("sources".to_string(), toml::Value::Table(sources));
-        root.insert("sinks".to_string(), toml::Value::Table(sinks));
+        // root.insert("sources".to_string(), toml::Value::Table(sources));
+        // root.insert("sinks".to_string(), toml::Value::Table(sinks));
 
         // Serialize it to a TOML string
-        let toml = toml::to_string(&root).unwrap();
-        debug!("Vector config:\n{}", toml);
+        // let toml = toml::to_string(&root).unwrap();
+        debug!("Vector config:\n{}", root_toml);
 
         // Write the string to a file
-        std::fs::write(config_path, toml).unwrap();
+        std::fs::write(config_path, root_toml).unwrap();
     }
 
     fn save_metric_definitions_to_telegraf_config(
@@ -333,131 +402,179 @@ impl MetricCollectorManager {
          * value = "i-0b49b58f6c93acf75"
          *
          */
-        // Create a TOML value representing your data structure
-        let mut root = toml::value::Table::new();
+        // // Create a TOML value representing your data structure
+        // let mut root = toml::value::Table::new();
 
-        // [global_tags]
-        let global_tags = toml::value::Table::new();
-        root.insert("global_tags".to_string(), toml::Value::Table(global_tags));
+        // // [global_tags]
+        // let global_tags = toml::value::Table::new();
+        // root.insert("global_tags".to_string(), toml::Value::Table(global_tags));
 
-        // [agent]
-        let mut agent = toml::value::Table::new();
-        agent.insert(
-            "interval".to_string(),
-            toml::Value::String("1s".to_string()),
-        );
-        agent.insert("round_interval".to_string(), toml::Value::Boolean(true));
-        agent.insert("metric_batch_size".to_string(), toml::Value::Integer(1000));
-        agent.insert(
-            "metric_buffer_limit".to_string(),
-            toml::Value::Integer(10000),
-        );
-        agent.insert(
-            "collection_jitter".to_string(),
-            toml::Value::String("0s".to_string()),
-        );
-        agent.insert(
-            "flush_interval".to_string(),
-            toml::Value::String("1s".to_string()),
-        );
-        agent.insert(
-            "flush_jitter".to_string(),
-            toml::Value::String("0s".to_string()),
-        );
-        agent.insert(
-            "precision".to_string(),
-            toml::Value::String("0s".to_string()),
-        );
-        agent.insert("debug".to_string(), toml::Value::Boolean(false));
-        agent.insert("quiet".to_string(), toml::Value::Boolean(false));
-        root.insert("agent".to_string(), toml::Value::Table(agent));
+        // // [agent]
+        // let mut agent = toml::value::Table::new();
+        // agent.insert(
+        //     "interval".to_string(),
+        //     toml::Value::String("1s".to_string()),
+        // );
+        // agent.insert("round_interval".to_string(), toml::Value::Boolean(true));
+        // agent.insert("metric_batch_size".to_string(), toml::Value::Integer(1000));
+        // agent.insert(
+        //     "metric_buffer_limit".to_string(),
+        //     toml::Value::Integer(10000),
+        // );
+        // agent.insert(
+        //     "collection_jitter".to_string(),
+        //     toml::Value::String("0s".to_string()),
+        // );
+        // agent.insert(
+        //     "flush_interval".to_string(),
+        //     toml::Value::String("1s".to_string()),
+        // );
+        // agent.insert(
+        //     "flush_jitter".to_string(),
+        //     toml::Value::String("0s".to_string()),
+        // );
+        // agent.insert(
+        //     "precision".to_string(),
+        //     toml::Value::String("0s".to_string()),
+        // );
+        // agent.insert("debug".to_string(), toml::Value::Boolean(false));
+        // agent.insert("quiet".to_string(), toml::Value::Boolean(false));
+        // root.insert("agent".to_string(), toml::Value::Table(agent));
 
-        // [[inputs]]
-        let mut inputs = toml::value::Table::new();
-        let mut inputs_array: HashMap<String, toml::value::Array> = HashMap::new();
+        // // [[inputs]]
+        // let mut inputs = toml::value::Table::new();
+        // let mut inputs_array: HashMap<String, toml::value::Array> = HashMap::new();
 
-        // [[outputs.http]]
-        let mut outputs_http = toml::value::Array::new();
+        // // [[outputs.http]]
+        // let mut outputs_http = toml::value::Array::new();
 
+        let mut root_toml = "".to_string();
         // Create a TOML array representing the metric definitions
         for metric_definition in metric_definitions {
             if metric_definition.collector != "telegraf" {
                 continue;
             }
 
-            // Create a input
-            let mut input_metric = toml::value::Table::new();
+            // metadata.outputs remove
+            let mut metadata = metric_definition.metadata.clone();
+            metadata.remove("outputs");
 
-            // Add metadata to the source
-            for (key, value) in &metric_definition.metadata {
-                let Ok(value) = serde_json::from_str::<toml::Value>(value.to_string().as_str()) else {
-                    continue;
-                };
-                input_metric.insert(key.to_string(), value);
-            }
+            // convert metric_definition.metadata to toml
+            let metadata_toml =
+                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
 
-            input_metric =
-                add_telegraf_input_required_tags(input_metric, metric_definition.id.to_string());
+            let mut outputs_toml = toml::value::Array::new();
+            if metric_definition.collector == "telegraf" {
+                let outputs = metric_definition.metadata.get("outputs").unwrap();
 
-            // e.g. metric_kind: cloudwatch
-            let kind = metric_definition.metric_kind.to_string();
-            // e.g. [[inputs.cloudwatch]]
-            let inputs_array_metric = match inputs_array.get_mut(&kind) {
-                Some(inputs_array_metric) => inputs_array_metric,
-                None => {
-                    let inputs_metric = toml::value::Array::new();
-                    inputs_array.insert(kind.clone(), inputs_metric);
-                    inputs_array.get_mut(&kind).unwrap()
+                // find output waveautoscale
+                if outputs.get("wave-autoscale").is_some() {
+                    // make new output
+                    let mut output_metric = toml::value::Table::new();
+                    output_metric.insert(
+                        "url".to_string(),
+                        toml::Value::String(format!(
+                            "{}?metric_id={}&collector=telegraf",
+                            self.output_url, metric_definition.id
+                        )),
+                    );
+                    output_metric.insert(
+                        "method".to_string(),
+                        toml::Value::String("POST".to_string()),
+                    );
+                    output_metric.insert(
+                        "data_format".to_string(),
+                        toml::Value::String("json".to_string()),
+                    );
+                    let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
+                        continue;
+                    };
+                    output_metric.insert("tagpass".to_string(), required_tags);
+                    outputs_toml.push(toml::Value::Table(output_metric));
                 }
-            };
-            inputs_array_metric.push(input_metric.into());
+            }
+            // [[outputs]]
+            let mut outputs = toml::value::Table::new();
+            outputs.insert("http".to_string(), toml::Value::Array(outputs_toml));
+            let mut root_outputs = toml::value::Table::new();
+            root_outputs.insert("outputs".to_string(), toml::Value::Table(outputs));
 
-            // Create a output
-            let mut output_metric = toml::value::Table::new();
-            output_metric.insert(
-                "url".to_string(),
-                toml::Value::String(format!(
-                    "{}?metric_id={}&collector=telegraf",
-                    self.output_url, metric_definition.id
-                )),
-            );
-            output_metric.insert(
-                "method".to_string(),
-                toml::Value::String("POST".to_string()),
-            );
-            output_metric.insert(
-                "data_format".to_string(),
-                toml::Value::String("json".to_string()),
-            );
-            let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
-                continue;
-            };
-            output_metric.insert("tagpass".to_string(), required_tags);
-            outputs_http.push(toml::Value::Table(output_metric));
+            let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
+            let root_outputs_toml_str = toml::to_string(&root_outputs).unwrap();
+
+            root_toml =
+                root_toml + "\n" + &metadata_toml_str + "\n" + &root_outputs_toml_str + "\n";
+            // // Create a input
+            // let mut input_metric = toml::value::Table::new();
+
+            // // Add metadata to the source
+            // for (key, value) in &metric_definition.metadata {
+            //     let Ok(value) = serde_json::from_str::<toml::Value>(value.to_string().as_str()) else {
+            //         continue;
+            //     };
+            //     input_metric.insert(key.to_string(), value);
+            // }
+
+            // input_metric =
+            //     add_telegraf_input_required_tags(input_metric, metric_definition.id.to_string());
+
+            // // e.g. metric_kind: cloudwatch
+            // let kind = metric_definition.metric_kind.to_string();
+            // // e.g. [[inputs.cloudwatch]]
+            // let inputs_array_metric = match inputs_array.get_mut(&kind) {
+            //     Some(inputs_array_metric) => inputs_array_metric,
+            //     None => {
+            //         let inputs_metric = toml::value::Array::new();
+            //         inputs_array.insert(kind.clone(), inputs_metric);
+            //         inputs_array.get_mut(&kind).unwrap()
+            //     }
+            // };
+            // inputs_array_metric.push(input_metric.into());
+
+            // // Create a output
+            // let mut output_metric = toml::value::Table::new();
+            // output_metric.insert(
+            //     "url".to_string(),
+            //     toml::Value::String(format!(
+            //         "{}?metric_id={}&collector=telegraf",
+            //         self.output_url, metric_definition.id
+            //     )),
+            // );
+            // output_metric.insert(
+            //     "method".to_string(),
+            //     toml::Value::String("POST".to_string()),
+            // );
+            // output_metric.insert(
+            //     "data_format".to_string(),
+            //     toml::Value::String("json".to_string()),
+            // );
+            // let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
+            //     continue;
+            // };
+            // output_metric.insert("tagpass".to_string(), required_tags);
+            // outputs_http.push(toml::Value::Table(output_metric));
         }
 
-        // Add the inputs and outputs to the root
-        for (kind, inputs_array_metric) in inputs_array {
-            inputs.insert(kind, inputs_array_metric.into());
-        }
-        root.insert("inputs".to_string(), toml::Value::Table(inputs));
+        // // Add the inputs and outputs to the root
+        // for (kind, inputs_array_metric) in inputs_array {
+        //     inputs.insert(kind, inputs_array_metric.into());
+        // }
+        // root.insert("inputs".to_string(), toml::Value::Table(inputs));
 
-        // [[outputs]]
-        let mut outputs = toml::value::Table::new();
-        outputs.insert("http".to_string(), toml::Value::Array(outputs_http));
-        root.insert("outputs".to_string(), toml::Value::Table(outputs));
+        // // [[outputs]]
+        // let mut outputs = toml::value::Table::new();
+        // outputs.insert("http".to_string(), toml::Value::Array(outputs_http));
+        // root.insert("outputs".to_string(), toml::Value::Table(outputs));
 
-        // Serialize it to a TOML string
-        let toml = toml::to_string(&root).unwrap();
-        debug!("Telegraf config:\n{}", toml);
+        debug!("Telegraf config:\n{}", root_toml);
 
         // Write the string to a file
-        std::fs::write(config_path, toml).unwrap();
+        std::fs::write(config_path, root_toml).unwrap();
     }
 
     pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
-
+        println!(" >> metric_definitions: {:?}", metric_definitions);
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
 
@@ -465,6 +582,7 @@ impl MetricCollectorManager {
 
         // Find the metric definitions that use Vector collector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
+        println!(">> metric_definitions: {:?}", metric_definitions);
         for metric_definition in metric_definitions {
             if metric_definition.collector == "vector" {
                 vector_metric_definitions.push(metric_definition);
@@ -837,5 +955,219 @@ mod tests {
         // if std::path::Path::new(&telegraf_dir_path).exists() {
         //     std::fs::remove_dir_all(&telegraf_dir_path).unwrap();
         // }
+    }
+
+    #[test]
+    fn test_yaml_convert_break_line_to_toml() {
+        let mut root_test = toml::value::Table::new();
+        let mut root_test2 = toml::value::Table::new();
+        root_test2.insert(
+            "key1".to_string(),
+            toml::Value::String("'a\"a\"a\nbbb".to_string()),
+        );
+        root_test2.insert(
+            "key2".to_string(),
+            toml::Value::String("'a\"a\"a\nbbb\\\"".to_string()),
+        );
+        root_test2.insert(
+            "key3".to_string(),
+            toml::Value::String(
+                r#"'a"a"a
+            bbb"#
+                    .to_string(),
+            ),
+        );
+        root_test2.insert(
+            "key4".to_string(),
+            toml::Value::String(r#"'a"a"a\nbbb"#.to_string()),
+        );
+        root_test.insert("metadata".to_string(), toml::Value::Table(root_test2));
+        println!(" >> root_test : {:?}", root_test);
+        let root_test_str = toml::to_string(&root_test).unwrap();
+        println!(" >>>> root_test :\n{}", root_test_str);
+    }
+
+    #[test]
+    fn test_vector_yaml_to_toml() {
+        let yaml = r#"
+        kind: Metric
+        id: istio_request_duration_milliseconds_sum_1m
+        collector: vector
+        metric_kind: http_client
+        metadata:
+          sources:
+            my_source_id_1:
+              type: http_client
+              query:
+                "query": ['rate(istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}[1m])']
+          transforms:
+            my_transforms_id_1:
+              inputs: ["my_source_id_1"]
+              type: remap
+          sinks:
+            my_sinks_id:
+              type: wave-autoscale
+              inputs: my_transforms_id_1
+        "#;
+
+        let metric_definition = serde_yaml::from_str::<MetricDefinition>(yaml).unwrap();
+
+        // metadata.sinks remove
+        let mut metadata = metric_definition.metadata.clone();
+        metadata.remove("sinks");
+
+        // convert metric_definition.metadata to toml
+        let metadata_toml =
+            serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
+
+        let mut root_sinks_toml = toml::value::Table::new();
+        if metric_definition.collector == "vector" {
+            let sinks = metric_definition.metadata.get("sinks").unwrap();
+
+            // find sinks intput
+            let mut sinks_input = "";
+            sinks.as_object().unwrap().keys().for_each(|key| {
+                let sinks_type_data = sinks.get(key).unwrap().get("type");
+                let sinks_inputs_data = sinks.get(key).unwrap().get("inputs");
+                if sinks_type_data.unwrap() == "wave-autoscale" {
+                    sinks_input = sinks_inputs_data.unwrap().as_str().unwrap();
+                }
+            });
+
+            // make new sinks
+            let mut sinks_metric = toml::value::Table::new();
+            sinks_metric.insert("type".to_string(), toml::Value::String("http".to_string()));
+            sinks_metric.insert(
+                "inputs".to_string(),
+                toml::Value::Array(vec![toml::Value::String(sinks_input.to_string())]),
+            );
+            sinks_metric.insert(
+                "uri".to_string(),
+                toml::Value::String(format!(
+                    "{}?metric_id={}&collector=vector",
+                    "output_url", metric_definition.id
+                )),
+            );
+            sinks_metric.insert(
+                "method".to_string(),
+                toml::Value::String("post".to_string()),
+            );
+            let mut encoding = toml::value::Table::new();
+            encoding.insert("codec".to_string(), toml::Value::String("json".to_string()));
+            sinks_metric.insert("encoding".to_string(), toml::Value::Table(encoding));
+
+            let sink_metric_id = format!("output_{}", metric_definition.id);
+            let mut sinks_toml = toml::value::Table::new();
+            sinks_toml.insert(sink_metric_id, toml::Value::Table(sinks_metric));
+            root_sinks_toml.insert("sinks".to_string(), toml::Value::Table(sinks_toml));
+        }
+
+        let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
+        debug!("metadata_toml:\n{}", metadata_toml_str);
+        assert!(metadata_toml_str.contains("[sources.my_source_id_1]"));
+        assert!(metadata_toml_str.contains("[sources.my_source_id_1.query]"));
+        assert!(metadata_toml_str.contains("[transforms.my_transforms_id_1]"));
+        let root_sinks_toml_str = toml::to_string(&root_sinks_toml).unwrap();
+        debug!("sinks_toml:\n{}", root_sinks_toml_str);
+        assert!(root_sinks_toml_str.contains("inputs = [\"my_transforms_id_1\"]"));
+        assert!(root_sinks_toml_str.contains("method = \"post\""));
+    }
+
+    #[test]
+    fn test_telegraf_yaml_to_toml() {
+        let yaml = r#"
+        kind: Metric
+        id: prometheus_metrics
+        collector: telegraf
+        metric_kind: http_client
+        metadata:
+          inputs:
+            prometheus:
+              - urls: ["http://localhost:9090/metrics"]
+                period: "10s"
+                delay: "10s"
+                interval: "10s"
+                namepass: ["process_cpu_seconds_*"]
+                tags:
+                  metric_id: prometheus_metrics
+          outputs:
+            wave-autoscale:
+              tagpass:
+                metric_id: prometheus_metrics
+          agent:
+            interval: "1s"
+            metric_batch_size: 1000
+            metric_buffer_limit: 10000
+            flush_interval: "1s"
+        "#;
+
+        let metric_definition = serde_yaml::from_str::<MetricDefinition>(yaml).unwrap();
+
+        // metadata.outputs remove
+        let mut metadata = metric_definition.metadata.clone();
+        metadata.remove("outputs");
+
+        // convert metric_definition.metadata to toml
+        let metadata_toml =
+            serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
+
+        let mut outputs_toml = toml::value::Array::new();
+        if metric_definition.collector == "telegraf" {
+            let outputs = metric_definition.metadata.get("outputs").unwrap();
+
+            // find output waveautoscale
+            if outputs.get("wave-autoscale").is_some() {
+                // find tagpass
+                let tagpass = outputs
+                    .get("wave-autoscale")
+                    .unwrap()
+                    .get("tagpass")
+                    .unwrap();
+
+                // make new output
+                let mut output_metric = toml::value::Table::new();
+                output_metric.insert(
+                    "url".to_string(),
+                    toml::Value::String(format!(
+                        "{}?metric_id={}&collector=telegraf",
+                        "output_url", metric_definition.id
+                    )),
+                );
+                output_metric.insert(
+                    "method".to_string(),
+                    toml::Value::String("POST".to_string()),
+                );
+                output_metric.insert(
+                    "data_format".to_string(),
+                    toml::Value::String("json".to_string()),
+                );
+                // let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
+                //     //continue;
+                //     return
+                // };
+                let Ok(output_tagpass) = serde_json::from_str::<toml::Value>(serde_json::json!(tagpass).to_string().as_str()) else {
+                    //continue;
+                    return
+                };
+                output_metric.insert("tagpass".to_string(), output_tagpass);
+                outputs_toml.push(toml::Value::Table(output_metric));
+            }
+        }
+        // [[outputs]]
+        let mut outputs = toml::value::Table::new();
+        outputs.insert("http".to_string(), toml::Value::Array(outputs_toml));
+        let mut root_outputs = toml::value::Table::new();
+        root_outputs.insert("outputs".to_string(), toml::Value::Table(outputs));
+
+        let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
+        debug!("metadata_toml:\n{}", metadata_toml_str);
+        assert!(metadata_toml_str.contains("flush_interval = \"1s\""));
+        assert!(metadata_toml_str.contains("[[inputs.prometheus]]"));
+        assert!(metadata_toml_str.contains("namepass = [\"process_cpu_seconds_*\"]"));
+        let outputs_http_str = toml::to_string(&root_outputs).unwrap();
+        debug!("output_toml:\n{}", outputs_http_str);
+        assert!(outputs_http_str.contains("[[outputs.http]]"));
+        assert!(outputs_http_str.contains("[outputs.http.tagpass]"));
+        assert!(outputs_http_str.contains("metric_id = \"prometheus_metrics\""));
     }
 }

@@ -3,7 +3,13 @@
 kind: Metric
 id: vector_host_metrics
 collector: vector
-metric_kind: host_metrics
 metadata:
-  namespace: host
-  scrape_interval_secs: 5
+  sources:
+    my_source_id_1:
+      type: host_metrics
+      namespace: host
+      scrape_interval_secs: 5
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: my_source_id_1
