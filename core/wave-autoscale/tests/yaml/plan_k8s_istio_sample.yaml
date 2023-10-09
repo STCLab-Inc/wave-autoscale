@@ -6,7 +6,7 @@ metadata:
   sources:
     my_source_id_1:
       type: http_client
-      endpoint: "http://34.64.190.189:9090/api/v1/query"
+      endpoint: "http://0.0.0.0:9090/api/v1/query"
       scrape_interval_secs: 30
       query:
         "query":
@@ -57,7 +57,7 @@ collector: telegraf
 metadata:
   inputs:
     prometheus:
-      - urls: ["http://34.64.190.189:9090/metrics"]
+      - urls: ["http://0.0.0.0:9090/metrics"]
         period: "10s"
         delay: "10s"
         interval: "10s"
@@ -97,10 +97,10 @@ kind: ScalingComponent
 id: k8s_deployment
 component_kind: kubernetes-deployment
 metadata:
-  api_server_endpoint: "https://34.22.74.73"
+  api_server_endpoint: "https://0.0.0.0"
   namespace: kube-ns
   name: node-server-dp
-  ca_cert: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVMRENDQXBTZ0F3SUJBZ0lRQlJHNUtYU29rTDk3RXVaWGlXdG5nakFOQmdrcWhraUc5dzBCQVFzRkFEQXYKTVMwd0t3WURWUVFERXlSak1URmtOekJrTXkwME1qTTNMVFJpWXpVdFlXSm1NeTA0WXpGa05UZG1NVEl6T0RJdwpJQmNOTWpNd09USTBNRE0xTkRJeldoZ1BNakExTXpBNU1UWXdORFUwTWpOYU1DOHhMVEFyQmdOVkJBTVRKR014Ck1XUTNNR1F6TFRReU16Y3ROR0pqTlMxaFltWXpMVGhqTVdRMU4yWXhNak00TWpDQ0FhSXdEUVlKS29aSWh2Y04KQVFFQkJRQURnZ0dQQURDQ0FZb0NnZ0dCQU1hVERqMXg0NGRxbGZsdi9jYnltb0JzNTVtbEZLL0NwSHZBWFJ4dgpUZFpzOXQzZnBYNzJ6MkVKVWRFeW5OWUdOeTNGT2kyK3o1dGhOdFFSYW5DSjB4YlBIQ3FJeSsyZXhHMVo0SUoxCjNhUDN3QTJRUUNhQUV6ZGF6QTZEcTFyOTZLYS9NQ1VkSyttYmlsS2h1UWxaYXM3MDJWWGZ3WWcyWDdZOWUrbHcKMFlVZEYwazBIUEg4QVVNVW91RGFsUU96RWJpM3RTeTBPWk5TMGIyNDFOeFpQVUlzQThyVjV6SWxtU2xGcnAvbwpWY1V1OUZ2cXdJaVltTTRZT2xWNVVSVFYyUW5vWHZNSkF6bU9YZmF2ajNSM29tbzNQSGJVNE8rN1o2R1ZwdU9nCmlEeXJ1T3hvL3FGZGtPQnJWT2F6TFFBLzdDMXFLSEhneHYwZnhtU0ZwYXdldnRJMjY1OENHRFlmZmlWYXJzSVUKTStNeE5INUFLbEtRelMxa3VQanQxQ09iYVJMajdjWmlTUnRJOGtQQ3JObXlaS1p4UVptTTZ4S3NBQ00wTmZEbAozeVZtV3BOaWpOVnJvUURRNmZ4cVFKVTJTT0V3VkZrbkNhU3I0b1U0cnozQis4Q0FTejlUekhHalJhVGc2NGU1ClhXNncrNEFUR2lHZDh4UTBLd1I4ZTY4UEVRSURBUUFCbzBJd1FEQU9CZ05WSFE4QkFmOEVCQU1DQWdRd0R3WUQKVlIwVEFRSC9CQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVuZkV1SVlOK0grMHp1dDM0Slh3dER2bkE3RFV3RFFZSgpLb1pJaHZjTkFRRUxCUUFEZ2dHQkFBNVRuQzJuekxVdkVSQ1B1V040Q1hJZTNQeEs4TGRmVjVudlNaRmJLL20vCkh0S3M3OE5zeEtoVEV5ajBBcG5ES01JKzdvY0xacXowMnBWNGZic21nVzNXc2lualFrcXFFSXJkaSs4V2I3bEEKVVAxbXZYYkhJc2ltK3lyeWRHK1VjY2RtSnRRZmNPc3l6d01LUExzMG5VVWZEcEVZU2N0T1phUktJT2VvQWlRZApiWG5ZdVhhdGhDcDZTZGh4MndRVHM2NnR1VGc0MXB3em1kT2pzdzJNYzZpVGVnVUhOcVZpMUpsb1RLS0ltQW0wCmN6bTllY081d2h4UFU2LzVLU3Yyc29IdW83VGhOb0krdTdPUGM0T2VIdTZqd0VMNXVQRWZxbmxVT3NzZUdNYkgKWmRtRmxYK3JoM3hmbGo0OE9iTXBrakxzek05REtsV0R1UFcydW1MNmFDdXc3SmI2a2dZRHZycmM0K0hyakFJZAo0WXhESHVNMThqeE1ocDU2U2FLNFNHWGVIZy9hcUsxVnZGbTBJUGlGZ1hURWNrSXdYeU4vdE1tejdIazJxSkcxCkYyRW1hUElXZ0h0M1ovODVHUDA5Q3NadHJDVVZQNzF2L0h1YWNzcG5YU1dXRlJQaGhydndxZXp2cW85amlxTEkKRGZvN1BZYzAzck9OZDdJVkFnUmFZZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  ca_cert: ENFUlRJRklDQVRFLS0tLS0K..
 ---
 kind: ScalingPlan
 id: scaling_plan_k8s_deployment_autoscaling
@@ -114,8 +114,8 @@ plans:
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
-        metric_id: 'istio_metric_request_duration_10s',
-        name: 'istio_request_duration_milliseconds_bucket',
+        metric_id: 'istio_request_duration_milliseconds_sum_1m',
+        name: 'name_1',
         stats: 'max',
         period_sec: 10
       }) >= 1000

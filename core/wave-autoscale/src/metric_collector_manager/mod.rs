@@ -212,11 +212,6 @@ impl MetricCollectorManager {
          * ...
          *
          */
-        // Create a TOML value representing your data structure
-        // let mut root = toml::value::Table::new();
-        // let mut sources = toml::value::Table::new();
-        // let mut sinks = toml::value::Table::new();
-
         let mut root_toml = "".to_string();
         // Create a TOML array representing the metric definitions
         for metric_definition in metric_definitions {
@@ -229,21 +224,47 @@ impl MetricCollectorManager {
             metadata.remove("sinks");
 
             // convert metric_definition.metadata to toml
-            let metadata_toml =
-                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
+            let Ok(metadata_toml) =
+                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)) else {
+                error!("[vector] Failed to convert metadata to toml");
+                continue;
+            };
 
-            let sinks = metric_definition.metadata.get("sinks").unwrap();
+            let Some(sinks) = metric_definition.metadata.get("sinks") else {
+                error!("[vector] sinks not found");
+                continue;
+            };
+
+            let Some(sinks_object) = sinks.as_object() else {
+                error!("[vector] Failed to convert metadata.sinks to as_object");
+                continue;
+            };
 
             // find sinks intput
             let mut sinks_input = "";
-            sinks.as_object().unwrap().keys().for_each(|key| {
-                let sinks_type_data = sinks.get(key).unwrap().get("type");
-                let sinks_inputs_data = sinks.get(key).unwrap().get("inputs");
-                if sinks_type_data.unwrap() == "wave-autoscale" {
-                    sinks_input = sinks_inputs_data.unwrap().as_str().unwrap();
+            sinks_object.keys().for_each(|key| {
+                let Some(key_object) = sinks.get(key) else {
+                    error!("[vector] Failed to convert metadata.sinks to as_object for key: {}", key);
+                    return;
+                };
+                let Some(sinks_type_data) = key_object.get("type") else {
+                    error!("[vector] missing metadata.sinks type");
+                    return;
+                };
+                let Some(sinks_inputs_data) = key_object.get("inputs") else {
+                    error!("[vector] missing metadata.sinks inputs");
+                    return;
+                };
+                if sinks_type_data == "wave-autoscale" {
+                    let Some(sinks_inputs_data_str) = sinks_inputs_data.as_str() else {
+                        error!("[vector] Failed to convert metadata.sinks.inputs to as_str");
+                        return;
+                    };
+                    sinks_input = sinks_inputs_data_str;
                 }
             });
             if sinks_input.is_empty() {
+                error!("[vector] missing sinks > type: wave-autoscale > input data");
                 continue;
             }
 
@@ -287,8 +308,14 @@ impl MetricCollectorManager {
             let mut root_sinks_toml = toml::value::Table::new();
             root_sinks_toml.insert("sinks".to_string(), toml::Value::Table(sinks_toml));
 
-            let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
-            let root_sinks_toml_str = toml::to_string(&root_sinks_toml).unwrap();
+            let Ok(metadata_toml_str) = toml::to_string(&metadata_toml) else {
+                error!("[vector] Failed to convert metadata to toml string");
+                continue;
+            };
+            let Ok(root_sinks_toml_str) = toml::to_string(&root_sinks_toml) else {
+                error!("[vector] Failed to convert metadata.sinks to toml string");
+                continue;
+            };
 
             root_toml = root_toml + "\n" + &metadata_toml_str + "\n" + &root_sinks_toml_str + "\n";
         }
@@ -358,12 +385,18 @@ impl MetricCollectorManager {
             metadata.remove("outputs");
 
             // convert metric_definition.metadata to toml
-            let metadata_toml =
-                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)).unwrap();
+            let Ok(metadata_toml) =
+                serde_json::from_value::<toml::Value>(serde_json::json!(metadata)) else {
+                error!("[telegraf] Failed to convert metadata to toml");
+                continue;
+            };
 
             let mut outputs_toml = toml::value::Array::new();
             if metric_definition.collector == "telegraf" {
-                let outputs = metric_definition.metadata.get("outputs").unwrap();
+                let Some(outputs) = metric_definition.metadata.get("outputs") else {
+                    error!("[telegraf] outputs not found");
+                    continue;
+                };
 
                 // find output waveautoscale
                 if outputs.get("wave-autoscale").is_some() {
@@ -397,8 +430,14 @@ impl MetricCollectorManager {
             let mut root_outputs = toml::value::Table::new();
             root_outputs.insert("outputs".to_string(), toml::Value::Table(outputs));
 
-            let metadata_toml_str = toml::to_string(&metadata_toml).unwrap();
-            let root_outputs_toml_str = toml::to_string(&root_outputs).unwrap();
+            let Ok(metadata_toml_str) = toml::to_string(&metadata_toml) else {
+                error!("[telegraf] Failed to convert metadata to toml string");
+                continue;
+            };
+            let Ok(root_outputs_toml_str) = toml::to_string(&root_outputs) else {
+                error!("[telegraf] Failed to convert metadata.output to toml string");
+                continue;
+            };
 
             root_toml =
                 root_toml + "\n" + &metadata_toml_str + "\n" + &root_outputs_toml_str + "\n";
