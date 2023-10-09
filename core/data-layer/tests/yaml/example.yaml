@@ -3,7 +3,6 @@ kind: Metric
 # id should be unique. And alphanumeric characters and underscores are allowed.
 # for example, "metric_id" is valid but "metric-id" is not.
 id: metric_id
-metric_kind: prometheus
 metadata:
   user_key: user_value
 ---

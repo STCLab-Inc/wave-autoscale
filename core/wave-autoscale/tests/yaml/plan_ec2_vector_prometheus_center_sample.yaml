@@ -2,7 +2,6 @@
 kind: Metric
 id: prometheus_scrape_1
 collector: vector
-metric_kind: prometheus_scrape
 metadata:
   endpoints:
     - http://prometheus-simulation.waveautoscale.io:9090/federate

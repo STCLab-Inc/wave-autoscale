@@ -1,11 +1,10 @@
 ---
 kind: Metric
 id: cloudwatch_dynamodb_id
-metric_kind: cloudwatch-data
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   polling_interval: 60000
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html

@@ -1,11 +1,10 @@
 ---
 kind: Metric
 id: cloudwatch_cpu_max
-metric_kind: cloudwatch-data
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   polling_interval: 60000
   expression: "SELECT MAX(CPUUtilization) FROM SCHEMA('AWS/ECS', ClusterName) WHERE ClusterName = 'wave-test-cluster10'"
   period: 5

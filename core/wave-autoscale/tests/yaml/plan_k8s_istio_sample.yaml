@@ -2,7 +2,6 @@
 kind: Metric
 id: istio_request_duration_milliseconds_sum_1m
 collector: vector
-metric_kind: http_client
 metadata:
   sources:
     my_source_id_1:
@@ -55,7 +54,6 @@ metadata:
 kind: Metric
 id: prometheus_metrics
 collector: telegraf
-metric_kind: http_client
 metadata:
   inputs:
     prometheus:

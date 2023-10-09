@@ -3,5 +3,4 @@
 kind: Metric
 id: telegraf_mem_metrics
 collector: telegraf
-metric_kind: mem
 metadata:

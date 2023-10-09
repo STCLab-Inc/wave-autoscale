@@ -107,7 +107,6 @@ mod tests {
             kind: ObjectKind::Metric,
             db_id: "".to_string(),
             collector: "vector".to_string(),
-            metric_kind: "prometheus".to_string(),
         }];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
