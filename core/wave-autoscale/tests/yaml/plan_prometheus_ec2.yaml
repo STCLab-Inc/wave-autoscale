@@ -1,7 +1,6 @@
 ---
 kind: Metric
 id: prometheus_api_server_cpu_average_total
-metric_kind: prometheus
 metadata:
   endpoint: http://3.34.170.13:9090
   # Note: query must return a vector/scalar single element response
@@ -14,8 +13,8 @@ id: ec2_autoscaling_api_server
 component_kind: aws-ec2-autoscaling
 metadata:
   region: ap-northeast-2
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   asg_name: tf-wa-20230322020900305100000006
 ---
 kind: ScalingPlan

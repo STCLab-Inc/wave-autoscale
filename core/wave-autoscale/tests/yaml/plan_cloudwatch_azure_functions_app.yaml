@@ -2,7 +2,6 @@
 kind: Metric
 id: cloudwatch_concurrent_executions_cnt
 collector: telegraf
-metric_kind: cloudwatch
 metadata:
   region: ap-northeast-2
   # AWS Credentials using the local AWS credentials file(~/.aws/credentials)

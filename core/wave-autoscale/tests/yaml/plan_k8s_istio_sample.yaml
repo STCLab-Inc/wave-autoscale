@@ -1,0 +1,126 @@
+---
+kind: Metric
+id: istio_request_duration_milliseconds_sum_1m
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      endpoint: "http://0.0.0.0:9090/api/v1/query"
+      scrape_interval_secs: 30
+      query:
+        "query":
+          [
+            'rate(istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}[1m])',
+          ]
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: remap
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data.result)) -> |_index, value| {
+            tally = push(tally, {"name": "name_1", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : value.value[1]}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: ["my_transforms_id_1"] # last transform id or source id
+# metric example - vector
+# [
+#   {
+#     "name": "name_1",
+#     "tags":
+#       {
+#         "connection_security_policy": "mutual_tls",
+#         "destination_canonical_revision": "latest",
+#         "destination_cluster": "Kubernetes",
+#         "job": "envoy-stats",
+#         "reporter": "destination",
+#         "request_protocol": "http",
+#         "response_code": "200",
+#         "response_flags": "-",
+#         "source_app": "istio-ingressgateway",
+#         ...
+#       },
+#     "timestamp": 1696689166.865,
+#     "value": "0",
+#   },
+# ]
+---
+kind: Metric
+id: prometheus_metrics
+collector: telegraf
+metadata:
+  inputs:
+    prometheus:
+      - urls: ["http://0.0.0.0:9090/metrics"]
+        period: "10s"
+        delay: "10s"
+        interval: "10s"
+        namepass: ["process_cpu_seconds_*"]
+        tags:
+          metric_id: prometheus_metrics # add tags
+  outputs:
+    wave-autoscale:
+      tagpass:
+        metric_id: prometheus_metrics # input tags append
+  agent:
+    interval: "1s"
+    round_interval: true
+    metric_batch_size: 1000
+    metric_buffer_limit: 10000
+    collection_jitter: "0s"
+    flush_interval: "1s"
+    flush_jitter: "0s"
+    precision: "0s"
+    debug: false
+# metric example - telegraf
+# [
+#   {
+#     "name": "process_cpu_seconds_total_counter",
+#     "tags":
+#       {
+#         "host": "xx.local",
+#         "metric_id": "prometheus_metrics",
+#         "url": "http://34.64.190.189:9090/metrics",
+#       },
+#     "value": 66125.06,
+#     "timestamp": 1696831030,
+#   },
+# ]
+---
+kind: ScalingComponent
+id: k8s_deployment
+component_kind: kubernetes-deployment
+metadata:
+  api_server_endpoint: "https://0.0.0.0"
+  namespace: kube-ns
+  name: node-server-dp
+  ca_cert: ENFUlRJRklDQVRFLS0tLS0K..
+---
+kind: ScalingPlan
+id: scaling_plan_k8s_deployment_autoscaling
+metadata:
+  title: "Scaling Plan for K8S Deployment Autoscaling"
+  cool_down: 300 # seconds
+  interval: 10000 # milliseconds
+plans:
+  - id: scale-out-plan-1
+    description: "Scale out if error rate is greater than 1%."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'istio_request_duration_milliseconds_sum_1m',
+        name: 'name_1',
+        stats: 'max',
+        period_sec: 10
+      }) >= 1000
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: k8s_deployment
+        replicas: $replicas + 1

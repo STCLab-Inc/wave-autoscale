@@ -1,11 +1,10 @@
 ---
 kind: Metric
 id: cloudwatch_consumed_write_capacity_units_cnt
-metric_kind: cloudwatch-data
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   polling_interval: 30000
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
@@ -18,8 +17,8 @@ id: scaling_component_dynamodb_table
 component_kind: amazon-dynamodb
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   table_name: test-dynamodb-table
 ---
 kind: ScalingPlan

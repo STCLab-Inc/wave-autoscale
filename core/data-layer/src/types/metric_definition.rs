@@ -26,8 +26,6 @@ pub struct MetricDefinition {
     // Example: "vector", "telegraf", "fluentbit"
     #[serde(default)]
     pub collector: String,
-    // Example: "prometheus", "cloudwatch-statistics"
-    pub metric_kind: String,
     #[ts(type = "object")]
     pub metadata: HashMap<String, Value>,
 }
