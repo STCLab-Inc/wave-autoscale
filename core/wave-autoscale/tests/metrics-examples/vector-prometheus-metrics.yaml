@@ -16,4 +16,4 @@ metadata:
   sinks:
     my_sinks_id:
       type: wave-autoscale
-      inputs: my_source_id_1 # last transform id or source id
+      inputs: ["my_source_id_1"] # last transform id or source id

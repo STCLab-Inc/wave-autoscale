@@ -241,7 +241,7 @@ impl MetricCollectorManager {
             };
 
             // find sinks intput
-            let mut sinks_input = "";
+            let mut sinks_input = Vec::<toml::Value>::new();
             sinks_object.keys().for_each(|key| {
                 let Some(key_object) = sinks.get(key) else {
                     error!("[vector] Failed to convert metadata.sinks to as_object for key: {}", key);
@@ -256,25 +256,28 @@ impl MetricCollectorManager {
                     return;
                 };
                 if sinks_type_data == "wave-autoscale" {
-                    let Some(sinks_inputs_data_str) = sinks_inputs_data.as_str() else {
-                        error!("[vector] Failed to convert metadata.sinks.inputs to as_str");
+                    let Some(sinks_inputs_data_arr) = sinks_inputs_data.as_array() else {
+                        error!("[vector] Failed to convert metadata.sinks.inputs to as_array");
                         return;
                     };
-                    sinks_input = sinks_inputs_data_str;
+                    for arr_data in sinks_inputs_data_arr {
+                        let Some(input_str) = arr_data.as_str() else {
+                            error!("[vector] sinks > wave-autoscale > input is not string");
+                            return;
+                        };
+                        sinks_input.push(toml::Value::String(input_str.to_string()));
+                    }
                 }
             });
             if sinks_input.is_empty() {
-                error!("[vector] missing sinks > type: wave-autoscale > input data");
+                error!("[vector] missing sinks > type: wave-autoscale > inputs data");
                 continue;
             }
 
             // make new sinks
             let mut sinks_metric = toml::value::Table::new();
             sinks_metric.insert("type".to_string(), toml::Value::String("http".to_string()));
-            sinks_metric.insert(
-                "inputs".to_string(),
-                toml::Value::Array(vec![toml::Value::String(sinks_input.to_string())]),
-            );
+            sinks_metric.insert("inputs".to_string(), toml::Value::Array(sinks_input));
             sinks_metric.insert(
                 "uri".to_string(),
                 toml::Value::String(format!(
@@ -687,6 +690,38 @@ mod tests {
     #[test]
     fn test_save_metric_definitions_to_vector_config() {
         let manager = get_metric_collector_manager();
+
+        let vector_metadata_1 = r#"
+        sources:
+          metric_id_1:
+            type: http_client
+            query:
+              "query": ['rate(istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}[1m])']
+        sinks:
+          metric_id_1:
+            type: wave-autoscale
+            inputs: ["metric_id_1"]
+        "#;
+        let vector_metadata_2 = r#"
+        sources:
+          metric_id_2:
+            type: http_client
+            query:
+              "query": ['rate(istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}[1m])']
+        transforms:
+          my_transforms_id_1:
+            inputs: ["metric_id_1"]
+            type: remap
+        sinks:
+          metric_id_2:
+            type: wave-autoscale
+            inputs: ["my_transforms_id_1"]
+        "#;
+        let vector_metadata_hashmap_1 =
+            serde_yaml::from_str::<HashMap<String, serde_json::Value>>(vector_metadata_1).unwrap();
+        let vector_metadata_hashmap_2 =
+            serde_yaml::from_str::<HashMap<String, serde_json::Value>>(vector_metadata_2).unwrap();
+
         let metric_definitions = vec![
             // Vector
             MetricDefinition {
@@ -694,7 +729,7 @@ mod tests {
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
-                metadata: HashMap::new(),
+                metadata: vector_metadata_hashmap_1,
             },
             // Telegraf
             MetricDefinition {
@@ -702,7 +737,7 @@ mod tests {
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
-                metadata: HashMap::new(),
+                metadata: vector_metadata_hashmap_2,
             },
         ];
 
@@ -763,20 +798,33 @@ mod tests {
         // let nested_metadata_example = json!([{}]);
         // metadata_example.insert("nested_metadata".to_string(), nested_metadata_example);
 
+        let telegraf_metadata = r#"
+        inputs:
+          mem:
+            - tags:
+                metric_id: prometheus_metrics
+        outputs:
+          wave-autoscale:
+            tagpass:
+              metric_id: prometheus_metrics
+        "#;
+        let telegraf_metadata_hashmap =
+            serde_yaml::from_str::<HashMap<String, serde_json::Value>>(telegraf_metadata).unwrap();
+
         let metric_definitions = vec![
             MetricDefinition {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "telegraf".to_string(),
-                metadata: HashMap::new(),
+                metadata: telegraf_metadata_hashmap.clone(),
             },
             MetricDefinition {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
                 collector: "telegraf".to_string(),
-                metadata: HashMap::new(),
+                metadata: telegraf_metadata_hashmap,
             },
         ];
 
@@ -847,7 +895,7 @@ mod tests {
           sinks:
             my_sinks_id:
               type: wave-autoscale
-              inputs: my_transforms_id_1
+              inputs: ["my_transforms_id_1"]
         "#;
 
         let metric_definition = serde_yaml::from_str::<MetricDefinition>(yaml).unwrap();
@@ -865,22 +913,25 @@ mod tests {
             let sinks = metric_definition.metadata.get("sinks").unwrap();
 
             // find sinks intput
-            let mut sinks_input = "";
+            let mut sinks_input = Vec::<toml::Value>::new();
             sinks.as_object().unwrap().keys().for_each(|key| {
                 let sinks_type_data = sinks.get(key).unwrap().get("type");
                 let sinks_inputs_data = sinks.get(key).unwrap().get("inputs");
                 if sinks_type_data.unwrap() == "wave-autoscale" {
-                    sinks_input = sinks_inputs_data.unwrap().as_str().unwrap();
+                    for arr_data in sinks_inputs_data.unwrap().as_array().unwrap() {
+                        let Some(input_str) = arr_data.as_str() else {
+                            error!("[vector] sinks > wave-autoscale > input is not string");
+                            return;
+                        };
+                        sinks_input.push(toml::Value::String(input_str.to_string()));
+                    }
                 }
             });
 
             // make new sinks
             let mut sinks_metric = toml::value::Table::new();
             sinks_metric.insert("type".to_string(), toml::Value::String("http".to_string()));
-            sinks_metric.insert(
-                "inputs".to_string(),
-                toml::Value::Array(vec![toml::Value::String(sinks_input.to_string())]),
-            );
+            sinks_metric.insert("inputs".to_string(), toml::Value::Array(sinks_input));
             sinks_metric.insert(
                 "uri".to_string(),
                 toml::Value::String(format!(
