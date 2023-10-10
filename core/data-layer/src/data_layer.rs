@@ -202,7 +202,7 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, collector, metric_kind, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metric_kind, metadata, updated_at) = ($8,$9,$10,$11)";
+                "INSERT INTO metric (db_id, id, collector, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (collector, metadata, updated_at) = ($7,$8,$9)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -210,13 +210,11 @@ impl DataLayer {
                 .bind(db_id)
                 .bind(metric.id.to_lowercase())
                 .bind(metric.collector.to_lowercase())
-                .bind(metric.metric_kind.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
                 .bind(metric.collector.to_lowercase())
-                .bind(metric.metric_kind.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(updated_at)
                 // Run
@@ -231,7 +229,7 @@ impl DataLayer {
     // Get all metrics from the database
     pub async fn get_all_metrics(&self) -> Result<Vec<MetricDefinition>> {
         let mut metrics: Vec<MetricDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, collector, metric_kind, metadata FROM metric";
+        let query_string = "SELECT db_id, id, collector, metadata FROM metric";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -243,7 +241,6 @@ impl DataLayer {
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 collector: row.get("collector"),
-                metric_kind: row.get("metric_kind"),
                 metadata: serde_json::from_str(row.get("metadata")).unwrap(),
             });
         }
@@ -251,8 +248,7 @@ impl DataLayer {
     }
     // Get a metric from the database
     pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
-        let query_string =
-            "SELECT db_id, id, collector, metric_kind, metadata FROM metric WHERE db_id=$1";
+        let query_string = "SELECT db_id, id, collector, metadata FROM metric WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             // Do not use fetch_one because it expects exact one result. If not, it will return an error
@@ -270,7 +266,6 @@ impl DataLayer {
             db_id: row.get("db_id"),
             id: row.get("id"),
             collector: row.get("collector"),
-            metric_kind: row.get("metric_kind"),
             metadata: serde_json::from_str(row.get("metadata")).unwrap(),
         });
         Ok(result)
@@ -304,13 +299,12 @@ impl DataLayer {
     pub async fn update_metric(&self, metric: MetricDefinition) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
-            "UPDATE metric SET id=$1, collector=$2, metric_kind=$3, metadata=$4, updated_at=$5 WHERE db_id=$6";
+            "UPDATE metric SET id=$1, collector=$2, metadata=$3, updated_at=$4 WHERE db_id=$5";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
             .bind(metric.id)
             .bind(metric.collector)
-            .bind(metric.metric_kind)
             .bind(metadata_string)
             .bind(updated_at)
             // WHERE

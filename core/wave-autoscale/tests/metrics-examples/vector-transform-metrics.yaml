@@ -1,0 +1,33 @@
+# source: https://vector.dev/docs/reference/configuration/sources/http_client/
+# transform: https://vector.dev/docs/reference/configuration/transforms/remap/
+---
+kind: Metric
+id: vector_host_metrics
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      endpoint: "http://34.64.190.189:9090/api/v1/query"
+      scrape_interval_secs: 30
+      query:
+        "query":
+          [
+            'rate(istio_request_duration_milliseconds_sum{destination_workload="node-server-dp",response_code="200",reporter="destination"}[1m])',
+          ]
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: remap
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data.result)) -> |_index, value| {
+            tally = push(tally, {\"name\": \"name_1\", \"tags\": value.metric, \"timestamp\": value.value[0], \"gauge\": {\"value\" : value.value[1]}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: ["my_transforms_id_1"] # last transform id or source id

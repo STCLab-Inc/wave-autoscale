@@ -4,13 +4,29 @@
 kind: Metric
 id: google_cloud_monitoring_mig_metrics
 collector: telegraf
-metric_kind: stackdriver
 metadata:
-  project: wave-autoscale-test
-  ## Include timeseries that start with the given metric type.
-  metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/utilization"]
-  interval: "1m"
-
+  inputs:
+    stackdriver:
+      - project: wave-autoscale-test
+        metric_type_prefix_include:
+          ["compute.googleapis.com/instance/cpu/utilization"]
+        interval: "1m"
+        tags:
+          metric_id: prometheus_metrics # add tags
+  outputs:
+    wave-autoscale:
+      tagpass:
+        metric_id: prometheus_metrics # input tags append
+  agent:
+    interval: "1s"
+    round_interval: true
+    metric_batch_size: 1000
+    metric_buffer_limit: 10000
+    collection_jitter: "0s"
+    flush_interval: "1s"
+    flush_jitter: "0s"
+    precision: "0s"
+    debug: false
 # Output in the database will be like this:
 # [
 #   {
@@ -50,21 +66,3 @@ metadata:
 #     "value": 0.0171343613359871
 #   }
 # ]
-
-
-# ---
-# kind: ScalingPlan
-# id: google_scaling_plan
-# title: "Scaling Plan for Google VM Instance"
-# plans:
-#   - id: scale-up-plan-1
-#     description: "Scale up"
-#     # JavaScript expression that returns a boolean value.
-#     expression: >
-#       get({
-#         name: 'google_cloud_monitoring_mig_metrics_utilization'
-#       }) > 0.04
-#     # Higher priority values will be checked first.
-#     priority: 1
-#     scaling_components:
-#      ...

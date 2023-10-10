@@ -116,7 +116,6 @@ mod tests {
                     kind: data_layer::types::object_kind::ObjectKind::Metric,
                     id: "metric_id_1".to_string(),
                     collector: "vector".to_string(),
-                    metric_kind: "counter".to_string(),
                     metadata: HashMap::new(),
                 },
                 data_layer::MetricDefinition {
@@ -124,7 +123,6 @@ mod tests {
                     kind: data_layer::types::object_kind::ObjectKind::Metric,
                     id: "metric_id_2".to_string(),
                     collector: "vector".to_string(),
-                    metric_kind: "counter".to_string(),
                     metadata: HashMap::new(),
                 },
             ])
@@ -190,13 +188,11 @@ mod tests {
                 { "metrics": [{
                     "id": "metric_id_1",
                     "collector": "vector",
-                    "metric_kind": "counter",
                     "metadata": {}
                 },
                 {
                     "id": "metric_id_2",
                     "collector": "vector",
-                    "metric_kind": "counter",
                     "metadata": {}
                 }]}
             ))
@@ -242,7 +238,6 @@ mod tests {
             {
                 "id": "metric_id_3",
                 "collector": "telegraf",
-                "metric_kind": "counter",
                 "metadata": {}
             }
         );

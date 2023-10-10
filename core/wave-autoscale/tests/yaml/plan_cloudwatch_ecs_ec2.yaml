@@ -1,15 +1,14 @@
 ---
 kind: Metric
 id: cloudwatch_cpu_max
-metric_kind: cloudwatch-data
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   polling_interval: 60000
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
-  expression: "SELECT MAX(CPUUtilization) FROM SCHEMA(\"AWS/ECS\", ClusterName) WHERE ClusterName = 'wave-test-cluster10'"
+  expression: 'SELECT MAX(CPUUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = ''wave-test-cluster10'''
   period: 5
   duration_seconds: 120
   # TODO: support MetricStat
@@ -19,8 +18,8 @@ id: aws_ecs_ec2_service_scaling_server
 component_kind: amazon-ecs
 metadata:
   region: ap-northeast-3
-  access_key: {{ env.access_key }}
-  secret_key: {{ env.secret_key }}
+  access_key: { { env.access_key } }
+  secret_key: { { env.secret_key } }
   cluster_name: wave-test-cluster10
   service_name: wave-test-cluster10-service3
 ---
