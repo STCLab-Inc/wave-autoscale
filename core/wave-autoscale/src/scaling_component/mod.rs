@@ -14,6 +14,7 @@ pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod google_cloud_run_service;
 pub mod k8s_deployment;
+pub mod netfunnel_segment;
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
     amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
@@ -24,6 +25,7 @@ use self::{
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent,
+    netfunnel_segment::NetfunnelSegmentScalingComponent,
 };
 use anyhow::Result;
 
@@ -95,6 +97,9 @@ impl ScalingComponentManager {
             )),
             AzureFunctionsAppScalingComponent::SCALING_KIND => Ok(Box::new(
                 AzureFunctionsAppScalingComponent::new(cloned_defintion),
+            )),
+            NetfunnelSegmentScalingComponent::SCALING_KIND => Ok(Box::new(
+                NetfunnelSegmentScalingComponent::new(cloned_defintion),
             )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
