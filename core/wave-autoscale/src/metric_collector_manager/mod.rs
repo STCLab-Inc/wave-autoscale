@@ -454,7 +454,6 @@ impl MetricCollectorManager {
 
     pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
-        println!(" >> metric_definitions: {:?}", metric_definitions);
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
 
@@ -462,7 +461,6 @@ impl MetricCollectorManager {
 
         // Find the metric definitions that use Vector collector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
-        println!(">> metric_definitions: {:?}", metric_definitions);
         for metric_definition in metric_definitions {
             if metric_definition.collector == "vector" {
                 vector_metric_definitions.push(metric_definition);
