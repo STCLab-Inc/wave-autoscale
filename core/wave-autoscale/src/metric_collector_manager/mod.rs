@@ -829,36 +829,6 @@ mod tests {
     }
 
     #[test]
-    fn test_yaml_convert_break_line_to_toml() {
-        let mut root_test = toml::value::Table::new();
-        let mut root_test2 = toml::value::Table::new();
-        root_test2.insert(
-            "key1".to_string(),
-            toml::Value::String("'a\"a\"a\nbbb".to_string()),
-        );
-        root_test2.insert(
-            "key2".to_string(),
-            toml::Value::String("'a\"a\"a\nbbb\\\"".to_string()),
-        );
-        root_test2.insert(
-            "key3".to_string(),
-            toml::Value::String(
-                r#"'a"a"a
-            bbb"#
-                    .to_string(),
-            ),
-        );
-        root_test2.insert(
-            "key4".to_string(),
-            toml::Value::String(r#"'a"a"a\nbbb"#.to_string()),
-        );
-        root_test.insert("metadata".to_string(), toml::Value::Table(root_test2));
-        println!(" >> root_test : {:?}", root_test);
-        let root_test_str = toml::to_string(&root_test).unwrap();
-        println!(" >>>> root_test :\n{}", root_test_str);
-    }
-
-    #[test]
     fn test_vector_yaml_to_toml() {
         let yaml = r#"
         kind: Metric
@@ -1010,12 +980,7 @@ mod tests {
                     "data_format".to_string(),
                     toml::Value::String("json".to_string()),
                 );
-                // let Ok(required_tags) = serde_json::from_str::<toml::Value>(serde_json::json!({ "metric_id" : [metric_definition.id.to_string()] }).to_string().as_str()) else {
-                //     //continue;
-                //     return
-                // };
                 let Ok(output_tagpass) = serde_json::from_str::<toml::Value>(serde_json::json!(tagpass).to_string().as_str()) else {
-                    //continue;
                     return
                 };
                 output_metric.insert("tagpass".to_string(), output_tagpass);
