@@ -67,11 +67,25 @@ impl ScalingComponent for K8sPatchScalingComponent {
             return Err(anyhow::anyhow!("cannot create kubernetes client"));
         };
 
-        let api_version = manifest.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
-        let kind = manifest.get("kind").unwrap().as_str().unwrap();
+        let Some(api_version) = manifest.get("apiVersion") else {
+            return Err(anyhow::anyhow!("apiVersion not found"));
+        };
+        let Some(api_version) = api_version.as_str() else {
+            return Err(anyhow::anyhow!("apiVersion string not found"));
+        };
+        let Some(api_group) = api_version.split('/').next() else {
+            return Err(anyhow::anyhow!("api Group not found"));
+        };
+        let Some(kind) = manifest.get("kind") else {
+            return Err(anyhow::anyhow!("kind not found"));
+        };
+        let Some(kind) = kind.as_str() else {
+            return Err(anyhow::anyhow!("kind string not found"));
+        };
 
-        let apigroup = discovery::group(&client, api_group).await.unwrap();
+        let Ok(apigroup) = discovery::group(&client, api_group).await else {
+            return Err(anyhow::anyhow!("api group not found"));
+        };
         let recommended_kind = apigroup.recommended_kind(kind);
         let Some(api_resource) = recommended_kind else {
             return Err(anyhow::anyhow!("api group resource not found"));
