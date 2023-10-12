@@ -1,8 +1,7 @@
 use super::ScalingComponent;
-use crate::util::{aws::get_aws_config_with_metadata, cloudflare::CloudflareClient};
+use crate::util::cloudflare::CloudflareClient;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
-use aws_sdk_wafv2::Client as WAFClient;
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
 use std::collections::HashMap;
