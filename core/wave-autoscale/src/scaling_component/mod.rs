@@ -14,6 +14,7 @@ pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod google_cloud_run_service;
 pub mod k8s_deployment;
+pub mod k8s_patch;
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
     amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
@@ -23,7 +24,7 @@ use self::{
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
-    k8s_deployment::K8sDeploymentScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent, k8s_patch::K8sPatchScalingComponent,
 };
 use anyhow::Result;
 
@@ -72,6 +73,9 @@ impl ScalingComponentManager {
             K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
                 K8sDeploymentScalingComponent::new(cloned_defintion),
             )),
+            K8sPatchScalingComponent::SCALING_KIND => {
+                Ok(Box::new(K8sPatchScalingComponent::new(cloned_defintion)))
+            }
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
             )),

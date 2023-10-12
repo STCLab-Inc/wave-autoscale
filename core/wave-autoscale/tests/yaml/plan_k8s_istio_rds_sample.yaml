@@ -1,0 +1,177 @@
+kind: Metric
+id: cloudwatch_rds_metrics
+collector: telegraf
+metadata:
+  inputs:
+    cloudwatch:
+      - region: ap-northeast-1
+        profile: "default"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/RDS"]
+        metrics:
+          - names: ["CPUUtilization"]
+            statistic_include: ["maximum"] # ["average", "sum", "minimum", "maximum", sample_count"]
+            dimensions:
+              - name: DBInstanceIdentifier
+                value: "wave-eks-istio-postgresql"
+        tags:
+          metric_id: cloudwatch_rds_metrics # add tags
+      - region: ap-northeast-1
+        profile: "default"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/RDS"]
+        metrics:
+          - names: ["DBLoad"]
+            statistic_include: ["maximum"] # ["average", "sum", "minimum", "maximum", sample_count"]
+            dimensions:
+              - name: DBInstanceIdentifier
+                value: "wave-eks-istio-postgresql"
+        tags:
+          metric_id: cloudwatch_rds_metrics # add tags
+  outputs:
+    wave-autoscale: {}
+  agent:
+    interval: "1s"
+    round_interval: true
+    metric_batch_size: 1000
+    metric_buffer_limit: 10000
+    collection_jitter: "0s"
+    flush_interval: "1s"
+    flush_jitter: "0s"
+    precision: "0s"
+    debug: false
+---
+kind: ScalingComponent
+id: k8s_patch
+component_kind: kubernetes-patch
+metadata:
+---
+kind: ScalingPlan
+id: scaling_plan_k8s_patch_scaling
+metadata:
+  title: "Scaling Plan for K8S Patch Scaling - istio virtual service dely"
+  cool_down: 30 # seconds
+  interval: 10000 # milliseconds
+plans:
+  - id: plan-scale-out
+    description: "Scale out if CPU Utilization is greater than 80% or DBLoad is greater than 170."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'cloudwatch_rds_metrics',
+        name: 'cloudwatch_aws_rds_cpu_utilization_maximum',
+        stats: 'max',
+        period_sec: 10
+      }) >= 80
+      || 
+      get({
+        metric_id: 'cloudwatch_rds_metrics',
+        name: 'cloudwatch_aws_rds_db_load_maximum',
+        stats: 'max',
+        period_sec: 10
+      }) >= 170
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: k8s_patch
+        namespace: istio-system
+        name: istio-vs
+        manifest:
+          apiVersion: networking.istio.io/v1beta1
+          kind: VirtualService
+          spec:
+            hosts:
+              - "*"
+            gateways:
+              - istio-gateway
+            http:
+              - match:
+                  - uri:
+                      prefix: /product/
+                    port: 443
+                rewrite:
+                  uri: "/"
+                route:
+                  - destination:
+                      host: product-server-sv.wave-autoscale.svc.cluster.local
+                      port:
+                        number: 5001
+                fault:
+                  delay:
+                    fixedDelay: 10s
+                    percentage:
+                      value: 100
+              - match:
+                  - uri:
+                      prefix: /order/
+                    port: 443
+                rewrite:
+                  uri: "/"
+                route:
+                  - destination:
+                      host: order-server-sv.wave-autoscale.svc.cluster.local
+                      port:
+                        number: 5002
+                fault:
+                  delay:
+                    fixedDelay: 10s
+                    percentage:
+                      value: 100
+  - id: plan-scale-in
+    description: "Scale in if CPU Utilization is less than 70% or DBLoad is greater than 150."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'cloudwatch_rds_metrics',
+        name: 'cloudwatch_aws_rds_cpu_utilization_maximum',
+        stats: 'max',
+        period_sec: 10
+      }) < 70
+      || 
+      get({
+        metric_id: 'cloudwatch_rds_metrics',
+        name: 'cloudwatch_aws_rds_db_load_maximum',
+        stats: 'max',
+        period_sec: 10
+      }) < 150
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: k8s_patch
+        namespace: istio-system
+        name: istio-vs
+        manifest:
+          apiVersion: networking.istio.io/v1beta1
+          kind: VirtualService
+          spec:
+            hosts:
+              - "*"
+            gateways:
+              - istio-gateway
+            http:
+              - match:
+                  - uri:
+                      prefix: /product/
+                    port: 443
+                rewrite:
+                  uri: "/"
+                route:
+                  - destination:
+                      host: product-server-sv.wave-autoscale.svc.cluster.local
+                      port:
+                        number: 5001
+              - match:
+                  - uri:
+                      prefix: /order/
+                    port: 443
+                rewrite:
+                  uri: "/"
+                route:
+                  - destination:
+                      host: order-server-sv.wave-autoscale.svc.cluster.local
+                      port:
+                        number: 5002
