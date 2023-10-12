@@ -7,24 +7,24 @@ This module provides a client for the Cloudflare API
 
 Example:
 ```rust
-let cloudflare = Cloudflare::new("YOUR_API_TOKEN_HERE".to_string());
+let client = CloudflareClient::new("YOUR_API_TOKEN_HERE".to_string());
 let payload = json!({
     "id": "RULE_ID",
     "action": "allow",
     "expression": "true",
 });
-let result = cloudflare
+let result = client
     .update_zone_rule("TEST_ZONE_ID", "TEST_RULESET_ID", "TEST_RULE_ID", payload)
     .await;
 assert!(result.is_ok(), "Failed to update zone rule");
 ```
 */
-pub struct Cloudflare {
+pub struct CloudflareClient {
     api_token: String,
     client: Client,
 }
 
-impl Cloudflare {
+impl CloudflareClient {
     // Constructor to create a new Cloudflare instance with a given api_token
     pub fn new(api_token: String) -> Self {
         Self {
@@ -75,20 +75,16 @@ impl Cloudflare {
             .client
             .patch(&url)
             .header("Authorization", format!("Bearer {}", self.api_token))
-            // .header("Content-Type", "application/json")
             .json(&payload)
             .send()
             .await?;
 
-        // println!("{:?}", response);
-        let error_message = response.text().await?;
-        println!("{:?}", error_message);
-        // if !response.status().is_success() {
-        //     return Err(Box::new(std::io::Error::new(
-        //         std::io::ErrorKind::Other,
-        //         "Failed to update zone rule",
-        //     )));
-        // }
+        if !response.status().is_success() {
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to update zone rule",
+            )));
+        }
 
         Ok(())
     }
@@ -130,7 +126,7 @@ impl Cloudflare {
 
 #[cfg(test)]
 mod tests {
-    use super::Cloudflare;
+    use super::CloudflareClient;
     use serde_json::json;
 
     #[tokio::test]
@@ -141,7 +137,7 @@ mod tests {
         let ruleset_id = "";
         let rule_id = "";
 
-        let cloudflare = Cloudflare::new(api_token.to_string());
+        let cloudflare = CloudflareClient::new(api_token.to_string());
         let payload = json!({
             "enabled": true,
             "action": "block",
@@ -162,7 +158,7 @@ mod tests {
         let ruleset_id = "";
         let rule_id = "";
 
-        let cloudflare = Cloudflare::new(api_token.to_string());
+        let cloudflare = CloudflareClient::new(api_token.to_string());
         let payload = json!({
             "enabled": true,
             "action": "block",
