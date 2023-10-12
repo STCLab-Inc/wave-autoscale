@@ -50,6 +50,7 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
+            Some(serde_json::Value::String(base_url)),
             Some(serde_json::Value::String(authorization)),
             Some(serde_json::Value::String(organization_id)),
             Some(serde_json::Value::String(tenant_id)),
@@ -58,6 +59,7 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
             Some(serde_json::Value::String(segment_id)),
             max_inflow,
         ) = (
+            metadata.get("base_url"),
             metadata.get("authorization"),
             metadata.get("organization_id"),
             metadata.get("tenant_id"),
@@ -71,8 +73,8 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
         ) {
             if let Some(max_inflow) = max_inflow {
                 let url = format!(
-                    "https://dev-api.surffy-dev.io/v2/wave/project/{}/segment/{}",
-                    project_id, segment_id
+                    "{}/v2/wave/project/{}/segment/{}",
+                    base_url, project_id, segment_id
                 );
 
                 let client = Client::new();
@@ -117,6 +119,10 @@ mod test {
     async fn apply_max_inflow() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (
+                String::from("base_url"),
+                serde_json::json!("https://dev-api.surffy-dev.io"),
+            ),
+            (
                 String::from("authorization"),
                 serde_json::json!("authorization"),
             ),
@@ -132,7 +138,7 @@ mod test {
         .into_iter()
         .collect();
         let params: HashMap<String, serde_json::Value> =
-            vec![(String::from("max_inflow"), serde_json::json!(10))]
+            vec![(String::from("max_inflow"), serde_json::json!(20))]
                 .into_iter()
                 .collect();
 
