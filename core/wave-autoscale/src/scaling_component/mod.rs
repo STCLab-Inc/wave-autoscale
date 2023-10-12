@@ -11,6 +11,8 @@ pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod google_cloud_run_service;
 pub mod k8s_deployment;
+pub mod k8s_patch;
+pub mod netfunnel_segment;
 
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
@@ -21,7 +23,8 @@ use self::{
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
-    k8s_deployment::K8sDeploymentScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent, k8s_patch::K8sPatchScalingComponent,
+    netfunnel_segment::NetfunnelSegmentScalingComponent,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -74,6 +77,9 @@ impl ScalingComponentManager {
             K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
                 K8sDeploymentScalingComponent::new(cloned_defintion),
             )),
+            K8sPatchScalingComponent::SCALING_KIND => {
+                Ok(Box::new(K8sPatchScalingComponent::new(cloned_defintion)))
+            }
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
             )),
@@ -97,6 +103,9 @@ impl ScalingComponentManager {
             )),
             AzureFunctionsAppScalingComponent::SCALING_KIND => Ok(Box::new(
                 AzureFunctionsAppScalingComponent::new(cloned_defintion),
+            )),
+            NetfunnelSegmentScalingComponent::SCALING_KIND => Ok(Box::new(
+                NetfunnelSegmentScalingComponent::new(cloned_defintion),
             )),
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
