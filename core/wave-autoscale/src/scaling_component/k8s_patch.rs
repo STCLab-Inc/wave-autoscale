@@ -7,6 +7,7 @@ use kube::{
 };
 use std::collections::HashMap;
 
+
 pub struct K8sPatchScalingComponent {
     definition: ScalingComponentDefinition,
 }
@@ -66,14 +67,16 @@ impl ScalingComponent for K8sPatchScalingComponent {
             return Err(anyhow::anyhow!("cannot create kubernetes client"));
         };
 
-        println!("manifest:\n {:#?}", manifest);
         let api_version = manifest.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split("/").nth(0).unwrap();
+        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
         let kind = manifest.get("kind").unwrap().as_str().unwrap();
 
         let apigroup = discovery::group(&client, api_group).await.unwrap();
-        let (ar, caps) = apigroup.recommended_kind(kind).unwrap();
-        let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &ar);
+        let recommended_kind = apigroup.recommended_kind(kind);
+        let Some(api_resource) = recommended_kind else {
+            return Err(anyhow::anyhow!("api group resource not found"));
+        };
+        let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource.0);
 
         let patch_params = PatchParams::apply("wave-autoscale");
         let patch_params = PatchParams::force(patch_params);
@@ -82,7 +85,6 @@ impl ScalingComponent for K8sPatchScalingComponent {
             .patch(name, &patch_params, &Patch::Apply(manifest))
             .await;
 
-        println!("{:#?}", result);
         if let Err(e) = result {
             return Err(anyhow::anyhow!(e));
         }
@@ -139,15 +141,19 @@ mod test {
         let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
         println!("patch_json:\n {:#?}", patch_json);
         let api_version = patch_json.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split("/").nth(0).unwrap();
+        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
         let kind = patch_json.get("kind").unwrap().as_str().unwrap();
 
         // https://github.com/kube-rs/kube/blob/main/examples/crd_derive_schema.rs
         let apigroup = discovery::group(&client, api_group).await.unwrap();
-        let (ar, caps) = apigroup.recommended_kind(kind).unwrap();
+        let recommended_kind = apigroup.recommended_kind(kind);
+        let Some(api_resource) = recommended_kind else {
+            assert!(false);
+            return;
+        };
         let namespace = "istio-system";
         let name = "istio-vs";
-        let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &ar);
+        let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource.0);
         // let get_object = api.get(name).await.unwrap();
         // println!(" >> get_object :\n{:?}", get_object);
 
@@ -198,12 +204,12 @@ mod test {
         let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
         println!("patch_json:\n {:#?}", patch_json);
         let api_version = patch_json.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split("/").nth(0).unwrap();
+        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
         let kind = patch_json.get("kind").unwrap().as_str().unwrap();
 
         // https://github.com/kube-rs/kube/blob/main/examples/crd_derive_schema.rs
         let apigroup = discovery::group(&client, api_group).await.unwrap();
-        let (ar, caps) = apigroup.recommended_kind(kind).unwrap();
+        let (ar, _caps) = apigroup.recommended_kind(kind).unwrap();
         let namespace = "wave-autoscale";
         let name = "product-server-dp";
         // Use the discovered kind in an Api, and Controller with the ApiResource as its DynamicType
