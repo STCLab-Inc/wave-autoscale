@@ -1,7 +1,3 @@
-use async_trait::async_trait;
-use data_layer::ScalingComponentDefinition;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::RwLock;
 pub mod amazon_dynamodb_table;
 pub mod amazon_emr_ec2;
 pub mod aws_ec2_autoscaling;
@@ -10,12 +6,14 @@ pub mod aws_lambda_function;
 pub mod aws_wafv2;
 pub mod azure_functions_app;
 pub mod azure_vmss_autoscaling;
+pub mod cloudflare_rule;
 pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod google_cloud_run_service;
 pub mod k8s_deployment;
 pub mod k8s_patch;
 pub mod netfunnel_segment;
+
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
     amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
@@ -25,11 +23,14 @@ use self::{
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
-    k8s_deployment::K8sDeploymentScalingComponent,
-    k8s_patch::K8sPatchScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent, k8s_patch::K8sPatchScalingComponent,
     netfunnel_segment::NetfunnelSegmentScalingComponent,
 };
 use anyhow::Result;
+use async_trait::async_trait;
+use data_layer::ScalingComponentDefinition;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 
 // ScalingComponent can be used in multiple threads. So it needs to be Send + Sync.
 #[async_trait]
