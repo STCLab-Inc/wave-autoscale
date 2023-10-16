@@ -1,0 +1,227 @@
+---
+kind: Metric
+id: metric_netfunnel_segment
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      endpoint: {{ base_url }}/v2/wave/project/{{ project_id }}/segment-stats
+      scrape_interval_secs: 5
+      headers:
+        Accept:
+          - application/json, text/plain, */*
+        Accept-Encoding:
+          - gzip, deflate, br
+        Accept-Language:
+          - ko,en;q=0.9,en-US;q=0.8,ko-KR;q=0.7
+        organizationId:
+          - "{{ organization_id }}"
+        tenantId:
+          - {{ tenant_id }}
+        userKey:
+          - {{ user_key }}
+        authorization:
+          - {{ authorization }}
+  transforms:
+    my_transforms_id_1:
+      inputs: [my_source_id_1]
+      type: remap
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data)) -> |_index, value| {
+            tally = push(tally, {"name": "numbersWaiting", "tags": {"segmentId": to_string!(value.segmentId)}, "timestamp": value.timestamp, "gauge": {"value" : value.numbersWaiting}})
+        }
+        for_each(array!(.data)) -> |_index, value| {
+            tally = push(tally, {"name": "waitTime", "tags": {"segmentId": to_string!(value.segmentId)}, "timestamp": value.timestamp, "gauge": {"value" : value.waitTime}})
+        }
+        for_each(array!(.data)) -> |_index, value| {
+            tally = push(tally, {"name": "maxInflow", "tags": {"segmentId": to_string!(value.segmentId)}, "timestamp": value.timestamp, "gauge": {"value" : value.maxInflow}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: [my_transforms_id_1]
+---
+kind: ScalingComponent
+id: scaling_component_netfunnel_segment
+component_kind: netfunnel
+metadata:
+  base_url: {{ base_url }}
+  authorization: {{ authorization }}
+  organization_id: "{{ organization_id }}"
+  tenant_id: {{ tenant_id }}
+  user_key: {{ user_key }}
+  project_id: "{{ project_id }}"
+  segment_id: "{{ segment_id }}"
+---
+kind: ScalingPlan
+id: scaling_plan_netfunnel_segment
+metadata:
+  title: Scaling Plan for NetFUNNEL Segment
+  cool_down: 1 # seconds
+  interval: 2000 # milliseconds
+plans:
+  - id: scale-out-plan-1
+    description: Scale out if the number of waitings is greater than 110 and if the wait time is greater than 6.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'numbersWaiting',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) >= 110
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'waitTime',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) >= 6
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_netfunnel_segment
+        base_url: {{ base_url }}
+        authorization: {{ authorization }}
+        organization_id: "{{ organization_id }}"
+        tenant_id: {{ tenant_id }}
+        user_key: {{ user_key }}
+        project_id: "{{ project_id }}"
+        segment_id: "{{ segment_id }}"
+        max_inflow: 120
+  - id: scale-out-plan-2
+    description: Scale out if the number of waitings is greater than 30 and if the wait time is greater than 6.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'numbersWaiting',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) >= 30
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'waitTime',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) >= 6
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_netfunnel_segment
+        base_url: {{ base_url }}
+        authorization: {{ authorization }}
+        organization_id: "{{ organization_id }}"
+        tenant_id: {{ tenant_id }}
+        user_key: {{ user_key }}
+        project_id: "{{ project_id }}"
+        segment_id: "{{ segment_id }}"
+        max_inflow: 40
+  - id: scale-in-plan-1
+    description: Scale in if the number of waitings is smaller than 1 and if the wait time is smaller than 1 when the max inflow is 60.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'numbersWaiting',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) <= 1
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'waitTime',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) <= 1
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'maxInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) == 60
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_component_netfunnel_segment
+        base_url: {{ base_url }}
+        authorization: {{ authorization }}
+        organization_id: "{{ organization_id }}"
+        tenant_id: {{ tenant_id }}
+        user_key: {{ user_key }}
+        project_id: "{{ project_id }}"
+        segment_id: "{{ segment_id }}"
+        max_inflow: 20
+  - id: scale-in-plan-2
+    description: Scale out if the number of waitings is smaller than 1 and if the wait time is smaller than 1 when the max inflow is 120.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'numbersWaiting',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) <= 1
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'waitTime',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) <= 1
+      &&
+      get({
+        metric_id: 'metric_netfunnel_segment',
+        name: 'maxInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'max',
+        period_sec: 1
+      }) == 120
+    # Higher priority values will be checked first.
+    priority: 4
+    scaling_components:
+      - component_id: scaling_component_netfunnel_segment
+        base_url: {{ base_url }}
+        authorization: {{ authorization }}
+        organization_id: "{{ organization_id }}"
+        tenant_id: {{ tenant_id }}
+        user_key: {{ user_key }}
+        project_id: "{{ project_id }}"
+        segment_id: "{{ segment_id }}"
+        max_inflow: 60
