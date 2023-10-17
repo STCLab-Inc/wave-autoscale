@@ -1,0 +1,267 @@
+---
+kind: Metric
+id: metric_lambda_function
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      endpoint: { { endpoint } }
+      scrape_interval_secs: 5
+      headers:
+        Accept:
+          - { { accept } }
+        Accept-Encoding:
+          - { { accept_encoding } }
+        Accept-Language:
+          - { { accept_language } }
+        organizationId:
+          - "{{ organization_id }}"
+        tenantId:
+          - { { tenant_id } }
+        userKey:
+          - { { user_key } }
+        authorization:
+          - { { authorization } }
+  transforms:
+    my_transforms_id_1:
+      inputs: [my_source_id_1]
+      type: remap
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data)) -> |_index, value| {
+            tally = push(tally, {"name": "totalInflow", "tags": {"segmentId": to_string!(value.segmentId)}, "timestamp": value.timestamp, "gauge": {"value" : value.totalInflow}})            
+        }        
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: [my_transforms_id_1]
+---
+kind: ScalingComponent
+id: scaling_component_lambda_functions_1
+component_kind: aws-lambda
+metadata:
+  region: { { region } }
+  function_name: { { function_name } }
+  qualifier: "{{ qualifier }}"
+---
+kind: ScalingComponent
+id: scaling_component_lambda_functions_2
+component_kind: aws-lambda
+metadata:
+  region: { { region } }
+  function_name: { { function_name } }
+  qualifier: "{{ qualifier }}"
+---
+kind: ScalingPlan
+id: scaling_plan_lambda_function
+metadata:
+  title: Scaling Plan for Lambda Function
+  cool_down: 10 # seconds
+  interval: 5000 # milliseconds
+plans:
+  - id: scale-concurrency-1
+    description: Scale concurrency.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) < 17/63
+    # Higher priority values will be checked first.
+    priority: 4
+    scaling_components:
+      - component_id: scaling_component_lambda_functions_1
+        provisioned_concurrency: 10
+      - component_id: scaling_component_lambda_functions_2
+        provisioned_concurrency: 90
+  - id: scale-concurrency-2
+    description: Scale concurrency.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) > 17/63)
+      &&
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) < 45/63)
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_lambda_functions_1
+        provisioned_concurrency: 30
+      - component_id: scaling_component_lambda_functions_2
+        provisioned_concurrency: 70
+  - id: scale-concurrency-3
+    description: Scale concurrency.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) < 105/63)
+      &&
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) > 45/63)
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_lambda_functions_1
+        provisioned_concurrency: 50
+      - component_id: scaling_component_lambda_functions_2
+        provisioned_concurrency: 50
+  - id: scale-concurrency-4
+    description: Scale concurrency.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) < 357/63)
+      &&
+      ((get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) > 105/63)
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_component_lambda_functions_1
+        provisioned_concurrency: 70
+      - component_id: scaling_component_lambda_functions_2
+        provisioned_concurrency: 30
+  - id: scale-concurrency-5
+    description: Scale concurrency.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      }) /
+      get({
+        metric_id: 'metric_lambda_function',
+        name: 'totalInflow',
+        tags: {
+          'segmentId': '{{ segment_id }}'
+        },
+        stats: 'avg',
+        period_sec: 10
+      })) > 357/63
+    # Higher priority values will be checked first.
+    priority: 5
+    scaling_components:
+      - component_id: scaling_component_lambda_functions_1
+        provisioned_concurrency: 90
+      - component_id: scaling_component_lambda_functions_2
+        provisioned_concurrency: 10
