@@ -62,7 +62,7 @@ metadata:
   interval: 2000 # milliseconds
 plans:
   - id: scale-out-plan-1
-    description: Scale out if the number of waitings is greater than 110 and if the wait time is greater than 6.
+    description: Scale out if the number of waitings is greater than 500 when the max inflow is 1600.
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
@@ -73,24 +73,24 @@ plans:
         },
         stats: 'max',
         period_sec: 1
-      }) >= 110
+      }) >= 500
       &&
       get({
         metric_id: 'metric_netfunnel_segment',
-        name: 'waitTime',
+        name: 'maxInflow',
         tags: {
           'segmentId': '{{ segment_id }}'
         },
         stats: 'max',
         period_sec: 1
-      }) >= 6
+      }) == 1600
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
       - component_id: scaling_component_netfunnel_segment
-        max_inflow: 120
+        max_inflow: 3200
   - id: scale-out-plan-2
-    description: Scale out if the number of waitings is greater than 30 and if the wait time is greater than 6.
+    description: Scale out if the number of waitings is greater than 1000 and if the wait time is greater than 50 when the max inflow is 40.
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
@@ -101,17 +101,7 @@ plans:
         },
         stats: 'max',
         period_sec: 1
-      }) >= 30
-      &&
-      get({
-        metric_id: 'metric_netfunnel_segment',
-        name: 'waitTime',
-        tags: {
-          'segmentId': '{{ segment_id }}'
-        },
-        stats: 'max',
-        period_sec: 1
-      }) >= 6
+      }) >= 1000
       &&
       get({
         metric_id: 'metric_netfunnel_segment',
@@ -121,14 +111,14 @@ plans:
         },
         stats: 'max',
         period_sec: 1
-      }) == 20
+      }) == 40
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
       - component_id: scaling_component_netfunnel_segment
-        max_inflow: 40
+        max_inflow: 1600
   - id: scale-in-plan-1
-    description: Scale in if the number of waitings is smaller than 1 and the max inflow is 60.
+    description: Scale in if the number of waitings is smaller than 1 and the max inflow is 1200.
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
@@ -149,14 +139,14 @@ plans:
         },
         stats: 'max',
         period_sec: 1
-      }) == 60
+      }) == 1200
     # Higher priority values will be checked first.
     priority: 3
     scaling_components:
       - component_id: scaling_component_netfunnel_segment
-        max_inflow: 20
+        max_inflow: 60
   - id: scale-in-plan-2
-    description: Scale out if the number of waitings is smaller than 1 and the max inflow is 120.
+    description: Scale out if the number of waitings is smaller than 1 and the max inflow is 3200.
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
@@ -177,9 +167,10 @@ plans:
         },
         stats: 'max',
         period_sec: 1
-      }) == 120
+      }) == 3200
     # Higher priority values will be checked first.
     priority: 4
     scaling_components:
       - component_id: scaling_component_netfunnel_segment
-        max_inflow: 60
+        max_inflow: 1200
+
