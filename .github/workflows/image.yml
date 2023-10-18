@@ -13,7 +13,7 @@ env:
 jobs:
   build-amd64:
     runs-on: wave-autoscale-build-amd64
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment: production
     steps:
       - name: Checkout repository
@@ -42,7 +42,7 @@ jobs:
             org.opencontainers.image.url="https://waveautoscale.com"
   build-arm64:
     runs-on: wave-autoscale-build-arm64
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment: production
     steps:
       - name: Checkout repository
