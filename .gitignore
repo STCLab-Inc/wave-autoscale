@@ -28,6 +28,8 @@ wave.db
 :memory:
 telegraf*/
 vector*/
+!examples/metrics/telegraf/
+!examples/metrics/vector/
 
 # VSCode
 .vscode/
