@@ -14,10 +14,11 @@ use api_server::app::run_api_server;
 use args::Args;
 use clap::Parser;
 use data_layer::data_layer::DataLayer;
-use log::error;
 use metric_collector_manager::MetricCollectorManager;
 use std::sync::Arc;
 use tokio::sync::watch;
+use tracing::error;
+use util::log::LogLevel;
 use utils::wave_config::WaveConfig;
 
 #[tokio::main]
@@ -27,12 +28,19 @@ async fn main() {
         std::process::exit(0);
     });
 
-    // Initialize logger
-    env_logger::init();
-
     // Parse command line arguments
     // Separate function to allow for unit testing
     let args = Args::parse();
+
+    // Initialize logger
+
+    if args.quiet {
+        util::log::init(LogLevel::Quiet);
+    } else if args.verbose {
+        util::log::init(LogLevel::Verbose);
+    } else {
+        util::log::init(LogLevel::Info);
+    }
 
     // Configuration
     let wave_config = WaveConfig::new(args.config.as_str());
@@ -49,7 +57,11 @@ async fn main() {
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let metric_collector_manager = MetricCollectorManager::new(wave_config.clone(), &output_url);
+    let metric_collector_manager = MetricCollectorManager::new(
+        wave_config.clone(),
+        &output_url,
+        !args.quiet && args.verbose,
+    );
 
     // Run API Server
     let shared_data_layer_for_api_server = shared_data_layer.clone();

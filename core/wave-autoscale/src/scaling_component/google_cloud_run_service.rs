@@ -95,7 +95,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 }
             };
             if !result_status_code.is_success() {
-                log::error!("API call error: {:?}", &result_body);
+                tracing::error!("API call error: {:?}", &result_body);
                 let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
@@ -153,7 +153,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 }
             };
             if !result_status_code.is_success() {
-                log::error!("API call error: {:?}", &result_body);
+                tracing::error!("API call error: {:?}", &result_body);
                 let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
@@ -454,10 +454,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_ok());
     }
 
@@ -491,10 +487,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_ok());
     }
 
@@ -541,10 +533,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_ok());
     }
 
@@ -591,10 +579,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_ok());
     }
 
@@ -632,10 +616,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 
@@ -673,10 +653,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 
@@ -724,10 +700,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 
@@ -775,10 +747,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 
@@ -826,10 +794,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 
@@ -880,10 +844,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "cloud_run_service_scaling_component: {:?}",
-            cloud_run_service_scaling_component
-        );
         assert!(cloud_run_service_scaling_component.is_err());
     }
 }

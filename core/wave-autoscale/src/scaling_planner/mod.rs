@@ -12,12 +12,12 @@ use data_layer::{
     },
     ScalingPlanDefinition,
 };
-use log::{debug, error};
 use rquickjs::async_with;
 use serde_json::{json, Value};
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
+use tracing::{debug, error};
 use ulid::Ulid;
 
 async fn apply_scaling_components(
@@ -268,7 +268,6 @@ impl<'a> ScalingPlanner {
                             let mut shared_last_plan_timestamp =
                                 shared_last_plan_timestamp.write().await;
                             *shared_last_plan_timestamp = Some(Utc::now());
-                            println!(" >> update last plan timestamp");
                         }
 
                         // Update the last run

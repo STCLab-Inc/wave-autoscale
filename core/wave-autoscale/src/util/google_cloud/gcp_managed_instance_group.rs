@@ -110,11 +110,7 @@ mod test {
             .await
             .unwrap();
         let status = response.status();
-        let body = response.text().await.unwrap();
-        println!(
-            "test_call_gcp_patch_instance_group_manager response: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap();
         assert!(status == StatusCode::OK);
     }
 
@@ -139,8 +135,7 @@ mod test {
         };
         let response = call_gcp_patch_autoscaler(gcp_mig_setting).await.unwrap();
         let status = response.status();
-        let body = response.text().await.unwrap();
-        println!("test_call_gcp_patch_autoscaler response: {:?}", body);
+        let _body = response.text().await.unwrap();
         assert!(status == StatusCode::OK);
     }
 
@@ -159,11 +154,7 @@ mod test {
             .await
             .unwrap();
         let status = response.status();
-        let body = response.text().await.unwrap();
-        println!(
-            "test_call_gcp_post_instance_group_manager_resize response: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap();
         assert!(status == StatusCode::OK);
     }
 }

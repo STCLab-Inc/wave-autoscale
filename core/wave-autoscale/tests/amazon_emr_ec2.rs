@@ -171,10 +171,6 @@ mod test_amazon_emr_ec2 {
             "on_demand_timeout_duration_minutes".to_string(),
             json!(emr_info().on_demand_timeout_duration_minutes),
         );
-        println!(
-            ">> spot_timeout_duration_minutes: {}",
-            emr_info().spot_timeout_duration_minutes
-        );
         options.insert(
             "spot_timeout_duration_minutes".to_string(),
             json!(emr_info().spot_timeout_duration_minutes),

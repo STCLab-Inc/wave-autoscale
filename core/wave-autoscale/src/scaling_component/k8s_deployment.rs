@@ -159,7 +159,6 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
                 .patch(name, &patch_params, &Patch::Apply(patch))
                 .await;
 
-            println!("{:#?}", result);
             if let Err(e) = result {
                 return Err(anyhow::anyhow!(e));
             }
@@ -167,7 +166,6 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
 
             if let Some(spec) = result.spec {
                 if let Some(replicas_result) = spec.replicas {
-                    println!("{}: {} -> {}", name, replicas_result, replicas);
                     if replicas_result != replicas as i32 {
                         return Err(anyhow::anyhow!("Failed to scale deployment"));
                     }
@@ -339,7 +337,6 @@ mod test {
         let result = scaling_component_manager
             .apply_to("api_server", options)
             .await;
-        println!("{:?}", result);
         assert!(result.is_ok());
     }
 }

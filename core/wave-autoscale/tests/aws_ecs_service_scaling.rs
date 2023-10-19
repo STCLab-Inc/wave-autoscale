@@ -65,12 +65,8 @@ mod aws_ecs_service_scaling_test {
                         "extras": meta.to_string()
                     });
 
-                    println!(" >> API send error << ");
-                    println!("{:?}", result_json);
                     return Err(anyhow::anyhow!(result_json));
                 } else {
-                    println!(" >> API send result << ");
-                    println!("{:?}", result);
                     assert!(result.is_ok());
                 }
             }

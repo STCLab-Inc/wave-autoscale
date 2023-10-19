@@ -128,7 +128,6 @@ impl ScalingComponent for EC2AutoScalingComponent {
             }
             Ok(())
         } else {
-            println!(" >> Invalid metadata");
             Err(anyhow::anyhow!("Invalid metadata"))
         }
     }
