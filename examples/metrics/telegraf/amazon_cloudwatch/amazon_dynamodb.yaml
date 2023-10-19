@@ -1,0 +1,146 @@
+kind: Metric
+id: telegraf_cloudwatch_amazon_dynamodb_metrics
+collector: telegraf
+metadata:
+  inputs:
+    cloudwatch:
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ConsumedReadCapacityUnits"] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ConsumedWriteCapacityUnits"] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ProvisionedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ProvisionedReadCapacityUnits"] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ProvisionedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ProvisionedWriteCapacityUnits"] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ReadThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ReadThrottleEvents"] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(WriteThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["WriteThrottleEvents"] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ReturnedItemCount) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ReturnedItemCount"] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(UserErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["UserErrors"] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["SystemErrors"] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+        tags:
+          metric_id: telegraf_cloudwatch_amazon_dynamodb_metrics
+  outputs:
+    wave-autoscale: {}
+  agent:
+    interval: "10s" # Default data collection interval for all inputs. Intervals are durations of time and can be specified for supporting settings by combining an integer value and time unit as a string value. Valid time units are ns, us (or µs), ms, s, m, h.
+    round_interval: true # Rounds collection interval to interval ie, if interval="10s" then always collect on :00, :10, :20, etc.
+    metric_batch_size: 1000 # Telegraf will send metrics to outputs in batches of at most metric_batch_size metrics. This controls the size of writes that Telegraf sends to output plugins.
+    metric_buffer_limit: 10000 # Maximum number of unwritten metrics per output. Increasing this value allows for longer periods of output downtime without dropping metrics at the cost of higher maximum memory usage.
+    collection_jitter: "0s" # Collection jitter is used to jitter the collection by a random interval. Each plugin will sleep for a random time within jitter before collecting. This can be used to avoid many plugins querying things like sysfs at the same time, which can have a measurable effect on the system.
+    flush_interval: "1s" # Default flushing interval for all outputs. Maximum flush_interval will be flush_interval + flush_jitter.
+    flush_jitter: "0s" # Default flush jitter for all outputs. This jitters the flush interval by a random amount. This is primarily to avoid large write spikes for users running a large number of telegraf instances. ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
+    precision: "0s" # Collected metrics are rounded to the precision specified as an interval. Precision will NOT be used for service inputs. It is up to each individual service input to set the timestamp at the appropriate precision.
+    debug: false # Log at debug level.
+---
+
