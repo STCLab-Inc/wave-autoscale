@@ -26,7 +26,7 @@ metadata:
         namespaces: ["AWS/Lambda"]
         metrics: # SELECT AVG(Duration) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
           - names: ["Duration"] # Tracks the execution time of Lambda functions. An increase in function execution time can impact scaling decisions. Functions with longer execution times may consume more resources, potentially necessitating scale-out. Additionally, functions with long execution times can also impact throttling and Lambda costs.
-            statistic_include: ["average"] # Collect the metrics with the Average statistic, or Max statistic.
+            statistic_include: ["average"] # Collect the metrics with the Average statistic, or Maximum statistic.
             dimensions:
               - name: FunctionName
                 value: "{{ function_name }}"
