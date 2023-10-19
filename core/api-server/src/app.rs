@@ -2,11 +2,11 @@ use crate::{app_state::get_app_state, controller};
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 use data_layer::data_layer::DataLayer;
-use log::{debug, info};
 use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::info;
 use utils::wave_config::WaveConfig;
 
 async fn ping() -> String {
@@ -26,11 +26,8 @@ pub async fn run_api_server(
     let host = wave_config.host;
     let port = wave_config.port;
 
-    debug!("host: {}", host);
     // Run HTTP Server
     let app_state = get_app_state(shared_data_layer);
-
-    debug!("app_state");
     let http_server = HttpServer::new(move || {
         let cors = Cors::permissive().max_age(3600);
 
@@ -55,9 +52,8 @@ pub async fn run_api_server(
         )
     }
     let http_server = http_server.unwrap();
+    info!("API Server is running on {}:{}", host, port);
     let _ = http_server.run().await;
 
-    info!("It's up! {}:{}", host, port);
-    // server.await
     Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::app_state::AppState;
 use actix_web::{
     post,
     web::{self, Bytes},
@@ -5,8 +6,6 @@ use actix_web::{
 };
 use serde::Deserialize;
 use serde_json::json;
-
-use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(post_metrics_receiver);
