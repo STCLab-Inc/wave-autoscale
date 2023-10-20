@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use data_layer::ScalingPlanDefinition;
 use serde::Deserialize;
+use tracing::{debug, error};
 use validator::Validate;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -14,10 +15,9 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 #[get("/api/plans")]
 async fn get_plans(app_state: web::Data<AppState>) -> impl Responder {
-    // HttpResponse::Ok().body("Hello world!")
-    // const plans = &app
     let plans = app_state.data_layer.get_all_plans().await;
     if plans.is_err() {
+        error!("Failed to get plans: {:?}", plans);
         return HttpResponse::InternalServerError().body(format!("{:?}", plans));
     }
     HttpResponse::Ok().json(plans.unwrap())
@@ -28,14 +28,18 @@ async fn get_plan_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Getting plan by id: {}", db_id);
     let plan = app_state
         .data_layer
         .get_plan_by_id(db_id.into_inner())
         .await;
     if plan.is_err() {
+        error!("Failed to get plan: {:?}", plan);
         return HttpResponse::InternalServerError().body(format!("{:?}", plan));
     }
-    HttpResponse::Ok().json(plan.unwrap())
+    let plan = plan.unwrap();
+    debug!("Got plan: {:?}", plan);
+    HttpResponse::Ok().json(plan)
 }
 
 #[derive(Deserialize, Validate)]
@@ -48,10 +52,13 @@ async fn post_plans(
     request: web::Json<PostPlansRequest>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Adding plans: {:?}", request.plans);
     let result = app_state.data_layer.add_plans(request.plans.clone()).await;
     if result.is_err() {
+        error!("Failed to add plans: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Added plans: {:?}", request.plans);
     HttpResponse::Ok().body("ok")
 }
 
@@ -62,12 +69,15 @@ async fn put_plan_by_id(
     app_state: web::Data<AppState>,
 ) -> impl Responder {
     let mut plan = request.into_inner();
+    debug!("Updating plan: {:?}", plan);
     plan.db_id = db_id.into_inner();
 
     let result = app_state.data_layer.update_plan(plan).await;
     if result.is_err() {
+        error!("Failed to update plan: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Updated plan");
     HttpResponse::Ok().body("ok")
 }
 
@@ -76,9 +86,12 @@ async fn delete_plan_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Deleting plan by id: {}", db_id);
     let result = app_state.data_layer.delete_plan(db_id.into_inner()).await;
     if result.is_err() {
+        error!("Failed to delete plan: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Deleted plan");
     HttpResponse::Ok().body("ok")
 }

@@ -4,8 +4,10 @@ use actix_web::{
     web::{self},
     HttpResponse, Responder,
 };
+
 use data_layer::MetricDefinition;
 use serde::Deserialize;
+use tracing::{debug, error};
 use validator::Validate;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -18,10 +20,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 #[get("/api/metrics")]
 async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
-    // HttpResponse::Ok().body("Hello world!")
-    // const metrics = &app
+    debug!("Getting all metrics");
     let metrics = app_state.data_layer.get_all_metrics().await;
     if metrics.is_err() {
+        error!("Failed to get metrics: {:?}", metrics);
         return HttpResponse::InternalServerError().body(format!("{:?}", metrics));
     }
     HttpResponse::Ok().json(metrics.unwrap())
@@ -32,19 +34,24 @@ async fn get_metric_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Getting metric by id: {}", db_id);
     let metric = app_state
         .data_layer
         .get_metric_by_id(db_id.into_inner())
         .await;
     if metric.is_err() {
         let error_message = format!("{:?}", metric);
+        error!("Failed to get metric: {}", error_message);
         return HttpResponse::InternalServerError().body(error_message);
     }
     let metric = metric.unwrap();
     if metric.is_none() {
+        error!("Metric not found");
         return HttpResponse::NotFound().body("Metric not found");
     }
-    HttpResponse::Ok().json(metric.unwrap())
+    let metric = metric.unwrap();
+    debug!("Got metric: {:?}", metric);
+    HttpResponse::Ok().json(metric)
 }
 
 // [POST] /metrics
@@ -58,13 +65,16 @@ async fn post_metrics(
     request: web::Json<PostMetricsRequest>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Adding metrics: {:?}", request.metrics);
     let result = app_state
         .data_layer
         .add_metrics(request.metrics.clone())
         .await;
     if result.is_err() {
+        error!("Failed to add metrics: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Added metrics");
     HttpResponse::Ok().body("ok")
 }
 
@@ -75,11 +85,14 @@ async fn put_metric_by_id(
     app_state: web::Data<AppState>,
 ) -> impl Responder {
     let mut metric = request.into_inner();
+    debug!("Updating metric: {:?}", metric);
     metric.db_id = db_id.into_inner();
     let result = app_state.data_layer.update_metric(metric).await;
     if result.is_err() {
+        error!("Failed to update metric: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Updated metric");
     HttpResponse::Ok().body("ok")
 }
 
@@ -88,10 +101,13 @@ async fn delete_metric_by_id(
     db_id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
+    debug!("Deleting metric by id: {}", db_id);
     let result = app_state.data_layer.delete_metric(db_id.into_inner()).await;
     if result.is_err() {
+        error!("Failed to delete metric: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
+    debug!("Deleted metric");
     HttpResponse::Ok().body("ok")
 }
 
@@ -135,6 +151,7 @@ mod tests {
     // [GET] /api/metrics
 
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_get_metrics() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
@@ -147,6 +164,7 @@ mod tests {
     // [GET] /api/metrics/{db_id}
 
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_get_metric_by_id() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
@@ -164,6 +182,7 @@ mod tests {
     }
 
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_get_metric_by_id_failed() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
@@ -178,6 +197,7 @@ mod tests {
 
     // [POST] /api/metrics
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_post_metrics() {
         let app_state = get_app_state_for_test().await;
         let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
@@ -206,6 +226,7 @@ mod tests {
 
     // [DELETE] /api/metrics/{db_id}
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_delete_metric_by_id() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
@@ -226,6 +247,7 @@ mod tests {
 
     // [PUT] /api/metrics/{db_id}
     #[actix_web::test]
+    #[tracing_test::traced_test]
     async fn test_put_metric_by_id() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
