@@ -76,6 +76,7 @@ strum = { version = "0.25.0" }
 strum_macros = { version = "0.25.0" }
 tracing = { version = "0.1.40" }
 tracing-subscriber = { version = "0.3.17" }
+serde_json_path = { version = "0.6.2" }
 
 [dev-dependencies]
 handlebars = "4.3.7"
