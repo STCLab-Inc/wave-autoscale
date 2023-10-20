@@ -108,7 +108,7 @@ impl ScalingComponent for AzureFunctionsAppScalingComponent {
                 }
             };
             if !result_status_code.is_success() {
-                log::error!("API call error: {:?}", &result_body);
+                tracing::error!("API call error: {:?}", &result_body);
                 let json = serde_json::json!({
                     "message": "API call error",
                     "code": result_status_code.as_str(),
@@ -198,10 +198,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "azure_functions_app_scaling_component: {:?}",
-            azure_functions_app_scaling_component
-        );
         assert!(azure_functions_app_scaling_component.is_ok());
     }
 
@@ -245,10 +241,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "azure_functions_app_scaling_component: {:?}",
-            azure_functions_app_scaling_component
-        );
         assert!(azure_functions_app_scaling_component.is_ok());
     }
 
@@ -292,10 +284,6 @@ mod test {
                 .apply(params)
                 .await;
 
-        println!(
-            "azure_functions_app_scaling_component: {:?}",
-            azure_functions_app_scaling_component
-        );
         assert!(azure_functions_app_scaling_component.is_ok());
     }
 }

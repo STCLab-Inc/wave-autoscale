@@ -15,4 +15,10 @@ pub struct Args {
     /// Read definition from a yaml file. If not specified, the default definition path './definition.yaml' will be used.
     #[arg(short, long, default_value = "./definition.yaml")]
     pub definition: String,
+    /// Verbose mode, Overridden by `--quiet`
+    #[arg(short, long, action)]
+    pub verbose: bool,
+    /// Quiet mode, Overrides `--verbose`
+    #[arg(short, long, action)]
+    pub quiet: bool,
 }

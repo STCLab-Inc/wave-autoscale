@@ -115,11 +115,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_get_cloud_run_service_based_on_api_version_1 contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
@@ -166,11 +162,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_put_cloud_run_service_based_on_api_version_1 contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
@@ -190,11 +182,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_get_cloud_run_service_based_on_api_version_2 contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
@@ -229,11 +217,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_patch_cloud_run_service_based_on_api_version_2 contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
         
         assert!(status == reqwest::StatusCode::OK);
     }

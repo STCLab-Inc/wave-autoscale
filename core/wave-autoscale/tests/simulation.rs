@@ -1,11 +1,9 @@
 mod simulation_test {
     use data_layer::data_layer::DataLayer;
-    use log::debug;
     use serde_json::json;
+    use tracing::debug;
 
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    fn init() {}
 
     // A utility function for metrics.
     // This function automatically creates SourceMetrics in DataLayer.

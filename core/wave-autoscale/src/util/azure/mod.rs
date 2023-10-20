@@ -3,7 +3,7 @@ pub mod azure_virtual_machine_scale_sets;
 use azure_core;
 use azure_core::auth::TokenCredential;
 use azure_identity::client_credentials_flow;
-use log::error;
+use tracing::error;
 pub mod azure_funtions_app_helper;
 
 #[derive(Clone)]

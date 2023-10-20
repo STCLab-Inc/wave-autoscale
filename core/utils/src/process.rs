@@ -1,15 +1,16 @@
 use anyhow::Result;
-use log::info;
 use std::{
     collections::HashMap,
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
 };
+use tracing::debug;
 
 pub struct AppInfo {
     pub name: String,
     pub command: String,
     pub args: Option<Vec<String>>,
     pub envs: Option<HashMap<String, String>>,
+    pub output: bool,
 }
 
 fn spawn(app_info: &AppInfo) -> Result<Child> {
@@ -26,6 +27,12 @@ fn spawn(app_info: &AppInfo) -> Result<Child> {
     } else {
         command
     };
+    // Output
+    let command = if app_info.output {
+        command.stdout(Stdio::inherit()).stderr(Stdio::inherit())
+    } else {
+        command.stdout(Stdio::null()).stderr(Stdio::null())
+    };
     match command.spawn() {
         Ok(child) => Ok(child),
         Err(_) => Err(anyhow::anyhow!("Error spawning {}", app_info.name)),
@@ -37,7 +44,7 @@ pub fn run_processes(app_info_list: &Vec<AppInfo>) {
     loop {
         for app_info in app_info_list {
             if !running_apps.contains_key(&app_info.name) {
-                info!("Starting {}", app_info.name);
+                debug!("Starting {}", app_info.name);
                 let child = spawn(app_info);
                 if let Ok(child) = child {
                     running_apps.insert(app_info.name.clone(), child);
@@ -47,10 +54,10 @@ pub fn run_processes(app_info_list: &Vec<AppInfo>) {
         let mut to_remove: Vec<String> = Vec::new();
         for (name, child) in &mut running_apps {
             if let Some(exit_status) = child.try_wait().unwrap() {
-                info!("{} has exited with status: {}", name, exit_status);
+                debug!("{} has exited with status: {}", name, exit_status);
                 to_remove.push(name.clone());
             } else {
-                info!("{} is still running", name);
+                debug!("{} is still running", name);
             }
         }
         for name in to_remove {

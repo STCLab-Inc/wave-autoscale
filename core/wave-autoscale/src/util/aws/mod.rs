@@ -9,9 +9,9 @@
 use super::aws_region::get_aws_region_static_str;
 use aws_config::{meta::region::RegionProviderChain, SdkConfig};
 use aws_credential_types::Credentials;
-use log::debug;
 use std::{collections::HashMap, time::SystemTime};
 use thiserror::Error;
+use tracing::debug;
 
 const PROVIDER_NAME: &str = "wave-autoscale";
 

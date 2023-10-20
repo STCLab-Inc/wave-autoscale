@@ -1,8 +1,5 @@
 #[cfg(test)]
 mod integration_test {
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
 
     fn remove_db(path: String) {
         let path = std::path::Path::new(path.trim_start_matches("sqlite://"));

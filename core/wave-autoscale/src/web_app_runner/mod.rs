@@ -1,9 +1,9 @@
-use log::{debug, error};
 use regex::Regex;
 use std::{
     collections::HashMap,
     process::{Child, Command},
 };
+use tracing::{debug, error};
 
 const WAVE_WEB_APP: &str = "wave-web-app";
 const MINIMUM_NODE_VERSION: u32 = 14;

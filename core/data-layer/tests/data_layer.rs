@@ -13,7 +13,6 @@ mod data_layer {
         types::{object_kind::ObjectKind, plan_item_definition::PlanItemDefinition},
         MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
     };
-    use log::debug;
     use rand::Rng;
     use serde_json::json;
     use std::{
@@ -23,6 +22,7 @@ mod data_layer {
             Arc,
         },
     };
+    use tracing::{debug, error};
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 1;
@@ -48,7 +48,7 @@ mod data_layer {
         let path = std::path::Path::new(TEST_DB.trim_start_matches("sqlite://"));
         let remove_result = std::fs::remove_file(path);
         if remove_result.is_err() {
-            println!("Error removing file: {:?}", remove_result);
+            error!("Error removing file: {:?}", remove_result);
         }
         let data_layer = DataLayer::new(TEST_DB).await;
         data_layer.sync("").await;

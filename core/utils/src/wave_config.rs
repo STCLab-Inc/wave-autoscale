@@ -1,6 +1,6 @@
-use log::{debug, error};
 use serde::Deserialize;
 use std::fs::File;
+use tracing::{debug, error, info};
 
 const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
@@ -112,10 +112,7 @@ impl WaveConfig {
             config_path
         };
 
-        // Confirm the current directory
-        let current = std::env::current_dir();
-        debug!("Current directory: {:?}", current);
-        debug!("Reading config file: {}", config_path);
+        info!("Reading config file: {}", config_path);
         // Read the file of the path
         let file = File::open(config_path);
         if file.is_err() {
@@ -129,6 +126,7 @@ impl WaveConfig {
             return WaveConfig::default();
         }
         let wave_config = wave_config.unwrap();
+
         debug!("Config file parsed: {:?}", wave_config);
         wave_config
     }
@@ -151,6 +149,8 @@ impl WaveConfig {
 
 #[cfg(test)]
 mod tests {
+    use tracing_test::traced_test;
+
     use super::*;
 
     fn get_wave_config() -> WaveConfig {
@@ -158,6 +158,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_watch_definition_duration() {
         let wave_config = get_wave_config();
         assert_eq!(wave_config.db_url, DEFAULT_DB_URL);

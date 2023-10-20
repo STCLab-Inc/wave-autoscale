@@ -1,24 +1,26 @@
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
-use log::{debug, error, info};
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use tar::Archive;
+use tracing::{debug, error, info};
 use utils::process::{run_processes, AppInfo};
 use utils::wave_config::WaveConfig;
 pub struct MetricCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
+    collector_log: bool,
 }
 
 impl MetricCollectorManager {
-    pub fn new(wave_config: WaveConfig, output_url: &str) -> Self {
+    pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
         Self {
             wave_config,
             output_url: output_url.to_string(),
+            collector_log,
         }
     }
 
@@ -106,7 +108,7 @@ impl MetricCollectorManager {
             // Check if the binary exists
             let path = std::path::Path::new(&collector_binary_path);
             if path.exists() {
-                info!("{} exists", collector_binary_path);
+                debug!("{} exists", collector_binary_path);
                 continue;
             }
 
@@ -135,7 +137,7 @@ impl MetricCollectorManager {
                 error!("Error downloading file: {}", result.err().unwrap());
                 continue;
             }
-            info!("Downloaded {} to {}", download_url, download_path);
+            info!("Completed downloading {}", download_path);
 
             // Decompress the file
             // Example: ./temp/vector_linux_x86_64
@@ -305,6 +307,7 @@ impl MetricCollectorManager {
                 command: format!("{}/vector", vector_dir_path),
                 args: Some(vec!["--config-toml".to_string(), vector_config_path]),
                 envs: None,
+                output: self.collector_log,
             };
             collector_processes.push(vector_app_info);
         }
@@ -332,6 +335,7 @@ impl MetricCollectorManager {
                 command: format!("{}/telegraf", telegraf_dir_path),
                 args: Some(vec!["--config".to_string(), telegraf_config_path]),
                 envs: None,
+                output: self.collector_log,
             };
             collector_processes.push(telegraf_app_info);
         }
@@ -771,20 +775,63 @@ fn validation_telegraf_definition(metric_definitions: &MetricDefinition) -> bool
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use data_layer::types::object_kind::ObjectKind;
-
     use super::*;
+    use data_layer::types::object_kind::ObjectKind;
+    use std::collections::HashMap;
+    use tracing_test::traced_test;
 
     fn get_metric_collector_manager() -> MetricCollectorManager {
         // Remove wave.db
         let _ = std::fs::remove_file("./wave.db");
 
         let wave_config = WaveConfig::new("./tests/config/wave-config.yaml");
-        MetricCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
+        MetricCollectorManager::new(
+            wave_config,
+            "http://localhost:3024/api/metrics-receiver",
+            true,
+        )
     }
 
+<<<<<<< HEAD
+=======
+    #[test]
+    #[traced_test]
+    fn test_add_telegraf_input_required_tags_empty_tags() {
+        let metric_id = "metric_id_1".to_string();
+        let mut input_metric = toml::value::Table::new();
+        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
+        let tags = input_metric.get("tags").unwrap();
+        assert!(tags
+            .as_table()
+            .unwrap()
+            .get("metric_id")
+            .unwrap()
+            .eq(&toml::Value::String(metric_id)));
+        assert_eq!(tags.as_table().unwrap().len(), 1);
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_add_telegraf_input_required_tags_add_tags() {
+        let metric_id = "metric_id_1".to_string();
+        let mut input_metric = toml::value::Table::new();
+
+        let mut input_tags = toml::value::Table::new();
+        input_tags.insert("tag_1".to_string(), toml::Value::String(metric_id.clone()));
+        input_metric.insert("tags".to_string(), toml::Value::Table(input_tags.clone()));
+
+        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
+        let tags = input_metric.get("tags").unwrap();
+        assert!(tags
+            .as_table()
+            .unwrap()
+            .get("metric_id")
+            .unwrap()
+            .eq(&toml::Value::String(metric_id)));
+        assert_eq!(tags.as_table().unwrap().len(), 2);
+    }
+
+>>>>>>> 632e0fa3698da408391600dc3906f0bd313c2001
     // Test whether it fetchs the os and arch correctly
     #[test]
     fn test_get_os_arch() {
@@ -803,6 +850,7 @@ mod tests {
 
     // Test whether it fetchs Vector binaries correctly for
     #[tokio::test]
+    #[traced_test]
     async fn test_prepare_collector_binaries_vector() {
         let manager = get_metric_collector_manager();
         let metric_definitions = vec![
@@ -840,6 +888,7 @@ mod tests {
 
     // Test whether it fetchs Telegraf binaries correctly
     #[tokio::test]
+    #[traced_test]
     async fn test_prepare_collector_binaries_telegraf() {
         let manager = get_metric_collector_manager();
         let metric_definitions = vec![
@@ -880,6 +929,7 @@ mod tests {
 
     // Test whether it saves metric definitions to Vector config correctly
     #[test]
+    #[traced_test]
     fn test_save_metric_definitions_to_vector_config() {
         let manager = get_metric_collector_manager();
 
@@ -982,6 +1032,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_save_metric_definitions_to_telegraf_config() {
         let manager = get_metric_collector_manager();
 
@@ -1069,8 +1120,14 @@ mod tests {
     }
 
     #[test]
+<<<<<<< HEAD
     fn test_vector_yaml_to_toml_success() {
         let metric_yaml_1 = r#"
+=======
+    #[traced_test]
+    fn test_vector_yaml_to_toml() {
+        let yaml = r#"
+>>>>>>> 632e0fa3698da408391600dc3906f0bd313c2001
         kind: Metric
         id: istio_request_duration_milliseconds_sum_1m
         collector: vector
@@ -1213,6 +1270,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_telegraf_yaml_to_toml() {
         let yaml = r#"
         kind: Metric

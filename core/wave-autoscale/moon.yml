@@ -82,8 +82,12 @@ tasks:
       - "tests/config/wave-config.yaml"
       # - "--definition"
       # - "./core/wave-autoscale/tests/yaml/plan_cloudwatch_ecs_ec2.yaml"
+      # - "--quiet"
+      # - "--verbose"
     env:
-      RUST_LOG: wave_autoscale=debug
+      RUST_LOG: utils=info,wave_autoscale=info,api_server=info,data_layer=info
+      # RUST_LOG: debug
+      # RUST_LOG: info
   run-help:
     command:
       - "cargo"
