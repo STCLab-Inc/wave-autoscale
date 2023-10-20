@@ -80,7 +80,7 @@ jobs:
       #   run: moon run :lint -f
 
       - name: Run test
-        run: moon run controller:test -f --remote
+        run: moon run --remote --affected controller:test -f
 
       - name: Cargo Autoclean
         run: moon run archiver:clean-cargo-cache -f
