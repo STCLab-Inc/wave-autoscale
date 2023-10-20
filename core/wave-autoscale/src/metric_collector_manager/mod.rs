@@ -354,7 +354,7 @@ fn convert_metric_definitions_to_vector_toml(
     let mut root_toml = "".to_string();
     // Create a TOML array representing the metric definitions
     for metric_definition in metric_definitions {
-        if !validation_vector_definition(metric_definition) {
+        if !validate_vector_definition(metric_definition) {
             error!("[vector] Validation Failed");
             continue;
         }
@@ -475,7 +475,7 @@ fn convert_metric_definitions_to_telegraf_toml(
     let mut root_toml = "".to_string();
     // Create a TOML array representing the metric definitions
     for metric_definition in metric_definitions {
-        if !validation_telegraf_definition(metric_definition) {
+        if !validate_telegraf_definition(metric_definition) {
             error!("[telegraf] Validation Failed");
             continue;
         }
@@ -654,7 +654,7 @@ fn convert_metric_definitions_to_telegraf_toml(
     root_toml
 }
 
-fn validation_vector_definition(metric_definitions: &MetricDefinition) -> bool {
+fn validate_vector_definition(metric_definitions: &MetricDefinition) -> bool {
     let metric_definition_json =
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
@@ -745,7 +745,7 @@ fn validation_vector_definition(metric_definitions: &MetricDefinition) -> bool {
     is_sinks_inputs_target_ids
 }
 
-fn validation_telegraf_definition(metric_definitions: &MetricDefinition) -> bool {
+fn validate_telegraf_definition(metric_definitions: &MetricDefinition) -> bool {
     let metric_definition_json =
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
@@ -792,46 +792,6 @@ mod tests {
         )
     }
 
-<<<<<<< HEAD
-=======
-    #[test]
-    #[traced_test]
-    fn test_add_telegraf_input_required_tags_empty_tags() {
-        let metric_id = "metric_id_1".to_string();
-        let mut input_metric = toml::value::Table::new();
-        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
-        let tags = input_metric.get("tags").unwrap();
-        assert!(tags
-            .as_table()
-            .unwrap()
-            .get("metric_id")
-            .unwrap()
-            .eq(&toml::Value::String(metric_id)));
-        assert_eq!(tags.as_table().unwrap().len(), 1);
-    }
-
-    #[test]
-    #[traced_test]
-    fn test_add_telegraf_input_required_tags_add_tags() {
-        let metric_id = "metric_id_1".to_string();
-        let mut input_metric = toml::value::Table::new();
-
-        let mut input_tags = toml::value::Table::new();
-        input_tags.insert("tag_1".to_string(), toml::Value::String(metric_id.clone()));
-        input_metric.insert("tags".to_string(), toml::Value::Table(input_tags.clone()));
-
-        input_metric = add_telegraf_input_required_tags(input_metric, metric_id.clone());
-        let tags = input_metric.get("tags").unwrap();
-        assert!(tags
-            .as_table()
-            .unwrap()
-            .get("metric_id")
-            .unwrap()
-            .eq(&toml::Value::String(metric_id)));
-        assert_eq!(tags.as_table().unwrap().len(), 2);
-    }
-
->>>>>>> 632e0fa3698da408391600dc3906f0bd313c2001
     // Test whether it fetchs the os and arch correctly
     #[test]
     fn test_get_os_arch() {
@@ -1120,14 +1080,9 @@ mod tests {
     }
 
     #[test]
-<<<<<<< HEAD
+    #[traced_test]
     fn test_vector_yaml_to_toml_success() {
         let metric_yaml_1 = r#"
-=======
-    #[traced_test]
-    fn test_vector_yaml_to_toml() {
-        let yaml = r#"
->>>>>>> 632e0fa3698da408391600dc3906f0bd313c2001
         kind: Metric
         id: istio_request_duration_milliseconds_sum_1m
         collector: vector
@@ -1181,6 +1136,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_vector_yaml_to_toml_validation() {
         let metric_yaml_success_1 = r#"
         kind: Metric
@@ -1206,7 +1162,7 @@ mod tests {
         "#;
         let metric_definition_success_1 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_success_1).unwrap();
-        assert!(validation_vector_definition(&metric_definition_success_1));
+        assert!(validate_vector_definition(&metric_definition_success_1));
 
         let metric_yaml_success_2 = r#"
         kind: Metric
@@ -1223,7 +1179,7 @@ mod tests {
         "#;
         let metric_definition_success_2 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_success_2).unwrap();
-        assert!(validation_vector_definition(&metric_definition_success_2));
+        assert!(validate_vector_definition(&metric_definition_success_2));
 
         let metric_yaml_fail_1 = r#"
         kind: Metric
@@ -1240,7 +1196,7 @@ mod tests {
         "#;
         let metric_definition_fail_1 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_fail_1).unwrap();
-        assert!(!validation_vector_definition(&metric_definition_fail_1));
+        assert!(!validate_vector_definition(&metric_definition_fail_1));
 
         let metric_yaml_fail_2 = r#"
         kind: Metric
@@ -1266,7 +1222,7 @@ mod tests {
         "#;
         let metric_definition_fail_2 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_fail_2).unwrap();
-        assert!(!validation_vector_definition(&metric_definition_fail_2));
+        assert!(!validate_vector_definition(&metric_definition_fail_2));
     }
 
     #[test]
@@ -1321,6 +1277,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_telegraf_yaml_to_toml_validation() {
         let metric_yaml_success_1 = r#"
         kind: Metric
@@ -1337,7 +1294,7 @@ mod tests {
         "#;
         let metric_definition_success_1 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_success_1).unwrap();
-        assert!(validation_telegraf_definition(&metric_definition_success_1));
+        assert!(validate_telegraf_definition(&metric_definition_success_1));
 
         let metric_yaml_fail_1 = r#"
         kind: Metric
@@ -1356,6 +1313,6 @@ mod tests {
         "#;
         let metric_definition_fail_1 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_fail_1).unwrap();
-        assert!(!validation_telegraf_definition(&metric_definition_fail_1));
+        assert!(!validate_telegraf_definition(&metric_definition_fail_1));
     }
 }
