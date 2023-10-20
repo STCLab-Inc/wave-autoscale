@@ -22,6 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         timeout-minutes: 1
+        with:
+          fetch-depth: 0
 
       # - name: Set up cargo cache
       #   uses: actions/cache@v3
@@ -80,7 +82,7 @@ jobs:
       #   run: moon run :lint -f
 
       - name: Run test
-        run: moon run --remote --affected controller:test -f
+        run: moon run controller:test -f
 
       - name: Cargo Autoclean
         run: moon run archiver:clean-cargo-cache -f
