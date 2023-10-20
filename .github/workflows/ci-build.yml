@@ -1,6 +1,7 @@
 name: Integration tests
 run-name: ${{ github.actor }} has created a pull request
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - 'main'
@@ -21,6 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         timeout-minutes: 1
+        with:
+          fetch-depth: 0
 
       # - name: Set up cargo cache
       #   uses: actions/cache@v3

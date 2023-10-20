@@ -1,9 +1,8 @@
+use crate::app_state::AppState;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use data_layer::ScalingComponentDefinition;
 use serde::Deserialize;
 use validator::Validate;
-
-use crate::app_state::AppState;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_scaling_components)

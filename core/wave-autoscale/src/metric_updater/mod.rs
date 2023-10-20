@@ -1,8 +1,8 @@
 use data_layer::data_layer::DataLayer;
-use log::debug;
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
+
 
 pub type SharedMetricUpdater = Arc<RwLock<MetricUpdater>>;
 
@@ -54,8 +54,6 @@ impl MetricUpdater {
                 let new_metric_values = data_layer
                     .get_source_metrics_values(metric_ids.clone(), MAX_TIME_GREATER_THAN)
                     .await;
-
-                debug!("new_metric_values: {:?}", new_metric_values);
 
                 if let Ok(new_metric_values) = new_metric_values {
                     let mut metric_values = metric_values.write().await;

@@ -40,9 +40,9 @@ use crate::{
     },
 };
 use data_layer::data_layer::DataLayer;
-use log::{debug, error};
 use std::sync::Arc;
 use tokio::time::sleep;
+use tracing::{debug, error, info};
 use utils::wave_config::WaveConfig;
 
 pub struct App {
@@ -140,25 +140,16 @@ impl App {
             debug!("Successfully added scaling plan definitions");
             manager_writer.run();
         }
-        debug!("ScalingPlanners started: {}", number_of_plans);
-    }
-
-    pub fn get_data_layer(&self) -> Arc<DataLayer> {
-        self.shared_data_layer.clone()
-    }
-
-    pub fn get_scaling_component_manager(&self) -> SharedScalingComponentManager {
-        self.shared_scaling_component_manager.clone()
-    }
-
-    pub fn get_scaling_planner_manager(&self) -> SharedScalingPlannerManager {
-        self.shared_scaling_planner_manager.clone()
+        info!("[run] ScalingPlans started: {} plans", number_of_plans);
     }
 
     // Run the cron job to remove the old Autoscaling History
     pub fn run_autoscaling_history_cron_job(&mut self, duration_string: String) {
         self.stop_autoscaling_history_cron_job();
-        debug!("Starting autoscaling history cron job: {}", duration_string);
+        debug!(
+            "[run_autoscaling_history_cron_job] duration_string: {}",
+            duration_string
+        );
         let duration = duration_str::parse(&duration_string);
         if duration.is_err() {
             error!("Error parsing duration string: {}", duration_string);
@@ -193,5 +184,23 @@ impl App {
                 self.autoscaling_history_remover_handle = None;
             }
         }
+    }
+
+    // For unit testing
+    #[allow(dead_code)]
+    pub fn get_data_layer(&self) -> Arc<DataLayer> {
+        self.shared_data_layer.clone()
+    }
+
+    // For unit testing
+    #[allow(dead_code)]
+    pub fn get_scaling_component_manager(&self) -> SharedScalingComponentManager {
+        self.shared_scaling_component_manager.clone()
+    }
+
+    // For unit testing
+    #[allow(dead_code)]
+    pub fn get_scaling_planner_manager(&self) -> SharedScalingPlannerManager {
+        self.shared_scaling_planner_manager.clone()
     }
 }

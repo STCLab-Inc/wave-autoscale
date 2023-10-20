@@ -153,7 +153,6 @@ mod test {
         "#;
 
         let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-        println!("patch_json:\n {:#?}", patch_json);
         let api_version = patch_json.get("apiVersion").unwrap();
         let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
         let kind = patch_json.get("kind").unwrap().as_str().unwrap();
@@ -169,7 +168,6 @@ mod test {
         let name = "istio-vs";
         let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource.0);
         // let get_object = api.get(name).await.unwrap();
-        // println!(" >> get_object :\n{:?}", get_object);
 
         let patch_params = PatchParams::apply("wave-autoscale");
         let patch_params = PatchParams::force(patch_params);
@@ -178,7 +176,6 @@ mod test {
             .patch(name, &patch_params, &Patch::Apply(patch_json))
             .await;
 
-        println!("result: {:#?}", result);
         assert!(result.is_ok());
     }
 
@@ -216,7 +213,6 @@ mod test {
                     - containerPort: 5001
         "#;
         let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-        println!("patch_json:\n {:#?}", patch_json);
         let api_version = patch_json.get("apiVersion").unwrap();
         let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
         let kind = patch_json.get("kind").unwrap().as_str().unwrap();
@@ -229,10 +225,8 @@ mod test {
         // Use the discovered kind in an Api, and Controller with the ApiResource as its DynamicType
         let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &ar);
         // let get_object = api.get(name).await.unwrap();
-        // println!(" >> get_object :\n{:?}", get_object);
         
         let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-        println!("patch_json:\n {:#?}", patch_json);
 
         let patch_params = PatchParams::apply("wave-autoscale");
         let patch_params = PatchParams::force(patch_params);
@@ -241,7 +235,6 @@ mod test {
             .patch(name, &patch_params, &Patch::Apply(patch_json))
             .await;
 
-        println!("result: {:#?}", result);
         assert!(result.is_ok());
     }
 }

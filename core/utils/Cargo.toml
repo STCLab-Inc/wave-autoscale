@@ -6,8 +6,10 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-env_logger = { version = "0.10.0" }
-log = { version = "0.4.18" }
 anyhow = "1.0.70"
 serde = { version = "1.0.157", features = ["derive"] }
 serde_yaml = "0.9.19"
+tracing = { version = "0.1.40" }
+
+[dev-dependencies]
+tracing-test ={ version = "0.2.4" }

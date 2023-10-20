@@ -8,9 +8,9 @@ use aws_sdk_emr::types::{
 };
 use aws_sdk_emr::Client;
 use data_layer::ScalingComponentDefinition;
-use log::{debug, error};
 use serde_json::Value;
 use std::collections::HashMap;
+use tracing::{debug, error};
 
 pub struct EMREC2AutoScalingComponent {
     definition: ScalingComponentDefinition,

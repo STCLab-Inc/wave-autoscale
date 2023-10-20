@@ -63,15 +63,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_azure_functions_app_for_consumption_plan response status: {:?}",
-            status
-        );
-        println!(
-            "test_call_azure_functions_app_for_consumption_plan response body: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
@@ -99,15 +91,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_azure_functions_app_for_premium_plan response status: {:?}",
-            status
-        );
-        println!(
-            "test_call_azure_functions_app_for_premium_plan response body: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
