@@ -1,6 +1,7 @@
 name: Integration tests
 run-name: ${{ github.actor }} has created a pull request
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - 'main'
