@@ -146,7 +146,7 @@ impl DataLayer {
             }
         }
     }
-    pub fn watch_definitions(&self, watch_duration_ms: u64) -> watch::Receiver<String> {
+    pub fn watch_definitions_in_db(&self, watch_duration_ms: u64) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
         let database_kind = self.pool.any_kind();
@@ -156,7 +156,7 @@ impl DataLayer {
             loop {
                 // 1 second
                 tokio::time::sleep(tokio::time::Duration::from_millis(watch_duration_ms)).await;
-                debug!("Watching the definition file");
+                debug!("Watching the definition in the db");
 
                 // REFACTOR: Use type state pattern to avoid this match
                 let query_string = match database_kind {

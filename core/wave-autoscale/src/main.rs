@@ -91,7 +91,7 @@ async fn main() {
     // Watch the definition file
     let watch_duration = wave_config.watch_definition_duration;
     let mut watch_receiver: Option<watch::Receiver<String>> = if watch_duration != 0 {
-        Some(shared_data_layer.watch_definitions(watch_duration))
+        Some(shared_data_layer.watch_definitions_in_db(watch_duration))
     } else {
         None
     };
