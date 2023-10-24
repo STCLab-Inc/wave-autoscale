@@ -9,11 +9,13 @@ use data_layer::{
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
+        source_metrics::SourceMetrics,
     },
     ScalingPlanDefinition,
 };
 use rquickjs::async_with;
 use serde_json::{json, Value};
+use std::collections::LinkedList;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
@@ -154,30 +156,40 @@ impl<'a> ScalingPlanner {
                     }
                 }
                 {
-                    let metric_ids_values = match data_layer
-                        .get_source_metrics_values_all_metric_ids(1000 * 60 * 30) // 30 minutes
-                        .await
-                    {
-                        Ok(metric_ids_values) => metric_ids_values,
-                        Err(_) => {
-                            error!("Error getting metric values");
-                            continue;
-                        }
-                    };
+                    let metric_ids_values =
+                        match data_layer.get_source_metrics_in_data_layer().await {
+                            Ok(metric_ids_values) => metric_ids_values,
+                            Err(_) => {
+                                error!("Error getting metric values");
+                                continue;
+                            }
+                        };
                     // Prepare "get" function for JavaScript. This function will be used to get the metric values from the JavaScript code.
                     async_with!(context => |ctx| {
                         let _ = ctx.globals().set(
                             "get",
                             rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                                let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
+                                let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| {
+                                    error!("[ScalingPlan expression error] 'metric_id' not found or is not a string");
+                                    rquickjs::Error::Exception
+                                })?;
+                                let name = args.get::<String, String>("name".to_string()).map_err(|_| {
+                                    error!("[ScalingPlan expression error] 'name' not found or is not a string");
+                                    rquickjs::Error::Exception
+                                })?;
                                 let tags = args.get::<String, HashMap<String, String>>("tags".to_string());
                                 let tags = match tags {
                                     Ok(tags) => tags,
                                     Err(_) => HashMap::new()
                                 };
-                                let stats = args.get::<String, String>("stats".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| rquickjs::Error::Exception)?;
+                                let stats = args.get::<String, String>("stats".to_string()).map_err(|_| {
+                                    error!("[ScalingPlan expression error] 'stats' not found or is not a string");
+                                    rquickjs::Error::Exception
+                                })?;
+                                let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| {
+                                    error!("[ScalingPlan expression error] 'period_sec' not found or is not a number");
+                                    rquickjs::Error::Exception
+                                })?;
                                 context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
                             }),
                         );
@@ -334,7 +346,7 @@ fn context_global_get_func(
     tags: HashMap<String, String>,
     stats: String,
     period_sec: u64,
-    metric_ids_values: Vec<serde_json::Value>,
+    metric_ids_values: LinkedList<SourceMetrics>,
 ) -> Result<f64, rquickjs::Error> {
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
@@ -344,6 +356,11 @@ fn context_global_get_func(
     metric_ids_values
         .iter()
         .for_each(|value| {
+            let Ok(value) = serde_json::to_value(value.clone()) else {
+                error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
+                return;
+            };
+
             // metric_id in the metric data should match the metric_id in the definition.
             if value.get("metric_id").and_then(Value::as_str) != Some(metric_id.as_str()) {
                 return;
@@ -361,7 +378,10 @@ fn context_global_get_func(
             let Some(json_value_str) = value.get("json_value") else {return;};
             let Some(json_value_str) = json_value_str.as_str() else {return;};
             let json_value_str = serde_json::from_str::<Value>(json_value_str)
-                .map_err(|_| rquickjs::Error::Exception)
+                .map_err(|_| {
+                    error!("[ScalingPlan expression error] Failed to convert json_value to serde value");
+                    rquickjs::Error::Exception
+                })
                 .unwrap();
             let Some(json_values_arr) = json_value_str.as_array() else {return;};
             let _filter_json_values_arr: Vec<_> = json_values_arr
@@ -422,7 +442,10 @@ fn context_global_get_func(
                 Err(_) => Err(rquickjs::Error::Exception),
             }
         }
-        _ => Err(rquickjs::Error::Exception),
+        _ => {
+            error!("[ScalingPlan expression error] stats is not defined");
+            Err(rquickjs::Error::Exception)
+        }
     };
     metric_stats
 }
@@ -470,7 +493,7 @@ mod tests {
         plans: Vec<PlanItemDefinition>,
     ) -> (Arc<DataLayer>, ScalingPlanner) {
         // Initialize DataLayer
-        let data_layer = DataLayer::new("").await;
+        let data_layer = DataLayer::new("", 500_000).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
         // Create a MetricDefinition
@@ -550,20 +573,45 @@ mod tests {
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 60));
         let ulid_before_200m =
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 200));
-
-        let mut metric_values: Vec<serde_json::Value> = Vec::new();
+        let create_dt = chrono::Local::now();
+        let collector = "vector";
+        let mut metric_values: LinkedList<SourceMetrics> = LinkedList::new();
         let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_1m.to_string(), "json_value": json_value})]);
+        metric_values.push_front(SourceMetrics {
+            id: ulid_before_1m.to_string(),
+            collector: collector.to_string(),
+            metric_id: "metric1".to_string(),
+            json_value: json_value.to_string(),
+            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        });
         let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_1m.to_string(), "json_value": json_value2})]);
+        metric_values.push_front(SourceMetrics {
+            id: ulid_before_1m.to_string(),
+            collector: collector.to_string(),
+            metric_id: "metric1".to_string(),
+            json_value: json_value2.to_string(),
+            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        });
         let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_200m.to_string(), "json_value": json_value3})]);
+        metric_values.push_front(SourceMetrics {
+            id: ulid_before_200m.to_string(),
+            collector: collector.to_string(),
+            metric_id: "metric1".to_string(),
+            json_value: json_value3.to_string(),
+            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        });
         let json_value4 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric2", "id": ulid_before_1m.to_string(), "json_value": json_value4})]);
+        metric_values.push_front(SourceMetrics {
+            id: ulid_before_1m.to_string(),
+            collector: collector.to_string(),
+            metric_id: "metric2".to_string(),
+            json_value: json_value4.to_string(),
+            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        });
 
         let metric_ids_values = metric_values;
 

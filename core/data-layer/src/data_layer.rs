@@ -2,44 +2,69 @@ use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        source_metrics::SourceMetrics,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
+use get_size::GetSize;
 use serde_json::json;
 use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
     AnyPool, Row,
 };
+use std::collections::LinkedList;
+use std::sync::Arc;
 use std::{
     collections::HashMap,
     path::Path,
     time::{Duration, SystemTime},
 };
-use tokio::sync::watch;
+use tokio::sync::{watch, RwLock};
 use tracing::{debug, error};
 use ulid::Ulid;
 use uuid::Uuid;
 
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
+const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 
 #[derive(Debug)]
 pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
+    source_metrics_data: SourceMetricsData,
+}
+
+#[derive(Debug)]
+pub struct SourceMetricsData {
+    metric_buffer_size_kb: u64,
+    source_metrics: Arc<RwLock<LinkedList<SourceMetrics>>>,
+    source_metrics_size: Arc<RwLock<usize>>,
 }
 
 impl DataLayer {
-    pub async fn new(sql_url: &str) -> Self {
+    pub async fn new(sql_url: &str, metric_buffer_size_kb: u64) -> Self {
         let sql_url = if sql_url.is_empty() {
             DEFAULT_DB_URL
         } else {
             sql_url
         };
+        let metric_buffer_size_kb = if metric_buffer_size_kb == 0 {
+            DEFAULT_METRIC_BUFFER_SIZE_KB
+        } else {
+            metric_buffer_size_kb
+        };
 
+        let source_metrics = Arc::new(RwLock::new(LinkedList::<SourceMetrics>::new()));
+        let source_metrics_size = Arc::new(RwLock::new(0));
         DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
+            source_metrics_data: SourceMetricsData {
+                metric_buffer_size_kb,
+                source_metrics,
+                source_metrics_size,
+            },
         }
     }
 
@@ -683,6 +708,75 @@ impl DataLayer {
     }
 
     // Source Metrics
+    pub async fn add_source_metrics_in_data_layer(
+        &self,
+        collector: &str,
+        metric_id: &str,
+        json_value: &str,
+    ) -> Result<()> {
+        let source_metrics = self.source_metrics_data.source_metrics.clone();
+        let source_metrics_size = self.source_metrics_data.source_metrics_size.clone();
+        let metric_buffer_size_kb = self.source_metrics_data.metric_buffer_size_kb;
+
+        let source_metric_data = SourceMetrics {
+            id: Ulid::new().to_string(),
+            collector: collector.to_string(),
+            metric_id: metric_id.to_string(),
+            json_value: json_value.to_string(),
+            create_dt: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        };
+        let source_metric_data_size = source_metric_data.clone().get_heap_size();
+        // memory check and remove (front is latest data)
+        let mut total_source_metrics_size =
+            *source_metrics_size.read().await + source_metric_data_size;
+        loop {
+            let mut read_source_metrics_length = 0;
+            let mut remove_target_source_metric_size = 0;
+            {
+                // get oldest data and size
+                let read_source_metrics = source_metrics.read().await;
+                read_source_metrics_length = read_source_metrics.len();
+                remove_target_source_metric_size = match read_source_metrics.back() {
+                    Some(remove_target_srouce_metric) => {
+                        remove_target_srouce_metric.get_heap_size()
+                    }
+                    None => 0,
+                };
+            }
+
+            // check total size
+            if total_source_metrics_size > metric_buffer_size_kb as usize {
+                // remove oldest data
+                if read_source_metrics_length > 0 {
+                    let mut write_source_metrics = source_metrics.write().await;
+                    write_source_metrics.pop_back();
+                    total_source_metrics_size -= remove_target_source_metric_size;
+                }
+                continue;
+            }
+            break;
+        }
+
+        // add metric data and update size
+        {
+            let mut write_source_metrics = source_metrics.write().await;
+            write_source_metrics.push_front(source_metric_data.clone());
+            *write_source_metrics = write_source_metrics.clone();
+        }
+        {
+            let mut write_source_metrics_size = source_metrics_size.write().await;
+            *write_source_metrics_size = total_source_metrics_size;
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_source_metrics_in_data_layer(&self) -> Result<LinkedList<SourceMetrics>> {
+        let source_metrics = self.source_metrics_data.source_metrics.clone();
+        let source_metrics = source_metrics.read().await;
+        Ok(source_metrics.clone())
+    }
+
     // Add a SourceMetric to the database
     pub async fn add_source_metric(
         &self,
@@ -785,10 +879,12 @@ impl DataLayer {
 #[cfg(test)]
 mod tests {
     use super::DataLayer;
+    use super::*;
     use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
     use tracing::{debug, error};
     use tracing_test::traced_test;
     use ulid::Ulid;
+    const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 
     async fn get_data_layer_with_sqlite() -> DataLayer {
         const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
@@ -798,14 +894,14 @@ mod tests {
         if remove_result.is_err() {
             error!("Error removing file: {:?}", remove_result);
         }
-        let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
+        let data_layer = DataLayer::new(DEFAULT_DB_URL, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
         data_layer.sync("").await;
         data_layer
     }
 
     async fn get_data_layer_with_postgres() -> DataLayer {
         const DEFAULT_DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
-        let data_layer = DataLayer::new(DEFAULT_DB_URL).await;
+        let data_layer = DataLayer::new(DEFAULT_DB_URL, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
         data_layer.sync("").await;
         data_layer
     }
@@ -917,5 +1013,33 @@ mod tests {
             .filter(|value| value.get("metric_id").unwrap() == "source_metrics_test_1")
             .collect();
         assert!(!source_metrics_filter_arr.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_add_source_metrics_in_data_layer() {
+        const DB_URL: &str = "sqlite://tests/temp/test.db";
+        const METRIC_BUFFER_SIZE_KB: u64 = 1_000;
+        let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
+        let collector = "vector";
+        let metric_id = "metric_1";
+        let json_value = r#"[{
+            "name": "name",
+            "tags": {
+                "tag1": "value1"
+            },
+            "value": 2.0
+        }]"#;
+        for _idx in 1..10 {
+            let _ = data_layer
+                .add_source_metrics_in_data_layer(collector, metric_id, json_value)
+                .await;
+            let metric_1 = data_layer.get_source_metrics_in_data_layer().await.unwrap();
+            let mut total_source_metric_size = 0;
+            metric_1.iter().for_each(|source_metric| {
+                let source_metric_size = source_metric.get_heap_size();
+                total_source_metric_size += source_metric_size;
+            });
+            assert!(total_source_metric_size < METRIC_BUFFER_SIZE_KB as usize);
+        }
     }
 }

@@ -28,6 +28,7 @@ mod data_layer {
     const EXPECTED_METRICS_COUNT: usize = 1;
     const EXPECTED_SCALING_COMPONENTS_COUNT: usize = 1;
     const EXPECTED_SCALING_PLANS_COUNT: usize = 1;
+    const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 
     // Common function to read the example yaml file
     fn read_example_yaml_file() -> Result<ParserResult> {
@@ -37,7 +38,7 @@ mod data_layer {
 
     async fn get_data_layer_with_postgres() -> Result<DataLayer> {
         const TEST_DB: &str = "postgresql://postgres:postgres@localhost:5432/postgres";
-        let data_layer = DataLayer::new(TEST_DB).await;
+        let data_layer = DataLayer::new(TEST_DB, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
         data_layer.sync("").await;
         Ok(data_layer)
     }
@@ -50,7 +51,7 @@ mod data_layer {
         if remove_result.is_err() {
             error!("Error removing file: {:?}", remove_result);
         }
-        let data_layer = DataLayer::new(TEST_DB).await;
+        let data_layer = DataLayer::new(TEST_DB, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
         data_layer.sync("").await;
         Ok(data_layer)
     }

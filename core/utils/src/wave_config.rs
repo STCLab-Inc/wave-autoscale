@@ -4,6 +4,7 @@ use tracing::{debug, error, info};
 
 const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
+const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
 const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "1d";
 const DEFAULT_API_HOST: &str = "0.0.0.0";
@@ -15,6 +16,9 @@ const DEFAULT_KUBERNETES: bool = false;
 
 fn default_db_url() -> String {
     DEFAULT_DB_URL.to_string()
+}
+fn default_metric_buffer_size_kb() -> u64 {
+    DEFAULT_METRIC_BUFFER_SIZE_KB
 }
 fn default_watch_definition_duration() -> u64 {
     DEFAULT_WATCH_DEFINITION_DURATION
@@ -55,6 +59,8 @@ pub struct WaveConfig {
     // For data-layer
     #[serde(default = "default_db_url")]
     pub db_url: String,
+    #[serde(default = "default_metric_buffer_size_kb")]
+    pub metric_buffer_size_kb: u64,
     // For the controller
     // milliseconds
     #[serde(default = "default_watch_definition_duration")]
@@ -90,6 +96,7 @@ impl Default for WaveConfig {
     fn default() -> Self {
         WaveConfig {
             db_url: DEFAULT_DB_URL.to_string(),
+            metric_buffer_size_kb: DEFAULT_METRIC_BUFFER_SIZE_KB,
             watch_definition_duration: DEFAULT_WATCH_DEFINITION_DURATION,
             autoscaling_history_retention: DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string(),
             host: DEFAULT_API_HOST.to_string(),

@@ -1,8 +1,9 @@
 db_url: sqlite://./wave.db
 host: localhost
 port: 3024
+metric_buffer_size_kb: 500000
 watch_definition_duration: 5000
-autoscaling_history_retention: '1d'
+autoscaling_history_retention: "1d"
 web_ui: false
 web_ui_host: 0.0.0.0
 web_ui_port: 3025
