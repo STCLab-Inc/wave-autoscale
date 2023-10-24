@@ -723,7 +723,6 @@ impl DataLayer {
             collector: collector.to_string(),
             metric_id: metric_id.to_string(),
             json_value: json_value.to_string(),
-            create_dt: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         };
         let source_metric_data_size = source_metric_data.clone().get_heap_size();
         // memory check and remove (front is latest data)
@@ -767,7 +766,7 @@ impl DataLayer {
             let mut write_source_metrics_size = source_metrics_size.write().await;
             *write_source_metrics_size = total_source_metrics_size;
         }
-
+        debug!("Save Metric\n{:?}", source_metric_data);
         Ok(())
     }
 

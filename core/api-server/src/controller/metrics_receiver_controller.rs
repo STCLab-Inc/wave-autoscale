@@ -156,12 +156,6 @@ async fn post_metrics_receiver(
         error!("Failed to save metric into the data-layer: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
-    debug!(
-        "Saved metric into the data-layer: collector - {:?}, metric_id - {:?}, json_value - {:?}",
-        collector.as_str(),
-        metric_id.as_str(),
-        json_value.as_str()
-    );
     HttpResponse::Ok().finish()
 }
 

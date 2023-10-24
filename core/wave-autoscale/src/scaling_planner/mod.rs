@@ -573,7 +573,6 @@ mod tests {
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 60));
         let ulid_before_200m =
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 200));
-        let create_dt = chrono::Local::now();
         let collector = "vector";
         let mut metric_values: LinkedList<SourceMetrics> = LinkedList::new();
         let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
@@ -583,7 +582,6 @@ mod tests {
             collector: collector.to_string(),
             metric_id: "metric1".to_string(),
             json_value: json_value.to_string(),
-            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
         });
         let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string();
@@ -592,7 +590,6 @@ mod tests {
             collector: collector.to_string(),
             metric_id: "metric1".to_string(),
             json_value: json_value2.to_string(),
-            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
         });
         let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string();
@@ -601,7 +598,6 @@ mod tests {
             collector: collector.to_string(),
             metric_id: "metric1".to_string(),
             json_value: json_value3.to_string(),
-            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
         });
         let json_value4 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string();
@@ -610,7 +606,6 @@ mod tests {
             collector: collector.to_string(),
             metric_id: "metric2".to_string(),
             json_value: json_value4.to_string(),
-            create_dt: create_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
         });
 
         let metric_ids_values = metric_values;

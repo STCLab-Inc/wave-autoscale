@@ -7,5 +7,4 @@ pub struct SourceMetrics {
     pub collector: String,
     pub metric_id: String,
     pub json_value: String,
-    pub create_dt: String,
 }
