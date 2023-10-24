@@ -740,7 +740,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -848,7 +848,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -890,7 +890,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
