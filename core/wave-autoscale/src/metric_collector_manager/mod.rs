@@ -35,11 +35,16 @@ impl MetricCollectorManager {
         // Reqwest setup
         let client = reqwest::Client::new();
 
-        let res = client
-            .get(url)
-            .send()
-            .await
-            .or(Err(format!("Failed to GET from '{}'", &url)))?;
+        let res = client.get(url).send().await;
+
+        if res.is_err() {
+            return Err(format!(
+                "Failed to GET from '{}', {:?}",
+                &url,
+                res.err().unwrap()
+            ));
+        }
+        let res = res.unwrap();
 
         // get total size
         let total_size = res
