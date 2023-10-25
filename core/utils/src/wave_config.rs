@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(wave_config.db_url, DEFAULT_DB_URL);
         assert_eq!(
             wave_config.watch_definition_duration,
-            DEFAULT_WATCH_DEFINITION_DURATION + 1
+            DEFAULT_WATCH_DEFINITION_DURATION
         );
         assert_eq!(
             wave_config.autoscaling_history_retention,
