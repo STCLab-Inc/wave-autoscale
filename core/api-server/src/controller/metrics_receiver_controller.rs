@@ -6,7 +6,7 @@ use actix_web::{
 };
 use serde::Deserialize;
 use serde_json::json;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(post_metrics_receiver);
@@ -157,6 +157,12 @@ async fn post_metrics_receiver(
         collector.as_str(),
         metric_id.as_str(),
         json_value.as_str()
+    );
+    info!(
+        "[api-server] Saved metric into the data-layer: {:?}, {:?}, size: {:?}",
+        collector.as_str(),
+        metric_id.as_str(),
+        json_value.len()
     );
     HttpResponse::Ok().finish()
 }

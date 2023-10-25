@@ -18,7 +18,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::sync::watch;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use ulid::Ulid;
 use uuid::Uuid;
 
@@ -47,7 +47,9 @@ impl DataLayer {
         self.migrate().await;
 
         // TODO: Validate the definition file before loading it into the database
-        if !definition_path.is_empty() && Path::new(definition_path).exists() {
+        let is_empty = definition_path.is_empty();
+        let exists = Path::new(definition_path).exists();
+        if !is_empty && exists {
             let result = self
                 .load_definition_file_into_database(definition_path)
                 .await;
@@ -56,7 +58,18 @@ impl DataLayer {
                     "Failed to load the definition file into the database: {:?}",
                     result
                 );
+            } else {
+                info!(
+                    "[data-layer] The definition file is loaded into the database: {}",
+                    definition_path
+                );
             }
+        } else if !is_empty && !exists {
+            error!("The definition file does not exist: {}", definition_path);
+        } else {
+            info!(
+                "[data-layer] The definition path is empty, skip loading the definition file into the database"
+            );
         }
     }
 

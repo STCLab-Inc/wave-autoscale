@@ -52,7 +52,7 @@ pub async fn run_api_server(
         )
     }
     let http_server = http_server.unwrap();
-    info!("API Server is running on {}:{}", host, port);
+    info!("[api-server] running on {}:{}", host, port);
     let _ = http_server.run().await;
 
     Ok(())

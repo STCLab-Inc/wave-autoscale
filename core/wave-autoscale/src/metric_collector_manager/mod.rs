@@ -131,13 +131,19 @@ impl MetricCollectorManager {
             let download_path = format!("{}/{}", temp, download_filename);
 
             // Download the file
-            info!("Downloading {} from {}", download_path, download_url);
+            info!(
+                "[metric-collector-manager] Downloading {} from {}",
+                download_path, download_url
+            );
             let result = Self::download_file(download_url, &download_path).await;
             if result.is_err() {
                 error!("Error downloading file: {}", result.err().unwrap());
                 continue;
             }
-            info!("Completed downloading {}", download_path);
+            info!(
+                "[metric-collector-manager] Completed downloading {}",
+                download_path
+            );
 
             // Decompress the file
             // Example: ./temp/vector_linux_x86_64
@@ -151,7 +157,7 @@ impl MetricCollectorManager {
                 continue;
             }
             info!(
-                "Decompressed {} to {}",
+                "[metric-collector-manager] Decompressed {} to {}",
                 download_path, collector_binary_path
             );
 
@@ -303,11 +309,14 @@ impl MetricCollectorManager {
     }
 
     pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
+        info!(
+            "[metric-collector-manager] {} metric definitions",
+            metric_definitions.len()
+        );
         if metric_definitions.is_empty() {
-            info!("No metric definitions");
+            debug!("No metric definitions");
             return;
         }
-        info!("{} metric definitions", metric_definitions.len());
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
