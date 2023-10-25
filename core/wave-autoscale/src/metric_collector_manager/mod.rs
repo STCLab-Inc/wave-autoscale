@@ -131,13 +131,19 @@ impl MetricCollectorManager {
             let download_path = format!("{}/{}", temp, download_filename);
 
             // Download the file
-            info!("Downloading {} from {}", download_path, download_url);
+            info!(
+                "[metric-collector-manager] Downloading {} from {}",
+                download_path, download_url
+            );
             let result = Self::download_file(download_url, &download_path).await;
             if result.is_err() {
                 error!("Error downloading file: {}", result.err().unwrap());
                 continue;
             }
-            info!("Completed downloading {}", download_path);
+            info!(
+                "[metric-collector-manager] Completed downloading {}",
+                download_path
+            );
 
             // Decompress the file
             // Example: ./temp/vector_linux_x86_64
@@ -151,7 +157,7 @@ impl MetricCollectorManager {
                 continue;
             }
             info!(
-                "Decompressed {} to {}",
+                "[metric-collector-manager] Decompressed {} to {}",
                 download_path, collector_binary_path
             );
 
@@ -191,7 +197,7 @@ impl MetricCollectorManager {
         &self,
         metric_definitions: &Vec<&MetricDefinition>,
         config_path: &str,
-    ) {
+    ) -> anyhow::Result<()> {
         /*
          * Example:
          *
@@ -218,15 +224,27 @@ impl MetricCollectorManager {
         let root_toml =
             convert_metric_definitions_to_vector_toml(metric_definitions, self.output_url.clone());
 
+        if root_toml.is_empty() {
+            error!("Failed to convert metric definitions to toml");
+            return Err(anyhow::anyhow!(
+                "Failed to convert metric definitions to toml"
+            ));
+        }
         // Write the string to a file
-        std::fs::write(config_path, root_toml).unwrap();
+        let result = std::fs::write(config_path, root_toml);
+        if result.is_err() {
+            let error = result.err().unwrap();
+            error!("Failed to write to file: {}", error);
+            return Err(anyhow::anyhow!("Failed to write to file: {}", error));
+        }
+        Ok(())
     }
 
     fn save_metric_definitions_to_telegraf_config(
         &self,
         metric_definitions: &Vec<&MetricDefinition>,
         config_path: &str,
-    ) {
+    ) -> anyhow::Result<()> {
         /*
          * Example:
          *
@@ -274,11 +292,31 @@ impl MetricCollectorManager {
             self.output_url.clone(),
         );
 
+        if root_toml.is_empty() {
+            error!("Failed to convert metric definitions to toml");
+            return Err(anyhow::anyhow!(
+                "Failed to convert metric definitions to toml"
+            ));
+        }
         // Write the string to a file
-        std::fs::write(config_path, root_toml).unwrap();
+        let result = std::fs::write(config_path, root_toml);
+        if result.is_err() {
+            let error = result.err().unwrap();
+            error!("Failed to write to file: {}", error);
+            return Err(anyhow::anyhow!("Failed to write to file: {}", error));
+        }
+        Ok(())
     }
 
     pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
+        info!(
+            "[metric-collector-manager] {} metric definitions",
+            metric_definitions.len()
+        );
+        if metric_definitions.is_empty() {
+            debug!("No metric definitions");
+            return;
+        }
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
@@ -297,19 +335,22 @@ impl MetricCollectorManager {
             let os_arch = self.get_os_arch();
             let vector_dir_path = format!("./vector_{}", os_arch);
             let vector_config_path = format!("{}/vector.toml", vector_dir_path);
-            self.save_metric_definitions_to_vector_config(
+            let save_result = self.save_metric_definitions_to_vector_config(
                 &vector_metric_definitions,
                 vector_config_path.as_str(),
             );
 
-            let vector_app_info = AppInfo {
-                name: "vector".to_string(),
-                command: format!("{}/vector", vector_dir_path),
-                args: Some(vec!["--config-toml".to_string(), vector_config_path]),
-                envs: None,
-                output: self.collector_log,
-            };
-            collector_processes.push(vector_app_info);
+            if save_result.is_ok() {
+                // Run the collector binaries
+                let vector_app_info = AppInfo {
+                    name: "vector".to_string(),
+                    command: format!("{}/vector", vector_dir_path),
+                    args: Some(vec!["--config-toml".to_string(), vector_config_path]),
+                    envs: None,
+                    output: self.collector_log,
+                };
+                collector_processes.push(vector_app_info);
+            }
         }
 
         // Find the metric definitions that use Telegraf collector
@@ -324,20 +365,22 @@ impl MetricCollectorManager {
             let os_arch = self.get_os_arch();
             let telegraf_dir_path = format!("./telegraf_{}", os_arch);
             let telegraf_config_path = format!("{}/telegraf.conf", telegraf_dir_path);
-            self.save_metric_definitions_to_telegraf_config(
+            let save_result = self.save_metric_definitions_to_telegraf_config(
                 &telegraf_metric_definitions,
                 telegraf_config_path.as_str(),
             );
 
-            // Run the collector binaries
-            let telegraf_app_info = AppInfo {
-                name: "telegraf".to_string(),
-                command: format!("{}/telegraf", telegraf_dir_path),
-                args: Some(vec!["--config".to_string(), telegraf_config_path]),
-                envs: None,
-                output: self.collector_log,
-            };
-            collector_processes.push(telegraf_app_info);
+            if save_result.is_ok() {
+                // Run the collector binaries
+                let telegraf_app_info = AppInfo {
+                    name: "telegraf".to_string(),
+                    command: format!("{}/telegraf", telegraf_dir_path),
+                    args: Some(vec!["--config".to_string(), telegraf_config_path]),
+                    envs: None,
+                    output: self.collector_log,
+                };
+                collector_processes.push(telegraf_app_info);
+            }
         }
         if !collector_processes.is_empty() {
             tokio::spawn(async move {
