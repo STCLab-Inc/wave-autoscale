@@ -2,8 +2,12 @@ name: Publish Docker Image
 on:
   workflow_dispatch:
     inputs:
+      env:
+        description: 'Environment Mode'
+        required: true
+        default: 'development'
       version:
-        description: 'Version to publish'
+        description: 'Version to Publish'
         required: true
         default: 'latest'
         
@@ -14,7 +18,7 @@ jobs:
   build-amd64:
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
-    environment: production
+    environment: ${{ inputs.env }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -43,7 +47,7 @@ jobs:
   build-arm64:
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
-    environment: production
+    environment: ${{ inputs.env }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
