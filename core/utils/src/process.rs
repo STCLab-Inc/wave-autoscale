@@ -5,6 +5,8 @@ use std::{
 };
 use tracing::debug;
 
+const WATCH_DURATION: u64 = 10;
+
 pub struct AppInfo {
     pub name: String,
     pub command: String,
@@ -63,6 +65,6 @@ pub fn run_processes(app_info_list: &Vec<AppInfo>) {
         for name in to_remove {
             running_apps.remove(&name);
         }
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(WATCH_DURATION));
     }
 }
