@@ -38,11 +38,11 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64
-          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64
-          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
-            org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
+            org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
   build-arm64:
     runs-on: wave-autoscale-build-arm64
@@ -67,16 +67,16 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64
-          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
-            org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
+            org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
   manifest:
     needs: [build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
-    environment: production
+    environment: ${{ inputs.env }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
