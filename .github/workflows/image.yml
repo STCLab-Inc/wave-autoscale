@@ -88,4 +88,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create and push Docker manifest
-        run: docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
+        run: >
+        docker buildx imagetools create 
+        -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} 
+        ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 
+        ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
