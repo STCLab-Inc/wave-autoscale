@@ -1081,7 +1081,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_source_metrics_in_data_layer() {
         const DB_URL: &str = "sqlite://tests/temp/test.db";
-        const METRIC_BUFFER_SIZE_KB: u64 = 1_000;
+        const METRIC_BUFFER_SIZE_KB: u64 = 1;
         let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
         let collector = "vector";
         let metric_id = "metric_1";
@@ -1114,8 +1114,7 @@ mod tests {
         let measure_metric_id_size = metric_id.get_heap_size() * 2;
         let measure_ulid_size = Ulid::new().to_string().get_heap_size() * 2;
         let measure_size = measure_json_value_size + measure_metric_id_size + measure_ulid_size;
-
-        assert!(total_source_metric_size < METRIC_BUFFER_SIZE_KB as usize); // source_metrics of size is less than METRIC_BUFFER_SIZE_KB
+        assert!(total_source_metric_size < (METRIC_BUFFER_SIZE_KB * 1000) as usize); // source_metrics of size is less than METRIC_BUFFER_SIZE_KB
         assert!(total_source_metric_size % measure_size == 0); // source_metrics of size is multiple of measure_size
     }
 
@@ -1174,14 +1173,14 @@ mod tests {
     #[tokio::test]
     async fn test_add_source_metrics_in_data_layer_check_save_data() {
         const DB_URL: &str = "sqlite://tests/temp/test.db";
-        const METRIC_BUFFER_SIZE_KB: u64 = 600;
+        const METRIC_BUFFER_SIZE_KB: u64 = 1;
         let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
         let ulid_size = Ulid::new().to_string().get_heap_size();
 
         // sample data 1
         let sample_1_metric_id = "sample_1".to_string();
         let sample_1_json_value =
-            json!([{"name": "test", "tags": {"tag1": "value"}, "value": 1.0}]).to_string();
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value"}, "value": 1.0}]).to_string();
         let sample_1_total_size = add_source_metrics_in_data_layer_save_test_data(
             &data_layer,
             sample_1_metric_id,
@@ -1193,7 +1192,7 @@ mod tests {
         // sample data 2
         let sample_2_metric_id = "sample_2".to_string();
         let sample_2_json_value =
-            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value","tag7": "value","tag8": "value","tag9": "value","tag10": "value"}, "value": 1.0}]).to_string();
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value","tag7": "value","tag8": "value","tag9": "value","tag10": "value","tag11": "value","tag12": "value","tag13": "value","tag14": "value","tag15": "value","tag16": "value","tag17": "value","tag18": "value","tag19": "value","tag20": "value","tag21": "value"}, "value": 1.0}]).to_string();
         let sample_2_total_size = add_source_metrics_in_data_layer_save_test_data(
             &data_layer,
             sample_2_metric_id,
@@ -1205,7 +1204,7 @@ mod tests {
         // sample data 3
         let sample_3_metric_id = "sample_1".to_string();
         let sample_3_json_value =
-            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value"}, "value": 1.0}]).to_string();
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value","tag7": "value","tag8": "value","tag9": "value","tag10": "value"}, "value": 1.0}]).to_string();
         let sample_3_total_size = add_source_metrics_in_data_layer_save_test_data(
             &data_layer,
             sample_3_metric_id,
@@ -1236,7 +1235,7 @@ mod tests {
         // sample data 4
         let sample_4_metric_id = "sample_4".to_string();
         let sample_4_json_value =
-            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value"}, "value": 1.0}]).to_string();
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value","tag7": "value","tag8": "value","tag9": "value","tag10": "value","tag11": "value","tag12": "value","tag13": "value","tag14": "value","tag15": "value"}, "value": 1.0}]).to_string();
         let sample_4_total_size = add_source_metrics_in_data_layer_save_test_data(
             &data_layer,
             sample_4_metric_id,

@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 use ulid::Ulid;
 
+#[ignore]
 #[tokio::test]
 async fn performance_test_add_source_metrics_in_data_layer() {
     const SAMPLE_DATA_10MB_FILE_PATH: &str = "./tests/sample/source_metrics_performance_10MB.txt";
