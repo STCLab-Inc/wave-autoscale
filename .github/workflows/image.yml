@@ -1,16 +1,19 @@
 name: Publish Docker Image
 on:
+  push:
+    branches:
+      - "main"
   workflow_dispatch:
     inputs:
       env:
-        description: 'Environment Mode'
+        description: "Environment Mode"
         required: true
-        default: 'development'
+        default: "development"
       version:
-        description: 'Version to Publish'
+        description: "Version to Publish"
         required: true
-        default: 'latest'
-        
+        default: "latest"
+
 env:
   CARGO_TERM_COLOR: always
 
