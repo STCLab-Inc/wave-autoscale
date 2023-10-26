@@ -9,11 +9,17 @@ metadata:
     app.kubernetes.io/part-of: wave-autoscale
 data:
   wave-config.yaml: |
+    # Data Layer
     db_url: {{ .Values.config.db_url }}
-    host: {{ .Values.config.host }}
-    port: {{ .Values.config.port }}
     watch_definition_duration: {{ .Values.config.watch_definition_duration }}
     autoscaling_history_retention: {{ .Values.config.autoscaling_history_retention }}
+    reset_definitions_on_startup: {{ .Values.config.reset_definitions_on_startup }}
+
+    # API Server
+    host: {{ .Values.config.host }}
+    port: {{ .Values.config.port }}
+    
+    # Web Console
     web_ui: {{ .Values.config.web_ui }}
     web_ui_host: {{ .Values.config.web_ui_host }}
     web_ui_port: {{ .Values.config.web_ui_port }}
@@ -44,4 +50,19 @@ metadata:
 data:
   definitions.yaml: |
     # Your definitions.yaml content here.
-    # See https://docs.waveautoscale.com/definitions/ for more information.
+    # See https://waveautoscale.com/docs/guide/getting-started/ for more information.
+    # https://vector.dev/docs/reference/configuration/sources/host_metrics/
+    ---
+    kind: Metric
+    id: vector_host_metrics
+    collector: vector
+    metadata:
+      sources:
+        my_source_id_1:
+          type: host_metrics
+          namespace: host
+          scrape_interval_secs: 5
+      sinks:
+        my_sinks_id:
+          type: wave-autoscale
+          inputs: ["my_source_id_1"]

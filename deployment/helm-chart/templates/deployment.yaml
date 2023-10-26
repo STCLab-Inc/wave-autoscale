@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/component: core
     app.kubernetes.io/part-of: wave-autoscale
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -23,6 +25,7 @@ spec:
       containers:
         - name: wave-autoscale
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: Always
           command: ["./wave-autoscale"]
           args:
             [

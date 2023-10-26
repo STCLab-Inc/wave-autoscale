@@ -2,21 +2,23 @@ image:
   repository: waveautoscale/wave-autoscale
   tag: latest
   pullPolicy: Always
+
 config:
   db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
   host: localhost
   port: 3024
   watch_definition_duration: 5000
   autoscaling_history_retention: "1d"
+  reset_definitions_on_startup: true
   web_ui: false
   web_ui_host: 0.0.0.0
   web_ui_port: 3025
   vector:
-      macos_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
-      macos_aarch64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
-      linux_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-unknown-linux-gnu.tar.gz
-      linux_aarch64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-aarch64-unknown-linux-gnu.tar.gz
-      windows_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-pc-windows-msvc.zip
+    macos_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
+    macos_aarch64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
+    linux_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-unknown-linux-gnu.tar.gz
+    linux_aarch64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-aarch64-unknown-linux-gnu.tar.gz
+    windows_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-pc-windows-msvc.zip
   telegraf:
     macos_x86_64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_darwin_amd64.tar.gz
     macos_aarch64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_darwin_arm64.tar.gz

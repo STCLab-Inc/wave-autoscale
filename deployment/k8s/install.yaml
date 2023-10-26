@@ -6,16 +6,22 @@ metadata:
   name: wave-config
   labels:
     app.kubernetes.io/name: wave-autoscale-config
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: config
     app.kubernetes.io/part-of: wave-autoscale
 data:
   wave-config.yaml: |
+    # Data Layer
     db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
-    host: localhost
-    port: 3024
     watch_definition_duration: 5000
     autoscaling_history_retention: 1d
+    reset_definitions_on_startup: true
+
+    # API Server
+    host: localhost
+    port: 3024
+    
+    # Web Console
     web_ui: false
     web_ui_host: 0.0.0.0
     web_ui_port: 3025
@@ -40,13 +46,28 @@ metadata:
   name: wave-definitions
   labels:
     app.kubernetes.io/name: wave-autoscale-definitions
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: definitions
     app.kubernetes.io/part-of: wave-autoscale
 data:
   definitions.yaml: |
     # Your definitions.yaml content here.
-    # See https://docs.waveautoscale.com/definitions/ for more information.
+    # See https://waveautoscale.com/docs/guide/getting-started/ for more information.
+    # https://vector.dev/docs/reference/configuration/sources/host_metrics/
+    ---
+    kind: Metric
+    id: vector_host_metrics
+    collector: vector
+    metadata:
+      sources:
+        my_source_id_1:
+          type: host_metrics
+          namespace: host
+          scrape_interval_secs: 5
+      sinks:
+        my_sinks_id:
+          type: wave-autoscale
+          inputs: ["my_source_id_1"]
 ---
 # Source: wave-autoscale/templates/deployment-postgres.yaml
 apiVersion: v1
@@ -55,7 +76,7 @@ metadata:
   name: wa-pvc
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres-pvc
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: data
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -72,7 +93,7 @@ metadata:
   name: wave-autoscale-postgres-service
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres-service
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: service
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -90,7 +111,7 @@ metadata:
   name: wave-autoscale-lb-service
   labels:
     app.kubernetes.io/name: wave-autoscale-lb-service
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: service
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -108,7 +129,7 @@ metadata:
   name: wave-autoscale-postgres
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: database
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -149,10 +170,12 @@ metadata:
   name: wave-autoscale
   labels:
     app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: 0.0.13
+    app.kubernetes.io/version: 0.0.15
     app.kubernetes.io/component: core
     app.kubernetes.io/part-of: wave-autoscale
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -161,13 +184,14 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: wave-autoscale
-        app.kubernetes.io/version: 0.0.13
+        app.kubernetes.io/version: 0.0.15
         app.kubernetes.io/component: core
         app.kubernetes.io/part-of: wave-autoscale
     spec:
       containers:
         - name: wave-autoscale
           image: waveautoscale/wave-autoscale:latest
+          imagePullPolicy: Always
           command: ["./wave-autoscale"]
           args:
             [

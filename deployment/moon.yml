@@ -1,11 +1,11 @@
 language: "bash"
 
 tasks:
-  deploy-docker-compose:
+  build-docker-compose:
     command: "cp core/wave-autoscale/tests/config/wave-config.yaml deployment/docker-compose/wave-config.yaml"
     options:
       runFromWorkspaceRoot: true
-  deploy-k8s:
+  build-k8s:
     command: "helm template helm-chart > k8s/install.yaml"
     inputs:
       - "helm-chart/**/*"
