@@ -15,7 +15,8 @@ use data_layer::{
 };
 use rquickjs::async_with;
 use serde_json::{json, Value};
-use std::collections::LinkedList;
+use std::collections::BTreeMap;
+use std::ops::Bound::Included;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
@@ -346,34 +347,23 @@ fn context_global_get_func(
     tags: HashMap<String, String>,
     stats: String,
     period_sec: u64,
-    metric_ids_values: LinkedList<SourceMetrics>,
+    metric_ids_values: HashMap<String, BTreeMap<String, SourceMetrics>>,
 ) -> Result<f64, rquickjs::Error> {
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
 
     let mut target_value_arr: Vec<f64> = Vec::new();
-    metric_ids_values
-        .iter()
-        .for_each(|value| {
-            let Ok(value) = serde_json::to_value(value.clone()) else {
+    // find metric_id
+    let Some(metric_values) = metric_ids_values.get(&metric_id) else {
+        return Err(rquickjs::Error::Exception)
+    };
+    metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
+        .for_each(|(_ulid, source_metrics_value)| {
+            let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
                 error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
                 return;
             };
-
-            // metric_id in the metric data should match the metric_id in the definition.
-            if value.get("metric_id").and_then(Value::as_str) != Some(metric_id.as_str()) {
-                return;
-            }
-            let Some(map_id) = value
-                .get("id")
-                .and_then(Value::as_str) else {
-                    return;
-                };
-            // id in the metric data should be equal to or greater than the time defined before a period of period_sec.
-            if map_id.to_string().lt(&ulid.to_string()) {
-                return;
-            }
             // find name or tags
             let Some(json_value_str) = value.get("json_value") else {return;};
             let Some(json_value_str) = json_value_str.as_str() else {return;};
@@ -571,42 +561,48 @@ mod tests {
         };
         let ulid_before_1m =
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 60));
+        let ulid_before_90s =
+            Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 90));
         let ulid_before_200m =
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 200));
-        let collector = "vector";
-        let mut metric_values: LinkedList<SourceMetrics> = LinkedList::new();
+        let mut metric_values: HashMap<String, BTreeMap<String, SourceMetrics>> = HashMap::new();
+        let mut metric1_values_btreemap: BTreeMap<String, SourceMetrics> = BTreeMap::new();
+        let mut metric2_values_btreemap: BTreeMap<String, SourceMetrics> = BTreeMap::new();
         let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string();
-        metric_values.push_front(SourceMetrics {
-            id: ulid_before_1m.to_string(),
-            collector: collector.to_string(),
-            metric_id: "metric1".to_string(),
-            json_value: json_value.to_string(),
-        });
+        metric1_values_btreemap.insert(
+            ulid_before_1m.to_string(),
+            SourceMetrics {
+                json_value: json_value.to_string(),
+            },
+        );
         let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string();
-        metric_values.push_front(SourceMetrics {
-            id: ulid_before_1m.to_string(),
-            collector: collector.to_string(),
-            metric_id: "metric1".to_string(),
-            json_value: json_value2.to_string(),
-        });
+        metric1_values_btreemap.insert(
+            ulid_before_90s.to_string(),
+            SourceMetrics {
+                json_value: json_value2.to_string(),
+            },
+        );
         let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string();
-        metric_values.push_front(SourceMetrics {
-            id: ulid_before_200m.to_string(),
-            collector: collector.to_string(),
-            metric_id: "metric1".to_string(),
-            json_value: json_value3.to_string(),
-        });
+        metric1_values_btreemap.insert(
+            ulid_before_200m.to_string(),
+            SourceMetrics {
+                json_value: json_value3.to_string(),
+            },
+        );
         let json_value4 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string();
-        metric_values.push_front(SourceMetrics {
-            id: ulid_before_1m.to_string(),
-            collector: collector.to_string(),
-            metric_id: "metric2".to_string(),
-            json_value: json_value4.to_string(),
-        });
+        metric2_values_btreemap.insert(
+            ulid_before_1m.to_string(),
+            SourceMetrics {
+                json_value: json_value4.to_string(),
+            },
+        );
+
+        metric_values.insert("metric1".to_string(), metric1_values_btreemap);
+        metric_values.insert("metric2".to_string(), metric2_values_btreemap);
 
         let metric_ids_values = metric_values;
 

@@ -1,8 +1,9 @@
 use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
-        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
-        source_metrics::SourceMetrics,
+        autoscaling_history_definition::AutoscalingHistoryDefinition,
+        object_kind::ObjectKind,
+        source_metrics::{self, SourceMetrics},
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -14,7 +15,7 @@ use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
     AnyPool, Row,
 };
-use std::collections::LinkedList;
+use std::collections::{BTreeMap, LinkedList};
 use std::sync::Arc;
 use std::{
     collections::HashMap,
@@ -39,7 +40,8 @@ pub struct DataLayer {
 #[derive(Debug)]
 pub struct SourceMetricsData {
     metric_buffer_size_kb: u64,
-    source_metrics: Arc<RwLock<LinkedList<SourceMetrics>>>,
+    source_metrics: Arc<RwLock<HashMap<String, BTreeMap<String, SourceMetrics>>>>,
+    source_metrics_metadata: Arc<RwLock<LinkedList<(String, String, usize)>>>,
     source_metrics_size: Arc<RwLock<usize>>,
 }
 
@@ -56,13 +58,16 @@ impl DataLayer {
             metric_buffer_size_kb
         };
 
-        let source_metrics = Arc::new(RwLock::new(LinkedList::<SourceMetrics>::new()));
+        let source_metrics = Arc::new(RwLock::new(HashMap::new()));
+        let source_metrics_metadata = Arc::new(RwLock::new(LinkedList::new()));
         let source_metrics_size = Arc::new(RwLock::new(0));
+
         DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
             source_metrics_data: SourceMetricsData {
                 metric_buffer_size_kb,
                 source_metrics,
+                source_metrics_metadata,
                 source_metrics_size,
             },
         }
@@ -710,70 +715,111 @@ impl DataLayer {
     // Source Metrics
     pub async fn add_source_metrics_in_data_layer(
         &self,
-        collector: &str,
+        _collector: &str,
         metric_id: &str,
         json_value: &str,
     ) -> Result<()> {
-        let source_metrics = self.source_metrics_data.source_metrics.clone();
-        let source_metrics_size = self.source_metrics_data.source_metrics_size.clone();
+        let mut source_metrics = self.source_metrics_data.source_metrics.write().await;
+        let mut source_metrics_metadata = self
+            .source_metrics_data
+            .source_metrics_metadata
+            .write()
+            .await;
+        let mut source_metrics_size = self.source_metrics_data.source_metrics_size.write().await;
         let metric_buffer_size_kb = self.source_metrics_data.metric_buffer_size_kb;
+        /* [ Data structure ]
+         * source metrics - HashMap<key: metric_id, value: BTreeMap<key: ULID, value: SourceMetrics>>
+         * source metrics metadata - LinkedList<(metric_id, ULID, data size(source metrics + source metrics metadata)> - list order by ULID ASC */
 
-        let source_metric_data = SourceMetrics {
-            id: Ulid::new().to_string(),
-            collector: collector.to_string(),
-            metric_id: metric_id.to_string(),
+        let now_ulid = Ulid::new().to_string();
+        let source_metric_insert_data = SourceMetrics {
             json_value: json_value.to_string(),
         };
-        let source_metric_data_size = source_metric_data.clone().get_heap_size();
-        // memory check and remove (front is latest data)
-        let mut total_source_metrics_size =
-            *source_metrics_size.read().await + source_metric_data_size;
-        loop {
-            let mut read_source_metrics_length = 0;
-            let mut remove_target_source_metric_size = 0;
-            {
-                // get oldest data and size
-                let read_source_metrics = source_metrics.read().await;
-                read_source_metrics_length = read_source_metrics.len();
-                remove_target_source_metric_size = match read_source_metrics.back() {
-                    Some(remove_target_srouce_metric) => {
-                        remove_target_srouce_metric.get_heap_size()
-                    }
-                    None => 0,
-                };
-            }
+        // source_metric_insert_data_size = source metrics + source metrics metadata
+        let source_metric_insert_data_size = source_metric_insert_data.get_heap_size()
+            + (metric_id.to_string().get_heap_size() * 2)
+            + (now_ulid.get_heap_size() * 2);
 
-            // check total size
-            if total_source_metrics_size > metric_buffer_size_kb as usize {
-                // remove oldest data
-                if read_source_metrics_length > 0 {
-                    let mut write_source_metrics = source_metrics.write().await;
-                    write_source_metrics.pop_back();
-                    total_source_metrics_size -= remove_target_source_metric_size;
-                }
+        let mut total_source_metrics_size = *source_metrics_size + source_metric_insert_data_size;
+
+        // get remove target data
+        let mut remove_target_data: Vec<(String, String, usize)> = Vec::new();
+        let mut subtract_total_size = total_source_metrics_size;
+        loop {
+            // check size :: buffersize - total size < 0 (None) => remove target data
+            if metric_buffer_size_kb
+                .checked_sub(subtract_total_size as u64)
+                .is_none()
+            {
+                let Some(front_source_metrics_metadata) = source_metrics_metadata.pop_front() else {
+                        break;
+                    };
+                subtract_total_size -= front_source_metrics_metadata.2;
+                remove_target_data.append(&mut vec![front_source_metrics_metadata]);
                 continue;
             }
             break;
         }
 
-        // add metric data and update size
-        {
-            let mut write_source_metrics = source_metrics.write().await;
-            write_source_metrics.push_front(source_metric_data.clone());
-            *write_source_metrics = write_source_metrics.clone();
+        // remove target data
+        remove_target_data
+            .iter()
+            .for_each(|(metric_id, ulid, size)| {
+                let Some(metric_id_data) = source_metrics.get_mut(metric_id) else {
+                    return;
+                };
+                metric_id_data.remove(ulid);
+                if metric_id_data.is_empty() {
+                    source_metrics.remove(metric_id);
+                }
+                total_source_metrics_size -= size;
+            });
+
+        // add metric data
+        match source_metrics.get_mut(metric_id) {
+            Some(source_metrics_map) => {
+                source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data.clone());
+            }
+            None => {
+                let mut metric_id_map = BTreeMap::new();
+                metric_id_map.insert(now_ulid.clone(), source_metric_insert_data.clone());
+                source_metrics.insert(metric_id.to_string(), metric_id_map);
+            }
         }
-        {
-            let mut write_source_metrics_size = source_metrics_size.write().await;
-            *write_source_metrics_size = total_source_metrics_size;
-        }
-        debug!("Save Metric\n{:?}", source_metric_data);
+        source_metrics_metadata.push_back((
+            metric_id.to_string(),
+            now_ulid,
+            source_metric_insert_data_size,
+        ));
+
+        debug!(
+            "[source metrics] add item size: {} / total size: {}",
+            source_metric_insert_data_size, total_source_metrics_size
+        );
+
+        // update source_metric_size
+        *source_metrics_size = total_source_metrics_size;
+
+        debug!("Save Metric\n{:?}", source_metric_insert_data);
         Ok(())
     }
 
-    pub async fn get_source_metrics_in_data_layer(&self) -> Result<LinkedList<SourceMetrics>> {
-        let source_metrics = self.source_metrics_data.source_metrics.clone();
-        let source_metrics = source_metrics.read().await;
+    pub async fn get_source_metrics_in_data_layer(
+        &self,
+    ) -> Result<HashMap<String, BTreeMap<String, SourceMetrics>>> {
+        let source_metrics = self.source_metrics_data.source_metrics.read().await;
         Ok(source_metrics.clone())
+    }
+
+    pub async fn get_source_metrics_metadata_in_data_layer(
+        &self,
+    ) -> Result<LinkedList<(String, String, usize)>> {
+        let source_metrics_metadata = self
+            .source_metrics_data
+            .source_metrics_metadata
+            .read()
+            .await;
+        Ok(source_metrics_metadata.clone())
     }
 
     // Add a SourceMetric to the database
@@ -1032,13 +1078,167 @@ mod tests {
             let _ = data_layer
                 .add_source_metrics_in_data_layer(collector, metric_id, json_value)
                 .await;
-            let metric_1 = data_layer.get_source_metrics_in_data_layer().await.unwrap();
-            let mut total_source_metric_size = 0;
-            metric_1.iter().for_each(|source_metric| {
-                let source_metric_size = source_metric.get_heap_size();
-                total_source_metric_size += source_metric_size;
-            });
-            assert!(total_source_metric_size < METRIC_BUFFER_SIZE_KB as usize);
         }
+        let metric_data = data_layer.get_source_metrics_in_data_layer().await.unwrap();
+        let mut total_source_metric_size = 0;
+        metric_data.iter().for_each(|source_metric| {
+            source_metric.1.iter().for_each(|(ulid, source_metrics)| {
+                total_source_metric_size += source_metrics.get_heap_size()
+                    + (metric_id.get_heap_size() * 2)
+                    + (ulid.get_heap_size() * 2);
+            });
+        });
+
+        let measure_json_value_size = SourceMetrics {
+            json_value: json_value.to_string(),
+        }
+        .get_heap_size();
+        let measure_metric_id_size = metric_id.get_heap_size() * 2;
+        let measure_ulid_size = Ulid::new().to_string().get_heap_size() * 2;
+        let measure_size = measure_json_value_size + measure_metric_id_size + measure_ulid_size;
+
+        assert!(total_source_metric_size < METRIC_BUFFER_SIZE_KB as usize); // source_metrics of size is less than METRIC_BUFFER_SIZE_KB
+        assert!(total_source_metric_size % measure_size == 0); // source_metrics of size is multiple of measure_size
+    }
+
+    async fn add_source_metrics_in_data_layer_save_test_data(
+        data_layer: &DataLayer,
+        metric_id: String,
+        json_value: String,
+        ulid_size: usize,
+    ) -> usize {
+        // sample data 1
+        let metric_id_size = metric_id.get_heap_size();
+        let json_value_data = SourceMetrics {
+            json_value: json_value.to_string(),
+        };
+        let sample_data_total_size =
+            json_value_data.get_heap_size() + (metric_id_size * 2) + (ulid_size * 2);
+
+        // save sample data 1
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", &metric_id, &json_value)
+            .await;
+        sample_data_total_size
+    }
+
+    async fn get_add_source_metrics_in_data_layer_size(data_layer: &DataLayer) -> usize {
+        let mut total_source_metrics_size = 0;
+        for (metric_id, btree_map) in data_layer
+            .get_source_metrics_in_data_layer()
+            .await
+            .unwrap()
+            .iter()
+        {
+            for (ulid, source_metrics) in btree_map.iter() {
+                let source_metrics_size = source_metrics.get_heap_size()
+                    + (metric_id.get_heap_size() * 2)
+                    + (ulid.get_heap_size() * 2);
+                total_source_metrics_size += source_metrics_size;
+            }
+        }
+        total_source_metrics_size
+    }
+
+    async fn get_add_source_metrics_metadata_in_data_layer_size(data_layer: &DataLayer) -> usize {
+        let mut total_source_metrics_metadata_size = 0;
+        data_layer
+            .get_source_metrics_metadata_in_data_layer()
+            .await
+            .unwrap()
+            .iter()
+            .for_each(|(_metric_id, _ulid, size)| {
+                total_source_metrics_metadata_size += size;
+            });
+        total_source_metrics_metadata_size
+    }
+
+    #[tokio::test]
+    async fn test_add_source_metrics_in_data_layer_check_save_data() {
+        const DB_URL: &str = "sqlite://tests/temp/test.db";
+        const METRIC_BUFFER_SIZE_KB: u64 = 600;
+        let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
+        let ulid_size = Ulid::new().to_string().get_heap_size();
+
+        // sample data 1
+        let sample_1_metric_id = "sample_1".to_string();
+        let sample_1_json_value =
+            json!([{"name": "test", "tags": {"tag1": "value"}, "value": 1.0}]).to_string();
+        let sample_1_total_size = add_source_metrics_in_data_layer_save_test_data(
+            &data_layer,
+            sample_1_metric_id,
+            sample_1_json_value,
+            ulid_size,
+        )
+        .await;
+
+        // sample data 2
+        let sample_2_metric_id = "sample_2".to_string();
+        let sample_2_json_value =
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value","tag7": "value","tag8": "value","tag9": "value","tag10": "value"}, "value": 1.0}]).to_string();
+        let sample_2_total_size = add_source_metrics_in_data_layer_save_test_data(
+            &data_layer,
+            sample_2_metric_id,
+            sample_2_json_value,
+            ulid_size,
+        )
+        .await;
+
+        // sample data 3
+        let sample_3_metric_id = "sample_1".to_string();
+        let sample_3_json_value =
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value","tag5": "value","tag6": "value"}, "value": 1.0}]).to_string();
+        let sample_3_total_size = add_source_metrics_in_data_layer_save_test_data(
+            &data_layer,
+            sample_3_metric_id,
+            sample_3_json_value,
+            ulid_size,
+        )
+        .await;
+
+        // check save data size = source_metrics
+        let total_source_metrics_size =
+            get_add_source_metrics_in_data_layer_size(&data_layer).await;
+
+        // check save data size => source_metrics_metadata
+        let total_source_metrics_metadata_size =
+            get_add_source_metrics_metadata_in_data_layer_size(&data_layer).await;
+
+        // sample data size(1 + 2 + 3) = total source metrics size
+        assert!(
+            (sample_1_total_size + sample_2_total_size + sample_3_total_size)
+                == total_source_metrics_size
+        );
+        // sample data size(1 + 2 + 3) = total source metrics metadata size
+        assert!(
+            (sample_1_total_size + sample_2_total_size + sample_3_total_size)
+                == total_source_metrics_metadata_size
+        );
+
+        // sample data 4
+        let sample_4_metric_id = "sample_4".to_string();
+        let sample_4_json_value =
+            json!([{"name": "test", "tags": {"tag1": "value","tag2": "value","tag3": "value","tag4": "value"}, "value": 1.0}]).to_string();
+        let sample_4_total_size = add_source_metrics_in_data_layer_save_test_data(
+            &data_layer,
+            sample_4_metric_id,
+            sample_4_json_value,
+            ulid_size,
+        )
+        .await;
+        // check save data size = source_metrics
+        let total_source_metrics_size_2 =
+            get_add_source_metrics_in_data_layer_size(&data_layer).await;
+
+        // check save data size => source_metrics_metadata
+        let total_source_metrics_metadata_size_2 =
+            get_add_source_metrics_metadata_in_data_layer_size(&data_layer).await;
+
+        // sample data size(3 + 4) = total source metrics size
+        assert!((sample_3_total_size + sample_4_total_size) == total_source_metrics_size_2);
+        // sample data size(3 + 4) = total source metrics metadata size
+        assert!(
+            (sample_3_total_size + sample_4_total_size) == total_source_metrics_metadata_size_2
+        );
     }
 }
