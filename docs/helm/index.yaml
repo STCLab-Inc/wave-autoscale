@@ -9,6 +9,6 @@ entries:
     name: wave-autoscale
     type: application
     urls:
-    - https://github.waveautoscale.com/helm/wave-autoscale-0.1.0.tgz
+    - https://stclab-inc.github.io/wave-autoscale/helm/wave-autoscale-0.1.0.tgz
     version: 0.1.0
 generated: "2023-10-26T18:33:33.412595+09:00"
