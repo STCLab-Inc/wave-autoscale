@@ -1,9 +1,8 @@
 use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
-        autoscaling_history_definition::AutoscalingHistoryDefinition,
-        object_kind::ObjectKind,
-        source_metrics::{self, SourceMetrics},
+        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        source_metrics::SourceMetrics,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -53,9 +52,9 @@ impl DataLayer {
             sql_url
         };
         let metric_buffer_size_kb = if metric_buffer_size_kb == 0 {
-            DEFAULT_METRIC_BUFFER_SIZE_KB
+            DEFAULT_METRIC_BUFFER_SIZE_KB * 1000
         } else {
-            metric_buffer_size_kb
+            metric_buffer_size_kb * 1000
         };
 
         let source_metrics = Arc::new(RwLock::new(HashMap::new()));
@@ -732,6 +731,12 @@ impl DataLayer {
         metric_id: &str,
         json_value: &str,
     ) -> Result<()> {
+        /* [ Comment ]
+         *  source metrics: Metric data is separated by metric_id and ulid is sorted in ascending order (using for ScalingPlan search)
+         *  source metrics metadata: Metric data is sorted in ASC order by ULID (using for remove target data to maintain buffer size)
+         * [ Data structure ]
+         *  source metrics - HashMap<key: metric_id, value: BTreeMap<key: ULID, value: SourceMetrics>>
+         *  source metrics metadata - LinkedList<(metric_id, ULID, data size(source metrics + source metrics metadata)> - list order by ULID ASC */
         let mut source_metrics = self.source_metrics_data.source_metrics.write().await;
         let mut source_metrics_metadata = self
             .source_metrics_data
@@ -740,9 +745,6 @@ impl DataLayer {
             .await;
         let mut source_metrics_size = self.source_metrics_data.source_metrics_size.write().await;
         let metric_buffer_size_kb = self.source_metrics_data.metric_buffer_size_kb;
-        /* [ Data structure ]
-         * source metrics - HashMap<key: metric_id, value: BTreeMap<key: ULID, value: SourceMetrics>>
-         * source metrics metadata - LinkedList<(metric_id, ULID, data size(source metrics + source metrics metadata)> - list order by ULID ASC */
 
         let now_ulid = Ulid::new().to_string();
         let source_metric_insert_data = SourceMetrics {
@@ -767,7 +769,7 @@ impl DataLayer {
                 let Some(front_source_metrics_metadata) = source_metrics_metadata.pop_front() else {
                         break;
                     };
-                subtract_total_size -= front_source_metrics_metadata.2;
+                subtract_total_size -= front_source_metrics_metadata.2; // oldest metadata size
                 remove_target_data.append(&mut vec![front_source_metrics_metadata]);
                 continue;
             }
@@ -781,14 +783,16 @@ impl DataLayer {
                 let Some(metric_id_data) = source_metrics.get_mut(metric_id) else {
                     return;
                 };
+                // remove source metrics - btreemap ulid
                 metric_id_data.remove(ulid);
+                // (if btreemap is empty) remove source metrics - hashmap metric_id
                 if metric_id_data.is_empty() {
                     source_metrics.remove(metric_id);
                 }
                 total_source_metrics_size -= size;
             });
 
-        // add metric data
+        // add source metrics
         match source_metrics.get_mut(metric_id) {
             Some(source_metrics_map) => {
                 source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data.clone());
@@ -799,6 +803,7 @@ impl DataLayer {
                 source_metrics.insert(metric_id.to_string(), metric_id_map);
             }
         }
+        // add source metrics metadata
         source_metrics_metadata.push_back((
             metric_id.to_string(),
             now_ulid,
