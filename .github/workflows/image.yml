@@ -21,7 +21,7 @@ jobs:
   build-amd64:
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
-    environment: ${{ inputs.env }}
+    environment: ${{ inputs.env || 'development' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -50,7 +50,7 @@ jobs:
   build-arm64:
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
-    environment: ${{ inputs.env }}
+    environment: ${{ inputs.env || 'development' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -79,7 +79,7 @@ jobs:
   manifest:
     needs: [build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
-    environment: ${{ inputs.env }}
+    environment: ${{ inputs.env || 'development' }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -93,6 +93,6 @@ jobs:
       - name: Create and push Docker manifest
         run: >
           docker buildx imagetools create 
-          -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} 
+          -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version || 'latest' }} 
           ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 
           ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
