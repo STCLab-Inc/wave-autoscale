@@ -12,6 +12,13 @@
                     "hostPort": 3024,
                     "protocol": "tcp",
                     "appProtocol": "http"
+                },
+                {
+                    "name": "wave-autoscale-3025-tcp",
+                    "containerPort": 3025,
+                    "hostPort": 3025,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
                 }
             ],
             "essential": true,
