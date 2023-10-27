@@ -22,6 +22,8 @@ RUN cargo build --release
 
 ### Runtime
 FROM debian:bullseye-slim
+RUN apt-get update
+RUN apt-get install -y openssl ca-certificates
 WORKDIR /usr/local/bin
 COPY --from=builder /usr/src/wave-autoscale/target/release/wave-autoscale .
 CMD ["./wave-autoscale"]

@@ -45,7 +45,6 @@ impl MetricCollectorManager {
             ));
         }
         let res = res.unwrap();
-
         // get total size
         let total_size = res
             .content_length()

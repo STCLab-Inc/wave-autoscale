@@ -1,16 +1,19 @@
 name: Publish Docker Image
 on:
+  push:
+    branches:
+      - "main"
   workflow_dispatch:
     inputs:
       env:
-        description: 'Environment Mode'
+        description: "Environment Mode"
         required: true
-        default: 'development'
+        default: "development"
       version:
-        description: 'Version to Publish'
+        description: "Version to Publish"
         required: true
-        default: 'latest'
-        
+        default: "latest"
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -38,8 +41,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64
-          # cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64
-          # cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
@@ -67,8 +70,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          # cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64
-          # cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
@@ -88,4 +91,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create and push Docker manifest
-        run: docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
+        run: >
+          docker buildx imagetools create 
+          -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} 
+          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 
+          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
