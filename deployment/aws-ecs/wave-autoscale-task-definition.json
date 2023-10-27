@@ -1,0 +1,48 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "wave-autoscale",
+            "image": "waveautoscale/wave-autoscale:latest",
+            "cpu": 512,
+            "memory": 1024,
+            "portMappings": [
+                {
+                    "name": "wave-autoscale-3024-tcp",
+                    "containerPort": 3024,
+                    "hostPort": 3024,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/wave-autoscale",
+                    "awslogs-region": "ap-northeast-3",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            }
+        }
+    ],
+    "family": "wave-autoscale",
+    "networkMode": "awsvpc",
+    "volumes": [
+        {
+            "name": "wave-autoscale-volume",
+            "host": {}
+        }
+    ],
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "cpu": "512",
+    "memory": "1024"
+}
