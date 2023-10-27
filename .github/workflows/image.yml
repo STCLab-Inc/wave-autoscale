@@ -10,11 +10,11 @@ on:
         required: true
         default: "development"
       app_version:
-        description: "Version to Publish"
+        description: "App Version to Publish"
         required: true
-        default: "latest"
+        default: "nightly"
       image_tag_version:
-        description: "Version to Publish"
+        description: "Image Tag Version to Publish"
         required: true
         default: "latest"
 
@@ -79,6 +79,9 @@ jobs:
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
     environment: ${{ inputs.env || 'development' }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -104,6 +107,27 @@ jobs:
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
+      - name: Extract the binary from the image
+        run: |
+          mkdir -p ./bin && cd ./bin
+          id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64)
+          docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
+          docker rm -v $id
+          chmod +x ./wave-autoscale
+          cp ../docs/basic-example/* ./
+          tar -czvf wave-autoscale-linux-arm64.tar.gz *
+      - name: Upload the binary to S3
+        uses: reggionick/s3-deploy@v4
+        with:
+          folder: bin
+          bucket: ${{ secrets.S3_BUCKET }}/${{ inputs.app_version || 'nightly' }}
+          bucket-region: ${{ secrets.S3_BUCKET_REGION }}
+          dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          invalidation: /
+          delete-removed: false
+          no-cache: true
+          private: true
+          files-to-include: "*.tar.gz"
   manifest:
     needs: [build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
