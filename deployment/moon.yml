@@ -12,7 +12,7 @@ tasks:
     outputs:
       - "k8s/install.yaml"
   build-helm-chart-repo:
-    command: "cd ./helm-chart-repo && helm package ../helm-chart && helm repo index ./ --url https://github.waveautoscale.com/helm && cd .. && ./copy-chart-to-docs.sh"
+    command: "mkdir -p ./helm-chart-repo && cd ./helm-chart-repo && helm package ../helm-chart && helm repo index ./ --url https://github.waveautoscale.com/helm && cd .. && ./mv-chart-to-docs.sh && rm -r ./helm-chart-repo"
     inputs:
       - "helm-chart/**/*"
     outputs:
