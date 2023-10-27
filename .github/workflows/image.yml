@@ -55,7 +55,7 @@ jobs:
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
       - name: Extract the binary from the image
-        run: >
+        run: |
           mkdir -p ./bin && cd ./bin
           id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64)
           docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
