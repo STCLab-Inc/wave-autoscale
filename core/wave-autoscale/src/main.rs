@@ -54,7 +54,9 @@ async fn main() {
     // DataLayer
     let db_url = wave_config.db_url.clone();
     let metric_buffer_size_kb = wave_config.metric_buffer_size_kb;
-    let data_layer = DataLayer::new(db_url.as_str(), metric_buffer_size_kb).await;
+    let enable_metrics_log = wave_config.enable_metrics_log;
+    let data_layer =
+        DataLayer::new(db_url.as_str(), metric_buffer_size_kb, enable_metrics_log).await;
     // Do not need RwLock or Mutex because the DataLayer is read-only.
     let shared_data_layer = Arc::new(data_layer);
 

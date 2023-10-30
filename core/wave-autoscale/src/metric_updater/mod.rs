@@ -95,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metric_updater() {
-        let data_layer = DataLayer::new("", 500_000).await;
+        let data_layer = DataLayer::new("", 500_000, false).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
         let metric_definitions = vec![MetricDefinition {

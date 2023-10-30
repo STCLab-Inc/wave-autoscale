@@ -12,7 +12,9 @@ async fn performance_test_add_source_metrics_in_data_layer() {
     const SAMPLE_DATA_10MB_FILE_PATH: &str = "./tests/sample/source_metrics_performance_10MB.txt";
     const DB_URL: &str = "";
     const METRIC_BUFFER_SIZE_KB: u64 = 100_000; // 100 MB
-    let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
+    const DEFAULT_ENABLE_METRICS_LOG: bool = false;
+    let data_layer =
+        DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB, DEFAULT_ENABLE_METRICS_LOG).await;
     let ulid_size = Ulid::new().to_string().get_heap_size();
 
     // read sample data file

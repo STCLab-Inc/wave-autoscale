@@ -6,6 +6,7 @@ reset_definitions_on_startup: true
 
 # Metrics
 metric_buffer_size_kb: 500000
+enable_metrics_log: false
 
 # API Server
 host: localhost

@@ -168,6 +168,16 @@ async fn post_metrics_receiver(
         metric_id.as_str(),
         json_value.len()
     );
+    // Save to database
+    if data_layer.get_enable_metrics_log().await {
+        let result_save_db = data_layer
+            .add_source_metric(collector.as_str(), metric_id.as_str(), json_value.as_str())
+            .await;
+        if result_save_db.is_err() {
+            error!("Failed to save metric into the DB: {:?}", result);
+            return HttpResponse::InternalServerError().body(format!("{:?}", result));
+        }
+    }
     HttpResponse::Ok().finish()
 }
 

@@ -39,13 +39,14 @@ pub struct DataLayer {
 #[derive(Debug)]
 pub struct SourceMetricsData {
     metric_buffer_size_kb: u64,
+    enable_metrics_log: bool,
     source_metrics: Arc<RwLock<HashMap<String, BTreeMap<String, SourceMetrics>>>>,
     source_metrics_metadata: Arc<RwLock<LinkedList<(String, String, usize)>>>,
     source_metrics_size: Arc<RwLock<usize>>,
 }
 
 impl DataLayer {
-    pub async fn new(sql_url: &str, metric_buffer_size_kb: u64) -> Self {
+    pub async fn new(sql_url: &str, metric_buffer_size_kb: u64, enable_metrics_log: bool) -> Self {
         let sql_url = if sql_url.is_empty() {
             DEFAULT_DB_URL
         } else {
@@ -65,6 +66,7 @@ impl DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
             source_metrics_data: SourceMetricsData {
                 metric_buffer_size_kb,
+                enable_metrics_log,
                 source_metrics,
                 source_metrics_metadata,
                 source_metrics_size,
@@ -241,6 +243,10 @@ impl DataLayer {
             }
         });
         notify_receiver
+    }
+
+    pub async fn get_enable_metrics_log(&self) -> bool {
+        self.source_metrics_data.enable_metrics_log
     }
 
     // Add multiple metrics to the database
@@ -948,6 +954,7 @@ mod tests {
     use tracing_test::traced_test;
     use ulid::Ulid;
     const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
+    const DEFAULT_ENABLE_METRICS_LOG: bool = false;
 
     async fn get_data_layer_with_sqlite() -> DataLayer {
         const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
@@ -957,14 +964,24 @@ mod tests {
         if remove_result.is_err() {
             error!("Error removing file: {:?}", remove_result);
         }
-        let data_layer = DataLayer::new(DEFAULT_DB_URL, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
+        let data_layer = DataLayer::new(
+            DEFAULT_DB_URL,
+            DEFAULT_METRIC_BUFFER_SIZE_KB,
+            DEFAULT_ENABLE_METRICS_LOG,
+        )
+        .await;
         data_layer.sync("").await;
         data_layer
     }
 
     async fn get_data_layer_with_postgres() -> DataLayer {
         const DEFAULT_DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
-        let data_layer = DataLayer::new(DEFAULT_DB_URL, DEFAULT_METRIC_BUFFER_SIZE_KB).await;
+        let data_layer = DataLayer::new(
+            DEFAULT_DB_URL,
+            DEFAULT_METRIC_BUFFER_SIZE_KB,
+            DEFAULT_ENABLE_METRICS_LOG,
+        )
+        .await;
         data_layer.sync("").await;
         data_layer
     }
@@ -1082,7 +1099,8 @@ mod tests {
     async fn test_add_source_metrics_in_data_layer() {
         const DB_URL: &str = "sqlite://tests/temp/test.db";
         const METRIC_BUFFER_SIZE_KB: u64 = 1;
-        let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
+        let data_layer =
+            DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB, DEFAULT_ENABLE_METRICS_LOG).await;
         let collector = "vector";
         let metric_id = "metric_1";
         let json_value = r#"[{
@@ -1174,7 +1192,8 @@ mod tests {
     async fn test_add_source_metrics_in_data_layer_check_save_data() {
         const DB_URL: &str = "sqlite://tests/temp/test.db";
         const METRIC_BUFFER_SIZE_KB: u64 = 1;
-        let data_layer = DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB).await;
+        let data_layer =
+            DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB, DEFAULT_ENABLE_METRICS_LOG).await;
         let ulid_size = Ulid::new().to_string().get_heap_size();
 
         // sample data 1
