@@ -1,0 +1,142 @@
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-compute
+---
+kind: Metric
+id: telegraf_stackdriver_mig_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/firewall/dropped_bytes_count"] # If there are many dropped bytes, consider scaling out due to network performance issues.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/firewall/dropped_packets_count"] # If there are many dropped packets, consider scaling out due to network performance issues.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/guest_visible_vcpus"] # This metric represents the number of vCPUs visible within the guest. If a high number of vCPUs are being used, consider scaling out. On the other hand, if the number is low, consider scaling in to save resources.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/reserved_cores"] # This indicates the number of vCPUs reserved on the host. Similar to guest_visible_vcpus, you can make scaling decisions based on this.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/scheduler_wait_time"] # Represents the wait time of the CPU scheduler. High wait times may indicate a lack of CPU resources, thus consider scaling out.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/usage_time"] # Represents the CPU usage time. High usage time can be a sign to consider scaling out, while low usage time may indicate that scaling in is appropriate.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/cpu/utilization"] # Indicates CPU utilization. Closer to 1.0, consider scaling out; closer to 0, consider scaling in.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/memory/balloon/ram_size"] # You can make scaling decisions based on available memory. If the memory in use is close to the total, consider scaling out; otherwise, consider scaling in.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance/memory/balloon/ram_used"] # You can make scaling decisions based on current memory usage. If the memory in use is close to the total, consider scaling out; otherwise, consider scaling in.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance_group/predicted_capacity"] # Based on the predicted capacity, you can pre-emptively scale resources up or down. You can prepare for a surge in traffic by scaling out in advance, and in the opposite case, consider scaling in.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance_group/predicted_size"] # Based on the predicted number of VMs, you can expand or reduce the required number of instances in advance.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance_group/predicted_utilization"] # Through predicted utilization, you can adjust scaling in/out to ensure resources are not excessively used.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["compute.googleapis.com/instance_group/size"] # Based on the current number of VMs, you can make decisions on scaling in or out. This metric is fundamentally very important.
+        interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_mig_metrics
+        filter:
+          resource_labels:
+            - key: instance_group_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+  outputs:
+    wave-autoscale:
+      tagpass:
+        metric_id: telegraf_stackdriver_mig_metrics # input tags append
+  agent:
+    interval: "10s" # Default data collection interval for all inputs. Intervals are durations of time and can be specified for supporting settings by combining an integer value and time unit as a string value. Valid time units are ns, us (or µs), ms, s, m, h.
+    round_interval: true # Rounds collection interval to interval ie, if interval="10s" then always collect on :00, :10, :20, etc.
+    metric_batch_size: 1000 # Telegraf will send metrics to outputs in batches of at most metric_batch_size metrics. This controls the size of writes that Telegraf sends to output plugins.
+    metric_buffer_limit: 10000 # Maximum number of unwritten metrics per output. Increasing this value allows for longer periods of output downtime without dropping metrics at the cost of higher maximum memory usage.
+    collection_jitter: "0s" # Collection jitter is used to jitter the collection by a random interval. Each plugin will sleep for a random time within jitter before collecting. This can be used to avoid many plugins querying things like sysfs at the same time, which can have a measurable effect on the system.
+    flush_interval: "1s" # Default flushing interval for all outputs. Maximum flush_interval will be flush_interval + flush_jitter.
+    flush_jitter: "0s" # Default flush jitter for all outputs. This jitters the flush interval by a random amount. This is primarily to avoid large write spikes for users running a large number of telegraf instances. ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
+    precision: "0s" # Collected metrics are rounded to the precision specified as an interval. Precision will NOT be used for service inputs. It is up to each individual service input to set the timestamp at the appropriate precision.
+    debug: false # Log at debug level.
+
