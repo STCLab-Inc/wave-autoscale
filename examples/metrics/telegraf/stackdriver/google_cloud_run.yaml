@@ -1,0 +1,96 @@
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-run
+---
+kind: Metric
+id: telegraf_stackdriver_cloud_run_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/billable_instance_time"] # This metric indicates how much time container instances are being used. If this value is consistently high, you may consider scaling out by deploying more instances. On the other hand, if this value is low, you can consider scaling in.
+        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/completed_probe_attempt_count"] # This metric shows how often health check probes are attempted. If this metric is unstable, the instances may not be healthy, and you may consider scaling out.
+        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/cpu/utilizations"] # If CPU utilization is high, resources may be insufficient, and you should consider scaling out. Conversely, if CPU utilization is low, you can consider scaling in to conserve resources.
+        interval: "60s" # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/instance_count"] # This metric indicates the number of currently active container instances. If the number of instances surges, you may need to scale out, and if it declines, you may consider scaling in.
+        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/max_request_concurrencies"] # This metric represents the maximum number of requests being processed concurrently. If this value is high, additional instances may be needed, and you should consider scaling out.
+        interval: "120s" # Sampled every 60 seconds. After sampling, data is not visible for up to 120 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/container/memory/utilizations"] # If memory utilization is high, you should consider scaling out; if low, consider scaling in.
+        interval: "60s" # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/request_count"] # If the number of requests is high, you should consider scaling out; if low, consider scaling in.
+        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: wave-autoscale-test
+        metric_type_prefix_include: ["run.googleapis.com/request_latencies"] # If request latency is high, the user experience may deteriorate, and you should consider scaling out by adding instances. Low latency could be a signal to consider scaling in.
+        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+        tags:
+          metric_id: telegraf_stackdriver_cloud_run_metrics
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+  outputs:
+    wave-autoscale:
+      tagpass:
+        metric_id: telegraf_stackdriver_cloud_run_metrics # input tags append
+  agent:
+    interval: "60s" # Default data collection interval for all inputs. Intervals are durations of time and can be specified for supporting settings by combining an integer value and time unit as a string value. Valid time units are ns, us (or µs), ms, s, m, h.
+    round_interval: true # Rounds collection interval to interval ie, if interval="10s" then always collect on :00, :10, :20, etc.
+    metric_batch_size: 1000 # Telegraf will send metrics to outputs in batches of at most metric_batch_size metrics. This controls the size of writes that Telegraf sends to output plugins.
+    metric_buffer_limit: 10000 # Maximum number of unwritten metrics per output. Increasing this value allows for longer periods of output downtime without dropping metrics at the cost of higher maximum memory usage.
+    collection_jitter: "0s" # Collection jitter is used to jitter the collection by a random interval. Each plugin will sleep for a random time within jitter before collecting. This can be used to avoid many plugins querying things like sysfs at the same time, which can have a measurable effect on the system.
+    flush_interval: "60s" # Default flushing interval for all outputs. Maximum flush_interval will be flush_interval + flush_jitter.
+    flush_jitter: "0s" # Default flush jitter for all outputs. This jitters the flush interval by a random amount. This is primarily to avoid large write spikes for users running a large number of telegraf instances. ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
+    precision: "0s" # Collected metrics are rounded to the precision specified as an interval. Precision will NOT be used for service inputs. It is up to each individual service input to set the timestamp at the appropriate precision.
+    debug: false # Log at debug level.
