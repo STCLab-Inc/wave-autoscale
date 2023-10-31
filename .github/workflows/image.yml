@@ -1,12 +1,23 @@
 name: Publish Docker Image
 on:
+  push:
+    branches:
+      - "main"
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish'
+      env:
+        description: "Environment Mode"
         required: true
-        default: 'latest'
-        
+        default: "development"
+      app_version:
+        description: "App Version to Publish"
+        required: true
+        default: "nightly"
+      image_tag_version:
+        description: "Image Tag Version to Publish"
+        required: true
+        default: "latest"
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -14,7 +25,10 @@ jobs:
   build-amd64:
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
-    environment: production
+    environment: ${{ inputs.env || 'development' }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -34,16 +48,40 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64
-          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64
-          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
-            org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
+            org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
+      - name: Extract the binary from the image
+        run: |
+          mkdir -p ./bin && cd ./bin
+          id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64)
+          docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
+          docker rm -v $id
+          chmod +x ./wave-autoscale
+          cp ../docs/basic-example/* ./
+          tar -czvf wave-autoscale-linux-amd64.tar.gz *
+      - name: Upload the binary to S3
+        uses: reggionick/s3-deploy@v4
+        with:
+          folder: bin
+          bucket: ${{ secrets.S3_BUCKET }}/${{ inputs.app_version || 'nightly' }}
+          bucket-region: ${{ secrets.S3_BUCKET_REGION }}
+          dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          invalidation: /
+          delete-removed: false
+          no-cache: true
+          private: true
+          files-to-include: "*.tar.gz"
   build-arm64:
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
-    environment: production
+    environment: ${{ inputs.env || 'development' }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,16 +101,37 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          cache-from: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64
-          cache-to: type=registry,ref=waveautoscale/wave-autoscale:buildcache-arm64,mode=max
+          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64
+          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
-            org.opencontainers.image.description="Wave Autoscale is a open-source traffic & scaling automation tool."
+            org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
+      - name: Extract the binary from the image
+        run: |
+          mkdir -p ./bin && cd ./bin
+          id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64)
+          docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
+          docker rm -v $id
+          chmod +x ./wave-autoscale
+          cp ../docs/basic-example/* ./
+          tar -czvf wave-autoscale-linux-arm64.tar.gz *
+      - name: Upload the binary to S3
+        uses: reggionick/s3-deploy@v4
+        with:
+          folder: bin
+          bucket: ${{ secrets.S3_BUCKET }}/${{ inputs.app_version || 'nightly' }}
+          bucket-region: ${{ secrets.S3_BUCKET_REGION }}
+          dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          invalidation: /
+          delete-removed: false
+          no-cache: true
+          private: true
+          files-to-include: "*.tar.gz"
   manifest:
     needs: [build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
-    environment: production
+    environment: ${{ inputs.env || 'development' }}
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -84,7 +143,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create and push Docker manifest
-        run: |
-          docker buildx imagetools create -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.version }} \
-            ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 \
-            ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
+        run: >
+          docker buildx imagetools create 
+          -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.image_tag_version || 'latest' }} 
+          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 
+          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64

@@ -4,7 +4,7 @@
 
 
 - Website: https://waveautoscale.com
-- Documentation: https://waveautoscale.com/docs/guide/introduction/
+- Documentation: [https://waveautoscale.com/docs/guide/introduction/](https://www.waveautoscale.com/docs/guide/getting-started/)
 
 Wave Autoscale is an autoscaling solution that simplifies and automates complex autoscaling configurations within the cloud, adapting to the changing traffic demands.
 Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, engineers often struggle to handle the many challenges associated with dynamic scaling demands.

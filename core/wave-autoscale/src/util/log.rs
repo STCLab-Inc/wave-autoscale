@@ -1,4 +1,5 @@
-
+#[cfg(not(debug_assertions))]
+use tracing::Level;
 use tracing_subscriber;
 
 pub enum LogLevel {
