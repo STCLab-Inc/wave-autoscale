@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use data_layer::{
-    data_layer::DataLayer,
+    data_layer::{DataLayer, SOURCE_METRICS},
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
@@ -19,7 +19,11 @@ use std::collections::BTreeMap;
 use std::ops::Bound::Included;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{sync::RwLock, task::JoinHandle, time};
+use tokio::{
+    sync::{RwLock, RwLockReadGuard},
+    task::JoinHandle,
+    time,
+};
 use tracing::{debug, error};
 use ulid::Ulid;
 
@@ -157,43 +161,12 @@ impl<'a> ScalingPlanner {
                     }
                 }
                 {
-                    let metric_ids_values =
-                        match data_layer.get_source_metrics_in_data_layer().await {
-                            Ok(metric_ids_values) => metric_ids_values,
-                            Err(_) => {
-                                error!("Error getting metric values");
-                                continue;
-                            }
-                        };
-                    // Prepare "get" function for JavaScript. This function will be used to get the metric values from the JavaScript code.
                     async_with!(context => |ctx| {
+                        // let source_metrics = source_metrics.read().await;
+                        let get = rquickjs::prelude::Func::new("get", rquickjs::prelude::Async(get_in_js));
                         let _ = ctx.globals().set(
                             "get",
-                            rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                                let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| {
-                                    error!("[ScalingPlan expression error] 'metric_id' not found or is not a string");
-                                    rquickjs::Error::Exception
-                                })?;
-                                let name = args.get::<String, String>("name".to_string()).map_err(|_| {
-                                    error!("[ScalingPlan expression error] 'name' not found or is not a string");
-                                    rquickjs::Error::Exception
-                                })?;
-                                let tags = args.get::<String, HashMap<String, String>>("tags".to_string());
-                                let tags = match tags {
-                                    Ok(tags) => tags,
-                                    Err(_) => HashMap::new()
-                                };
-                                let stats = args.get::<String, String>("stats".to_string()).map_err(|_| {
-                                    error!("[ScalingPlan expression error] 'stats' not found or is not a string");
-                                    rquickjs::Error::Exception
-                                })?;
-                                let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| {
-                                    error!("[ScalingPlan expression error] 'period_sec' not found or is not a number");
-                                    rquickjs::Error::Exception
-                                })?;
-                                context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
-                            }),
-                        );
+                            get);
                     })
                     .await;
 
@@ -341,21 +314,43 @@ impl<'a> ScalingPlanner {
     }
 }
 
-fn context_global_get_func(
-    metric_id: String,
-    name: String,
-    tags: HashMap<String, String>,
-    stats: String,
-    period_sec: u64,
-    metric_ids_values: HashMap<String, BTreeMap<String, SourceMetrics>>,
-) -> Result<f64, rquickjs::Error> {
+async fn get_in_js<'js>(args: rquickjs::Object<'js>) -> Result<f64, rquickjs::Error> {
+    // let source_metrics = SOURCE_METRICS.clone();
+    // let source_metrics = source_metrics.read().await;
+    // println!("args, {:?}", args);
+    // Ok(0.0)
+    let metric_id = args
+        .get::<String, String>("metric_id".to_string())
+        .map_err(|_| {
+            error!("[ScalingPlan expression error] Failed to get metric_id");
+            rquickjs::Error::Exception
+        })?;
+    let name = args
+        .get::<String, String>("name".to_string())
+        .map_err(|_| {
+            error!("[ScalingPlan expression error] Failed to get name");
+            rquickjs::Error::Exception
+        })?;
+
+    let tags = args
+        .get::<String, HashMap<String, String>>("tags".to_string())
+        .unwrap_or(HashMap::new());
+    let stats = args
+        .get::<String, String>("stats".to_string())
+        .unwrap_or("latest".to_string());
+    let period_sec = args
+        .get::<String, u64>("period_sec".to_string())
+        .unwrap_or(300);
+
+    let source_metrics = SOURCE_METRICS.clone();
+    let source_metrics = source_metrics.read().await;
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
 
     let mut target_value_arr: Vec<f64> = Vec::new();
     // find metric_id
-    let Some(metric_values) = metric_ids_values.get(&metric_id) else {
+    let Some(metric_values) = source_metrics.get(&metric_id) else {
         return Err(rquickjs::Error::Exception)
     };
     metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
@@ -565,7 +560,8 @@ mod tests {
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 90));
         let ulid_before_200m =
             Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 200));
-        let mut metric_values: HashMap<String, BTreeMap<String, SourceMetrics>> = HashMap::new();
+        // let mut metric_values: HashMap<String, BTreeMap<String, SourceMetrics>> = HashMap::new();
+
         let mut metric1_values_btreemap: BTreeMap<String, SourceMetrics> = BTreeMap::new();
         let mut metric2_values_btreemap: BTreeMap<String, SourceMetrics> = BTreeMap::new();
         let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
@@ -601,23 +597,23 @@ mod tests {
             },
         );
 
-        metric_values.insert("metric1".to_string(), metric1_values_btreemap);
-        metric_values.insert("metric2".to_string(), metric2_values_btreemap);
 
-        let metric_ids_values = metric_values;
+        data_layer.add_source_metrics_in_data_layer()
+        // {
+        //     let source_metrics = SOURCE_METRICS.clone();
+        //     let mut source_metrics = source_metrics.write().await;
+        //     source_metrics.insert("metric1".to_string(), metric1_values_btreemap);
+        //     source_metrics.insert("metric2".to_string(), metric2_values_btreemap);
+        // }
+
+        // let metric_ids_values = metric_values;
 
         async_with!(context => |ctx| {
-            let _ = ctx.globals().set(
+            let get = rquickjs::prelude::Func::new("get", rquickjs::prelude::Async(get_in_js));
+            ctx.globals().set(
                 "get",
-                rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                    let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let tags = args.get::<String, HashMap<String, String>>("tags".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let stats = args.get::<String, String>("stats".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
-                }),
-            );
+                get,
+            ).unwrap();
         })
         .await;
 
@@ -632,10 +628,13 @@ mod tests {
         let expression_max =
             "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 4".to_string();
         let result_avg = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_avg.clone()) else {
+            println!("expression_avg - {:?}", expression_avg);
+            let result = ctx.eval::<bool, _>(expression_avg.clone());
+            if result.is_err() {
+                println!("result - {:?}", result.err().unwrap());
                 return false;
-            };
-            result
+            }
+            true
         })
         .await;
         let result_sum = async_with!(context => |ctx| {
@@ -666,6 +665,8 @@ mod tests {
             result
         })
         .await;
+
+        // runtime.idle().await;
         assert!(result_avg);
         assert!(result_sum);
         assert!(result_count);

@@ -9,6 +9,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use get_size::GetSize;
+use once_cell::sync::Lazy;
 use serde_json::json;
 use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
@@ -30,19 +31,32 @@ const DEFAULT_DB_URL: &str = "sqlite://wave.db";
 const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 
 #[derive(Debug)]
-pub struct DataLayer {
-    // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
-    pool: AnyPool,
-    source_metrics_data: SourceMetricsData,
-}
-
-#[derive(Debug)]
 pub struct SourceMetricsData {
     metric_buffer_size_kb: u64,
     enable_metrics_log: bool,
-    source_metrics: Arc<RwLock<HashMap<String, BTreeMap<String, SourceMetrics>>>>,
-    source_metrics_metadata: Arc<RwLock<LinkedList<(String, String, usize)>>>,
-    source_metrics_size: Arc<RwLock<usize>>,
+    source_metrics: HashMap<String, BTreeMap<String, SourceMetrics>>,
+    source_metrics_metadata: LinkedList<(String, String, usize)>,
+    source_metrics_size: usize,
+}
+
+type SharedSourceMetricsData = Arc<RwLock<SourceMetricsData>>;
+
+pub static SOURCE_METRICS_DATA: Lazy<SharedSourceMetricsData> = Lazy::new(|| {
+    let source_metrics_data = SourceMetricsData {
+        metric_buffer_size_kb: 500_000,
+        enable_metrics_log: false,
+        source_metrics: HashMap::new(),
+        source_metrics_metadata: LinkedList::new(),
+        source_metrics_size: 0,
+    };
+    Arc::new(RwLock::new(source_metrics_data))
+});
+
+#[derive(Debug)]
+pub struct DataLayer {
+    // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
+    pool: AnyPool,
+    source_metrics_data: SharedSourceMetricsData,
 }
 
 impl DataLayer {
@@ -58,19 +72,19 @@ impl DataLayer {
             metric_buffer_size_kb * 1000
         };
 
-        let source_metrics = Arc::new(RwLock::new(HashMap::new()));
-        let source_metrics_metadata = Arc::new(RwLock::new(LinkedList::new()));
-        let source_metrics_size = Arc::new(RwLock::new(0));
+        // // let source_metrics = Arc::new(RwLock::new(HashMap::new()));
+        // let source_metrics_metadata = Arc::new(RwLock::new(LinkedList::new()));
+        // let source_metrics_size = Arc::new(RwLock::new(0));
+        {
+            let source_metrics_data = SOURCE_METRICS_DATA.clone();
+            let mut source_metrics_data = source_metrics_data.write().await;
+            source_metrics_data.metric_buffer_size_kb = metric_buffer_size_kb;
+            source_metrics_data.enable_metrics_log = enable_metrics_log;
+        }
 
         DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
-            source_metrics_data: SourceMetricsData {
-                metric_buffer_size_kb,
-                enable_metrics_log,
-                source_metrics,
-                source_metrics_metadata,
-                source_metrics_size,
-            },
+            source_metrics_data: SOURCE_METRICS_DATA.clone(),
         }
     }
 
@@ -828,11 +842,10 @@ impl DataLayer {
         Ok(())
     }
 
-    pub async fn get_source_metrics_in_data_layer(
+    pub fn get_source_metrics_in_data_layer(
         &self,
-    ) -> Result<HashMap<String, BTreeMap<String, SourceMetrics>>> {
-        let source_metrics = self.source_metrics_data.source_metrics.read().await;
-        Ok(source_metrics.clone())
+    ) -> Arc<RwLock<HashMap<String, BTreeMap<String, SourceMetrics>>>> {
+        self.source_metrics_data.source_metrics.clone()
     }
 
     pub async fn get_source_metrics_metadata_in_data_layer(
