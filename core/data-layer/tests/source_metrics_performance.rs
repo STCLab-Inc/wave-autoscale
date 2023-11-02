@@ -2,14 +2,11 @@ use data_layer::data_layer::DataLayer;
 use data_layer::types::source_metrics::SourceMetrics;
 use get_size::GetSize;
 use serde_json::json;
-use std::fs::File;
-use std::io::Read;
 use ulid::Ulid;
 
 #[ignore]
 #[tokio::test]
 async fn performance_test_add_source_metrics_in_data_layer() {
-    const SAMPLE_DATA_10MB_FILE_PATH: &str = "./tests/sample/source_metrics_performance_10MB.txt";
     const DB_URL: &str = "";
     const METRIC_BUFFER_SIZE_KB: u64 = 100_000; // 100 MB
     const DEFAULT_ENABLE_METRICS_LOG: bool = false;
@@ -17,10 +14,15 @@ async fn performance_test_add_source_metrics_in_data_layer() {
         DataLayer::new(DB_URL, METRIC_BUFFER_SIZE_KB, DEFAULT_ENABLE_METRICS_LOG).await;
     let ulid_size = Ulid::new().to_string().get_heap_size();
 
-    // read sample data file
-    let mut file = File::open(SAMPLE_DATA_10MB_FILE_PATH).unwrap();
     let mut sample_data_10mb = String::new();
-    file.read_to_string(&mut sample_data_10mb).unwrap();
+    for _i in 0..100000 {
+        // 100 Byte
+        sample_data_10mb.push_str("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuv");
+    }
+    println!(
+        " >> sample_data_10mb.len(): {}",
+        sample_data_10mb.bytes().len()
+    );
     let sample_data_1mb = sample_data_10mb.clone();
     let _sample_data_1mb = sample_data_1mb.split_at(1_000_000).0.to_string();
 
