@@ -156,11 +156,12 @@ impl<'a> ScalingPlanner {
                 }
                 {
                     async_with!(context => |ctx| {
-                        // let source_metrics = source_metrics.read().await;
-                        let get = rquickjs::prelude::Func::new("get", rquickjs::prelude::Async(get_in_js));
                         let _ = ctx.globals().set(
                             "get",
-                            get);
+                            rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
+                                get_in_js(args)
+                            }),
+                        );
                     })
                     .await;
 
@@ -216,14 +217,11 @@ impl<'a> ScalingPlanner {
                                     result
                                 })
                                 .await;
-                                println!(" >> async_with JS Expression");
 
                                 // expression get value (for history)
-                                println!(" >> async_with start expression_get_value");
                                 let expression_map =
                                     expression_get_value(expression.clone(), context.clone()).await;
                                 expression_value_map.append(&mut expression_map.clone());
-                                println!(" >> async_with end expression_get_value");
 
                                 // If the expression is false, move to the next plan
                                 if !result {
@@ -311,7 +309,7 @@ impl<'a> ScalingPlanner {
     }
 }
 
-async fn get_in_js<'js>(args: rquickjs::Object<'js>) -> Result<f64, rquickjs::Error> {
+fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
     let metric_id = args
         .get::<String, String>("metric_id".to_string())
         .map_err(|_| {
@@ -336,7 +334,10 @@ async fn get_in_js<'js>(args: rquickjs::Object<'js>) -> Result<f64, rquickjs::Er
         .get::<String, u64>("period_sec".to_string())
         .unwrap_or(5 * 60); // default 5 min
 
-    let source_metrics_data = SOURCE_METRICS_DATA.read().await;
+    let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
+        error!("[get_in_js] Failed to get source_metrics_data");
+        return Err(rquickjs::Error::Exception)
+    };
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
@@ -388,10 +389,8 @@ async fn get_in_js<'js>(args: rquickjs::Object<'js>) -> Result<f64, rquickjs::Er
                 })
                 .collect();
         });
-    println!(" >> target_value_arr - {:?}", target_value_arr);
     let metric_stats = match stats {
         ms if ms.to_lowercase() == "latest" => {
-            // TODO: latest
             let Some(latest_value) = target_value_arr.iter().last() else {
                 return Err(rquickjs::Error::Exception);
             };
@@ -432,141 +431,7 @@ async fn get_in_js<'js>(args: rquickjs::Object<'js>) -> Result<f64, rquickjs::Er
             Err(rquickjs::Error::Exception)
         }
     };
-    println!(" >> metric_stats - {:?}", metric_stats);
     metric_stats
-}
-
-fn get_in_js2<'js>(
-    args: rquickjs::Object<'js>,
-) -> impl std::future::Future<Output = Result<f64, rquickjs::Error>> {
-    let metric_id = args
-        .get::<String, String>("metric_id".to_string())
-        .map_err(|_| {
-            error!("[ScalingPlan expression error] Failed to get metric_id");
-            rquickjs::Error::Exception
-        });
-    let name = args.get::<String, String>("name".to_string()).map_err(|_| {
-        error!("[ScalingPlan expression error] Failed to get name");
-        rquickjs::Error::Exception
-    });
-    // tags, stats, period_sec is optional
-    let tags = match args.get::<String, HashMap<String, String>>("tags".to_string()) {
-        Ok(tags) => tags,
-        Err(_) => HashMap::new(),
-    };
-    let stats = args
-        .get::<String, String>("stats".to_string())
-        .unwrap_or("latest".to_string());
-    let period_sec = args
-        .get::<String, u64>("period_sec".to_string())
-        .unwrap_or(5 * 60); // default 5 min
-
-    async move {
-        let Ok(metric_id) = metric_id else {
-            return Err(rquickjs::Error::Exception)
-        };
-        let Ok(name) = name else {
-            return Err(rquickjs::Error::Exception)
-        };
-        let source_metrics_data = SOURCE_METRICS_DATA.read().await;
-        let ulid = Ulid::from_datetime(
-            std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
-        );
-
-        let mut target_value_arr: Vec<f64> = Vec::new();
-        // find metric_id
-        let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
-            return Err(rquickjs::Error::Exception)
-        };
-        metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
-        .for_each(|(_ulid, source_metrics_value)| {
-            let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
-                error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
-                return;
-            };
-            // find name or tags
-            let Some(json_value_str) = value.get("json_value") else {return;};
-            let Some(json_value_str) = json_value_str.as_str() else {return;};
-            let json_value_str = serde_json::from_str::<Value>(json_value_str)
-                .map_err(|_| {
-                    error!("[ScalingPlan expression error] Failed to convert json_value to serde value");
-                    rquickjs::Error::Exception
-                })
-                .unwrap();
-            let Some(json_values_arr) = json_value_str.as_array() else {return;};
-            let _filter_json_values_arr: Vec<_> = json_values_arr
-                .iter()
-                .map(|json_value_item| {
-                    let result_bool = json_value_item.get("name").and_then(Value::as_str)
-                        == Some(name.as_str())
-                        && (tags.is_empty() || {
-                            json_value_item
-                                .get("tags")
-                                .and_then(Value::as_object)
-                                .map_or(false, |value_tags| {
-                                    tags.iter().all(|(key, value)| {
-                                        value_tags.get(key).and_then(Value::as_str)
-                                            == Some(value.as_str())
-                                    })
-                                })
-                        });
-                    if result_bool {
-                        let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
-                            return;
-                        };
-                        target_value_arr
-                            .append(&mut vec![json_vaule]);
-                    }
-                })
-                .collect();
-        });
-        println!(" >> target_value_arr - {:?}", target_value_arr);
-        let metric_stats = match stats {
-            ms if ms.to_lowercase() == "latest" => {
-                // TODO: latest
-                let Some(latest_value) = target_value_arr.iter().last() else {
-                return Err(rquickjs::Error::Exception);
-            };
-                Ok(latest_value.to_owned())
-            }
-            ms if ms.to_lowercase() == "avg" => {
-                let sum_value: f64 = target_value_arr.iter().sum();
-                let ms_num: f64 = sum_value / target_value_arr.len() as f64;
-                Ok(ms_num)
-            }
-            ms if ms.to_lowercase() == "sum" => {
-                let sum_value: f64 = target_value_arr.iter().sum();
-                Ok(sum_value)
-            }
-            ms if ms.to_lowercase() == "count" => Ok(target_value_arr.len() as f64),
-            ms if ms.to_lowercase() == "min" => {
-                let min_value = target_value_arr
-                    .into_iter()
-                    .reduce(f64::min)
-                    .ok_or(rquickjs::Error::Exception);
-                match min_value {
-                    Ok(min_value) => Ok(min_value),
-                    Err(_) => Err(rquickjs::Error::Exception),
-                }
-            }
-            ms if ms.to_lowercase() == "max" => {
-                let max_value = target_value_arr
-                    .into_iter()
-                    .reduce(f64::max)
-                    .ok_or(rquickjs::Error::Exception);
-                match max_value {
-                    Ok(max_value) => Ok(max_value),
-                    Err(_) => Err(rquickjs::Error::Exception),
-                }
-            }
-            _ => {
-                error!("[ScalingPlan expression error] stats is not defined");
-                Err(rquickjs::Error::Exception)
-            }
-        };
-        println!(" >> metric_stats - {:?}", metric_stats);
-        metric_stats
-    }
 }
 
 async fn expression_get_value(
@@ -601,7 +466,7 @@ mod tests {
     use data_layer::data_layer::DataLayer;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::MetricDefinition;
-    use rquickjs::context::intrinsic::Promise;
+
     use serde_json::json;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -681,7 +546,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_context_global_get_func() {
+    async fn test_get_in_js() {
         let data_layer = DataLayer::new("", 500_000, false).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
@@ -695,195 +560,115 @@ mod tests {
             return;
         };
 
+        async_with!(context => |ctx| {
+            let _ = ctx.globals().set(
+                "get",
+                rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
+                    get_in_js(args)
+                }),
+            );
+        })
+        .await;
+
         let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string();
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string(); // metric1
         let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string();
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string(); // metric1
         let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string();
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string(); // metric2
+        let json_value4 =
+            json!([{"name": "test2", "tags": {"tag1": "value1"}, "value": 7.0}]).to_string(); // metric1
         let timeover_json_value = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string();
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string(); // metric1
 
         // add data to data_layer
         let _ = data_layer
             .add_source_metrics_in_data_layer("vector", "metric1", &timeover_json_value)
             .await;
-        // sleep: 1s
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         let _ = data_layer
             .add_source_metrics_in_data_layer("vector", "metric1", &json_value)
             .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         let _ = data_layer
             .add_source_metrics_in_data_layer("vector", "metric1", &json_value2)
             .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         let _ = data_layer
             .add_source_metrics_in_data_layer("vector", "metric2", &json_value3)
             .await;
-
-        // async_with!(context => |ctx| {
-        //     let get = rquickjs::prelude::Func::new("get", rquickjs::prelude::Async(get_in_js));
-        //     let _ = ctx.globals().set(
-        //         "get",
-        //         get);
-        // })
-        // .await;
-
-        // async_with!(context => |ctx| {
-        //     let _ = ctx.globals().set(
-        //         "get",
-        //         rquickjs::prelude::Func::from(|args: rquickjs::Object| {
-        //             // Ok(get_in_js2(args).await)
-        //             println!(" >> args - {:?}", args.get::<String, String>("metric_id".to_string()));
-        //             rquickjs::prelude::Promised(get_in_js2(args))
-        //         }),
-        //     );
-        // })
-        // .await;
-        // runtime.idle().await;
-        // /* run our async JS code */
-        // let res_result = async_with!(context => |ctx| {
-        //     let res: rquickjs::prelude::Promise<()> = ctx.eval("get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}})").unwrap();
-        //     //println!(" res :: {:?}", res.await);
-        //     res.await
-        // })
-        // .await;
-        // println!(" >> res_result - {:?}", res_result);
-
-        // async_with!(context => |ctx| {
-        //     let _ = ctx.globals().set(
-        //         "get",
-        //         rquickjs::prelude::Func::from(|args: rquickjs::Object| {
-        //             // Ok(get_in_js2(args).await)
-        //             rquickjs::prelude::Promised(get_in_js2(args))
-        //         }));
-        // })
-        // .await;
-        // let res_result: rquickjs::prelude::Promise<()> = async_with!(context => |ctx| {
-        //     ctx.eval("get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}})").unwrap()
-        // }).await;
-        // println!(" >> res_result - {:?}", res_result.await.unwrap());
-
-        // async_with!(context => |ctx| {
-        //     let _ = ctx.globals().set(
-        //         "get",
-        //         rquickjs::prelude::Func::from(|ctx: rquickjs::Ctx, args: rquickjs::Object| -> dyn std::future::Future<Output = Result<f64, rquickjs::Error>> {
-        //             println!(" >> ctx - {:?}", args.get::<String, String>("metric_id".to_string()));
-        //             struct Args<'js>(rquickjs::Ctx<'js>);
-        //             let Args(ctx) = Args(ctx);
-        //             rquickjs::prelude::Promised(get_in_js2(args))
-        //         }));
-        // })
-        // .await;
-
-        async_with!(context => |ctx| {
-            // let get = rquickjs::prelude::Func::new("get", rquickjs::prelude::Async(get_in_js));
-            // let _ = ctx.globals().set(
-            //     "get",
-            //     get);
-            let get = rquickjs::Function::new(ctx.clone(), rquickjs::prelude::Async(get_in_js)).unwrap();
-            let _ = ctx.globals().set(
-                "get",
-                get);
-        })
-        .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", &json_value4)
+            .await;
 
         let expression_avg =
             "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
-        let expression_avg_2 = r"
-        (function(){
-            return new Promise((get) => {
-                get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}})
-            })
-        })
-        ";
         let expression_sum =
             "get({ metric_id: 'metric1', stats: 'sum', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 9".to_string();
-        let expression_sum_2 =
-            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 1, name: 'test', tags: { tag1: 'value1'}})".to_string();
         let expression_count =
             "get({ metric_id: 'metric1', stats: 'count', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
         let expression_min =
             "get({ metric_id: 'metric1', stats: 'min', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 2".to_string();
         let expression_max =
             "get({ metric_id: 'metric1', stats: 'max', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 4".to_string();
+        let expression_sum_timeover =
+            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 3, name: 'test', tags: { tag1: 'value1'}}) == 20".to_string();
+        let expression_optional_tags =
+            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 3, name: 'test'}) == 21"
+                .to_string();
+        let expression_optional_stats =
+            "get({ metric_id: 'metric1', period_sec: 3, name: 'test'}) == 4".to_string();
+        let expression_optional_period_sec =
+            "get({ metric_id: 'metric1', stats: 'max', name: 'test'}) == 6".to_string();
+        let expression_optional_stats_period_sec =
+            "get({ metric_id: 'metric1', name: 'test'}) == 4".to_string();
+        let expression_fail_name =
+            "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, tags: { tag1: 'value1'}}) == 3".to_string();
+        let expression_fail_metric_id =
+            "get({ stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3"
+                .to_string();
 
-        let result_avg_2: f64 = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<f64, _>(expression_avg_2) else {
-                println!(" >> result avg 2 error");
-                return 0.0;
-            };
-            result
-        })
-        .await;
-        println!(" >> result avg 2 - {:?}", result_avg_2);
-        // async_with!(context => |ctx| {
-        //     let _ = ctx.globals().set(
-        //         "get",
-        //         rquickjs::prelude::Func::from(rquickjs::prelude::Async(get_in_js)));
-        //         ctx.spawn(future)
-        //     let Ok(result_sum) = ctx.eval::<bool, _>(expression_sum_2) else {
-        //         return false;
-        //     };
-        //     println!(" >>>>>>>>>>>>>> result_sum - {:?}", result_sum);
-        //     let Ok(result_avg) = ctx.eval::<bool, _>(expression_avg_2) else {
-        //         return false;
-        //     };
-        //     println!(" >>>>>>>>>>>>>> result_avg - {:?}", result_avg);
-        //     true
-        // })
-        // .await;
+        let result_avg = check_expression(expression_avg, context.clone()).await;
+        let result_sum = check_expression(expression_sum, context.clone()).await;
+        let result_count = check_expression(expression_count, context.clone()).await;
+        let result_min = check_expression(expression_min, context.clone()).await;
+        let result_max = check_expression(expression_max, context.clone()).await;
+        let result_sum_timeover = check_expression(expression_sum_timeover, context.clone()).await;
+        let result_optional_tags =
+            check_expression(expression_optional_tags, context.clone()).await;
+        let result_optional_stats =
+            check_expression(expression_optional_stats, context.clone()).await;
+        let result_optional_period_sec =
+            check_expression(expression_optional_period_sec, context.clone()).await;
+        let result_optional_stats_period_sec =
+            check_expression(expression_optional_stats_period_sec, context.clone()).await;
+        let result_fail_name = check_expression(expression_fail_name, context.clone()).await;
+        let result_fail_metric_id =
+            check_expression(expression_fail_metric_id, context.clone()).await;
 
-        let result_avg = async_with!(context => |ctx| {
-            let result = ctx.eval::<bool, _>(expression_avg);
-            if result.is_err() {
-                return false;
-            }
-            result.unwrap()
-        })
-        .await;
-        println!("result_avg - {:?}", result_avg);
+        assert!(result_avg.unwrap());
+        assert!(result_sum.unwrap());
+        assert!(result_count.unwrap());
+        assert!(result_min.unwrap());
+        assert!(result_max.unwrap());
+        assert!(result_sum_timeover.unwrap());
+        assert!(result_optional_tags.unwrap());
+        assert!(result_optional_stats.unwrap());
+        assert!(result_optional_period_sec.unwrap());
+        assert!(result_optional_stats_period_sec.unwrap());
+        assert!(result_fail_name.is_err());
+        assert!(result_fail_metric_id.is_err());
+    }
 
-        let result_sum = async_with!(context => |ctx| {
-            println!(
-                " globals = {:?}",
-                ctx.globals().get::<_, rquickjs::Function>("get").unwrap().as_object()
-            );
-            let Ok(result) = ctx.eval::<bool, _>(expression_sum) else {
-                return false;
+    async fn check_expression(expression: String, context: rquickjs::AsyncContext) -> Result<bool> {
+        async_with!(context => |ctx| {
+            let Ok(result) = ctx.eval::<bool, _>(expression) else {
+                return Err(anyhow::anyhow!("Failed to eval expression"));
             };
-            result
+            Ok(result)
         })
-        .await;
-        println!("result_sum - {:?}", result_sum);
-
-        let result_count: bool = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_count) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        let result_min = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_min) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        let result_max = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_max) else {
-                return false;
-            };
-            result
-        })
-        .await;
-
-        // runtime.idle().await;
-        println!("{}", result_avg);
-        println!("{}", result_sum);
-        println!("{}", result_count);
-        println!("{}", result_min);
-        println!("{}", result_max);
+        .await
     }
 
     #[tokio::test]

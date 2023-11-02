@@ -16,13 +16,13 @@ use sqlx::{
     AnyPool, Row,
 };
 use std::collections::{BTreeMap, LinkedList};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::{
     collections::HashMap,
     path::Path,
     time::{Duration, SystemTime},
 };
-use tokio::sync::{watch, RwLock};
+use tokio::sync::watch;
 use tracing::{debug, error, info};
 use ulid::Ulid;
 use uuid::Uuid;
@@ -74,7 +74,19 @@ impl DataLayer {
 
         {
             let source_metrics_data = SOURCE_METRICS_DATA.clone();
-            let mut source_metrics_data = source_metrics_data.write().await;
+            let Ok(mut source_metrics_data) = source_metrics_data.write() else {
+                error!("[DataLayer::new()] Failed to get the lock of source_metrics_data and try to create a new one");
+                return DataLayer {
+                    pool: DataLayer::get_pool(sql_url).await,
+                    source_metrics_data: Arc::new(RwLock::new(SourceMetricsData {
+                        metric_buffer_size_kb,
+                        enable_metrics_log,
+                        source_metrics: HashMap::new(),
+                        source_metrics_metadata: LinkedList::new(),
+                        source_metrics_size: 0,
+                    }))
+                };
+            };
             source_metrics_data.metric_buffer_size_kb = metric_buffer_size_kb;
             source_metrics_data.enable_metrics_log = enable_metrics_log;
         }
@@ -750,7 +762,10 @@ impl DataLayer {
          * [ Data structure ]
          *  source metrics - HashMap<key: metric_id, value: BTreeMap<key: ULID, value: SourceMetrics>>
          *  source metrics metadata - LinkedList<(metric_id, ULID, data size(source metrics + source metrics metadata)> - list order by ULID ASC */
-        let mut source_metrics_data = self.source_metrics_data.write().await;
+        let Ok(mut source_metrics_data) = self.source_metrics_data.write() else {
+            error!("[add_source_metrics_in_data_layer] Failed to get source metrics data");
+            return Err(anyhow!("Failed to get source metrics data"));
+        };
 
         let now_ulid = Ulid::new().to_string();
         let source_metric_insert_data = SourceMetrics {
@@ -1114,7 +1129,7 @@ mod tests {
         let mut total_source_metric_size = 0;
         SOURCE_METRICS_DATA
             .read()
-            .await
+            .unwrap()
             .source_metrics
             .iter()
             .for_each(|source_metric| {
@@ -1159,7 +1174,7 @@ mod tests {
 
     async fn get_add_source_metrics_in_data_layer_size(_data_layer: &DataLayer) -> usize {
         let mut total_source_metrics_size = 0;
-        for (metric_id, btree_map) in SOURCE_METRICS_DATA.read().await.source_metrics.iter() {
+        for (metric_id, btree_map) in SOURCE_METRICS_DATA.read().unwrap().source_metrics.iter() {
             for (ulid, source_metrics) in btree_map.iter() {
                 let source_metrics_size = source_metrics.get_heap_size()
                     + (metric_id.get_heap_size() * 2)
@@ -1174,7 +1189,7 @@ mod tests {
         let mut total_source_metrics_metadata_size = 0;
         SOURCE_METRICS_DATA
             .read()
-            .await
+            .unwrap()
             .source_metrics_metadata
             .iter()
             .for_each(|(_metric_id, _ulid, size)| {
@@ -1271,5 +1286,51 @@ mod tests {
         assert!(
             (sample_3_total_size + sample_4_total_size) == total_source_metrics_metadata_size_2
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_source_metric_data_save_in_multi_thread() {
+        let loop_cnt = 10;
+        let mut hendle_vec = vec![];
+        for idx in 0..loop_cnt {
+            let hendle = tokio::spawn(async move {
+                let json_value1 =
+                    json!([{"name": format!("test_{}", idx), "value": 1.0}]).to_string();
+                let mut source_metrics_data = SOURCE_METRICS_DATA.write().unwrap();
+                let mut source_metrics_map = BTreeMap::new();
+                source_metrics_map.insert(
+                    Ulid::new().to_string(),
+                    SourceMetrics {
+                        json_value: json_value1,
+                    },
+                );
+                source_metrics_data
+                    .source_metrics
+                    .insert(format!("metric_{}", idx), source_metrics_map);
+                println!("idx : {}", idx);
+            });
+            hendle_vec.push(hendle);
+        }
+        for hendle in hendle_vec {
+            if let Err(e) = hendle.await {
+                println!("Error in handle: {:?}", e);
+            }
+        }
+        let mut read_idx = 0;
+        SOURCE_METRICS_DATA
+            .read()
+            .unwrap()
+            .source_metrics
+            .iter()
+            .for_each(|(metric_id, map)| {
+                println!(
+                    "metric_id: {}, ulid: {}, name: {}",
+                    metric_id,
+                    map.first_key_value().unwrap().0,
+                    map.first_key_value().unwrap().1.json_value
+                );
+                read_idx += 1;
+            });
+        assert_eq!(read_idx, loop_cnt);
     }
 }
