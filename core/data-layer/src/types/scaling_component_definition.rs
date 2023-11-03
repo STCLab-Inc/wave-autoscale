@@ -8,6 +8,9 @@ use ts_rs::TS;
 fn default_kind() -> ObjectKind {
     ObjectKind::ScalingComponent
 }
+fn default_metadata() -> HashMap<String, Value> {
+    HashMap::new()
+}
 
 #[derive(TS)]
 #[ts(
@@ -25,5 +28,6 @@ pub struct ScalingComponentDefinition {
     pub id: String,
     pub component_kind: String,
     #[ts(type = "object")]
+    #[serde(default = "default_metadata")]
     pub metadata: HashMap<String, Value>,
 }
