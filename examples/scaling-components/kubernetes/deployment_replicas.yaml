@@ -1,0 +1,65 @@
+kind: Metric
+id: prometheus_nginx_connections_waiting
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: prometheus_scrape
+      endpoints:
+        - "http://localhost:9090/federate"
+      scrape_interval_secs: 30
+      query:
+        "match[]":
+          - "nginx3_connections_waiting"
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: ["my_source_id_1"]
+---
+kind: ScalingComponent
+id: k8s_deployment
+component_kind: kubernetes-deployment
+metadata:
+  api_server_endpoint: ""
+  namespace: wave-autoscale
+  name: order-server-dp
+  ca_cert: ""
+---
+kind: ScalingPlan
+id: scaling_plan_k8s_deployment_scaling
+metadata:
+  title: "Scaling Plan for K8S Deployment Scaling - deployment replicas"
+  cool_down: 60 # seconds
+  interval: 10000 # milliseconds
+plans:
+  - id: plan-scale-out
+    description: "Scale out if request count is greater than 1000"
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'prometheus_nginx_connections_waiting',
+        name: 'nginx3_connections_waiting',
+        stats: 'max',
+        period_sec: 15
+      }) >= 1800
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: k8s_deployment
+        replicas: $replicas + 3
+  - id: plan-scale-in
+    description: "Scale in if request count is less 500"
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      get({
+        metric_id: 'prometheus_nginx_connections_waiting',
+        name: 'nginx3_connections_waiting',
+        stats: 'max',
+        period_sec: 15
+      }) < 500
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: k8s_deployment
+        # replicas must string type
+        replicas: "2"

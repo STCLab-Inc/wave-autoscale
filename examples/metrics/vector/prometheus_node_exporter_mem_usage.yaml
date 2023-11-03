@@ -1,0 +1,48 @@
+# We obtain the metric value of Memory usage in node exporter from Prometheus through the vector agent.
+kind: Metric
+id: prometheus_node_exporter_mem_usage
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      # If you use the Prometheus endpoint at `/api/v1/query`, you will receive a value in JSON format.
+      # Therefore, you need to use Vector's transforms to convert it to match the format of wave-autoscale.
+      endpoint: "http://localhost:9090/api/v1/query"
+      scrape_interval_secs: 30
+      query:
+        "query":
+          [
+            "100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[1m]) + avg_over_time(node_memory_Cached_bytes[1m]) + avg_over_time(node_memory_Buffers_bytes[1m])) / avg_over_time(node_memory_MemTotal_bytes[1m])))",
+          ]
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: remap
+      # - The metric format for wave-autoscale is as follows:
+      #   {"name": "name_1", "tags": {"tag_id": "tag1"}, "timestamp": 1698122911, "gauge": {"value" : 10.1}}
+      # - Both 'tags' and 'timestamp' are optional.
+      # - gauge.value must be a number.
+      # - VRL Playground - https://playground.vrl.dev/
+      # - endpoint metric data example:
+      #   {"status": "success", "data": {"resultType": "vector", "result": [{"metric": {"destination_app": "order-server"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "mutual_tls"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "unknown"}, "value": [1698134195.218, "0"]}]}}
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data.result)) -> |_index, value| {
+            tally = push(tally, {"name": "mem_usage", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : to_float!(value.value[1])}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      # The 'sinks' type in Vector should be set to 'wave-autoscale'.
+      type: wave-autoscale
+      # For the 'inputs' value, you should basically provide the 'id' value from 'sources'.
+      # If there are 'transforms', you can input the 'id' of the last transformed form.
+      inputs: ["my_transforms_id_1"]
+########### [ Saved Metric Data Example ] ############
+# {
+#   [{"name":"mem_usage","tags":{"container":"node-exporter","endpoint":"http-metrics","instance":"172.31.19.233:9100","job":"node-exporter","namespace":"istio-system","pod":"prometheus-community-prometheus-node-exporter-mdjhk","service":"prometheus-community-prometheus-node-exporter"},"value":"34.100197367599236","timestamp":1698626773.573},{"name":"mem_usage","tags":{"container":"node-exporter","endpoint":"http-metrics","instance":"172.31.30.225:9100","job":"node-exporter","namespace":"istio-system","pod":"prometheus-community-prometheus-node-exporter-jf4rd","service":"prometheus-community-prometheus-node-exporter"},"value":"26.796086791777185","timestamp":1698626773.573},{"name":"mem_usage","tags":{"container":"node-exporter","endpoint":"http-metrics","instance":"172.31.35.214:9100","job":"node-exporter","namespace":"istio-system","pod":"prometheus-community-prometheus-node-exporter-6mjr7","service":"prometheus-community-prometheus-node-exporter"},"value":"21.286137216284075","timestamp":1698626773.573},{"name":"mem_usage","tags":{"container":"node-exporter","endpoint":"http-metrics","instance":"172.31.37.31:9100","job":"node-exporter","namespace":"istio-system","pod":"prometheus-community-prometheus-node-exporter-sjxch","service":"prometheus-community-prometheus-node-exporter"},"value":"16.173212969632868","timestamp":1698626773.573},{"name":"mem_usage","tags":{"container":"node-exporter","endpoint":"http-metrics","instance":"172.31.42.149:9100","job":"node-exporter","namespace":"istio-system","pod":"prometheus-community-prometheus-node-exporter-zkpjp","service":"prometheus-community-prometheus-node-exporter"},"value":"16.72018978934965","timestamp":1698626773.573}]
+# }
+######################################################
