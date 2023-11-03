@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use data_layer::{
-    data_layer::DataLayer,
+    data_layer::{DataLayer, SOURCE_METRICS_DATA},
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
@@ -14,11 +14,36 @@ use data_layer::{
 };
 use rquickjs::async_with;
 use serde_json::{json, Value};
+use std::ops::Bound::Included;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
 use tracing::{debug, error};
 use ulid::Ulid;
+
+const PLAN_EXPRESSION_PERIOD_SEC: u64 = 5 * 60;
+
+#[derive(Debug, Clone)]
+enum PlanExpressionStats {
+    Latest,
+    Average,
+    Sum,
+    Count,
+    Minimum,
+    Maximum,
+}
+impl std::fmt::Display for PlanExpressionStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PlanExpressionStats::Latest => write!(f, "latest"),
+            PlanExpressionStats::Average => write!(f, "avg"),
+            PlanExpressionStats::Sum => write!(f, "sum"),
+            PlanExpressionStats::Count => write!(f, "count"),
+            PlanExpressionStats::Minimum => write!(f, "min"),
+            PlanExpressionStats::Maximum => write!(f, "max"),
+        }
+    }
+}
 
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
@@ -154,32 +179,10 @@ impl<'a> ScalingPlanner {
                     }
                 }
                 {
-                    let metric_ids_values = match data_layer
-                        .get_source_metrics_values_all_metric_ids(1000 * 60 * 30) // 30 minutes
-                        .await
-                    {
-                        Ok(metric_ids_values) => metric_ids_values,
-                        Err(_) => {
-                            error!("Error getting metric values");
-                            continue;
-                        }
-                    };
-                    // Prepare "get" function for JavaScript. This function will be used to get the metric values from the JavaScript code.
                     async_with!(context => |ctx| {
                         let _ = ctx.globals().set(
                             "get",
-                            rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                                let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let tags = args.get::<String, HashMap<String, String>>("tags".to_string());
-                                let tags = match tags {
-                                    Ok(tags) => tags,
-                                    Err(_) => HashMap::new()
-                                };
-                                let stats = args.get::<String, String>("stats".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                                context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
-                            }),
+                            rquickjs::prelude::Func::new("get", get_in_js),
                         );
                     })
                     .await;
@@ -328,40 +331,58 @@ impl<'a> ScalingPlanner {
     }
 }
 
-fn context_global_get_func(
-    metric_id: String,
-    name: String,
-    tags: HashMap<String, String>,
-    stats: String,
-    period_sec: u64,
-    metric_ids_values: Vec<serde_json::Value>,
-) -> Result<f64, rquickjs::Error> {
+fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
+    let metric_id = args
+        .get::<String, String>("metric_id".to_string())
+        .map_err(|_| {
+            error!("[ScalingPlan expression error] Failed to get metric_id");
+            rquickjs::Error::Exception
+        })?;
+    let name = args
+        .get::<String, String>("name".to_string())
+        .map_err(|_| {
+            error!("[ScalingPlan expression error] Failed to get name");
+            rquickjs::Error::Exception
+        })?;
+    // tags, stats, period_sec is optional
+    let tags = match args.get::<String, HashMap<String, String>>("tags".to_string()) {
+        Ok(tags) => tags,
+        Err(_) => HashMap::new(),
+    };
+    let stats = args
+        .get::<String, String>("stats".to_string())
+        .unwrap_or("latest".to_string());
+    let period_sec = args
+        .get::<String, u64>("period_sec".to_string())
+        .unwrap_or(PLAN_EXPRESSION_PERIOD_SEC); // default 5 min
+
+    let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
+        error!("[get_in_js] Failed to get source_metrics_data");
+        return Err(rquickjs::Error::Exception)
+    };
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
 
     let mut target_value_arr: Vec<f64> = Vec::new();
-    metric_ids_values
-        .iter()
-        .for_each(|value| {
-            // metric_id in the metric data should match the metric_id in the definition.
-            if value.get("metric_id").and_then(Value::as_str) != Some(metric_id.as_str()) {
+    // find metric_id
+    let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
+        return Err(rquickjs::Error::Exception)
+    };
+    metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
+        .for_each(|(_ulid, source_metrics_value)| {
+            let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
+                error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
                 return;
-            }
-            let Some(map_id) = value
-                .get("id")
-                .and_then(Value::as_str) else {
-                    return;
-                };
-            // id in the metric data should be equal to or greater than the time defined before a period of period_sec.
-            if map_id.to_string().lt(&ulid.to_string()) {
-                return;
-            }
+            };
             // find name or tags
             let Some(json_value_str) = value.get("json_value") else {return;};
             let Some(json_value_str) = json_value_str.as_str() else {return;};
             let json_value_str = serde_json::from_str::<Value>(json_value_str)
-                .map_err(|_| rquickjs::Error::Exception)
+                .map_err(|_| {
+                    error!("[ScalingPlan expression error] Failed to convert json_value to serde value");
+                    rquickjs::Error::Exception
+                })
                 .unwrap();
             let Some(json_values_arr) = json_value_str.as_array() else {return;};
             let _filter_json_values_arr: Vec<_> = json_values_arr
@@ -390,19 +411,24 @@ fn context_global_get_func(
                 })
                 .collect();
         });
-
-    let metric_stats = match stats {
-        ms if ms.to_lowercase() == "avg" => {
+    let metric_stats = match stats.to_lowercase() {
+        ms if PlanExpressionStats::Latest.to_string() == ms => {
+            let Some(latest_value) = target_value_arr.iter().last() else {
+                return Err(rquickjs::Error::Exception);
+            };
+            Ok(latest_value.to_owned())
+        }
+        ms if PlanExpressionStats::Average.to_string() == ms => {
             let sum_value: f64 = target_value_arr.iter().sum();
             let ms_num: f64 = sum_value / target_value_arr.len() as f64;
             Ok(ms_num)
         }
-        ms if ms.to_lowercase() == "sum" => {
+        ms if PlanExpressionStats::Sum.to_string() == ms => {
             let sum_value: f64 = target_value_arr.iter().sum();
             Ok(sum_value)
         }
-        ms if ms.to_lowercase() == "count" => Ok(target_value_arr.len() as f64),
-        ms if ms.to_lowercase() == "min" => {
+        ms if PlanExpressionStats::Count.to_string() == ms => Ok(target_value_arr.len() as f64),
+        ms if PlanExpressionStats::Minimum.to_string() == ms => {
             let min_value = target_value_arr
                 .into_iter()
                 .reduce(f64::min)
@@ -412,7 +438,7 @@ fn context_global_get_func(
                 Err(_) => Err(rquickjs::Error::Exception),
             }
         }
-        ms if ms.to_lowercase() == "max" => {
+        ms if PlanExpressionStats::Maximum.to_string() == ms => {
             let max_value = target_value_arr
                 .into_iter()
                 .reduce(f64::max)
@@ -422,7 +448,10 @@ fn context_global_get_func(
                 Err(_) => Err(rquickjs::Error::Exception),
             }
         }
-        _ => Err(rquickjs::Error::Exception),
+        _ => {
+            error!("[ScalingPlan expression error] stats is not defined");
+            Err(rquickjs::Error::Exception)
+        }
     };
     metric_stats
 }
@@ -447,6 +476,7 @@ async fn expression_get_value(
         .await;
         expression_value_map.append(&mut vec![get_result.clone()]);
     }
+
     expression_value_map
 }
 
@@ -458,6 +488,7 @@ mod tests {
     use data_layer::data_layer::DataLayer;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::MetricDefinition;
+
     use serde_json::json;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -470,7 +501,7 @@ mod tests {
         plans: Vec<PlanItemDefinition>,
     ) -> (Arc<DataLayer>, ScalingPlanner) {
         // Initialize DataLayer
-        let data_layer = DataLayer::new("").await;
+        let data_layer = DataLayer::new("", 500_000, false).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
         // Create a MetricDefinition
@@ -537,7 +568,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_context_global_get_func() {
+    async fn test_get_in_js() {
+        let data_layer = DataLayer::new("", 500_000, false).await;
+        data_layer.sync("").await;
+        let data_layer = Arc::new(data_layer);
+
         let Ok(runtime) = rquickjs::AsyncRuntime::new() else {
             error!("Error creating runtime");
             return;
@@ -546,92 +581,114 @@ mod tests {
             error!("Error creating context");
             return;
         };
-        let ulid_before_1m =
-            Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 60));
-        let ulid_before_200m =
-            Ulid::from_datetime(std::time::SystemTime::now() - Duration::from_millis(1000 * 200));
-
-        let mut metric_values: Vec<serde_json::Value> = Vec::new();
-        let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_1m.to_string(), "json_value": json_value})]);
-        let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_1m.to_string(), "json_value": json_value2})]);
-        let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric1", "id": ulid_before_200m.to_string(), "json_value": json_value3})]);
-        let json_value4 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string();
-        metric_values.append(&mut vec![json!({"metric_id": "metric2", "id": ulid_before_1m.to_string(), "json_value": json_value4})]);
-
-        let metric_ids_values = metric_values;
 
         async_with!(context => |ctx| {
             let _ = ctx.globals().set(
                 "get",
-                rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                    let metric_id = args.get::<String, String>("metric_id".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let name = args.get::<String, String>("name".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let tags = args.get::<String, HashMap<String, String>>("tags".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let stats = args.get::<String, String>("stats".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    let period_sec = args.get::<String, u64>("period_sec".to_string()).map_err(|_| rquickjs::Error::Exception)?;
-                    context_global_get_func(metric_id, name, tags, stats, period_sec, metric_ids_values.clone())
-                }),
+                rquickjs::prelude::Func::new("get", get_in_js),
             );
         })
         .await;
 
+        let json_value = json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string(); // metric1
+        let json_value2 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 3.0}
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 4.0}]).to_string(); // metric1
+        let json_value3 = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 7.0}
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string(); // metric2
+        let json_value4 =
+            json!([{"name": "test2", "tags": {"tag1": "value1"}, "value": 7.0}]).to_string(); // metric1
+        let timeover_json_value = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
+                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string(); // metric1
+
+        // add data to data_layer
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", &timeover_json_value)
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", &json_value)
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", &json_value2)
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric2", &json_value3)
+            .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", &json_value4)
+            .await;
+
         let expression_avg =
-            "get({ metric_id: 'metric1', stats: 'avg', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
+            "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
         let expression_sum =
-            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 9".to_string();
+            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 9".to_string();
         let expression_count =
-            "get({ metric_id: 'metric1', stats: 'count', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
+            "get({ metric_id: 'metric1', stats: 'count', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3".to_string();
         let expression_min =
-            "get({ metric_id: 'metric1', stats: 'min', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 2".to_string();
+            "get({ metric_id: 'metric1', stats: 'min', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 2".to_string();
         let expression_max =
-            "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) == 4".to_string();
-        let result_avg = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_avg.clone()) else {
-                return false;
+            "get({ metric_id: 'metric1', stats: 'max', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 4".to_string();
+        let expression_sum_timeover =
+            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 3, name: 'test', tags: { tag1: 'value1'}}) == 20".to_string();
+        let expression_optional_tags =
+            "get({ metric_id: 'metric1', stats: 'sum', period_sec: 3, name: 'test'}) == 21"
+                .to_string();
+        let expression_optional_stats =
+            "get({ metric_id: 'metric1', period_sec: 3, name: 'test'}) == 4".to_string();
+        let expression_optional_period_sec =
+            "get({ metric_id: 'metric1', stats: 'max', name: 'test'}) == 6".to_string();
+        let expression_optional_stats_period_sec =
+            "get({ metric_id: 'metric1', name: 'test'}) == 4".to_string();
+        let expression_fail_name =
+            "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, tags: { tag1: 'value1'}}) == 3".to_string();
+        let expression_fail_metric_id =
+            "get({ stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3"
+                .to_string();
+
+        let result_avg = check_expression(expression_avg, context.clone()).await;
+        let result_sum = check_expression(expression_sum, context.clone()).await;
+        let result_count = check_expression(expression_count, context.clone()).await;
+        let result_min = check_expression(expression_min, context.clone()).await;
+        let result_max = check_expression(expression_max, context.clone()).await;
+        let result_sum_timeover = check_expression(expression_sum_timeover, context.clone()).await;
+        let result_optional_tags =
+            check_expression(expression_optional_tags, context.clone()).await;
+        let result_optional_stats =
+            check_expression(expression_optional_stats, context.clone()).await;
+        let result_optional_period_sec =
+            check_expression(expression_optional_period_sec, context.clone()).await;
+        let result_optional_stats_period_sec =
+            check_expression(expression_optional_stats_period_sec, context.clone()).await;
+        let result_fail_name = check_expression(expression_fail_name, context.clone()).await;
+        let result_fail_metric_id =
+            check_expression(expression_fail_metric_id, context.clone()).await;
+
+        assert!(result_avg.unwrap());
+        assert!(result_sum.unwrap());
+        assert!(result_count.unwrap());
+        assert!(result_min.unwrap());
+        assert!(result_max.unwrap());
+        assert!(result_sum_timeover.unwrap());
+        assert!(result_optional_tags.unwrap());
+        assert!(result_optional_stats.unwrap());
+        assert!(result_optional_period_sec.unwrap());
+        assert!(result_optional_stats_period_sec.unwrap());
+        assert!(result_fail_name.is_err());
+        assert!(result_fail_metric_id.is_err());
+    }
+
+    async fn check_expression(expression: String, context: rquickjs::AsyncContext) -> Result<bool> {
+        async_with!(context => |ctx| {
+            let Ok(result) = ctx.eval::<bool, _>(expression) else {
+                return Err(anyhow::anyhow!("Failed to eval expression"));
             };
-            result
+            Ok(result)
         })
-        .await;
-        let result_sum = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_sum.clone()) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        let result_count = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_count.clone()) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        let result_min = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_min.clone()) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        let result_max = async_with!(context => |ctx| {
-            let Ok(result) = ctx.eval::<bool, _>(expression_max.clone()) else {
-                return false;
-            };
-            result
-        })
-        .await;
-        assert!(result_avg);
-        assert!(result_sum);
-        assert!(result_count);
-        assert!(result_min);
-        assert!(result_max);
+        .await
     }
 
     #[tokio::test]
@@ -692,7 +749,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -758,7 +815,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -800,7 +857,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -842,7 +899,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric.as_str())
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
