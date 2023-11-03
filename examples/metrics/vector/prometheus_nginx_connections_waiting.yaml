@@ -1,0 +1,30 @@
+# We obtain the metric value of connections waiting in Nginx from Prometheus through the vector agent.
+kind: Metric
+id: prometheus_nginx_connections_waiting
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: prometheus_scrape
+      # If you use the Prometheus endpoint at `/api/v1/query`, you will receive a value in JSON format.
+      # Therefore, you need to use Vector's transforms to convert it to match the format of wave-autoscale.
+      endpoints:
+        - "http://localhost:9090/federate"
+      scrape_interval_secs: 30
+      query:
+        "match[]":
+          - "nginx_connections_waiting"
+      # endpoint metric data example:
+      # nginx_connections_waiting{endpoint="http://nginx-10.0.101.222:80/nginx_status",host="nginx-10.0.101.222:80",instance="",monitor="prometheus_center"} 0 1698133601723
+  sinks:
+    my_sinks_id:
+      # The 'sinks' type in Vector should be set to 'wave-autoscale'.
+      type: wave-autoscale
+      # For the 'inputs' value, you should basically provide the 'id' value from 'sources'.
+      # If there are 'transforms', you can input the 'id' of the last transformed form.
+      inputs: ["my_source_id_1"]
+########### [ Saved Metric Data Example ] ############
+# {
+#   [{"name":"nginx_connections_waiting","tags":{"endpoint":"http://nginx-10.0.103.99:80/nginx_status","host":"nginx-10.0.103.99:80","instance":"","monitor":"prometheus_center"},"value":0.0,"timestamp":"2023-10-26T07:11:39.470Z"}]
+# }
+######################################################
