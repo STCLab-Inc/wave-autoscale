@@ -32,7 +32,7 @@ const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 
 #[derive(Debug)]
 pub struct SourceMetricsData {
-    metric_buffer_size_kb: u64,
+    metric_buffer_size_byte: u64,
     enable_metrics_log: bool,
     pub source_metrics: HashMap<String, BTreeMap<String, SourceMetrics>>,
     source_metrics_metadata: LinkedList<(String, String, usize)>,
@@ -43,7 +43,7 @@ type SharedSourceMetricsData = Arc<RwLock<SourceMetricsData>>;
 
 pub static SOURCE_METRICS_DATA: Lazy<SharedSourceMetricsData> = Lazy::new(|| {
     let source_metrics_data = SourceMetricsData {
-        metric_buffer_size_kb: 500_000,
+        metric_buffer_size_byte: 500_000,
         enable_metrics_log: false,
         source_metrics: HashMap::new(),
         source_metrics_metadata: LinkedList::new(),
@@ -66,7 +66,7 @@ impl DataLayer {
         } else {
             sql_url
         };
-        let metric_buffer_size_kb = if metric_buffer_size_kb == 0 {
+        let metric_buffer_size_byte = if metric_buffer_size_kb == 0 {
             DEFAULT_METRIC_BUFFER_SIZE_KB * 1000
         } else {
             metric_buffer_size_kb * 1000
@@ -75,19 +75,10 @@ impl DataLayer {
         {
             let source_metrics_data = SOURCE_METRICS_DATA.clone();
             let Ok(mut source_metrics_data) = source_metrics_data.write() else {
-                error!("[DataLayer::new()] Failed to get the lock of source_metrics_data and try to create a new one");
-                return DataLayer {
-                    pool: DataLayer::get_pool(sql_url).await,
-                    source_metrics_data: Arc::new(RwLock::new(SourceMetricsData {
-                        metric_buffer_size_kb,
-                        enable_metrics_log,
-                        source_metrics: HashMap::new(),
-                        source_metrics_metadata: LinkedList::new(),
-                        source_metrics_size: 0,
-                    }))
-                };
+                error!("[DataLayer::new()] Failed to get the lock of source_metrics_data");
+                panic!("Failed to get the lock of source_metrics_data");
             };
-            source_metrics_data.metric_buffer_size_kb = metric_buffer_size_kb;
+            source_metrics_data.metric_buffer_size_byte = metric_buffer_size_byte;
             source_metrics_data.enable_metrics_log = enable_metrics_log;
         }
 
@@ -785,7 +776,7 @@ impl DataLayer {
         loop {
             // check size :: buffersize - total size < 0 (None) => remove target data
             if source_metrics_data
-                .metric_buffer_size_kb
+                .metric_buffer_size_byte
                 .checked_sub(subtract_total_size as u64)
                 .is_some()
             {
@@ -796,7 +787,6 @@ impl DataLayer {
             };
             subtract_total_size -= front_source_metrics_metadata.2; // oldest metadata size
             remove_target_data.append(&mut vec![front_source_metrics_metadata]);
-            continue;
         }
 
         // remove target data

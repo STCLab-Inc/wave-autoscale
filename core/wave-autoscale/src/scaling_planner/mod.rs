@@ -21,6 +21,30 @@ use tokio::{sync::RwLock, task::JoinHandle, time};
 use tracing::{debug, error};
 use ulid::Ulid;
 
+const PLAN_EXPRESSION_PERIOD_SEC: u64 = 5 * 60;
+
+#[derive(Debug, Clone)]
+enum PlanExpressionStats {
+    Latest,
+    Average,
+    Sum,
+    Count,
+    Minimum,
+    Maximum,
+}
+impl std::fmt::Display for PlanExpressionStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PlanExpressionStats::Latest => write!(f, "latest"),
+            PlanExpressionStats::Average => write!(f, "avg"),
+            PlanExpressionStats::Sum => write!(f, "sum"),
+            PlanExpressionStats::Count => write!(f, "count"),
+            PlanExpressionStats::Minimum => write!(f, "min"),
+            PlanExpressionStats::Maximum => write!(f, "max"),
+        }
+    }
+}
+
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
     shared_scaling_component_manager: &SharedScalingComponentManager,
@@ -158,9 +182,7 @@ impl<'a> ScalingPlanner {
                     async_with!(context => |ctx| {
                         let _ = ctx.globals().set(
                             "get",
-                            rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                                get_in_js(args)
-                            }),
+                            rquickjs::prelude::Func::new("get", get_in_js),
                         );
                     })
                     .await;
@@ -332,7 +354,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         .unwrap_or("latest".to_string());
     let period_sec = args
         .get::<String, u64>("period_sec".to_string())
-        .unwrap_or(5 * 60); // default 5 min
+        .unwrap_or(PLAN_EXPRESSION_PERIOD_SEC); // default 5 min
 
     let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
         error!("[get_in_js] Failed to get source_metrics_data");
@@ -389,24 +411,24 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
                 })
                 .collect();
         });
-    let metric_stats = match stats {
-        ms if ms.to_lowercase() == "latest" => {
+    let metric_stats = match stats.to_lowercase() {
+        ms if PlanExpressionStats::Latest.to_string() == ms => {
             let Some(latest_value) = target_value_arr.iter().last() else {
                 return Err(rquickjs::Error::Exception);
             };
             Ok(latest_value.to_owned())
         }
-        ms if ms.to_lowercase() == "avg" => {
+        ms if PlanExpressionStats::Average.to_string() == ms => {
             let sum_value: f64 = target_value_arr.iter().sum();
             let ms_num: f64 = sum_value / target_value_arr.len() as f64;
             Ok(ms_num)
         }
-        ms if ms.to_lowercase() == "sum" => {
+        ms if PlanExpressionStats::Sum.to_string() == ms => {
             let sum_value: f64 = target_value_arr.iter().sum();
             Ok(sum_value)
         }
-        ms if ms.to_lowercase() == "count" => Ok(target_value_arr.len() as f64),
-        ms if ms.to_lowercase() == "min" => {
+        ms if PlanExpressionStats::Count.to_string() == ms => Ok(target_value_arr.len() as f64),
+        ms if PlanExpressionStats::Minimum.to_string() == ms => {
             let min_value = target_value_arr
                 .into_iter()
                 .reduce(f64::min)
@@ -416,7 +438,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
                 Err(_) => Err(rquickjs::Error::Exception),
             }
         }
-        ms if ms.to_lowercase() == "max" => {
+        ms if PlanExpressionStats::Maximum.to_string() == ms => {
             let max_value = target_value_arr
                 .into_iter()
                 .reduce(f64::max)
@@ -563,9 +585,7 @@ mod tests {
         async_with!(context => |ctx| {
             let _ = ctx.globals().set(
                 "get",
-                rquickjs::prelude::Func::new("get", move |args: rquickjs::Object| -> Result<f64, rquickjs::Error> {
-                    get_in_js(args)
-                }),
+                rquickjs::prelude::Func::new("get", get_in_js),
             );
         })
         .await;
