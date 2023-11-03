@@ -143,10 +143,14 @@ async fn post_metrics_receiver(
         return HttpResponse::InternalServerError().body("Failed to serialize JSON");
     }
     let json_value = json_value.unwrap();
-    // Save to database
+    // Save to data_layer
     let data_layer = &app_state.data_layer;
     let result = data_layer
-        .add_source_metric(collector.as_str(), metric_id.as_str(), json_value.as_str())
+        .add_source_metrics_in_data_layer(
+            collector.as_str(),
+            metric_id.as_str(),
+            json_value.as_str(),
+        )
         .await;
     if result.is_err() {
         error!("Failed to save metric into the data-layer: {:?}", result);

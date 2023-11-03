@@ -3,7 +3,6 @@ use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
-
 pub type SharedMetricUpdater = Arc<RwLock<MetricUpdater>>;
 
 // TODO: move this to config
@@ -96,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metric_updater() {
-        let data_layer = DataLayer::new("").await;
+        let data_layer = DataLayer::new("", 500_000, false).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
         let metric_definitions = vec![MetricDefinition {

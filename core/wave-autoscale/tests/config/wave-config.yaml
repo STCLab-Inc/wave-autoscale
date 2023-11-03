@@ -1,8 +1,12 @@
 # Data Layer
 db_url: sqlite://./wave.db
 watch_definition_duration: 5000
-autoscaling_history_retention: '1d'
+autoscaling_history_retention: "1d"
 reset_definitions_on_startup: true
+
+# Metrics
+metric_buffer_size_kb: 500000
+enable_metrics_log: false
 
 # API Server
 host: localhost
