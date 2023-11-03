@@ -1,13 +1,24 @@
 language: "bash"
 
 tasks:
-  deploy-docker-compose:
+  prepare-yaml:
+    command: "cp core/wave-autoscale/tests/config/wave-config.yaml docs/basic-example/ && cp core/wave-autoscale/tests/config/definition.yaml docs/basic-example/"
+    options:
+      runFromWorkspaceRoot: true
+  build-docker-compose:
     command: "cp core/wave-autoscale/tests/config/wave-config.yaml deployment/docker-compose/wave-config.yaml"
     options:
       runFromWorkspaceRoot: true
-  deploy-k8s:
+  build-k8s:
     command: "helm template helm-chart > k8s/install.yaml"
     inputs:
       - "helm-chart/**/*"
     outputs:
       - "k8s/install.yaml"
+  build-helm-chart-repo:
+    command: "mkdir -p ./helm-chart-repo && cd ./helm-chart-repo && helm package ../helm-chart && helm repo index ./ --url https://github.waveautoscale.com/helm && cd .. && ./mv-chart-to-docs.sh && rm -r ./helm-chart-repo"
+    inputs:
+      - "helm-chart/**/*"
+    outputs:
+      - "helm-chart-repo/*"
+      - "/docs/helm/*"

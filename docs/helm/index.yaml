@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  wave-autoscale:
+  - apiVersion: v2
+    appVersion: 0.0.15
+    created: "2023-10-27T13:49:55.697244+09:00"
+    description: A Helm chart for Wave Autoscale
+    digest: 1c2742912b8b558a2eb232ad5012cf01832dc6fbb66479f9093204bcfcfc0560
+    name: wave-autoscale
+    type: application
+    urls:
+    - https://github.waveautoscale.com/helm/wave-autoscale-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-10-27T13:49:55.696646+09:00"

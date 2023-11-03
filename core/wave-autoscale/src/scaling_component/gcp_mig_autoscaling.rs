@@ -6,9 +6,9 @@ use super::ScalingComponent;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
-use log::error;
 use serde_json::{json, Map};
 use std::collections::HashMap;
+use tracing::error;
 
 pub struct MIGAutoScalingComponent {
     definition: ScalingComponentDefinition,

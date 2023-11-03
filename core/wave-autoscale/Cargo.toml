@@ -53,8 +53,6 @@ rustls = "0.21.0"
 rustls-pemfile = "1.0.2"
 hyper-rustls = "0.24.0"
 clap = { version = "4.3.0", features = ["derive"] }
-log = { version = "0.4.18" }
-env_logger = { version = "0.10.0" }
 duration-str = { version = "0.5.1" }
 aws-sdk-ecs = "0.25.1"
 rquickjs = { version = "0.3.1", features = ["full-async", "parallel"] }
@@ -76,6 +74,10 @@ regex = { version = "1.9.1" }
 ctrlc = { version = "3.4.0" }
 strum = { version = "0.25.0" }
 strum_macros = { version = "0.25.0" }
+tracing = { version = "0.1.40" }
+tracing-subscriber = { version = "0.3.17" }
+serde_json_path = { version = "0.6.2" }
 
 [dev-dependencies]
 handlebars = "4.3.7"
+tracing-test = { version = "0.2.4" }

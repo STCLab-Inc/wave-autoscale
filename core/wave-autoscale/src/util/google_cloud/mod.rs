@@ -1,5 +1,5 @@
 use gcp_auth::AuthenticationManager;
-use log::error;
+use tracing::error;
 pub mod gcp_managed_instance_group;
 pub mod google_cloud_functions_instance_helper;
 pub mod google_cloud_run_service_helper;

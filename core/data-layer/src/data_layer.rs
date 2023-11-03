@@ -18,6 +18,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::sync::watch;
+use tracing::{debug, error, info};
 use ulid::Ulid;
 use uuid::Uuid;
 
@@ -46,7 +47,9 @@ impl DataLayer {
         self.migrate().await;
 
         // TODO: Validate the definition file before loading it into the database
-        if !definition_path.is_empty() && Path::new(definition_path).exists() {
+        let is_empty = definition_path.is_empty();
+        let exists = Path::new(definition_path).exists();
+        if !is_empty && exists {
             let result = self
                 .load_definition_file_into_database(definition_path)
                 .await;
@@ -55,11 +58,24 @@ impl DataLayer {
                     "Failed to load the definition file into the database: {:?}",
                     result
                 );
+            } else {
+                info!(
+                    "[data-layer] The definition file is loaded into the database: {}",
+                    definition_path
+                );
             }
+        } else if !is_empty && !exists {
+            error!("The definition file does not exist: {}", definition_path);
+        } else {
+            info!(
+                "[data-layer] The definition path is empty, skip loading the definition file into the database"
+            );
         }
     }
 
     async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
+        debug!("Loading the definition file into the database");
+
         // Parse the plan_file
         let parser_result = read_definition_yaml_file(definition_path);
         if parser_result.is_err() {
@@ -113,6 +129,8 @@ impl DataLayer {
             }
         }
 
+        debug!("Connecting to the database: {}", sql_url);
+
         AnyPoolOptions::new()
             .max_connections(5)
             .connect(sql_url)
@@ -120,7 +138,8 @@ impl DataLayer {
             .unwrap()
     }
     async fn migrate(&self) {
-        debug!("Database type: {:?}", self.pool.any_kind());
+        debug!("Migrate to database type: {:?}", self.pool.any_kind());
+
         match &self.pool.any_kind() {
             AnyKind::Postgres => {
                 sqlx::migrate!("migrations/postgres")
@@ -140,7 +159,7 @@ impl DataLayer {
             }
         }
     }
-    pub fn watch_definitions(&self, watch_duration_ms: u64) -> watch::Receiver<String> {
+    pub fn watch_definitions_in_db(&self, watch_duration_ms: u64) -> watch::Receiver<String> {
         let (notify_sender, notify_receiver) = watch::channel(String::new());
         let pool = self.pool.clone();
         let database_kind = self.pool.any_kind();
@@ -150,7 +169,8 @@ impl DataLayer {
             loop {
                 // 1 second
                 tokio::time::sleep(tokio::time::Duration::from_millis(watch_duration_ms)).await;
-                debug!("Watching...");
+                debug!("Watching the definition in the db");
+
                 // REFACTOR: Use type state pattern to avoid this match
                 let query_string = match database_kind {
                     AnyKind::Postgres => {
@@ -178,7 +198,6 @@ impl DataLayer {
                 if lastest_updated_at_hash != updated_at_hash_string {
                     // Send signals after the first time
                     if !lastest_updated_at_hash.is_empty() {
-                        debug!("is not empty");
                         let timestamp = Utc::now().to_rfc3339();
                         let result = notify_sender.send(timestamp);
                         if result.is_err() {
@@ -189,7 +208,6 @@ impl DataLayer {
                         }
                     }
                     lastest_updated_at_hash = updated_at_hash_string;
-                    debug!("Updated at hash changed");
                 }
             }
         });
@@ -781,14 +799,10 @@ impl DataLayer {
 mod tests {
     use super::DataLayer;
     use crate::types::autoscaling_history_definition::AutoscalingHistoryDefinition;
+    use tracing::{debug, error};
+    use tracing_test::traced_test;
     use ulid::Ulid;
 
-    fn init_log() {
-        let _ = env_logger::builder()
-            .is_test(true)
-            .filter_level(log::LevelFilter::Debug)
-            .try_init();
-    }
     async fn get_data_layer_with_sqlite() -> DataLayer {
         const DEFAULT_DB_URL: &str = "sqlite://tests/temp/test.db";
         // Delete the test db if it exists
@@ -825,8 +839,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[traced_test]
     async fn test_autoscaling_history() {
-        init_log();
         let data_layer = get_data_layer_with_sqlite().await;
         test_autoscaling_history_with_data_layer(data_layer).await;
 
@@ -882,8 +896,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[traced_test]
     async fn test_get_source_metrics_values_all_metric_ids() {
-        init_log();
         let data_layer = get_data_layer_with_sqlite().await;
         test_get_source_metrics_values_all_metric_ids_with_data_layer(data_layer).await;
 

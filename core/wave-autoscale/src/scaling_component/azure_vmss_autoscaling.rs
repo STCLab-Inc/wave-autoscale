@@ -11,8 +11,8 @@ use super::super::util::azure::{
 use super::ScalingComponent;
 use async_trait::async_trait;
 use data_layer::ScalingComponentDefinition;
-use log::error;
 use std::collections::HashMap;
+use tracing::error;
 
 pub struct VMSSAutoScalingComponent {
     definition: ScalingComponentDefinition,

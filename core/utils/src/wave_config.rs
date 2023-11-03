@@ -1,6 +1,6 @@
-use log::{debug, error};
 use serde::Deserialize;
 use std::fs::File;
+use tracing::{debug, error, info};
 
 const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
@@ -11,7 +11,7 @@ const DEFAULT_API_PORT: u16 = 3024;
 const DEFAULT_WEB_UI: bool = false;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
-const DEFAULT_KUBERNETES: bool = false;
+const DEFAULT_RESET_DEFINITIONS_ON_STARTUP: bool = false;
 
 fn default_db_url() -> String {
     DEFAULT_DB_URL.to_string()
@@ -37,8 +37,8 @@ fn default_web_ui_host() -> String {
 fn default_web_ui_port() -> u16 {
     DEFAULT_WEB_UI_PORT
 }
-fn default_kubernetes() -> bool {
-    DEFAULT_KUBERNETES
+fn default_reset_definitions_on_startup() -> bool {
+    DEFAULT_RESET_DEFINITIONS_ON_STARTUP
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default, Clone)]
@@ -52,22 +52,32 @@ struct DownloadUrlDefinition {
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct WaveConfig {
-    // For data-layer
+    //
+    // Data Layer
+    //
     #[serde(default = "default_db_url")]
     pub db_url: String,
-    // For the controller
     // milliseconds
     #[serde(default = "default_watch_definition_duration")]
     pub watch_definition_duration: u64,
     // Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
     #[serde(default = "default_autoscaling_history_retention")]
     pub autoscaling_history_retention: String,
-    // For api-server
+    // Reset definitions on startup
+    #[serde(default = "default_reset_definitions_on_startup")]
+    pub reset_definitions_on_startup: bool,
+
+    //
+    // API Server
+    //
     #[serde(default = "default_api_host")]
     pub host: String,
     #[serde(default = "default_api_port")]
     pub port: u16,
-    // For web-app
+
+    //
+    // Web Console
+    //
     #[serde(default = "default_web_ui")]
     pub web_ui: bool,
     #[serde(default = "default_web_ui_host")]
@@ -75,11 +85,9 @@ pub struct WaveConfig {
     #[serde(default = "default_web_ui_port")]
     pub web_ui_port: u16,
 
-    // For Kubernetes
-    #[serde(default = "default_kubernetes")]
-    pub kubernetes: bool,
-
-    // For download url
+    //
+    // Metrics Collector
+    //
     #[serde(default)]
     vector: DownloadUrlDefinition,
     #[serde(default)]
@@ -92,12 +100,12 @@ impl Default for WaveConfig {
             db_url: DEFAULT_DB_URL.to_string(),
             watch_definition_duration: DEFAULT_WATCH_DEFINITION_DURATION,
             autoscaling_history_retention: DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string(),
+            reset_definitions_on_startup: DEFAULT_RESET_DEFINITIONS_ON_STARTUP,
             host: DEFAULT_API_HOST.to_string(),
             port: DEFAULT_API_PORT,
             web_ui: DEFAULT_WEB_UI,
             web_ui_host: DEFAULT_WEB_UI_HOST.to_string(),
             web_ui_port: DEFAULT_WEB_UI_PORT,
-            kubernetes: DEFAULT_KUBERNETES,
             vector: DownloadUrlDefinition::default(),
             telegraf: DownloadUrlDefinition::default(),
         }
@@ -112,10 +120,6 @@ impl WaveConfig {
             config_path
         };
 
-        // Confirm the current directory
-        let current = std::env::current_dir();
-        debug!("Current directory: {:?}", current);
-        debug!("Reading config file: {}", config_path);
         // Read the file of the path
         let file = File::open(config_path);
         if file.is_err() {
@@ -129,6 +133,7 @@ impl WaveConfig {
             return WaveConfig::default();
         }
         let wave_config = wave_config.unwrap();
+        info!("[config] Config file parsed: {}", config_path);
         debug!("Config file parsed: {:?}", wave_config);
         wave_config
     }
@@ -151,6 +156,8 @@ impl WaveConfig {
 
 #[cfg(test)]
 mod tests {
+    use tracing_test::traced_test;
+
     use super::*;
 
     fn get_wave_config() -> WaveConfig {
@@ -158,12 +165,13 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_watch_definition_duration() {
         let wave_config = get_wave_config();
         assert_eq!(wave_config.db_url, DEFAULT_DB_URL);
         assert_eq!(
             wave_config.watch_definition_duration,
-            DEFAULT_WATCH_DEFINITION_DURATION + 1
+            DEFAULT_WATCH_DEFINITION_DURATION
         );
         assert_eq!(
             wave_config.autoscaling_history_retention,

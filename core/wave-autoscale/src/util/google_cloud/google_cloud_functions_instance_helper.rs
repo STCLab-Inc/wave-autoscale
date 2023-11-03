@@ -60,11 +60,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_patch_cloud_functions_instance_for_version_1_function contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }
@@ -91,11 +87,7 @@ mod test {
             .unwrap();
 
         let status = response.status();
-        let body = response.text().await.unwrap_or("".to_string());
-        println!(
-            "test_call_patch_cloud_functions_instance_for_version_2_function contents: {:?}",
-            body
-        );
+        let _body = response.text().await.unwrap_or("".to_string());
 
         assert!(status == reqwest::StatusCode::OK);
     }

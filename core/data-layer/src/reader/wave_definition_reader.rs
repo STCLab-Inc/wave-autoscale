@@ -11,6 +11,7 @@ use std::{
     io::Read,
     path::Path,
 };
+use tracing::error;
 
 #[derive(Debug, Default)]
 pub struct ParserResult {
@@ -164,7 +165,7 @@ where
                     parsed.validate()?;
                     result.scaling_component_definitions.push(parsed);
                 }
-                _ => println!("Not Found: {:?}", kind),
+                _ => error!("Not Found: {:?}", kind),
             }
         } else {
             // TODO: "kind" doesn't exist
