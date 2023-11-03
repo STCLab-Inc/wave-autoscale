@@ -11,8 +11,6 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/active_instances"] # Monitoring this metric allows you to know the number of currently active function instances. A sudden increase in this number may indicate that scaling out is necessary. Conversely, a low number could suggest that scaling in should be considered to save resources.
         interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
@@ -20,8 +18,6 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/execution_count"] # This metric indicates how often a function is executed. A high number of executions could be a signal to consider scaling out. Additionally, the status label can be checked to see if errors or timeouts are occurring frequently.
         interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
@@ -29,8 +25,6 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/execution_times"] # If execution times are lengthening, scaling out may need to be considered. On the other hand, if the execution times are generally short, the current setup can be considered efficient.
         interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
@@ -38,8 +32,6 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/instance_count"] # You can determine scaling strategies by checking the number of instances in active or idle states. If there are many idle instances, scaling in could be considered.
         interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
@@ -47,8 +39,6 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/network_egress"] # A surge in network traffic may necessitate considering scaling out. This is especially important for applications that need to transmit a large amount of data.
         interval: "240s" # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
@@ -56,23 +46,11 @@ metadata:
       - project: "{{ project }}"
         metric_type_prefix_include: ["cloudfunctions.googleapis.com/function/user_memory_bytes"] # If memory usage is high, you may need to increase the memory allocated to function instances or consider scaling out. High memory usage could result in performance degradation.
         interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
-        tags:
-          metric_id: telegraf_stackdriver_cloud_functions_metrics
         filter:
           resource_labels:
             - key: function_name
               value: "{{ function_name }}"
   outputs:
-    wave-autoscale:
-      tagpass:
-        metric_id: telegraf_stackdriver_cloud_functions_metrics # input tags append
-  agent:
-    interval: "60s" # Default data collection interval for all inputs. Intervals are durations of time and can be specified for supporting settings by combining an integer value and time unit as a string value. Valid time units are ns, us (or µs), ms, s, m, h.
-    round_interval: true # Rounds collection interval to interval ie, if interval="10s" then always collect on :00, :10, :20, etc.
-    metric_batch_size: 1000 # Telegraf will send metrics to outputs in batches of at most metric_batch_size metrics. This controls the size of writes that Telegraf sends to output plugins.
-    metric_buffer_limit: 10000 # Maximum number of unwritten metrics per output. Increasing this value allows for longer periods of output downtime without dropping metrics at the cost of higher maximum memory usage.
-    collection_jitter: "0s" # Collection jitter is used to jitter the collection by a random interval. Each plugin will sleep for a random time within jitter before collecting. This can be used to avoid many plugins querying things like sysfs at the same time, which can have a measurable effect on the system.
-    flush_interval: "60s" # Default flushing interval for all outputs. Maximum flush_interval will be flush_interval + flush_jitter.
-    flush_jitter: "0s" # Default flush jitter for all outputs. This jitters the flush interval by a random amount. This is primarily to avoid large write spikes for users running a large number of telegraf instances. ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
-    precision: "0s" # Collected metrics are rounded to the precision specified as an interval. Precision will NOT be used for service inputs. It is up to each individual service input to set the timestamp at the appropriate precision.
-    debug: false # Log at debug level.
+    wave-autoscale: {}
+---
+
