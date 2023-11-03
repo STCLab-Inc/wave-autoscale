@@ -1,0 +1,46 @@
+# We obtain the Istio request duration metric value from Prometheus through the vector agent.
+kind: Metric
+id: prometheus_coredns_request_5m
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      # If you use the Prometheus endpoint at `/api/v1/query`, you will receive a value in JSON format.
+      # Therefore, you need to use Vector's transforms to convert it to match the format of wave-autoscale.
+      endpoint: "http://localhost:9090/api/v1/query"
+      scrape_interval_secs: 30
+      # CoreDNS request rate of increase
+      # This metric is likely to rise as your application sees spikes in activity or during cyclical increases in usage.
+      # type 'A': ipv4, 'AAAA': ipv6
+      query:
+        "query": ['rate(coredns_dns_requests_total{type=~"A|AAAA"}[5m])']
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: remap
+      # - The metric format for wave-autoscale is as follows:
+      #   {"name": "coredns_request", "tags": {"tag_id": "tag1"}, "timestamp": 1698122911, "gauge": {"value" : 10.1}}
+      # - Both 'tags' and 'timestamp' are optional.
+      # - gauge.value must be a number.
+      # - VRL Playground - https://playground.vrl.dev/
+      # - endpoint metric data example:
+      #   {"status": "success", "data": {"resultType": "vector", "result": [{"metric": {"destination_app": "order-server"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "mutual_tls"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "unknown"}, "value": [1698134195.218, "0"]}]}}
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data.result)) -> |_index, value| {
+            tally = push(tally, {"name": "coredns_request", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : to_float!(value.value[1])}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      # The 'sinks' type in Vector should be set to 'wave-autoscale'.
+      type: wave-autoscale
+      # For the 'inputs' value, you should basically provide the 'id' value from 'sources'.
+      # If there are 'transforms', you can input the 'id' of the last transformed form.
+      inputs: ["my_transforms_id_1"]
+########### [ Saved Metric Data Example ] ############
+# [{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.16.95:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-ssw8p","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"A","zone":"."},"value":0.5111111111111112,"timestamp":1698983669.199},{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.16.95:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-ssw8p","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"AAAA","zone":"."},"value":0.003703703703703704,"timestamp":1698983669.199},{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.43.235:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-hqwp8","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"A","zone":"."},"value":0.45555555555555555,"timestamp":1698983669.199},{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.43.235:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-hqwp8","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"AAAA","zone":"."},"value":0.007407407407407408,"timestamp":1698983669.199},{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.45.158:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-t2b4k","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"A","zone":"."},"value":0.7592592592592593,"timestamp":1698983669.199},{"name":"coredns_request","tags":{"container":"coredns","endpoint":"http-metrics","family":"1","instance":"172.31.45.158:9153","job":"coredns","namespace":"kube-system","pod":"coredns-8496bbc677-t2b4k","proto":"udp","server":"dns://:53","service":"prometheus-community-kube-coredns","type":"AAAA","zone":"."},"value":0.011111111111111112,"timestamp":1698983669.199}]
+######################################################

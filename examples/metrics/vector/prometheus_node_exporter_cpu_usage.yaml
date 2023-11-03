@@ -1,0 +1,48 @@
+# We obtain the metric value of CPU usage in node exporter from Prometheus through the vector agent.
+kind: Metric
+id: prometheus_node_exporter_cpu_usage
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: http_client
+      # If you use the Prometheus endpoint at `/api/v1/query`, you will receive a value in JSON format.
+      # Therefore, you need to use Vector's transforms to convert it to match the format of wave-autoscale.
+      endpoint: "http://localhost:9090/api/v1/query"
+      scrape_interval_secs: 30
+      query:
+        "query":
+          [
+            '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)',
+          ]
+  transforms:
+    my_transforms_id_1:
+      inputs: ["my_source_id_1"]
+      type: remap
+      # - The metric format for wave-autoscale is as follows:
+      #   {"name": "name_1", "tags": {"tag_id": "tag1"}, "timestamp": 1698122911, "gauge": {"value" : 10.1}}
+      # - Both 'tags' and 'timestamp' are optional.
+      # - gauge.value must be a number.
+      # - VRL Playground - https://playground.vrl.dev/
+      # - endpoint metric data example:
+      #   {"status": "success", "data": {"resultType": "vector", "result": [{"metric": {"destination_app": "order-server"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "mutual_tls"}, "value": [1698134195.218, "0"]}, {"metric": {"connection_security_policy": "unknown"}, "value": [1698134195.218, "0"]}]}}
+      source: |-
+        . = parse_json!(.message)
+        tally = []
+        for_each(array!(.data.result)) -> |_index, value| {
+            tally = push(tally, {"name": "cpu_usage", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : to_float!(value.value[1])}})
+        }
+        tally
+        . = tally
+  sinks:
+    my_sinks_id:
+      # The 'sinks' type in Vector should be set to 'wave-autoscale'.
+      type: wave-autoscale
+      # For the 'inputs' value, you should basically provide the 'id' value from 'sources'.
+      # If there are 'transforms', you can input the 'id' of the last transformed form.
+      inputs: ["my_transforms_id_1"]
+########### [ Saved Metric Data Example ] ############
+# {
+#   [{"name":"cpu_usage","tags":{"instance":"172.31.19.233:9100"},"value":"10.783333333674818","timestamp":1698626340.897},{"name":"cpu_usage","tags":{"instance":"172.31.30.225:9100"},"value":"4.183333333348855","timestamp":1698626340.897},{"name":"cpu_usage","tags":{"instance":"172.31.35.214:9100"},"value":"4.483333333240196","timestamp":1698626340.897},{"name":"cpu_usage","tags":{"instance":"172.31.37.31:9100"},"value":"2.3333333335661735","timestamp":1698626340.897},{"name":"cpu_usage","tags":{"instance":"172.31.42.149:9100"},"value":"2.7500000002328306","timestamp":1698626340.897}]
+# }
+######################################################
