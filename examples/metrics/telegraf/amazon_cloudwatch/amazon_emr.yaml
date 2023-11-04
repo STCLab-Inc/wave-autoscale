@@ -1,0 +1,289 @@
+---
+kind: Metric
+id: telegraf_cloudwatch_amazon_emr_metrics
+collector: telegraf
+metadata:
+  inputs:
+    cloudwatch:
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalUnitsRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalUnitsRequested"] # Represents the desired count of resources needed to adjust the cluster's size, used as a reference when adding additional resources during scale-out.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalNodesRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalNodesRequested"] # Represents the desired count of resources needed to adjust the cluster's size, used as a reference when adding additional resources during scale-out.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalVCPURequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalVCPURequested"] # Represents the desired count of resources needed to adjust the cluster's size, used as a reference when adding additional resources during scale-out.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalUnitsRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalUnitsRunning"] # Reflects the current count of resources in use after cluster size adjustment, serving as the basis for scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalNodesRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalNodesRunning"] # Reflects the current count of resources in use after cluster size adjustment, serving as the basis for scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TotalVCPURunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TotalVCPURunning"] # Reflects the current count of resources in use after cluster size adjustment, serving as the basis for scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreUnitsRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreUnitsRequested"] # Indicates the count of targeted core resources in the cluster and is used to assess the need to increase or decrease the number of core instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreNodesRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreNodesRequested"] # Indicates the count of targeted core resources in the cluster and is used to assess the need to increase or decrease the number of core instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreVCPURequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreVCPURequested"] # Indicates the count of targeted core resources in the cluster and is used to assess the need to increase or decrease the number of core instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreUnitsRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreUnitsRunning"] # Represents the count of running CORE resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreNodesRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreNodesRunning"] # Represents the count of running CORE resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(CoreVCPURunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["CoreVCPURunning"] # Represents the count of running CORE resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskUnitsRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskUnitsRequested"] # Indicates the count of targeted task resources in the cluster and is considered when evaluating the need to scale-in or scale-out the task instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskNodesRequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskNodesRequested"] # Indicates the count of targeted task resources in the cluster and is considered when evaluating the need to scale-in or scale-out the task instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskVCPURequested) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskVCPURequested"] # Indicates the count of targeted task resources in the cluster and is considered when evaluating the need to scale-in or scale-out the task instances.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskUnitsRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskUnitsRunning"] # Represents the count of running task resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskNodesRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskNodesRunning"] # Represents the count of running task resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(TaskVCPURunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["TaskVCPURunning"] # Represents the count of running task resources, used in scale-in and scale-out decisions.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(AppsCompleted) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["AppsCompleted"] # Used for monitoring cluster job progress and making scale-in or scale-out decisions when necessary.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(AppsPending) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["AppsPending"] # Used for monitoring cluster job progress and making scale-in or scale-out decisions when necessary.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(AppsRunning) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["AppsRunning"] # Used for monitoring cluster job progress and making scale-in or scale-out decisions when necessary.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(ContainerAllocated) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["ContainerAllocated"] # Tracks resource allocation and pending resources in the cluster, used when adjusting cluster resources as needed.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/ElasticMapReduce"]
+        metrics: # SELECT COUNT(ContainerPending) FROM SCHEMA("AWS/ElasticMapReduce", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
+          - names: ["ContainerPending"] # Tracks resource allocation and pending resources in the cluster, used when adjusting cluster resources as needed.
+            statistic_include: ["sample_count"] # Collect the metrics with the Sample Count statistic.
+            dimensions:
+              - name: ClusterName
+                value: "{{ cluster_name }}"
+  outputs:
+    wave-autoscale: {}
+---
+
