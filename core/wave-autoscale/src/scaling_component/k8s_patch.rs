@@ -47,11 +47,15 @@ impl ScalingComponent for K8sPatchScalingComponent {
         let (
             Some(serde_json::Value::String(namespace)),
             Some(serde_json::Value::String(name)),
-            Some(serde_json::Value::Object(manifest)) 
+            Some(serde_json::Value::String(api_version)),
+            Some(serde_json::Value::String(kind)),
+            Some(serde_json::Value::Array(json_patch)) 
             ) = (
             params.get("namespace"),
             params.get("name"),
-            params.get("manifest"),
+            params.get("api_version"),
+            params.get("kind"),
+            params.get("json_patch"),
         ) else {
             return Err(anyhow::anyhow!("Invalid metadata"));
         };
@@ -67,20 +71,8 @@ impl ScalingComponent for K8sPatchScalingComponent {
             return Err(anyhow::anyhow!("cannot create kubernetes client"));
         };
 
-        let Some(api_version) = manifest.get("apiVersion") else {
-            return Err(anyhow::anyhow!("apiVersion not found"));
-        };
-        let Some(api_version) = api_version.as_str() else {
-            return Err(anyhow::anyhow!("apiVersion string not found"));
-        };
         let Some(api_group) = api_version.split('/').next() else {
             return Err(anyhow::anyhow!("api Group not found"));
-        };
-        let Some(kind) = manifest.get("kind") else {
-            return Err(anyhow::anyhow!("kind not found"));
-        };
-        let Some(kind) = kind.as_str() else {
-            return Err(anyhow::anyhow!("kind string not found"));
         };
 
         let Ok(apigroup) = discovery::group(&client, api_group).await else {
@@ -93,10 +85,13 @@ impl ScalingComponent for K8sPatchScalingComponent {
         let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource.0);
 
         let patch_params = PatchParams::apply("wave-autoscale");
-        let patch_params = PatchParams::force(patch_params);
+
+        let Ok(json_patch) = serde_json::from_value(serde_json::json!(json_patch)) else {
+            return Err(anyhow::anyhow!("json patch not found"));
+        };
 
         let result = api
-            .patch(name, &patch_params, &Patch::Apply(manifest))
+            .patch(name, &patch_params, &Patch::Json::<()>(json_patch))
             .await;
 
         if let Err(e) = result {
@@ -117,45 +112,22 @@ mod test {
         let client = Client::try_default().await;
         let client = client.unwrap();
 
-        let patch_yaml = r#"
-        apiVersion: networking.istio.io/v1beta1
-        kind: VirtualService
-        spec:
-          hosts:
-            - "*"
-          gateways:
-            - istio-gateway
-          http:
-            - match:
-                - uri:
-                    prefix: /product/
-                  port: 443
-              rewrite:
-                uri: "/"
-              route:
-                - destination:
-                    host: product-server-sv.wave-autoscale.svc.cluster.local
-                    port:
-                      number: 5001
-                  weight: 20
-            - match:
-                - uri:
-                    prefix: /order/
-                  port: 443
-              rewrite:
-                uri: "/"
-              route:
-                - destination:
-                    host: order-server-sv.wave-autoscale.svc.cluster.local
-                    port:
-                      number: 5002
-                  weight: 20
-        "#;
-
-        let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-        let api_version = patch_json.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
-        let kind = patch_json.get("kind").unwrap().as_str().unwrap();
+        let patch_json = serde_json::json!([
+            {
+                "op": "add",
+                "path": "/spec/http/0/fault",
+                "value": {"delay" : { "fixedDelay": "10s" } }
+            },
+            {
+                "op": "add",
+                "path": "/spec/http/0/fault/delay/percentage",
+                "value": { "value": 100 }
+            }
+        ]);
+        println!(" >> patch_json: {:?}", patch_json);
+        let api_version = "networking.istio.io/v1beta1";
+        let api_group = api_version.split('/').next().unwrap();
+        let kind = "VirtualService";
 
         // https://github.com/kube-rs/kube/blob/main/examples/crd_derive_schema.rs
         let apigroup = discovery::group(&client, api_group).await.unwrap();
@@ -170,12 +142,13 @@ mod test {
         // let get_object = api.get(name).await.unwrap();
 
         let patch_params = PatchParams::apply("wave-autoscale");
-        let patch_params = PatchParams::force(patch_params);
+        // let patch_params = PatchParams::force(patch_params);
 
+        let json_patch = serde_json::from_value(patch_json).unwrap();
         let result = api
-            .patch(name, &patch_params, &Patch::Apply(patch_json))
+            .patch(name, &patch_params, &Patch::Json::<()>(json_patch))
             .await;
-
+        println!(" result: {:?}", result);
         assert!(result.is_ok());
     }
 
@@ -185,37 +158,17 @@ mod test {
         let client = Client::try_default().await;
         let client = client.unwrap();
 
-        let patch_yaml = r#"
-        apiVersion: apps/v1
-        kind: Deployment
-        spec:
-          replicas: 1
-          selector:
-            matchLabels:
-              app: product-server
-          template:
-            metadata:
-              labels:
-                app: product-server
-            spec:
-              containers:
-                - name: product-server
-                  image: xxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/wa-demo-commerce-product-server:latest
-                  imagePullPolicy: Always
-                  resources:
-                    requests:
-                      cpu: "1000m"
-                      memory: "2Gi"
-                    limits:
-                      cpu: "1500m"
-                      memory: "4Gi"
-                  ports:
-                    - containerPort: 5001
-        "#;
-        let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-        let api_version = patch_json.get("apiVersion").unwrap();
-        let api_group = api_version.as_str().unwrap().split('/').next().unwrap();
-        let kind = patch_json.get("kind").unwrap().as_str().unwrap();
+        let patch_json = serde_json::json!([
+            {
+                "op": "add",
+                "path": "/spec/replicas",
+                "value": 2
+            },
+        ]);
+
+        let api_version = "apps/v1";
+        let api_group = api_version.split('/').next().unwrap();
+        let kind = "Deployment";
 
         // https://github.com/kube-rs/kube/blob/main/examples/crd_derive_schema.rs
         let apigroup = discovery::group(&client, api_group).await.unwrap();
@@ -226,15 +179,14 @@ mod test {
         let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &ar);
         // let get_object = api.get(name).await.unwrap();
         
-        let patch_json = serde_yaml::from_str::<serde_json::Value>(patch_yaml).unwrap();
-
         let patch_params = PatchParams::apply("wave-autoscale");
-        let patch_params = PatchParams::force(patch_params);
+        // let patch_params = PatchParams::force(patch_params);
 
+        let json_patch = serde_json::from_value(patch_json).unwrap();
         let result = api
-            .patch(name, &patch_params, &Patch::Apply(patch_json))
+            .patch(name, &patch_params, &Patch::Json::<()>(json_patch))
             .await;
-
+        println!(" result: {:?}", result);
         assert!(result.is_ok());
     }
 }

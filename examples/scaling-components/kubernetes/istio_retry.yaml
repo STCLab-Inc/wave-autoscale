@@ -56,46 +56,14 @@ plans:
       - component_id: k8s_patch
         namespace: istio-system
         name: istio-vs
-        # Kubernetes manifest patch
-        manifest:
-          apiVersion: networking.istio.io/v1beta1
-          kind: VirtualService
-          spec:
-            hosts:
-              - "*"
-            gateways:
-              - istio-gateway
-            http:
-              - match:
-                  - uri:
-                      prefix: /product/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: product-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5001
-                # maximum of 3 retries and each with a 2 second timeout.
-                retries:
-                  attempts: 3
-                  perTryTimeout: 2s
-              - match:
-                  - uri:
-                      prefix: /order/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: order-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5002
-                # maximum of 3 retries and each with a 2 second timeout.
-                retries:
-                  attempts: 3
-                  perTryTimeout: 2s
+        api_version: networking.istio.io/v1beta1
+        kind: VirtualService
+        # Kubernetes json patch
+        # maximum of 3 retries and each with a 2 second timeout.
+        json_patch:
+          - op: add
+            path: /spec/http/1/retries
+            value: { "attempts": 3, "perTryTimeout": "2s" }
   - id: plan-scale-in
     description: "Scale in if CPU Utilization is less than 30."
     # JavaScript expression that returns a boolean value.
@@ -112,43 +80,11 @@ plans:
       - component_id: k8s_patch
         namespace: istio-system
         name: istio-vs
-        # Kubernetes manifest patch
-        manifest:
-          apiVersion: networking.istio.io/v1beta1
-          kind: VirtualService
-          spec:
-            hosts:
-              - "*"
-            gateways:
-              - istio-gateway
-            http:
-              - match:
-                  - uri:
-                      prefix: /product/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: product-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5001
-                # maximum of 1 retries and each with a 5 second timeout.
-                retries:
-                  attempts: 1
-                  perTryTimeout: 5s
-              - match:
-                  - uri:
-                      prefix: /order/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: order-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5002
-                # maximum of 1 retries and each with a 5 second timeout.
-                retries:
-                  attempts: 1
-                  perTryTimeout: 5s
+        api_version: networking.istio.io/v1beta1
+        kind: VirtualService
+        # Kubernetes json patch
+        # maximum of 1 retries and each with a 5 second timeout.
+        json_patch:
+          - op: add
+            path: /http/1/retries
+            value: { "attempts": 1, "perTryTimeout": "5s" }
