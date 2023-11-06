@@ -11,7 +11,7 @@ pub mod gcp_mig_autoscaling;
 pub mod google_cloud_functions_instance;
 pub mod google_cloud_run_service;
 pub mod k8s_deployment;
-pub mod k8s_patch;
+pub mod k8s_json_patch;
 pub mod netfunnel_segment;
 
 use self::{
@@ -23,7 +23,7 @@ use self::{
     azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
-    k8s_deployment::K8sDeploymentScalingComponent, k8s_patch::K8sPatchScalingComponent,
+    k8s_deployment::K8sDeploymentScalingComponent, k8s_json_patch::K8sPatchScalingComponent,
     netfunnel_segment::NetfunnelSegmentScalingComponent,
 };
 use anyhow::Result;

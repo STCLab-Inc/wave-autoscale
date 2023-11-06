@@ -31,7 +31,7 @@ metadata:
 ---
 kind: ScalingComponent
 id: k8s_patch
-component_kind: kubernetes-patch
+component_kind: kubernetes-json-patch
 ---
 kind: ScalingPlan
 id: scaling_plan_k8s_patch_scaling
