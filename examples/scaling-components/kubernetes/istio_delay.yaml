@@ -86,5 +86,9 @@ plans:
         kind: VirtualService
         # Kubernetes json patch
         json_patch:
-          - op: remove
+          - op: add
             path: /spec/http/0/fault
+            value: null
+          # If you use remove, you may experience errors in autoscaling_history.
+          # - op: remove
+          #   path: /spec/http/0/fault
