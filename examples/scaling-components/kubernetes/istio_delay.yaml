@@ -31,7 +31,7 @@ metadata:
 ---
 kind: ScalingComponent
 id: k8s_patch
-component_kind: kubernetes-patch
+component_kind: kubernetes-json-patch
 ---
 kind: ScalingPlan
 id: scaling_plan_k8s_patch_scaling
@@ -56,48 +56,16 @@ plans:
       - component_id: k8s_patch
         namespace: istio-system
         name: istio-vs
-        # Kubernetes manifest patch
-        manifest:
-          apiVersion: networking.istio.io/v1beta1
-          kind: VirtualService
-          spec:
-            hosts:
-              - "*"
-            gateways:
-              - istio-gateway
-            http:
-              - match:
-                  - uri:
-                      prefix: /product/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: product-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5001
-                fault:
-                  delay:
-                    fixedDelay: 10s
-                    percentage:
-                      value: 100
-              - match:
-                  - uri:
-                      prefix: /order/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: order-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5002
-                fault:
-                  delay:
-                    fixedDelay: 10s
-                    percentage:
-                      value: 100
+        api_version: networking.istio.io/v1beta1
+        kind: VirtualService
+        # Kubernetes json patch
+        json_patch:
+          - op: add
+            path: /spec/http/0/fault
+            value: { "delay": { "fixedDelay": "10s" } }
+          - op: add
+            path: /spec/http/0/fault/delay/percentage
+            value: { "value": 100 }
   - id: plan-scale-in
     description: "Scale in if CPU Utilization is less than 30."
     # JavaScript expression that returns a boolean value.
@@ -114,35 +82,13 @@ plans:
       - component_id: k8s_patch
         namespace: istio-system
         name: istio-vs
-        # Kubernetes manifest patch
-        manifest:
-          apiVersion: networking.istio.io/v1beta1
-          kind: VirtualService
-          spec:
-            hosts:
-              - "*"
-            gateways:
-              - istio-gateway
-            http:
-              - match:
-                  - uri:
-                      prefix: /product/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: product-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5001
-              - match:
-                  - uri:
-                      prefix: /order/
-                    port: 443
-                rewrite:
-                  uri: "/"
-                route:
-                  - destination:
-                      host: order-server-sv.wave-autoscale.svc.cluster.local
-                      port:
-                        number: 5002
+        api_version: networking.istio.io/v1beta1
+        kind: VirtualService
+        # Kubernetes json patch
+        json_patch:
+          - op: add
+            path: /spec/http/0/fault
+            value: null
+          # If you use remove, you may experience errors in autoscaling_history.
+          # - op: remove
+          #   path: /spec/http/0/fault
