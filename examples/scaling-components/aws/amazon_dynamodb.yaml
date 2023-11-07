@@ -1,0 +1,468 @@
+---
+kind: Metric
+id: telegraf_cloudwatch_amazon_dynamodb_metrics
+collector: telegraf
+metadata:
+  inputs:
+    cloudwatch:
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ConsumedReadCapacityUnits"] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ConsumedWriteCapacityUnits"] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ProvisionedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ProvisionedReadCapacityUnits"] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ProvisionedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ProvisionedWriteCapacityUnits"] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ReadThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ReadThrottleEvents"] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(WriteThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["WriteThrottleEvents"] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(ReturnedItemCount) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["ReturnedItemCount"] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(UserErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["UserErrors"] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+      - region: "{{ region }}"
+        profile: "{{ profile }}"
+        period: "1m"
+        delay: "1m"
+        interval: "1m"
+        namespaces: ["AWS/DynamoDB"]
+        metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
+          - names: ["SystemErrors"] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+            dimensions:
+              - name: TableName
+                value: "{{ table_name }}"
+  outputs:
+    wave-autoscale: {}
+---
+kind: ScalingComponent
+id: scaling_component_amazon_dynamodb_table
+component_kind: amazon-dynamodb
+metadata:
+  region: "{{ region }}"
+  table_name: "{{ table_name }}"
+---
+kind: ScalingPlan
+id: scaling_plan_amazon_dynamodb_table
+title: "Scaling Plan for DynamoDB Table"
+plans:
+  # When the numbers of consumed read capacity units and write capacity units are both high (each exceeding 40000), the capacity mode of the DynamoDB table switches to on-demand.
+  # When the number of consumed read capacity units or write capacity units is low (less than 40000 for either), the capacity mode of the DynamoDB table switches to provisioned.
+  - id: switch_capacity_mode_to_on_demand
+    description: "Switch capacity mode to on-demand."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 40000
+      &&
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 40000
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: ON_DEMAND
+  - id: switch_capacity_mode_to_provisioned
+    description: "Switch capacity mode to provisioned."
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 40000
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 40000
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 40000
+        read_max_capacity: 40000
+        read_target_value: 70.0
+        write_min_capacity: 40000
+        write_max_capacity: 40000
+        write_target_value: 70.0
+  # When the number of consumed read capacity units or write capacity units is low (less than 8000 or up to 16000), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
+  # When the number of consumed read capacity units or write capacity units is high (exceeding 8000 or surpassing 16000), the capacity increases (scaling out) to meet the high demand.
+  - id: scaling_plan_amazon_dynamodb_table_scale_in_1
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 8000
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 8000
+    priority: 4
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 4000
+        read_max_capacity: 8000
+        read_target_value: 70.0
+        write_min_capacity: 4000
+        write_max_capacity: 8000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_in_2
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 16000
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 16000
+    priority: 3
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 8000
+        read_max_capacity: 16000
+        read_target_value: 70.0
+        write_min_capacity: 8000
+        write_max_capacity: 16000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_out_1
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 8000
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 8000
+    priority: 5
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 4000
+        read_max_capacity: 8000
+        read_target_value: 70.0
+        write_min_capacity: 4000
+        write_max_capacity: 8000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_out_2
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_read_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 16000
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 16000
+    priority: 6
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 8000
+        read_max_capacity: 16000
+        read_target_value: 70.0
+        write_min_capacity: 8000
+        write_max_capacity: 16000
+        write_target_value: 70.0
+  # When the number of read throttle events or write throttle events is low (less than 100 or up to 200), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
+  # When the number of read throttle events or write throttle events is high (exceeding 100 or surpassing 200), the capacity increases (scaling out) to meet the high demand.
+  - id: scaling_plan_amazon_dynamodb_table_scale_in_3
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_read_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 100
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_write_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 100
+    priority: 8
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 4000
+        read_max_capacity: 8000
+        read_target_value: 70.0
+        write_min_capacity: 4000
+        write_max_capacity: 8000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_in_4
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_read_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 200
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_write_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) <= 200
+    priority: 7
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 8000
+        read_max_capacity: 16000
+        read_target_value: 70.0
+        write_min_capacity: 8000
+        write_max_capacity: 16000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_out_3
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_read_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 100
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_write_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 100
+    priority: 9
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 4000
+        read_max_capacity: 8000
+        read_target_value: 70.0
+        write_min_capacity: 4000
+        write_max_capacity: 8000
+        write_target_value: 70.0
+  - id: scaling_plan_amazon_dynamodb_table_scale_out_4
+    description: Scale-in read and write capacity.
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_read_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 200
+      ||
+      (get({
+        metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
+        name: 'cloudwatch_aws_dynamo_db_write_throttle_events_sum',
+        tags: {
+          'table_name': '{{ table_name }}'
+        },
+        period_sec: 60
+      }) > 200
+    priority: 10
+    scaling_components:
+      - component_id: scaling_component_amazon_dynamodb_table
+        # JavaScript expression that returns an integer.
+        capacity_mode: PROVISIONED
+        autoscaling_mode: ON
+        capacity_unit: READ_WRITE
+        read_min_capacity: 8000
+        read_max_capacity: 16000
+        read_target_value: 70.0
+        write_min_capacity: 8000
+        write_max_capacity: 16000
+        write_target_value: 70.0
