@@ -1,6 +1,6 @@
 ---
 kind: Metric
-id: telegraf_cloudwatch_amazon_emr_metrics
+id: telegraf_cloudwatch_amazon_emr_ec2_metrics
 collector: telegraf
 metadata:
   inputs:
