@@ -60,7 +60,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/Lambda]
         metrics: # SELECT MAX(Throttles) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [ConcurrentExecutions] # Tracks the number of concurrent executions of the function. This metric represents the current load on the function, and an increase in concurrent executions may indicate the need for scale-out. Adjusting resource allocation for the function based on the Concurrent Executions metric helps maintain optimal performance.
+          - names: [ConcurrentExecutions] # Tracks the number of concurrent executions of the function. This metric represents the current load on the function, and an increase in concurrent executions may indicate the need for scale-out. Adjusting resource allocation for the function based on the concurrent executions metric helps maintain optimal performance.
             statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: FunctionName
