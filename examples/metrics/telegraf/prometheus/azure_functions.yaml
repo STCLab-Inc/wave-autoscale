@@ -1,6 +1,6 @@
 ---
 kind: Metric
-id: prometheus_metrics
+id: telegraf_prometheus_azure_functions_metrics
 collector: telegraf
 metadata:
   inputs:

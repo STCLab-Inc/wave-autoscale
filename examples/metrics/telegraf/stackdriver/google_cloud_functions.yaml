@@ -3,7 +3,7 @@
 # https://cloud.google.com/monitoring/api/metrics_gcp#gcp-cloudfunctions
 ---
 kind: Metric
-id: telegraf_stackdriver_cloud_functions_metrics
+id: telegraf_stackdriver_google_cloud_functions_metrics
 collector: telegraf
 metadata:
   inputs:
