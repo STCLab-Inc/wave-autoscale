@@ -88,4 +88,61 @@ metadata:
   outputs:
     wave-autoscale: {}
 ---
-
+kind: ScalingComponent
+id: scaling_component_aws_waf_rate_limit
+component_kind: aws-ec2-autoscaling
+metadata:
+  region: "{{ region }}"
+  web_acl_id: "{{ web_acl_id }}"
+  web_acl_name: "{{ web_acl_name }}"
+  scope: "{{ scope }}"
+---
+kind: ScalingPlan
+id: scaling_plan_aws_waf_rate_limit
+metadata:
+  title: scaling plan for aws waf rate limit
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
+plans:
+  # When the number of blocked request is low (less than 100), the rate limit decreases (scaling in), which reflects the low usage.
+  # When the number of blocked request is high (exceeding 1000), the rate limit (scaling out) to meet the high demand.
+  - id: scaling_plan_aws_waf_rate_limit_scale_in
+    description: scale-in rate limit
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_aws_waf_metrics',
+        name: 'cloudwatch_aws_waf_blocked_requests_sum',
+        tags: {
+          'region': '{{ region }}'
+          'rule': '{{ rule_name }}'
+          'web_acl': '{{ web_acl_name }}'
+        },
+        period_sec: 60
+      }) < 100
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_aws_waf_rate_limit
+        rule_name: "{{ rule_name }}"
+        rate_limit: 100
+  - id: scaling_plan_aws_waf_rate_limit_scale_out
+    description: scale-out rate limit
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_aws_waf_metrics',
+        name: 'cloudwatch_aws_waf_blocked_requests_sum',
+        tags: {
+          'region': '{{ region }}'
+          'rule': '{{ rule_name }}'
+          'web_acl': '{{ web_acl_name }}'
+        },
+        period_sec: 60
+      }) > 1000
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_aws_waf_rate_limit
+        rule_name: "{{ rule_name }}"
+        rate_limit: 1000
