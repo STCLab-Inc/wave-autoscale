@@ -7,109 +7,109 @@ metadata:
     cloudwatch:
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ConsumedReadCapacityUnits"] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ConsumedReadCapacityUnits] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ConsumedWriteCapacityUnits"] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ConsumedWriteCapacityUnits] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ProvisionedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ProvisionedReadCapacityUnits"] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ProvisionedReadCapacityUnits] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ProvisionedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ProvisionedWriteCapacityUnits"] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ProvisionedWriteCapacityUnits] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ReadThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ReadThrottleEvents"] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ReadThrottleEvents] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(WriteThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["WriteThrottleEvents"] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [WriteThrottleEvents] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ReturnedItemCount) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ReturnedItemCount"] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ReturnedItemCount] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(UserErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["UserErrors"] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [UserErrors] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["SystemErrors"] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
@@ -125,12 +125,14 @@ metadata:
 ---
 kind: ScalingPlan
 id: scaling_plan_amazon_dynamodb_table
-title: "Scaling Plan for DynamoDB Table"
+title: scaling plan for amazon dynamodb table
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
 plans:
   # When the numbers of consumed read capacity units and write capacity units are both high (each exceeding 40000), the capacity mode of the DynamoDB table switches to on-demand.
   # When the number of consumed read capacity units or write capacity units is low (less than 40000 for either), the capacity mode of the DynamoDB table switches to provisioned.
   - id: switch_capacity_mode_to_on_demand
-    description: "Switch capacity mode to on-demand."
+    description: switch capacity mode to on-demand
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -156,7 +158,7 @@ plans:
       - component_id: scaling_component_amazon_dynamodb_table
         capacity_mode: ON_DEMAND
   - id: switch_capacity_mode_to_provisioned
-    description: "Switch capacity mode to provisioned."
+    description: switch capacity mode to provisioned
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -191,7 +193,7 @@ plans:
   # When the number of consumed read capacity units or write capacity units is low (less than 8000 or up to 16000), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
   # When the number of consumed read capacity units or write capacity units is high (exceeding 8000 or surpassing 16000), the capacity increases (scaling out) to meet the high demand.
   - id: scaling_plan_amazon_dynamodb_table_scale_in_1
-    description: Scale-in read and write capacity.
+    description: scale-in capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -224,7 +226,7 @@ plans:
         write_max_capacity: 8000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_in_2
-    description: Scale-in read and write capacity.
+    description: scale-in capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -257,7 +259,7 @@ plans:
         write_max_capacity: 16000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_out_1
-    description: Scale-in read and write capacity.
+    description: scale-out capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -290,7 +292,7 @@ plans:
         write_max_capacity: 8000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_out_2
-    description: Scale-in read and write capacity.
+    description: scale-out capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -326,7 +328,7 @@ plans:
   # When the number of read throttle events or write throttle events is low (less than 100 or up to 200), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
   # When the number of read throttle events or write throttle events is high (exceeding 100 or surpassing 200), the capacity increases (scaling out) to meet the high demand.
   - id: scaling_plan_amazon_dynamodb_table_scale_in_3
-    description: Scale-in read and write capacity.
+    description: scale-in capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -359,7 +361,7 @@ plans:
         write_max_capacity: 8000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_in_4
-    description: Scale-in read and write capacity.
+    description: scale-in capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -392,7 +394,7 @@ plans:
         write_max_capacity: 16000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_out_3
-    description: Scale-in read and write capacity.
+    description: scale-out capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -425,7 +427,7 @@ plans:
         write_max_capacity: 8000
         write_target_value: 70.0
   - id: scaling_plan_amazon_dynamodb_table_scale_out_4
-    description: Scale-in read and write capacity.
+    description: scale-out capacity
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
