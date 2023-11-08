@@ -1,6 +1,6 @@
 ---
 kind: Metric
-id: telegraf_cloudwatch_aws_ec2_metrics
+id: telegraf_cloudwatch_aws_ec2_autoscaling_metrics
 collector: telegraf
 metadata:
   inputs:
@@ -68,4 +68,48 @@ metadata:
   outputs:
     wave-autoscale: {}
 ---
-
+kind: ScalingComponent
+id: scaling_component_aws_ec2_autoscaling_capacity
+component_kind: aws-ec2-autoscaling
+metadata:
+  region: "{{ region }}"
+  asg_name: "{{ asg_name }}"
+---
+kind: ScalingPlan
+id: scaling_plan_aws_ec2_autoscaling_capacity
+title: scaling plan for aws ec2 autoscaling capacity
+plans:
+  # When the value of instance cpu utilization is low (less than 10), the instance configuration values decreases (scaling in), which reflects the low usage.
+  # When the value of instance cpu utilization is high (exceeding 90), the instance configuration values increases (scaling out) to meet the high demand.
+  - id: scaling_plan_aws_ec2_autoscaling_capacity_scale_in
+    description: scale-in capacity
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_aws_ec2_autoscaling_metrics',
+        name: 'cloudwatch_aws_ec2_cpu_utilization_maximum',
+        tags: {
+          'auto_scaling_group_name': '{{ auto_scaling_group_name }}'
+        },
+        period_sec: 60
+      }) < 10
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_aws_ec2_autoscaling_capacity
+        desired: 1
+  - id: scaling_plan_aws_ec2_autoscaling_capacity_scale_out
+    description: scale-out capacity
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_cloudwatch_aws_ec2_autoscaling_metrics',
+        name: 'cloudwatch_aws_ec2_cpu_utilization_maximum',
+        tags: {
+          'auto_scaling_group_name': '{{ auto_scaling_group_name }}'
+        },
+        period_sec: 60
+      }) > 90
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_aws_ec2_autoscaling_capacity
+        desired: 10
