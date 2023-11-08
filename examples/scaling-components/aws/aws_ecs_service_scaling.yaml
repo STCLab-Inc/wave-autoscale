@@ -96,7 +96,7 @@ plans:
         },
         period_sec: 60
       }) < 10
-    priority: 2
+    priority: 1
     scaling_components:
       - component_id: scaling_component_aws_ecs_service_scaling
         desired: 1
@@ -112,7 +112,7 @@ plans:
         },
         period_sec: 60
       }) > 90
-    priority: 1
+    priority: 2
     scaling_components:
       - component_id: scaling_component_aws_ecs_service_scaling
         desired: 10
