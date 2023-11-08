@@ -127,7 +127,7 @@ plans:
         metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
         name: 'compute.googleapis.com/instance_cpu_utilization',
         tags: {
-          'instance_name': '{{ managed_instance_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) < 10
@@ -146,7 +146,7 @@ plans:
         metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
         name: 'compute.googleapis.com/instance_cpu_utilization',
         tags: {
-          'instance_name': '{{ managed_instance_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) < 20
@@ -165,7 +165,7 @@ plans:
         metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
         name: 'compute.googleapis.com/instance_cpu_utilization',
         tags: {
-          'instance_name': '{{ managed_instance_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) > 70
@@ -184,7 +184,7 @@ plans:
         metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
         name: 'compute.googleapis.com/instance_cpu_utilization',
         tags: {
-          'instance_name': '{{ managed_instance_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) > 90
