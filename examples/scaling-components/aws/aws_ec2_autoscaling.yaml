@@ -78,6 +78,8 @@ metadata:
 kind: ScalingPlan
 id: scaling_plan_aws_ec2_autoscaling_capacity
 title: scaling plan for aws ec2 autoscaling capacity
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
 plans:
   # When the value of instance cpu utilization is low (less than 10), the instance configuration values decreases (scaling in), which reflects the low usage.
   # When the value of instance cpu utilization is high (exceeding 90), the instance configuration values increases (scaling out) to meet the high demand.
@@ -89,11 +91,11 @@ plans:
         metric_id: 'telegraf_cloudwatch_aws_ec2_autoscaling_metrics',
         name: 'cloudwatch_aws_ec2_cpu_utilization_maximum',
         tags: {
-          'auto_scaling_group_name': '{{ auto_scaling_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) < 10
-    priority: 1
+    priority: 2
     scaling_components:
       - component_id: scaling_component_aws_ec2_autoscaling_capacity
         desired: 1
@@ -105,11 +107,11 @@ plans:
         metric_id: 'telegraf_cloudwatch_aws_ec2_autoscaling_metrics',
         name: 'cloudwatch_aws_ec2_cpu_utilization_maximum',
         tags: {
-          'auto_scaling_group_name': '{{ auto_scaling_group_name }}'
+          'instance_name': '{{ instance_name }}'
         },
         period_sec: 60
       }) > 90
-    priority: 2
+    priority: 1
     scaling_components:
       - component_id: scaling_component_aws_ec2_autoscaling_capacity
         desired: 10
