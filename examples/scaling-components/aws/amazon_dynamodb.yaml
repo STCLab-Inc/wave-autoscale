@@ -143,7 +143,7 @@ plans:
         },
         period_sec: 60
       }) > 40000
-      &&
+      ||
       (get({
         metric_id: 'telegraf_cloudwatch_amazon_dynamodb_metrics',
         name: 'cloudwatch_aws_dynamo_db_consumed_write_capacity_units_sum',
