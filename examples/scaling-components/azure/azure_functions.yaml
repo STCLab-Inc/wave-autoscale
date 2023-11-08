@@ -33,7 +33,7 @@ plans:
   # When the maximum wating number of connections is low (less than 0 or up to 10), the app configuration values decreases (scaling in), which reflects the low usage.
   # When the maximum wating number of connections is high (exceeding 100 or surpassing 1000), the app configuration values increases (scaling out) to meet the high demand.  
   - id: scaling_plan_azure_functions_app_scale_in_1
-    description: scale-in instance
+    description: scale-in instance count
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -49,7 +49,7 @@ plans:
         min_instance_count: 1
         max_instance_count: 2
   - id: scaling_plan_azure_functions_app_scale_in_2
-    description: scale-in instance
+    description: scale-in instance count
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -65,7 +65,7 @@ plans:
         min_instance_count: 5
         max_instance_count: 10
   - id: scaling_plan_azure_functions_app_scale_out_1
-    description: scale-out instance
+    description: scale-out instance count
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
@@ -81,7 +81,7 @@ plans:
         min_instance_count: 10
         max_instance_count: 20
   - id: scaling_plan_azure_functions_app_scale_out_2
-    description: scale-out instance
+    description: scale-out instance count
     # JavaScript expression that returns a boolean value.
     expression: >
       (get({
