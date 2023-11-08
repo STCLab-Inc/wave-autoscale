@@ -108,7 +108,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
             statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName

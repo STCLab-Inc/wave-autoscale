@@ -108,7 +108,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
             statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
@@ -129,8 +129,8 @@ title: scaling plan for amazon dynamodb table
   cool_down: 0 # seconds
   interval: 60000 # milliseconds
 plans:
-  # When the numbers of consumed read capacity units and write capacity units are both high (each exceeding 40000), the capacity mode of the DynamoDB table switches to on-demand.
-  # When the number of consumed read capacity units or write capacity units is low (less than 40000 for either), the capacity mode of the DynamoDB table switches to provisioned.
+  # When the numbers of consumed read capacity units and write capacity units are both high (each exceeding 40000), the capacity mode of the table switches to on-demand.
+  # When the number of consumed read capacity units or write capacity units is low (less than 40000 for either), the capacity mode of the table switches to provisioned.
   - id: switch_capacity_mode_to_on_demand
     description: switch capacity mode to on-demand
     # JavaScript expression that returns a boolean value.
@@ -190,7 +190,7 @@ plans:
         write_min_capacity: 40000
         write_max_capacity: 40000
         write_target_value: 70.0
-  # When the number of consumed read capacity units or write capacity units is low (less than 8000 or up to 16000), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
+  # When the number of consumed read capacity units or write capacity units is low (less than 8000 or up to 16000), the capacity of the table decreases (scaling in), which reflects the low usage.
   # When the number of consumed read capacity units or write capacity units is high (exceeding 8000 or surpassing 16000), the capacity increases (scaling out) to meet the high demand.
   - id: scaling_plan_amazon_dynamodb_table_scale_in_1
     description: scale-in capacity
@@ -325,7 +325,7 @@ plans:
         write_min_capacity: 8000
         write_max_capacity: 16000
         write_target_value: 70.0
-  # When the number of read throttle events or write throttle events is low (less than 100 or up to 200), the capacity of the DynamoDB table decreases (scaling in), which reflects the low usage.
+  # When the number of read throttle events or write throttle events is low (less than 100 or up to 200), the capacity of the table decreases (scaling in), which reflects the low usage.
   # When the number of read throttle events or write throttle events is high (exceeding 100 or surpassing 200), the capacity increases (scaling out) to meet the high demand.
   - id: scaling_plan_amazon_dynamodb_table_scale_in_3
     description: scale-in capacity

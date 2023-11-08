@@ -9,7 +9,7 @@ metadata:
         period: 10s
         delay: 10s
         interval: 10s
-        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is increasing, it signifies that the alertmanager service is failing to establish connections with other services or components within the required time. Timeouts can occur due to network delays, overload, or resource constraints. A continuous increase in timeouts can be an indication that scaling out should be considered. Adding more instances to the VMSS can increase processing capacity and reduce network delays, thereby alleviating connection timeout issues.
+        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is increasing, it signifies that the alertmanager service is failing to establish connections with other services or components within the required time. Timeouts can occur due to network delays, overload, or resource constraints. A continuous increase in timeouts can be an indication that scaling out should be considered. Adding more instances can increase processing capacity and reduce network delays, thereby alleviating connection timeout issues.
         tagpass:
           dialer_name: [alertmanager]
           reason: [timeout]
@@ -17,7 +17,7 @@ metadata:
         period: 10s
         delay: 10s
         interval: 10s
-        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is on the rise, it indicates that the default network dialer is being refused connections. A connection refusal can happen when the target service is unable to accept requests, which might occur if it is receiving too many connection requests or if it is temporarily down. An increase in connection refusals could point to availability issues with the service and might prompt scaling in, as there could be a need to adjust the size of the VMSS to conserve resources and optimize costs.
+        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is on the rise, it indicates that the default network dialer is being refused connections. A connection refusal can happen when the target service is unable to accept requests, which might occur if it is receiving too many connection requests or if it is temporarily down. An increase in connection refusals could point to availability issues with the service and might prompt scaling in, as there could be a need to adjust the size of resources and optimize costs.
         tagpass:
           dialer_name: [default]
           reason: [refused]
@@ -30,7 +30,7 @@ metadata:
         period: 10s
         delay: 10s
         interval: 10s
-        namepass: [process_resident_memory_bytes] # This metric indicates the amount of main memory used by the process in bytes. If memory usage is high, it suggests that there is an increasing demand for memory resources, and scaling out in the VMSS may be necessary to provide more memory resources. On the other hand, if memory usage is very low, scaling in could be considered.
+        namepass: [process_resident_memory_bytes] # This metric indicates the amount of main memory used by the process in bytes. If memory usage is high, it suggests that there is an increasing demand for memory resources, and scaling out may be necessary to provide more memory resources. On the other hand, if memory usage is very low, scaling in could be considered.
   outputs:
     wave-autoscale: {}
 ---

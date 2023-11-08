@@ -12,7 +12,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/Lambda]
         metrics: # SELECT AVG(Invocations) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [Invocations] # Tracks the number of invocations of Lambda functions. This metric represents the workload of the function. An increase in invocations indicates an increase in the function's workload, potentially requiring scale-out. For example, if the Invocations metric exceeds a certain threshold, you can perform scale-out by adding additional replicas of the Lambda function.
+          - names: [Invocations] # Tracks the number of invocations of functions. This metric represents the workload of the function. An increase in invocations indicates an increase in the function's workload, potentially requiring scale-out. For example, if the Invocations metric exceeds a certain threshold, you can perform scale-out by adding additional replicas of the function.
             statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: FunctionName
@@ -24,7 +24,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/Lambda]
         metrics: # SELECT AVG(Duration) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [Duration] # Tracks the execution time of Lambda functions. An increase in function execution time can impact scaling decisions. Functions with longer execution times may consume more resources, potentially necessitating scale-out. Additionally, functions with long execution times can also impact throttling and Lambda costs.
+          - names: [Duration] # Tracks the execution time of functions. An increase in function execution time can impact scaling decisions. Functions with longer execution times may consume more resources, potentially necessitating scale-out. Additionally, functions with long execution times can also impact throttling and costs.
             statistic_include: [average] # Collect the metrics with the Average statistic, or Maximum statistic.
             dimensions:
               - name: FunctionName
@@ -48,7 +48,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/Lambda]
         metrics: # SELECT SUM(Throttles) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [Throttles] # Tracks the number of times the Lambda function has been throttled. Throttling occurs when the concurrent execution limit of the function is exceeded. Throttles can indicate the need for scale-out or adjustments in resource allocation for the function.
+          - names: [Throttles] # Tracks the number of times the function has been throttled. Throttling occurs when the concurrent execution limit of the function is exceeded. Throttles can indicate the need for scale-out or adjustments in resource allocation for the function.
             statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: FunctionName
@@ -60,7 +60,7 @@ metadata:
         interval: 1m
         namespaces: [AWS/Lambda]
         metrics: # SELECT MAX(Throttles) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [ConcurrentExecutions] # Tracks the number of concurrent executions of the function. This metric represents the current load on the function, and an increase in concurrent executions may indicate the need for scale-out. Adjusting resource allocation for the Lambda function based on the Concurrent Executions metric helps maintain optimal performance.
+          - names: [ConcurrentExecutions] # Tracks the number of concurrent executions of the function. This metric represents the current load on the function, and an increase in concurrent executions may indicate the need for scale-out. Adjusting resource allocation for the function based on the Concurrent Executions metric helps maintain optimal performance.
             statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: FunctionName
@@ -83,7 +83,7 @@ metadata:
   cool_down: 0 # seconds
   interval: 60000 # milliseconds
 plans:
-  # When the number of invocations is low (less than 30 or up to 60), the concurrency of the Lambda function decreases (scaling in), which reflects the low usage.
+  # When the number of invocations is low (less than 30 or up to 60), the concurrency decreases (scaling in), which reflects the low usage.
   # When the number of invocations is high (exceeding 60 or surpassing 120), the concurrency increases (scaling out) to meet the high demand.
   - id: scaling_plan_aws_lambda_function_scale_in_1
     description: scale-in concurrency
