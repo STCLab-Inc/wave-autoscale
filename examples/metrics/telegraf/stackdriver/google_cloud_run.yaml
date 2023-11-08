@@ -3,64 +3,64 @@
 # https://cloud.google.com/monitoring/api/metrics_gcp#gcp-run
 ---
 kind: Metric
-id: telegraf_stackdriver_cloud_run_metrics
+id: telegraf_stackdriver_google_cloud_run_metrics
 collector: telegraf
 metadata:
   inputs:
     stackdriver:
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/billable_instance_time"] # This metric indicates how much time container instances are being used. If this value is consistently high, you may consider scaling out by deploying more instances. On the other hand, if this value is low, you can consider scaling in.
-        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/billable_instance_time] # This metric indicates how much time container instances are being used. If this value is consistently high, you may consider scaling out by deploying more instances. On the other hand, if this value is low, you can consider scaling in.
+        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/completed_probe_attempt_count"] # This metric shows how often health check probes are attempted. If this metric is unstable, the instances may not be healthy, and you may consider scaling out.
-        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/completed_probe_attempt_count] # This metric shows how often health check probes are attempted. If this metric is unstable, the instances may not be healthy, and you may consider scaling out.
+        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/cpu/utilizations"] # If CPU utilization is high, resources may be insufficient, and you should consider scaling out. Conversely, if CPU utilization is low, you can consider scaling in to conserve resources.
-        interval: "60s" # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/cpu/utilizations] # If CPU utilization is high, resources may be insufficient, and you should consider scaling out. Conversely, if CPU utilization is low, you can consider scaling in to conserve resources.
+        interval: 60s # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/instance_count"] # This metric indicates the number of currently active container instances. If the number of instances surges, you may need to scale out, and if it declines, you may consider scaling in.
-        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/instance_count] # This metric indicates the number of currently active container instances. If the number of instances surges, you may need to scale out, and if it declines, you may consider scaling in.
+        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/max_request_concurrencies"] # This metric represents the maximum number of requests being processed concurrently. If this value is high, additional instances may be needed, and you should consider scaling out.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/max_request_concurrencies] # This metric represents the maximum number of requests being processed concurrently. If this value is high, additional instances may be needed, and you should consider scaling out.
         interval: "120s" # Sampled every 60 seconds. After sampling, data is not visible for up to 120 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/container/memory/utilizations"] # If memory utilization is high, you should consider scaling out; if low, consider scaling in.
-        interval: "60s" # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/memory/utilizations] # If memory utilization is high, you should consider scaling out; if low, consider scaling in.
+        interval: 60s # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
 
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/request_count"] # If the number of requests is high, you should consider scaling out; if low, consider scaling in.
-        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/request_count] # If the number of requests is high, you should consider scaling out; if low, consider scaling in.
+        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: configuration_name
               value: "{{ configuration_name }}"
-      - project: wave-autoscale-test
-        metric_type_prefix_include: ["run.googleapis.com/request_latencies"] # If request latency is high, the user experience may deteriorate, and you should consider scaling out by adding instances. Low latency could be a signal to consider scaling in.
-        interval: "180s" # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/request_latencies] # If request latency is high, the user experience may deteriorate, and you should consider scaling out by adding instances. Low latency could be a signal to consider scaling in.
+        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: configuration_name

@@ -7,109 +7,109 @@ metadata:
     cloudwatch:
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ConsumedReadCapacityUnits"] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ConsumedReadCapacityUnits] # The ConsumedReadCapacityUnits metric tracks the usage of read capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ConsumedWriteCapacityUnits"] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ConsumedWriteCapacityUnits] # The ConsumedWriteCapacityUnits metric tracks the usage of write capacity units in a table. This metric represents the current workload and is crucial for scale-in and scale-out decisions. When capacity usage is high, it may indicate that the table's throughput is reaching its limits, leading to automatic scale-out to provide additional capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ProvisionedReadCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ProvisionedReadCapacityUnits"] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ProvisionedReadCapacityUnits] # The ProvisionedReadCapacityUnits metric indicates the provisioned read units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ProvisionedWriteCapacityUnits) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ProvisionedWriteCapacityUnits"] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ProvisionedWriteCapacityUnits] # The ProvisionedWriteCapacityUnits metric indicates the provisioned write units for a table. This metric is used to assess the current load on the table in comparison to its provisioned throughput.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ReadThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ReadThrottleEvents"] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ReadThrottleEvents] # The ReadThrottleEvents metric tracks the number of read requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(WriteThrottleEvents) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["WriteThrottleEvents"] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [WriteThrottleEvents] # The WriteThrottleEvents metric tracks the number of write requests that have been throttled. Throttling occurs when requests exceed the capacity limits of the table, indicating the need for scale-out or an increase in provisioned capacity.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(ReturnedItemCount) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["ReturnedItemCount"] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ReturnedItemCount] # The ReturnedItemCount metric tracks the number of items returned in query or scan operations. This metric is associated with the table's workload, and scale-out may be considered when the workload is high.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(UserErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["UserErrors"] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [UserErrors] # The UserErrors metric monitors the number of errors generated by users. When errors occur, it may indicate the need for scale-out or improvements in application code.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/DynamoDB"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/DynamoDB]
         metrics: # SELECT SUM(SystemErrors) FROM SCHEMA("AWS/DynamoDB", TableName) WHERE TableName = '"{{ table_name }}"'
-          - names: ["SystemErrors"] # The SystemErrors metric tracks the number of errors originating from DynamoDB itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [SystemErrors] # The SystemErrors metric tracks the number of errors originating from itself. System errors can impact the scalability of the table, and monitoring these errors supports scale-in and scale-out decisions.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: TableName
                 value: "{{ table_name }}"

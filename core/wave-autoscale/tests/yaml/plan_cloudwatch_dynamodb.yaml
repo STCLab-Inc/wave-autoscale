@@ -36,7 +36,7 @@ plans:
         # JavaScript expression that returns an integer.
         capacity_mode: ON_DEMAND
   - id: switch-capacity_mode-to-provisioned
-    description: "Switch capacity mode to on-demand if consumed write capacity units value is greater than 100."
+    description: "Switch capacity mode to provisioned if consumed write capacity units value is greater than 100."
     # JavaScript expression that returns a boolean value.
     expression: "cloudwatch_consumed_write_capacity_units_cnt >= 100"
     priority: 2

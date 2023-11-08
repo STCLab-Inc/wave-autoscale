@@ -1,0 +1,113 @@
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-compute
+---
+kind: Metric
+id: telegraf_stackdriver_gcp_mig_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/utilization] # Indicates CPU utilization. Closer to 1.0, consider scaling out; closer to 0, consider scaling in.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")      
+  outputs:
+    wave-autoscale: {}
+---
+kind: ScalingComponent
+id: scaling_component_gcp_mig_replica
+component_kind: gcp-compute-engine-mig
+metadata:
+  project_name: "{{ project_name }}"
+  location_kind: "{{ location_kind }}"
+  location_name: "{{ location_name }}"
+  group_name: "{{ group_name }}"
+---
+kind: ScalingPlan
+id: scaling_plan_gcp_mig_group
+title: scaling plan for gcp mig replica
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
+plans:
+  # When the value of instance cpu utilization is low (less than 10 or up to 20), the instance configuration values decreases (scaling in), which reflects the low usage.
+  # When the value of instance cpu utilization is high (exceeding 70 or surpassing 90), the instance configuration values increases (scaling out) to meet the high demand.
+  - id: scaling_plan_gcp_mig_replica_scale_in_1
+    description: scale-in replica
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
+        name: 'compute.googleapis.com/instance_cpu_utilization',
+        tags: {
+          'instance_name': '{{ instance_name }}'
+        },
+        period_sec: 60
+      }) < 10
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_component_gcp_mig_replica
+        resize: 1
+        min_num_replicas: 1
+        max_num_replicas: 3
+  - id: scaling_plan_gcp_mig_replica_scale_in_2
+    description: scale-in replica
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
+        name: 'compute.googleapis.com/instance_cpu_utilization',
+        tags: {
+          'instance_name': '{{ instance_name }}'
+        },
+        period_sec: 60
+      }) < 20
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_gcp_mig_replica
+        resize: 3
+        min_num_replicas: 3
+        max_num_replicas: 9
+  - id: scaling_plan_gcp_mig_replica_scale_out_1
+    description: scale-out replica
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
+        name: 'compute.googleapis.com/instance_cpu_utilization',
+        tags: {
+          'instance_name': '{{ instance_name }}'
+        },
+        period_sec: 60
+      }) > 70
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_component_gcp_mig_replica
+        resize: 6
+        min_num_replicas: 6
+        max_num_replicas: 18
+  - id: scaling_plan_gcp_mig_replica_scale_out_2
+    description: scale-out replica
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_gcp_mig_metrics',
+        name: 'compute.googleapis.com/instance_cpu_utilization',
+        tags: {
+          'instance_name': '{{ instance_name }}'
+        },
+        period_sec: 60
+      }) > 90
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_component_gcp_mig_replica
+        resize: 4
+        min_num_replicas: 9
+        max_num_replicas: 27

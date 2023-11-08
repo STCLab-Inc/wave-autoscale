@@ -1,30 +1,15 @@
 ---
 kind: Metric
-id: prometheus_metrics
+id: telegraf_prometheus_azure_functions_metrics
 collector: telegraf
 metadata:
   inputs:
     prometheus:
       - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [process_cpu_seconds_total] # This metric represents the total time in seconds that the process has consumed on the CPU. If this value remains high, it signifies that the process is using a significant amount of CPU resources, which could trigger a scale-out. If the system is enduring high CPU loads, additional instances may be required.
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [process_resident_memory_bytes] # This indicates the amount of actual memory in bytes that is being used by the process. If this value is very high and approaching the limits of the system's memory, it indicates that the system is in a state of memory saturation. This could lead to a scale-out to provide additional instances with more memory resources.
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [net_conntrack_listener_conn_accepted_total] # This metric represents the total number of connections that have been opened to an HTTP listener. A rapid increase in these numbers could mean a surge in server requests, triggering a scale-out.
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [net_conntrack_listener_conn_closed_total] # This metric represents the total number of connections that have been closed to an HTTP listener. A rapid increase in these numbers could mean a surge in server requests, triggering a scale-out.
+        period: 1m
+        delay: 0s
+        interval: 1m
+        namepass: [nginx_connections_waiting] # This metric represents the wating number of connections that the nginx reserves. If this value remains high, it signifies that the nginx is using a significant amount of connections, which could trigger a scale-out.
   outputs:
     wave-autoscale: {}
 ---

@@ -1,36 +1,15 @@
 ---
 kind: Metric
-id: prometheus_metrics
+id: telegraf_prometheus_azure_vmss_metrics
 collector: telegraf
 metadata:
   inputs:
     prometheus:
       - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is increasing, it signifies that the alertmanager service is failing to establish connections with other services or components within the required time. Timeouts can occur due to network delays, overload, or resource constraints. A continuous increase in timeouts can be an indication that scaling out should be considered. Adding more instances to the VMSS can increase processing capacity and reduce network delays, thereby alleviating connection timeout issues.
-        tagpass:
-          dialer_name: [alertmanager]
-          reason: [timeout]
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [net_conntrack_dialer_conn_failed_total] # If this counter is on the rise, it indicates that the default network dialer is being refused connections. A connection refusal can happen when the target service is unable to accept requests, which might occur if it is receiving too many connection requests or if it is temporarily down. An increase in connection refusals could point to availability issues with the service and might prompt scaling in, as there could be a need to adjust the size of the VMSS to conserve resources and optimize costs.
-        tagpass:
-          dialer_name: [default]
-          reason: [refused]
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [process_cpu_seconds_total] # This metric represents the total CPU time (in seconds) consumed by the process. An increase in CPU usage time may indicate that the system's load is increasing, and scaling out should be considered if a certain threshold is exceeded. Conversely, if the CPU usage time is very low, it indicates that the system is underutilized, and scaling in could be considered.
-      - urls: [http://0.0.0.0:9090/metrics]
-        period: 10s
-        delay: 10s
-        interval: 10s
-        namepass: [process_resident_memory_bytes] # This metric indicates the amount of main memory used by the process in bytes. If memory usage is high, it suggests that there is an increasing demand for memory resources, and scaling out in the VMSS may be necessary to provide more memory resources. On the other hand, if memory usage is very low, scaling in could be considered.
+        period: 1m
+        delay: 0s
+        interval: 1m
+        namepass: [nginx_connections_waiting] # This metric represents the wating number of connections that the nginx reserves. If this value remains high, it signifies that the nginx is using a significant amount of connections, which could trigger a scale-out.
   outputs:
     wave-autoscale: {}
 ---
