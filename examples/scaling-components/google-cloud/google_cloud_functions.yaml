@@ -16,36 +16,8 @@ metadata:
             - key: function_name
               value: "{{ function_name }}"
       - project: "{{ project }}"
-        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/execution_count] # This metric indicates how often a function is executed. A high number of executions could be a signal to consider scaling out. Additionally, the status label can be checked to see if errors or timeouts are occurring frequently.
-        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        filter:
-          resource_labels:
-            - key: function_name
-              value: "{{ function_name }}"
-      - project: "{{ project }}"
         metric_type_prefix_include: [cloudfunctions.googleapis.com/function/execution_times] # If execution times are lengthening, scaling out may need to be considered. On the other hand, if the execution times are generally short, the current setup can be considered efficient.
         interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        filter:
-          resource_labels:
-            - key: function_name
-              value: "{{ function_name }}"
-      - project: "{{ project }}"
-        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/instance_count] # You can determine scaling strategies by checking the number of instances in active or idle states. If there are many idle instances, scaling in could be considered.
-        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        filter:
-          resource_labels:
-            - key: function_name
-              value: "{{ function_name }}"
-      - project: "{{ project }}"
-        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/network_egress] # A surge in network traffic may necessitate considering scaling out. This is especially important for applications that need to transmit a large amount of data.
-        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
-        filter:
-          resource_labels:
-            - key: function_name
-              value: "{{ function_name }}"
-      - project: "{{ project }}"
-        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/user_memory_bytes] # If memory usage is high, you may need to increase the memory allocated to function instances or consider scaling out. High memory usage could result in performance degradation.
-        interval: 180s # Sampled every 60 seconds. After sampling, data is not visible for up to 180 seconds.
         filter:
           resource_labels:
             - key: function_name

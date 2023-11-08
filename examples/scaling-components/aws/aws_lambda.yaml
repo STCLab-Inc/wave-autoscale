@@ -35,33 +35,9 @@ metadata:
         delay: 1m
         interval: 1m
         namespaces: [AWS/Lambda]
-        metrics: # SELECT SUM(Errors) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [Errors] # Tracks the number of errors occurring in the function. An increase in errors may indicate performance issues in the function, necessitating scale-out or code improvements. In case of a high error rate, triggering alarms can prompt rapid corrective actions.
-            statistic_include: [sum] # Collect the metrics with the Sum statistic.
-            dimensions:
-              - name: FunctionName
-                value: "{{ function_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/Lambda]
         metrics: # SELECT SUM(Throttles) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
           - names: [Throttles] # Tracks the number of times the function has been throttled. Throttling occurs when the concurrent execution limit of the function is exceeded. Throttles can indicate the need for scale-out or adjustments in resource allocation for the function.
             statistic_include: [sum] # Collect the metrics with the Sum statistic.
-            dimensions:
-              - name: FunctionName
-                value: "{{ function_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/Lambda]
-        metrics: # SELECT MAX(Throttles) FROM SCHEMA("AWS/Lambda", FunctionName) WHERE FunctionName = '"{{ function_name }}"'
-          - names: [ConcurrentExecutions] # Tracks the number of concurrent executions of the function. This metric represents the current load on the function, and an increase in concurrent executions may indicate the need for scale-out. Adjusting resource allocation for the function based on the concurrent executions metric helps maintain optimal performance.
-            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: FunctionName
                 value: "{{ function_name }}"

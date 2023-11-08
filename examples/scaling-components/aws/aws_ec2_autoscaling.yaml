@@ -16,55 +16,7 @@ metadata:
             statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: AutoScalingGroupName
-                value: "{{ auto_scaling_group_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/EC2]
-        metrics: # SELECT MAX(DiskReadOps) FROM SCHEMA("AWS/EC2", AutoScalingGroupName) WHERE AutoScalingGroupName = '"{{ auto_scaling_group_name }}"'
-          - names: [DiskReadOps] # High disk read operations can indicate an increasing I/O load on the disks. This can be a signal to consider scaling out.
-            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
-            dimensions:
-              - name: AutoScalingGroupName
-                value: "{{ auto_scaling_group_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/EC2]
-        metrics: # SELECT MAX(DiskWriteOps) FROM SCHEMA("AWS/EC2", AutoScalingGroupName) WHERE AutoScalingGroupName = '"{{ auto_scaling_group_name }}"'
-          - names: [DiskWriteOps] # High disk write operations can indicate an increasing write I/O load on the disks. This can be a signal to consider scaling out.
-            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
-            dimensions:
-              - name: AutoScalingGroupName
-                value: "{{ auto_scaling_group_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/EC2]
-        metrics: # SELECT MAX(NetworkIn) FROM SCHEMA("AWS/EC2", AutoScalingGroupName) WHERE AutoScalingGroupName = '"{{ auto_scaling_group_name }}"'
-          - names: [NetworkIn] # High network ingress indicates a high network traffic load on the instance. This can be a signal to consider scaling out.
-            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
-            dimensions:
-              - name: AutoScalingGroupName
-                value: "{{ auto_scaling_group_name }}"
-      - region: "{{ region }}"
-        profile: "{{ profile }}"
-        period: 1m
-        delay: 1m
-        interval: 1m
-        namespaces: [AWS/EC2]
-        metrics: # SELECT MAX(NetworkOut) FROM SCHEMA("AWS/EC2", AutoScalingGroupName) WHERE AutoScalingGroupName = '"{{ auto_scaling_group_name }}"'
-          - names: [NetworkOut] # High network egress indicates a high network traffic load leaving the instance. This can be a signal to consider scaling out.
-            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
-            dimensions:
-              - name: AutoScalingGroupName
-                value: "{{ auto_scaling_group_name }}"
+                value: "{{ auto_scaling_group_name }}"      
   outputs:
     wave-autoscale: {}
 ---
