@@ -7,61 +7,61 @@ metadata:
     cloudwatch:
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/ECS"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/ECS]
         metrics: # SELECT MAX(CPUUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
-          - names: ["CPUUtilization"] # When CPUUtilization decreases, indicating a reduced need for CPU resources, it becomes a candidate for scale-in. This may involve terminating unnecessary EC2 instances or reducing Fargate tasks. Conversely, when CPUUtilization increases, indicating a higher demand for CPU resources, it becomes a candidate for scale-out. This may involve launching additional EC2 instances or expanding Fargate tasks.
-            statistic_include: ["maximum"] # Collect the metrics with the Maximum statistic.
+          - names: [CPUUtilization] # When CPUUtilization decreases, indicating a reduced need for CPU resources, it becomes a candidate for scale-in. This may involve terminating unnecessary EC2 instances or reducing Fargate tasks. Conversely, when CPUUtilization increases, indicating a higher demand for CPU resources, it becomes a candidate for scale-out. This may involve launching additional EC2 instances or expanding Fargate tasks.
+            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: ClusterName
                 value: "{{ cluster_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/ECS"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/ECS]
         metrics: # SELECT MAX(MemoryUtilization) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
-          - names: ["MemoryUtilization"] # When MemoryUtilization decreases, indicating a reduced need for memory resources, it becomes a candidate for scale-in. This may involve terminating unnecessary EC2 instances or reducing Fargate tasks. Conversely, when MemoryUtilization increases, indicating a higher demand for memory resources, it becomes a candidate for scale-out. This may involve launching additional EC2 instances or expanding Fargate tasks.
-            statistic_include: ["maximum"] # Collect the metrics with the Maximum statistic.
+          - names: [MemoryUtilization] # When MemoryUtilization decreases, indicating a reduced need for memory resources, it becomes a candidate for scale-in. This may involve terminating unnecessary EC2 instances or reducing Fargate tasks. Conversely, when MemoryUtilization increases, indicating a higher demand for memory resources, it becomes a candidate for scale-out. This may involve launching additional EC2 instances or expanding Fargate tasks.
+            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: ClusterName
                 value: "{{ cluster_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/ECS"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/ECS]
         metrics: # SELECT MAX(ActiveConnectionCount) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
-          - names: ["ActiveConnectionCount"] # If ActiveConnectionCount decreases, indicating fewer active connections, it may be considered for scale-in. Resources that are no longer needed can be released, or the number of tasks can be reduced. Conversely, if ActiveConnectionCount increases, indicating more active connections, it may be considered for scale-out. Additional tasks or expanded network resources can be deployed.
-            statistic_include: ["maximum"] # Collect the metrics with the Maximum statistic.
+          - names: [ActiveConnectionCount] # If ActiveConnectionCount decreases, indicating fewer active connections, it may be considered for scale-in. Resources that are no longer needed can be released, or the number of tasks can be reduced. Conversely, if ActiveConnectionCount increases, indicating more active connections, it may be considered for scale-out. Additional tasks or expanded network resources can be deployed.
+            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: ClusterName
                 value: "{{ cluster_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/ECS"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/ECS]
         metrics: # SELECT MAX(NewConnectionCount) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
-          - names: ["NewConnectionCount"] # If NewConnectionCount decreases, indicating a decrease in new connections, it may be considered for scale-in. The number of tasks can be reduced, or expanded network resources can be removed. Conversely, if NewConnectionCount increases, indicating an increase in new connections, it may be considered for scale-out. Additional tasks or expanded network resources can be deployed.
-            statistic_include: ["maximum"] # Collect the metrics with the Sample Count statistic.
+          - names: [NewConnectionCount] # If NewConnectionCount decreases, indicating a decrease in new connections, it may be considered for scale-in. The number of tasks can be reduced, or expanded network resources can be removed. Conversely, if NewConnectionCount increases, indicating an increase in new connections, it may be considered for scale-out. Additional tasks or expanded network resources can be deployed.
+            statistic_include: [maximum] # Collect the metrics with the Sample Count statistic.
             dimensions:
               - name: ClusterName
                 value: "{{ cluster_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/ECS"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/ECS]
         metrics: # SELECT MAX(GPUReservation) FROM SCHEMA("AWS/ECS", ClusterName) WHERE ClusterName = '"{{ cluster_name }}"'
-          - names: ["GPUReservation"] # If additional GPU resources are required to handle GPU workloads, it may be considered for scale-out. This could involve launching additional EC2 GPU instances or expanding Fargate GPU tasks.
-            statistic_include: ["maximum"] # Collect the metrics with the Maximum statistic.
+          - names: [GPUReservation] # If additional GPU resources are required to handle GPU workloads, it may be considered for scale-out. This could involve launching additional EC2 GPU instances or expanding Fargate GPU tasks.
+            statistic_include: [maximum] # Collect the metrics with the Maximum statistic.
             dimensions:
               - name: ClusterName
                 value: "{{ cluster_name }}"

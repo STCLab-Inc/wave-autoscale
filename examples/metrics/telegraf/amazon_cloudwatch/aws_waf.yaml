@@ -7,13 +7,13 @@ metadata:
     cloudwatch:
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(AllowedRequests) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["AllowedRequests"] # This metric tracks the number of allowed web requests. From a scaling perspective, if the "Allowed Requests" metric decreases, it indicates a reduction in traffic, making scale-in a potential consideration. Conversely, if the metric increases, it signals a traffic surge, warranting consideration for scale-out.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [AllowedRequests] # This metric tracks the number of allowed web requests. From a scaling perspective, if the "Allowed Requests" metric decreases, it indicates a reduction in traffic, making scale-in a potential consideration. Conversely, if the metric increases, it signals a traffic surge, warranting consideration for scale-out.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
@@ -23,13 +23,13 @@ metadata:
                 value: "{{ web_acl_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(BlockedRequests) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["BlockedRequests"] # This metric monitors the number of blocked web requests. In terms of scaling, a decrease in the "Blocked Requests" metric suggests a decline in blocked traffic, prompting consideration for scale-in. Conversely, an increase in this metric implies a rise in blocked traffic, making scale-out a relevant consideration.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [BlockedRequests] # This metric monitors the number of blocked web requests. In terms of scaling, a decrease in the "Blocked Requests" metric suggests a decline in blocked traffic, prompting consideration for scale-in. Conversely, an increase in this metric implies a rise in blocked traffic, making scale-out a relevant consideration.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
@@ -39,13 +39,13 @@ metadata:
                 value: "{{ web_acl_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(CountedRequests) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["CountedRequests"] # This metric reflects the number of web requests matching at least one rule. In the context of scaling, a decrease in the "Counted Requests" metric indicates a reduction in traffic matched by rules, prompting consideration for scale-in. Conversely, an increase in this metric signifies more traffic matched by rules, making scale-out a consideration.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [CountedRequests] # This metric reflects the number of web requests matching at least one rule. In the context of scaling, a decrease in the "Counted Requests" metric indicates a reduction in traffic matched by rules, prompting consideration for scale-in. Conversely, an increase in this metric signifies more traffic matched by rules, making scale-out a consideration.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
@@ -55,13 +55,13 @@ metadata:
                 value: "{{ web_acl_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(RequestsWithValidCaptchaToken) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["RequestsWithValidCaptchaToken"] # This metric records the number of web requests with CAPTCHA challenges. Regarding scaling, a decrease in "CAPTCHA Requests" suggests a decrease in CAPTCHA challenge usage, making scale-in a consideration. Conversely, an increase in this metric implies heightened CAPTCHA challenge usage, warranting consideration for scale-out.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [RequestsWithValidCaptchaToken] # This metric records the number of web requests with CAPTCHA challenges. Regarding scaling, a decrease in "CAPTCHA Requests" suggests a decrease in CAPTCHA challenge usage, making scale-in a consideration. Conversely, an increase in this metric implies heightened CAPTCHA challenge usage, warranting consideration for scale-out.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
@@ -71,13 +71,13 @@ metadata:
                 value: "{{ web_acl_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(ChallengeRequests) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["ChallengeRequests"] # This metric tracks the number of web requests resolved with valid CAPTCHA tokens. From a scaling perspective, a decrease in "Requests With Valid CAPTCHA Token" indicates a decrease in successful CAPTCHA resolutions, prompting consideration for scale-in. Conversely, an increase in this metric suggests more successful CAPTCHA resolutions, making scale-out a relevant consideration.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ChallengeRequests] # This metric tracks the number of web requests resolved with valid CAPTCHA tokens. From a scaling perspective, a decrease in "Requests With Valid CAPTCHA Token" indicates a decrease in successful CAPTCHA resolutions, prompting consideration for scale-in. Conversely, an increase in this metric suggests more successful CAPTCHA resolutions, making scale-out a relevant consideration.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
@@ -87,13 +87,13 @@ metadata:
                 value: "{{ web_acl_name }}"
       - region: "{{ region }}"
         profile: "{{ profile }}"
-        period: "1m"
-        delay: "1m"
-        interval: "1m"
-        namespaces: ["AWS/WAFV2"]
+        period: 1m
+        delay: 1m
+        interval: 1m
+        namespaces: [AWS/WAFV2]
         metrics: # SELECT SUM(ChallengeRequests) FROM SCHEMA("AWS/WAFV2", Region,Rule,WebACL) WHERE WebACL = '"{{ web_acl_name }}"' AND Region = '"{{ region }}"' AND Rule = '"{{ rule_name }}"'
-          - names: ["ChallengeRequests"] # This metric monitors the number of web requests with challenge controls applied. In terms of scaling, a decrease in "Challenge Requests" implies a reduction in challenge control usage, prompting consideration for scale-in. Conversely, an increase in this metric indicates an uptick in challenge control usage, making scale-out a relevant consideration. These metrics enable informed decisions for scaling based on traffic patterns and resource needs.
-            statistic_include: ["sum"] # Collect the metrics with the Sum statistic.
+          - names: [ChallengeRequests] # This metric monitors the number of web requests with challenge controls applied. In terms of scaling, a decrease in "Challenge Requests" implies a reduction in challenge control usage, prompting consideration for scale-in. Conversely, an increase in this metric indicates an uptick in challenge control usage, making scale-out a relevant consideration. These metrics enable informed decisions for scaling based on traffic patterns and resource needs.
+            statistic_include: [sum] # Collect the metrics with the Sum statistic.
             dimensions:
               - name: Region
                 value: "{{ region }}"
