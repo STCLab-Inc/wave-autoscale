@@ -1,71 +1,100 @@
 'use client';
-
 import classNames from 'classnames';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// TODO
 function getMenuClassNames(currentPathname: string, targetPath?: string) {
-  const COMMON_CLASS_NAMES =
-    'text-white disabled:text-black/30 lg:px-2 [&.active]:text-black/90 dark:[&.active]:text-neutral-400';
-  if (!targetPath) {
-    return COMMON_CLASS_NAMES;
-  }
-  return classNames(COMMON_CLASS_NAMES, {
-    'tab-active font-bold link-primary tab-bordered':
-      currentPathname.indexOf(targetPath) >= 0,
-  });
+  return classNames(
+    !targetPath || currentPathname.indexOf(targetPath) < 0
+      ? 'text-gray-600 pr-4 pl-4'
+      : 'text-gray-1000 pr-4 pl-4'
+  );
 }
 
 export default function Menu() {
   const pathname = usePathname();
   return (
-    <ul
-      className="list-style-none mr-auto flex flex-col pl-8 lg:flex-row"
-      data-te-navbar-nav-ref
-    >
-      <li className="my-4 lg:my-0 lg:pr-2" data-te-nav-item-ref>
+    <ul className="flex h-full flex-row items-center pt-1 lg:flex-row">
+      <li
+        className={classNames(
+          'flex-column flex h-full items-center lg:flex-row',
+          pathname === '/app/autoscaling-history'
+            ? 'border-b-4 border-purple-500'
+            : 'border-b-4 border-white'
+        )}
+      >
         <Link
-          className={getMenuClassNames(pathname, '/app/autoscaling-history')}
+          className={classNames(
+            getMenuClassNames(pathname, '/app/autoscaling-history'),
+            'whitespace-nowrap'
+          )}
           href="/app/autoscaling-history"
-          data-te-nav-link-ref
         >
           Autoscaling History
         </Link>
       </li>
-      <li className="my-4 lg:my-0 lg:pr-2" data-te-nav-item-ref>
+      <li
+        className={classNames(
+          'flex-column flex h-full items-center lg:flex-row',
+          pathname === '/app/planning'
+            ? 'border-b-4 border-purple-500'
+            : 'border-b-4 border-white'
+        )}
+      >
         <Link
-          className={getMenuClassNames(pathname, '/app/planning')}
+          className={classNames(
+            getMenuClassNames(pathname, '/app/planning'),
+            'whitespace-nowrap'
+          )}
           href="/app/planning"
-          data-te-nav-link-ref
         >
           Planning
         </Link>
       </li>
-      <li className="mb-4 lg:mb-0 lg:pr-2" data-te-nav-item-ref>
+      <li
+        className={classNames(
+          'flex-column flex h-full items-center lg:flex-row',
+          pathname === '/app/metrics'
+            ? 'border-b-4 border-purple-500'
+            : 'border-b-4 border-white'
+        )}
+      >
         <Link
-          className={getMenuClassNames(pathname, '/app/metrics')}
+          className={classNames(
+            getMenuClassNames(pathname, '/app/metrics'),
+            'whitespace-nowrap'
+          )}
           href="/app/metrics"
-          data-te-nav-link-ref
         >
           Metrics
         </Link>
       </li>
-      <li className="mb-4 lg:mb-0 lg:pr-2" data-te-nav-item-ref>
+      <li
+        className={classNames(
+          'flex-column flex h-full items-center lg:flex-row',
+          pathname === '/app/scaling-components'
+            ? 'border-b-4 border-purple-500'
+            : 'border-b-4 border-white'
+        )}
+      >
         <Link
-          className={getMenuClassNames(pathname, '/app/scaling-components')}
+          className={classNames(
+            getMenuClassNames(pathname, '/app/scaling-components'),
+            'whitespace-nowrap'
+          )}
           href="/app/scaling-components"
-          data-te-nav-link-ref
         >
           Scaling Components
         </Link>
       </li>
-      <li className="mb-4 lg:mb-0 lg:pr-2" data-te-nav-item-ref>
+      <li className="flex-column flex h-full items-center lg:flex-row">
         <Link
-          className={getMenuClassNames(pathname)}
+          className={classNames(
+            getMenuClassNames(pathname),
+            'whitespace-nowrap'
+          )}
           href="https://github.com/STCLab-Inc/wave-autoscale"
           target="_blank"
-          data-te-nav-link-ref
         >
           Github
         </Link>
