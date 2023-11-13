@@ -11,12 +11,11 @@ export default function Home() {
   const [windowWidth, setWindowWidth] = useState<number>(0);
 
   useEffect(() => {
-    setWindowWidth(window.innerWidth);
-
-    function handleResize() {
+    const handleResize = () => {
       setWindowWidth(window.innerWidth);
-    }
+    };
 
+    setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
 
     return () => {
