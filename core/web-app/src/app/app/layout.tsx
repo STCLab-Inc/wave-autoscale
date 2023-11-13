@@ -11,7 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="h-screen w-screen">
+    <div className="h-screen w-screen min-w-screen-md">
       <nav className="min-h-14 navbar h-14 w-full p-0 text-neutral-content">
         <div className="flex h-full w-full items-center pl-8 pr-8">
           <div className="flex h-full items-center justify-between">

@@ -28,6 +28,9 @@ module.exports = {
         'gray-600': '#7F8083',
         'gray-1000': '#1A1B1D',
       },
+      minWidth: {
+        'screen-md': '768px',
+      },
     },
   },
   plugins: [require('@tailwindcss/typography'), require('daisyui')],
