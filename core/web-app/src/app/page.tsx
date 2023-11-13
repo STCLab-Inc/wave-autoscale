@@ -48,7 +48,7 @@ export default function Home() {
           style={{ minWidth: '10rem', minHeight: '10rem' }}
         >
           <Image
-            src="assets/images/wave-autoscale_symbol.svg"
+            src="/assets/images/wave-autoscale_symbol.svg"
             alt="wave-autoscale_symbol.svg"
             width={100}
             height={100}
@@ -57,7 +57,7 @@ export default function Home() {
         </figure>
         <figure className={`bg-black ${paddingClass}`}>
           <Image
-            src="assets/images/wave-autoscale_text.svg"
+            src="/assets/images/wave-autoscale_text.svg"
             alt="wave-autoscale_text.svg"
             width={100}
             height={100}

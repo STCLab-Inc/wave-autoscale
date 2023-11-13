@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex h-full items-center justify-between">
             <figure onClick={handleClick} className="cursor-pointer">
               <Image
-                src="assets/images/wave-autoscale_symbol.svg"
+                src="/assets/images/wave-autoscale_symbol.svg"
                 alt="wave-autoscale_symbol.svg"
                 width={36}
                 height={32}
