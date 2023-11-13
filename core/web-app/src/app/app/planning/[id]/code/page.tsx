@@ -25,12 +25,17 @@ export default function PlanningDetailCodePage() {
 
   // If scalingPlanId changes, fetch the scaling plan then it updates plans and nodes.
   useEffect(() => {
-    const fetch = async () => {
-      await load(scalingPlanId);
+    const fetch = async (id: string) => {
+      await load(id);
       const yamlCode = await getYAMLCode();
       setValue('expression', yamlCode);
     };
-    fetch();
+
+    if (Array.isArray(scalingPlanId)) {
+      fetch(scalingPlanId[0]);
+    } else {
+      fetch(scalingPlanId);
+    }
   }, [scalingPlanId]);
 
   const onSubmit = async (data: any) => {

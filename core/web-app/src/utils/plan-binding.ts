@@ -17,8 +17,9 @@ export function generatePlanDefinition({
   }
   return {
     kind: 'ScalingPlan',
-    id,
     db_id,
+    id,
+    metadata: {},
     title,
     plans,
   } as ScalingPlanDefinition;

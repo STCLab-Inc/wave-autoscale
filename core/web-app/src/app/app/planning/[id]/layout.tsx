@@ -30,7 +30,7 @@ export default async function PlanningDetailLayout({
       {/* Plan Detail Header */}
       <div className="flex flex-1 flex-col">
         <ContentHeader
-          title={scalingPlanDefinition.title}
+          title={scalingPlanDefinition.kind}
           right={<PlanningDetailControls />}
         >
           <PlanningDetailTabs />

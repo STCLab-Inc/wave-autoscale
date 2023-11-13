@@ -95,7 +95,7 @@ export default function PlanningSidebar() {
                   'text-white': plan.db_id === selectePlanId,
                 })}
               >
-                {plan.title}
+                {plan.kind}
                 {currentScalingPlanState && needToSave(plan.db_id) && '*'}
               </div>
             </Link>
