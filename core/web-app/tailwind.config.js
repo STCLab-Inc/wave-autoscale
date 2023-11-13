@@ -7,15 +7,31 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // backgroundImage: {
-      //   'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-      //   'gradient-conic':
-      //     'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-      // },
+      backgroundColor: {
+        'gray-50': '#FAFAFB',
+        'gray-75': '#F5F5F7',
+        'gray-200': '#E5E6E9',
+        'gray-600': '#7F8083',
+        'gray-1000': '#1A1B1D',
+      },
+      textColor: {
+        'gray-50': '#FAFAFB',
+        'gray-75': '#F5F5F7',
+        'gray-200': '#E5E6E9',
+        'gray-600': '#7F8083',
+        'gray-1000': '#1A1B1D',
+      },
+      borderColor: {
+        'gray-50': '#FAFAFB',
+        'gray-75': '#F5F5F7',
+        'gray-200': '#E5E6E9',
+        'gray-600': '#7F8083',
+        'gray-1000': '#1A1B1D',
+      },
     },
   },
   plugins: [require('@tailwindcss/typography'), require('daisyui')],
   daisyui: {
-    themmes: ['winter'],
+    themes: ['winter'],
   },
 };
