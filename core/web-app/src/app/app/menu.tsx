@@ -11,82 +11,58 @@ function getMenuClassNames(currentPathname: string, targetPath?: string) {
   );
 }
 
+function MenuItem({
+  pathname,
+  targetPath,
+  label,
+}: {
+  pathname: string;
+  targetPath: string;
+  label: string;
+}) {
+  return (
+    <li
+      className={classNames(
+        'flex-column flex h-full items-center lg:flex-row',
+        pathname === targetPath
+          ? 'border-b-4 border-purple-500'
+          : 'border-b-4 border-white'
+      )}
+    >
+      <Link
+        className={classNames(
+          getMenuClassNames(pathname, targetPath),
+          'whitespace-nowrap'
+        )}
+        href={targetPath}
+      >
+        {label}
+      </Link>
+    </li>
+  );
+}
+
 export default function Menu() {
   const pathname = usePathname();
+
   return (
     <ul className="flex h-full flex-row items-center pt-1 lg:flex-row">
-      <li
-        className={classNames(
-          'flex-column flex h-full items-center lg:flex-row',
-          pathname === '/app/autoscaling-history'
-            ? 'border-b-4 border-purple-500'
-            : 'border-b-4 border-white'
-        )}
-      >
-        <Link
-          className={classNames(
-            getMenuClassNames(pathname, '/app/autoscaling-history'),
-            'whitespace-nowrap'
-          )}
-          href="/app/autoscaling-history"
-        >
-          Autoscaling History
-        </Link>
-      </li>
-      <li
-        className={classNames(
-          'flex-column flex h-full items-center lg:flex-row',
-          pathname === '/app/planning'
-            ? 'border-b-4 border-purple-500'
-            : 'border-b-4 border-white'
-        )}
-      >
-        <Link
-          className={classNames(
-            getMenuClassNames(pathname, '/app/planning'),
-            'whitespace-nowrap'
-          )}
-          href="/app/planning"
-        >
-          Planning
-        </Link>
-      </li>
-      <li
-        className={classNames(
-          'flex-column flex h-full items-center lg:flex-row',
-          pathname === '/app/metrics'
-            ? 'border-b-4 border-purple-500'
-            : 'border-b-4 border-white'
-        )}
-      >
-        <Link
-          className={classNames(
-            getMenuClassNames(pathname, '/app/metrics'),
-            'whitespace-nowrap'
-          )}
-          href="/app/metrics"
-        >
-          Metrics
-        </Link>
-      </li>
-      <li
-        className={classNames(
-          'flex-column flex h-full items-center lg:flex-row',
-          pathname === '/app/scaling-components'
-            ? 'border-b-4 border-purple-500'
-            : 'border-b-4 border-white'
-        )}
-      >
-        <Link
-          className={classNames(
-            getMenuClassNames(pathname, '/app/scaling-components'),
-            'whitespace-nowrap'
-          )}
-          href="/app/scaling-components"
-        >
-          Scaling Components
-        </Link>
-      </li>
+      <MenuItem
+        pathname={pathname}
+        targetPath="/app/autoscaling-history"
+        label="Autoscaling History"
+      />
+      <MenuItem
+        pathname={pathname}
+        targetPath="/app/planning"
+        label="Planning"
+      />
+      <MenuItem pathname={pathname} targetPath="/app/metrics" label="Metrics" />
+      <MenuItem
+        pathname={pathname}
+        targetPath="/app/scaling-components"
+        label="Scaling Components"
+      />
       <li className="flex-column flex h-full items-center lg:flex-row">
         <Link
           className={classNames(
