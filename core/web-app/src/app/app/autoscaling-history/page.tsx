@@ -50,17 +50,16 @@ export default function AutoscalingHistoryPage({}) {
   }, [fromDayjs, toDayjs]);
 
   return (
-    <main className="relative flex flex-1 flex-col">
+    <main className="h-full w-full">
       <ContentHeader
         title="Autoscaling History"
         right={
           <div className="flex items-center">
-            <div className="form-control">
-              <label className="input-group-sm input-group">
-                <span>From</span>
+            <div className="form-control mr-1">
+              <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm"
+                  className="input-bordered input input-sm max-w-[130px]"
                   max={toDayjs?.format('YYYY-MM-DD')}
                   defaultValue={fromDayjs?.format('YYYY-MM-DD')}
                   onChange={(e) => {
@@ -74,12 +73,12 @@ export default function AutoscalingHistoryPage({}) {
                 />
               </label>
             </div>
-            <div className="form-control ml-4">
-              <label className="input-group-sm input-group">
-                <span>To</span>
+            <span>-</span>
+            <div className="form-control ml-1">
+              <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm"
+                  className="input-bordered input input-sm max-w-[130px]"
                   min={fromDayjs?.format('YYYY-MM-DD')}
                   defaultValue={toDayjs?.format('YYYY-MM-DD')}
                   onChange={(e) => {
@@ -98,7 +97,7 @@ export default function AutoscalingHistoryPage({}) {
       />
       <div className="w-full">
         <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
-        <table className="table-compact table w-full table-fixed">
+        <table className="table-compact w-full">
           {/* head */}
           <thead>
             <tr>
@@ -152,7 +151,7 @@ export default function AutoscalingHistoryPage({}) {
                   </td>
                   <td>
                     {dayjs
-                      .unix(historyItem.created_at)
+                      .unix(historyItem.created_at / 1000)
                       .format('YYYY-MM-DD HH:mm:ss')}
                   </td>
                 </tr>
