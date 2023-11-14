@@ -110,9 +110,9 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
         annotations={[]}
         tooltip={({ cell }) => (
           <div
-            className={`bg-${
-              cell.data.z === 'Failed' ? '[#E0242E]' : '[#074eab]'
-            } p-2 text-white shadow-md`}
+            className={`p-2 text-white shadow-md ${
+              cell.data.z === 'Failed' ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
+            }`}
           >
             <div className="text-xs">
               Date: {cell.serieId.replace(/-/g, '/')}
