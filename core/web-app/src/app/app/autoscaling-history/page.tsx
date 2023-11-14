@@ -103,32 +103,32 @@ export default function AutoscalingHistoryPage() {
         <table className="w-full">
           <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-200 px-8 py-0 font-bold text-gray-800">
             <tr className="flex h-full w-full">
-              <th className="mr-4 flex h-full items-center">
+              <th className="mr-4 flex h-full flex-1 items-center">
                 <label className="flex h-full items-center">
                   <input type="checkbox" className="checkbox" />
                 </label>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-3 items-center">
                 <div className="min-w-16 flex items-center">Plan ID</div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-10 items-center">
                 <div className="min-w-20 flex items-center">Plan Item</div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-8 items-center">
                 <div className="min-w-28 flex items-center">Metric Values</div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-8 items-center">
                 <div className="min-w-36 flex items-center">
                   Metadata Values
                 </div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-8 items-center">
                 <div className="min-w-28 flex items-center">Fail Message</div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-2 items-center">
                 <div className="min-w-14 flex items-center">Status</div>
               </th>
-              <th className="mx-4 flex h-full w-full items-center">
+              <th className="mx-4 flex h-full w-full flex-5 items-center">
                 <div className="min-w-12 flex items-center">Date</div>
               </th>
             </tr>
@@ -136,17 +136,17 @@ export default function AutoscalingHistoryPage() {
           <tbody className="text-md min-h-12 flex w-full items-center justify-between border-b border-t px-8 py-0 text-gray-800">
             {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
               <tr key={historyItem.id} className="flex h-full w-full py-4">
-                <td className="mr-4 flex h-full items-center">
+                <td className="mr-4 flex h-full flex-1 items-center">
                   <label className="flex h-full items-center">
                     <input type="checkbox" className="checkbox" />
                   </label>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
-                  <div className="min-w-16 flex items-center">
+                <td className="mx-4 flex h-full w-full flex-3 items-start">
+                  <div className="min-w-16 flex items-center break-all">
                     {historyItem.plan_id}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
+                <td className="mx-4 flex h-full w-full flex-10 items-start">
                   <div className="min-w-20 flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.plan_item_json,
@@ -154,7 +154,7 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
+                <td className="mx-4 flex h-full w-full flex-8 items-start">
                   <div className="min-w-28 flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.metric_values_json,
@@ -162,7 +162,7 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
+                <td className="mx-4 flex h-full w-full flex-8 items-start">
                   <div className="min-w-36 flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.metadata_values_json,
@@ -170,7 +170,7 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
+                <td className="mx-4 flex h-full w-full flex-8 items-start">
                   <div className="min-w-28 flex flex-col items-center">
                     {historyItem.fail_message &&
                       renderKeyValuePairsWithJson(
@@ -179,7 +179,7 @@ export default function AutoscalingHistoryPage() {
                       )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
+                <td className="mx-4 flex h-full w-full flex-2 items-start">
                   <div className="min-w-14 flex items-center">
                     {historyItem.fail_message ? (
                       <div className="badge-error badge">Failed</div>
@@ -188,8 +188,8 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full items-start">
-                  <div className="min-w-12 flex items-center">
+                <td className="mx-4 flex h-full w-full flex-5 items-start">
+                  <div className="min-w-12 flex items-center break-all">
                     {dayjs
                       .unix(historyItem.created_at / 1000)
                       .format('YYYY-MM-DD HH:mm:ss')}
