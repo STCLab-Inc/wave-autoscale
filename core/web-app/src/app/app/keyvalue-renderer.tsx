@@ -21,7 +21,7 @@ export function renderKeyValuePairs(
       return (
         <div
           key={key}
-          className={classNames('mb-2', {
+          className={classNames('mb-2 w-full', {
             'ml-4': indentFlag,
           })}
         >
