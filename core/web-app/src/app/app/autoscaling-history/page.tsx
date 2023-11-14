@@ -21,6 +21,7 @@ const DEFAULT_TO = dayjs();
 
 interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
   created_at: number;
+  isChecked: boolean;
 }
 
 export default function AutoscalingHistoryPage() {
@@ -66,6 +67,18 @@ export default function AutoscalingHistoryPage() {
     );
   };
 
+  const [checkAllFlag, setCheckAllFlag] = useState(false);
+
+  const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setCheckAllFlag(checked);
+    const updatedHistory = history.map((historyItem) => ({
+      ...historyItem,
+      isChecked: checked,
+    }));
+    setHistory(updatedHistory);
+  };
+
   return (
     <main className="h-full w-full">
       <ContentHeader
@@ -105,7 +118,12 @@ export default function AutoscalingHistoryPage() {
             <tr className="flex h-full w-full">
               <th className="mr-4 flex h-full flex-1 items-center">
                 <label className="flex h-full items-center">
-                  <input type="checkbox" className="checkbox" />
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={checkAllFlag}
+                    onChange={handleCheckAllChange}
+                  />
                 </label>
               </th>
               <th className="mx-4 flex h-full w-full flex-3 items-center">
@@ -138,7 +156,20 @@ export default function AutoscalingHistoryPage() {
               <tr key={historyItem.id} className="flex h-full w-full py-4">
                 <td className="mr-4 flex h-full flex-1 items-center">
                   <label className="flex h-full items-center">
-                    <input type="checkbox" className="checkbox" />
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={historyItem.isChecked}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const updatedHistory = history.map((item) =>
+                          item.id === historyItem.id
+                            ? { ...item, isChecked: checked }
+                            : item
+                        );
+                        setHistory(updatedHistory);
+                      }}
+                    />
                   </label>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-3 items-start">
