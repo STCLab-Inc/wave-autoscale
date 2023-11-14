@@ -213,9 +213,13 @@ export default function AutoscalingHistoryPage() {
                 <td className="mx-4 flex h-full w-full flex-2 items-start">
                   <div className="min-w-14 flex items-center">
                     {historyItem.fail_message ? (
-                      <div className="badge-error badge">Failed</div>
+                      <div className="badge-error badge bg-[#E0242E] text-white">
+                        Failed
+                      </div>
                     ) : (
-                      <div className="badge-success badge">Success</div>
+                      <div className="badge-success badge bg-[#074EAB] text-white">
+                        Success
+                      </div>
                     )}
                   </div>
                 </td>
