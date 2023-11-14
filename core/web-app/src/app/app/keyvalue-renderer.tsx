@@ -42,7 +42,7 @@ export function renderKeyValuePairsWithJson(
     const keyValuePairs = JSON.parse(jsonString);
     return renderKeyValuePairs(keyValuePairs, indentFlag);
   } catch (error) {
-    console.log({ error });
+    /* console.log({ error }); */
   }
   return indentFlag ? (
     <div>{jsonString}</div>
