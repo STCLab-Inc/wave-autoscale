@@ -50,6 +50,7 @@ export default function Home() {
           <Image
             src="/assets/images/wave-autoscale_symbol.svg"
             alt="wave-autoscale_symbol.svg"
+            priority={true}
             width={100}
             height={100}
             style={{ minWidth: '5rem', maxWidth: '5rem' }}
@@ -59,6 +60,7 @@ export default function Home() {
           <Image
             src="/assets/images/wave-autoscale_text.svg"
             alt="wave-autoscale_text.svg"
+            priority={true}
             width={100}
             height={100}
           />

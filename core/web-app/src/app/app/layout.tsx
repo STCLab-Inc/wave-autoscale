@@ -19,6 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 src="/assets/images/wave-autoscale_symbol.svg"
                 alt="wave-autoscale_symbol.svg"
+                priority={true}
                 width={36}
                 height={32}
                 style={{
