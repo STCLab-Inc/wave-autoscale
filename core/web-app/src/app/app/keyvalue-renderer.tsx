@@ -5,7 +5,7 @@ export function renderKeyValuePairs(
   indent?: boolean,
   depth = 0
 ) {
-  const indentFlag = indent === undefined || indent === true ? true : false;
+  const indentFlag = indent ?? true;
 
   return Object.keys(keyValuePairs)
     .sort()
@@ -18,25 +18,15 @@ export function renderKeyValuePairs(
         return null;
       }
 
-      return indentFlag ? (
+      return (
         <div
           key={key}
           className={classNames('mb-2', {
-            'ml-4': depth > 0,
+            'ml-4': indentFlag,
           })}
         >
           <div className="whitespace-normal break-all font-bold">{key}</div>
-          <div className="whitespace-normal break-all ">{value}</div>
-        </div>
-      ) : (
-        <div
-          key={key}
-          className={classNames('mb-2 w-full', {
-            'ml-0': depth > 0,
-          })}
-        >
-          <div className="whitespace-normal break-all font-bold">{key}</div>
-          <div className="whitespace-normal break-all ">{value}</div>
+          <div className="whitespace-normal break-all">{value}</div>
         </div>
       );
     });
@@ -46,7 +36,7 @@ export function renderKeyValuePairsWithJson(
   jsonString: string,
   indent?: boolean
 ) {
-  const indentFlag = indent === undefined || indent === true ? true : false;
+  const indentFlag = indent ?? true;
 
   try {
     const keyValuePairs = JSON.parse(jsonString);
@@ -57,7 +47,7 @@ export function renderKeyValuePairsWithJson(
   return indentFlag ? (
     <div>{jsonString}</div>
   ) : (
-    <div className={classNames('mb-2 w-full')}>
+    <div className="mb-2 w-full">
       <div className="whitespace-normal break-all ">{jsonString}</div>
     </div>
   );
