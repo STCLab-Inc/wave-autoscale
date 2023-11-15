@@ -24,7 +24,7 @@ function MenuItem({
     <li
       className={classNames(
         'flex-column flex h-full items-center lg:flex-row',
-        pathname === targetPath
+        pathname.includes(targetPath)
           ? 'border-b-4 border-purple-500'
           : 'border-b-4 border-white'
       )}
