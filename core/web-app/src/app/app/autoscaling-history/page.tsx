@@ -227,7 +227,7 @@ export default function AutoscalingHistoryPage() {
                   <div className="min-w-12 flex items-center break-all">
                     {dayjs
                       .unix(historyItem.created_at / 1000)
-                      .format('YYYY-MM-DD HH:mm:ss')}
+                      .format('YYYY/MM/DD HH:mm:ss')}
                   </div>
                 </td>
               </tr>
