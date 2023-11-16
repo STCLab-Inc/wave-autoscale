@@ -1,12 +1,9 @@
-## Wave Autoscale - Open-source Traffic & Scaling Automation
-
-change
-
-![banner](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/76df15ee-2efc-40e9-a142-3a2551435b37)
-
+# Wave Autoscale
 
 - Website: https://waveautoscale.com
 - Documentation: [https://waveautoscale.com/docs/guide/introduction/](https://www.waveautoscale.com/docs/guide/getting-started/)
+
+<img alt="Wave Autoscale" src="https://github.com/STCLab-Inc/wave-autoscale/assets/114452/3b7f0e57-0cd9-42f5-93af-002444aa9c08" width="500px">
 
 Wave Autoscale is an autoscaling solution that simplifies and automates complex autoscaling configurations within the cloud, adapting to the changing traffic demands.
 Though cloud service providers such as AWS, Google Cloud, and Azure offer some autoscaling features, engineers often struggle to handle the many challenges associated with dynamic scaling demands.
@@ -30,7 +27,8 @@ Wave Autoscale works by letting users write down what they need for scaling. Thi
    // In a yaml file, if the number of connections to the Postgres exceeds 300
    expression: get({ metric_id: 'postgres', name: 'db_connections' }) > 300
    ```
-2. **Time-based Events (Cron Expression)**: Users can schedule scaling actions at specific times using cron expressions.
+2. **Time-based Events (Cron Expression)**: Users![github-main](https://github.com/STCLab-Inc/wave-autoscale/assets/114452/b9576e87-c715-4c5e-b618-f9afba673e25)
+ can schedule scaling actions at specific times using cron expressions.
    ```yaml
    // In a yaml file, every day at 1am
    cron_expression: "0 0 1 * * * *"
