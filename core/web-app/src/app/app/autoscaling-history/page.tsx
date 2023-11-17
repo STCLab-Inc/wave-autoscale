@@ -90,7 +90,7 @@ export default function AutoscalingHistoryPage() {
               <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm max-w-[130px]"
+                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
                   max={toDayjs.format('YYYY-MM-DD')}
                   value={from}
                   onChange={handleFromDateChange}
@@ -102,7 +102,7 @@ export default function AutoscalingHistoryPage() {
               <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm max-w-[130px]"
+                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
                   min={from}
                   value={to}
                   onChange={handleToDateChange}
