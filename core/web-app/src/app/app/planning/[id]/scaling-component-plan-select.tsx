@@ -132,7 +132,7 @@ export default function ScalingComponentPlanSelect(props: any) {
         </label>
       </div>
       <button
-        className="ml-1 flex h-8 items-center justify-center rounded-md border border-red-400  bg-red-400 pl-1 pr-1 text-sm text-gray-50"
+        className="ml-1 flex h-8 items-center justify-center rounded-md border border-red-400 bg-red-400 pl-1 pr-1 text-sm text-gray-50"
         onClick={onRemove}
       >
         <Image
