@@ -30,7 +30,7 @@ export default function AutoscalingHistoryPage() {
   const from = searchParams.get('from') || DEFAULT_FROM.format('YYYY-MM-DD');
   const to = searchParams.get('to') || DEFAULT_TO.format('YYYY-MM-DD');
   const fromDayjs = useMemo(() => dayjs(from), [from]);
-  const toDayjs = useMemo(() => dayjs(to), [to]);
+  const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
   const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
   const router = useRouter();
 
@@ -155,8 +155,8 @@ export default function AutoscalingHistoryPage() {
           <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b border-t px-8 py-0 text-gray-800">
             {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
               <tr key={historyItem.id} className="flex h-full w-full py-4">
-                <td className="mr-4 flex h-full flex-1 items-center">
-                  <label className="flex h-full items-center">
+                <td className="mr-4 flex h-full flex-1 items-start">
+                  <label className="flex items-center">
                     <input
                       type="checkbox"
                       className="checkbox"
