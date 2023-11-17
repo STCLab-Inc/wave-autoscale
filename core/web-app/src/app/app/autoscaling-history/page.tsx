@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { useSearchParams } from 'next/navigation';
@@ -151,7 +152,7 @@ export default function AutoscalingHistoryPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="text-md min-h-12 flex w-full items-center justify-between border-b border-t px-8 py-0 text-gray-800">
+          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b border-t px-8 py-0 text-gray-800">
             {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
               <tr key={historyItem.id} className="flex h-full w-full py-4">
                 <td className="mr-4 flex h-full flex-1 items-center">
