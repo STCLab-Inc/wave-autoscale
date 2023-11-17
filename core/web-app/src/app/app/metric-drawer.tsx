@@ -132,7 +132,7 @@ export default function MetricDetailDrawer({
           className="drawer-overlay"
           onClick={onClickOverlay}
         />
-        <div className="drawer-content w-[32rem] overflow-y-auto bg-base-100 p-4">
+        <div className="drawer-content min-w-[32rem] overflow-y-auto bg-base-100 p-4">
           <form className="" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-bold">Metric</h2>
