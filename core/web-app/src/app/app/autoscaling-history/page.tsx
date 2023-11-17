@@ -81,7 +81,7 @@ export default function AutoscalingHistoryPage() {
   };
 
   return (
-    <main className="h-full w-full">
+    <main className="flex h-full w-full flex-col">
       <ContentHeader
         title="Autoscaling History"
         right={
@@ -112,9 +112,9 @@ export default function AutoscalingHistoryPage() {
           </div>
         }
       />
-      <div className="w-full">
+      <div className="flex w-full flex-col">
         <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
-        <table className="w-full">
+        <table className="flex w-full flex-col">
           <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-200 px-8 py-0 font-bold text-gray-800">
             <tr className="flex h-full w-full">
               <th className="mr-4 flex h-full flex-1 items-center">
