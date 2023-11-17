@@ -20,7 +20,6 @@ export function generatePlanDefinition({
     db_id,
     id,
     metadata: {},
-    title,
     plans,
   } as ScalingPlanDefinition;
 }
