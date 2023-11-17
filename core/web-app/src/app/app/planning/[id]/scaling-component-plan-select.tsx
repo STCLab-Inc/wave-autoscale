@@ -4,6 +4,7 @@ import ScalingComponentService from '@/services/scaling-component';
 import { getScalingComponentPlanKeyTypes } from '@/utils/scaling-component-binding';
 import { MouseEventHandler, useEffect, useMemo, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
+import Image from 'next/image';
 
 // Metric Types
 const componentPlanKeyTypes = getScalingComponentPlanKeyTypes();
@@ -106,21 +107,18 @@ export default function ScalingComponentPlanSelect(props: any) {
   };
 
   return (
-    <div key={`${field.id}`} className="mb-5 border-b border-base-300 pb-2">
-      <div className="mb-2 flex flex-row justify-end">
-        <button className="btn-error btn-outline btn-xs btn" onClick={onRemove}>
-          Remove
-        </button>
-      </div>
-      <div className="form-control mb-2 w-full">
-        <label className="input-group-sm input-group">
-          <span className="input-group-label-fixed">Component</span>
+    <div
+      key={`${field.id}`}
+      className="mb-2 flex flex-row items-center border-b pb-2"
+    >
+      <div className="form-control mr-1 flex w-full">
+        <label className="input-group-sm">
           <Controller
             control={control}
             name={`scaling_components.${index}.component_id`}
             render={({ field }) => (
               <select
-                className="select-bordered select select-sm flex-1"
+                className="select-bordered select flex w-full rounded-md text-sm focus:outline-none"
                 defaultValue=""
                 {...field}
               >
@@ -133,6 +131,19 @@ export default function ScalingComponentPlanSelect(props: any) {
           />
         </label>
       </div>
+      <button
+        className="ml-1 flex h-8 items-center justify-center rounded-md border border-red-400  bg-red-400 pl-1 pr-1 text-sm text-gray-50"
+        onClick={onRemove}
+      >
+        <Image
+          src="/assets/icons/delete.svg"
+          alt="delete.svg"
+          priority={true}
+          width={24}
+          height={24}
+          style={{ minWidth: '1.5rem', maxWidth: '1.5rem' }}
+        />
+      </button>
       {metadataFormControls}
     </div>
   );

@@ -10,6 +10,10 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { usePlanStore } from './plan-store';
 
+interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
+  metadata: { cool_down: number; interval: number; title: string };
+}
+
 export default function PlanningSidebar() {
   const [addModalToggle, setAddModalToggle] = useState(false);
   const needToSave = usePlanStore((state) => state.needToSave);
@@ -17,12 +21,12 @@ export default function PlanningSidebar() {
     (state) => state.currentScalingPlanState
   );
   console.log({ currentScalingPlanState });
-  // Used to force refresh
+
   const [timestamp, setTimestamp] = useState(Date.now());
   const { register, reset, setFocus, handleSubmit } = useForm();
   const [plans, setPlans] = useState([]);
   const params = useParams();
-  const selectePlanId = params?.id;
+  const selectedPlanId = params?.id;
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -61,78 +65,94 @@ export default function PlanningSidebar() {
     setAddModalToggle(false);
   };
 
+  console.log(plans);
+
   return (
-    <>
-      <aside className="flex w-80 flex-col border-r border-base-300 bg-base-200">
-        {/* Header of aside */}
-        <div className="prose flex h-14 w-full items-center justify-start border-b border-base-300 px-3">
-          <div className="flex flex-1 flex-row items-center justify-start">
-            <h4 className="m-0">Plans</h4>
-            <span className="badge ml-2">
-              {plans !== undefined ? plans.length : undefined}
-            </span>
-          </div>
-          <button className="btn-primary btn-sm btn" onClick={onClickAdd}>
-            Add
+    <div className="flex h-full">
+      <aside className="flex h-full w-72 flex-col border-r border-gray-200">
+        <div className="flex h-14 w-full  min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 pl-8 pr-8">
+          <span className="font-Pretendard whitespace-nowrap text-lg font-semibold text-gray-1000">
+            Plans {plans !== undefined ? `(${plans.length})` : undefined}
+          </span>
+
+          <button
+            className="flex h-8 items-center justify-center rounded-md border border-gray-600 bg-gray-50 pl-5 pr-5 text-sm text-gray-600"
+            onClick={onClickAdd}
+          >
+            ADD
           </button>
         </div>
-        {/* Plan List */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {/* Plan Item */}
-          {plans?.map((plan: ScalingPlanDefinition) => (
+        <div className="flex flex-col">
+          {plans?.map((plan: ScalingPlanDefinitionEx) => (
             <Link
               href={`/app/planning/${plan.db_id}`}
               key={plan.db_id}
               className={classNames(
-                'mb mb-2 flex h-8 w-full cursor-pointer items-center justify-start rounded-xl px-3',
+                'flex h-12 w-full cursor-pointer items-center border-b px-8',
                 {
-                  'bg-primary': plan.db_id === selectePlanId,
+                  'hover:bg-blue-100 hover:text-blue-600':
+                    plan.db_id !== selectedPlanId,
+                  'bg-primary': plan.db_id === selectedPlanId,
                 }
               )}
             >
-              <div
-                className={classNames('prose', {
-                  'text-white': plan.db_id === selectePlanId,
+              <span
+                className={classNames('truncate', {
+                  'text-white': plan.db_id === selectedPlanId,
                 })}
               >
-                {plan.kind}
+                {plan.metadata.title}
                 {currentScalingPlanState && needToSave(plan.db_id) && '*'}
-              </div>
+              </span>
             </Link>
           ))}
         </div>
       </aside>
-      {/* Add a Plan Modal */}
+
       <div
         className={classNames('modal', { 'modal-open': addModalToggle })}
         onClick={onClickCancelInModal}
       >
         <div className="modal-box">
           <form onSubmit={handleSubmit(onSubmitAddDialog)}>
-            <h3 className="text-lg font-bold">Add a Plan</h3>
-            <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">Plan Title</span>
+            <label className="m-0 flex w-full pb-4">
+              <span className="font-Pretendard text-md whitespace-nowrap font-semibold text-gray-1000">
+                Add a Plan
+              </span>
+            </label>
+
+            <div className="form-control w-full py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Plan Title</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
+
               <input
                 {...register('title')}
                 type="text"
-                placeholder="Title"
-                className="input-bordered input w-full"
+                placeholder="Plan Title"
+                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
               />
             </div>
 
-            <div className="modal-action">
-              <button className="btn-ghost btn" onClick={onClickCancelInModal}>
-                Cancel
+            <div className="modal-action m-0 pt-4">
+              <button
+                className="flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
+                onClick={onClickCancelInModal}
+              >
+                CANCEL
               </button>
-              <button className="btn-primary btn" type="submit">
-                Add
+
+              <button
+                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50"
+                type="submit"
+              >
+                ADD
               </button>
             </div>
           </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }

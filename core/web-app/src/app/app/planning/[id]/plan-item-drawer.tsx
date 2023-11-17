@@ -10,6 +10,7 @@ import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import ScalingComponentPlanSelect from './scaling-component-plan-select';
 import { omit } from 'lodash';
+import Image from 'next/image';
 // import 'ace-builds/src-noconflict/ext-language_tools';
 
 export default function PlanItemDrawer({
@@ -78,6 +79,11 @@ export default function PlanItemDrawer({
     clearSelectedPlan();
   };
 
+  // Exit plan editor
+  const onClickExit = async () => {
+    clearSelectedPlan();
+  };
+
   // Update plan item
   const onSubmit = async (data: any) => {
     const { id, description, priority, expression, scaling_components } = data;
@@ -102,75 +108,100 @@ export default function PlanItemDrawer({
   };
 
   return (
-    <div className="plan-drawer drawer drawer-end w-[32rem]">
+    <div className="plan-drawer drawer drawer-end flex w-full min-w-[25rem] max-w-[25rem] flex-col">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
-      <div className="drawer-side w-[32rem] border-l border-base-300">
+      <div className="drawer-side h-full border-l border-t border-gray-200">
         <div
-          className="drawer-content overflow-y-auto bg-base-100 p-4"
+          className="drawer-content flex h-full w-full flex-col overflow-y-auto"
           ref={topElement}
         >
           <form className="" onSubmit={handleSubmit(onSubmit)}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-bold">Plan</h2>
-              <div>
+            <div className="flex h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
+              <span className="font-Pretendard whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
+                Plan
+              </span>
+              <div className="flex px-4">
                 <button
-                  type="button"
-                  className="btn-error btn-sm btn mr-2"
+                  className="mr-1 flex h-8 items-center justify-center rounded-md border border-red-400  bg-red-400 pl-1 pr-1 text-sm text-gray-50"
                   onClick={onClickRemove}
                 >
-                  Remove
+                  <Image
+                    src="/assets/icons/delete.svg"
+                    alt="delete.svg"
+                    priority={true}
+                    width={24}
+                    height={24}
+                    style={{ minWidth: '1.5rem', maxWidth: '1.5rem' }}
+                  />
                 </button>
-                <button type="submit" className="btn-primary btn-sm btn">
-                  Save
+                <button
+                  className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50"
+                  type="submit"
+                >
+                  SAVE
+                </button>
+                <button
+                  className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
+                  onClick={onClickExit}
+                >
+                  EXIT
                 </button>
               </div>
             </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
-                <span className="label-text">Plan ID</span>
-                {/* <span className="label-text-alt">used as a variable name</span> */}
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Plan ID</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <input
                 type="text"
-                placeholder="Type here"
-                className="input-bordered input input-md w-full"
+                placeholder="Plan ID"
+                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
                 autoComplete="off"
                 autoCapitalize="off"
                 autoCorrect="off"
                 {...register('id', { required: true })}
               />
             </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
-                <span className="label-text">Description</span>
-                {/* <span className="label-text-alt">used as a variable name</span> */}
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Description</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <textarea
-                placeholder="Type here"
-                className="textarea-bordered textarea textarea-md w-full"
-                {...register('description', { required: false })}
+                placeholder="Description"
+                className="textarea-bordered textarea textarea-sm my-2 w-full px-4 focus:outline-none"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                {...register('description', { required: true })}
               />
             </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
-                <span className="label-text">Priority</span>
-                {/* <span className="label-text-alt">used as a variable name</span> */}
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Priority</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <input
                 type="number"
-                placeholder="Type here"
-                className="input-bordered input input-md w-full"
-                {...register('priority', { required: false })}
+                placeholder="Priority"
+                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                {...register('priority', { required: true })}
               />
             </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
-                <span className="label-text">Expression</span>
-                {/* <span className="label-text-alt">
-                  Use '@' to see the metric variables
-                </span> */}
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Expression</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              <div className="textarea-bordered textarea textarea-md w-full">
+              <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
                 <Controller
                   control={control}
                   name="expression"
@@ -202,26 +233,29 @@ export default function PlanItemDrawer({
                 />
               </div>
             </div>
-            <div className="form-control mb-4 w-full">
-              <label className="label">
-                <span className="label-text">Scaling Components</span>
-                {/* <span className="label-text-alt">used as a variable name</span> */}
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">
+                  Scaling Components
+                </span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              {/* Scaling Component List */}
-              <div className="">
+
+              <div className="my-2 w-full">
                 {fields?.map((field, index) => (
                   <ScalingComponentPlanSelect
                     key={field.id}
                     {...{ control, index, field, remove }}
                   />
                 ))}
-                <div className="flex justify-end">
+
+                <div className="flex w-full">
                   <button
-                    type="button"
-                    className="btn-primary btn-outline btn-xs btn w-full"
+                    className="flex h-8 w-full items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
                     onClick={() => append({})}
                   >
-                    Add Scaling Components
+                    ADD SCALING COMPONENTS
                   </button>
                 </div>
               </div>

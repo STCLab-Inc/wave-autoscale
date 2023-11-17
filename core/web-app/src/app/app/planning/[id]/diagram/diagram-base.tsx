@@ -19,10 +19,10 @@ export default function PlanningDetailDiagramBase() {
         <PlanningDiagramFlow />
       </ReactFlowProvider>
       <button
-        className="btn-primary btn-sm btn absolute left-8 top-4"
+        className="absolute left-4 top-4 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
         onClick={onClickAddPlan}
       >
-        Add Plan
+        ADD PLAN
       </button>
     </>
   );
