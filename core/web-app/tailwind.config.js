@@ -109,6 +109,9 @@ module.exports = {
       spacing: {
         overlay: 'overlay',
       },
+      minHeight: {
+        14: '3.5rem',
+      },
     },
   },
   plugins: [require('@tailwindcss/typography'), require('daisyui')],

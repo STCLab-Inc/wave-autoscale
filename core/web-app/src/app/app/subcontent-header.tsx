@@ -12,7 +12,7 @@ export default function ContentHeader({
   right,
 }: SubContentHeaderProps) {
   return (
-    <div className="flex h-14 w-full min-w-full flex-row items-center justify-between border-t border-gray-200">
+    <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-t border-gray-200">
       <div className="font-Pretendard whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
         {title}
       </div>
