@@ -128,27 +128,25 @@ export default function AutoscalingHistoryPage() {
                 </label>
               </th>
               <th className="mx-4 flex h-full w-full flex-3 items-center">
-                <div className="min-w-16 flex items-center">Plan ID</div>
+                <div className="flex items-center">Plan ID</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-10 items-center">
-                <div className="min-w-20 flex items-center">Plan Item</div>
+                <div className="flex items-center">Plan Item</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="min-w-28 flex items-center">Metric Values</div>
+                <div className="flex items-center">Metric Values</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="min-w-36 flex items-center">
-                  Metadata Values
-                </div>
+                <div className="flex items-center">Metadata Values</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="min-w-28 flex items-center">Fail Message</div>
+                <div className="flex items-center">Fail Message</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-2 items-center">
-                <div className="min-w-14 flex items-center">Status</div>
+                <div className="flex items-center">Status</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-5 items-center">
-                <div className="min-w-12 flex items-center">Date</div>
+                <div className="flex items-center">Date</div>
               </th>
             </tr>
           </thead>
@@ -174,12 +172,12 @@ export default function AutoscalingHistoryPage() {
                   </label>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-3 items-start">
-                  <div className="min-w-16 flex items-center break-all">
+                  <div className="flex items-center break-all">
                     {historyItem.plan_id}
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-10 items-start">
-                  <div className="min-w-20 flex flex-col items-center">
+                  <div className="flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.plan_item_json,
                       false
@@ -187,7 +185,7 @@ export default function AutoscalingHistoryPage() {
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="min-w-28 flex flex-col items-center">
+                  <div className="flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.metric_values_json,
                       false
@@ -195,7 +193,7 @@ export default function AutoscalingHistoryPage() {
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="min-w-36 flex flex-col items-center">
+                  <div className="flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.metadata_values_json,
                       false
@@ -203,7 +201,7 @@ export default function AutoscalingHistoryPage() {
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="min-w-28 flex flex-col items-center">
+                  <div className="flex flex-col items-center">
                     {historyItem.fail_message &&
                       renderKeyValuePairsWithJson(
                         historyItem.fail_message,
@@ -212,20 +210,20 @@ export default function AutoscalingHistoryPage() {
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-2 items-start">
-                  <div className="min-w-14 flex items-center">
+                  <div className="flex items-center">
                     {historyItem.fail_message ? (
-                      <div className="badge-error badge bg-[#E0242E] text-white">
+                      <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
                         Failed
                       </div>
                     ) : (
-                      <div className="badge-success badge bg-[#074EAB] text-white">
+                      <div className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
                         Success
                       </div>
                     )}
                   </div>
                 </td>
                 <td className="mx-4 flex h-full w-full flex-5 items-start">
-                  <div className="min-w-12 flex items-center break-all">
+                  <div className="flex items-center break-all">
                     {dayjs
                       .unix(historyItem.created_at / 1000)
                       .format('YYYY/MM/DD HH:mm:ss')}

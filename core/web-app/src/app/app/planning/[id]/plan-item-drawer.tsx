@@ -119,7 +119,7 @@ export default function PlanItemDrawer({
         >
           <form className="" onSubmit={handleSubmit(onSubmit)}>
             <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
-              <span className="font-Pretendard whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
+              <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
                 Plan
               </span>
               <div className="flex px-4">

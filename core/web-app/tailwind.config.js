@@ -92,7 +92,14 @@ module.exports = {
         'blue-1000': '#151d4b',
       },
       minWidth: {
+        'screen-sm': '640px',
         'screen-md': '768px',
+        'screen-lg': '1024px',
+        'screen-xl': '1280px',
+        'screen-2xl': '1536px',
+      },
+      minHeight: {
+        14: '3.5rem',
       },
       flex: {
         1: '1 1 0%',
@@ -108,9 +115,6 @@ module.exports = {
       },
       spacing: {
         overlay: 'overlay',
-      },
-      minHeight: {
-        14: '3.5rem',
       },
     },
   },
