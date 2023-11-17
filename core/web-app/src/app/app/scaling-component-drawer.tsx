@@ -174,13 +174,13 @@ export default function ScalingComponentDetailDrawer({
               </label>
               <select
                 className="select-bordered select"
-                defaultValue="Pick one"
+                defaultValue="Scaling Component Kind"
                 {...register('component_kind', {
                   required: true,
                   onChange: onChangeComponentKind,
                 })}
               >
-                <option disabled>Pick one</option>
+                <option disabled>Scaling Component Kind</option>
                 {componentOptions}
               </select>
             </div>

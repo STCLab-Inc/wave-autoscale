@@ -119,12 +119,12 @@ export default function ScalingComponentPlanSelect(props: any) {
             name={`scaling_components.${index}.component_id`}
             render={({ field }) => (
               <select
-                className="select-bordered select flex w-full rounded-md text-sm focus:outline-none"
-                defaultValue=""
+                className="select-bordered select flex w-full truncate rounded-md text-sm focus:outline-none"
+                defaultValue="[Scaling Component Kind] Scaling Component ID"
                 {...field}
               >
-                <option value="" disabled>
-                  Pick one
+                <option disabled>
+                  [Scaling Component Kind] Scaling Component ID
                 </option>
                 {scalingComponentOptions}
               </select>

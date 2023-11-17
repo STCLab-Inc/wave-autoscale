@@ -161,13 +161,13 @@ export default function MetricDetailDrawer({
               </label>
               <select
                 className="select-bordered select"
-                defaultValue="Pick one"
+                defaultValue="Metric Kind"
                 {...register('metric_kind', {
                   required: true,
                   onChange: onChangeMetricType,
                 })}
               >
-                <option disabled>Pick one</option>
+                <option disabled>Metric Kind</option>
                 {metricOptions}
               </select>
             </div>
