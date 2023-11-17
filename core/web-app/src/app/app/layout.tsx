@@ -1,7 +1,10 @@
 'use client';
+
+import React from 'react';
 import Image from 'next/image';
-import Menu from './menu';
 import { useRouter } from 'next/navigation';
+
+import Menu from './menu';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

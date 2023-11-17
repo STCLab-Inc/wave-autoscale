@@ -1,18 +1,19 @@
 'use client';
 
+import React, { useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import Image from 'next/image';
+import { omit } from 'lodash';
+// import 'ace-builds/src-noconflict/ext-language_tools';
 import AceEditor from 'react-ace';
-import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
-import { usePlanStore } from '../plan-store';
-import { useEffect, useRef } from 'react';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
+
+import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
+import { usePlanStore } from '../plan-store';
 import ScalingComponentPlanSelect from './scaling-component-plan-select';
-import { omit } from 'lodash';
-import Image from 'next/image';
-// import 'ace-builds/src-noconflict/ext-language_tools';
 
 export default function PlanItemDrawer({
   planItemDefinition,

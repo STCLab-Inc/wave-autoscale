@@ -1,10 +1,11 @@
 'use client';
 
+import React, { MouseEventHandler, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { Controller, useWatch } from 'react-hook-form';
+
 import ScalingComponentService from '@/services/scaling-component';
 import { getScalingComponentPlanKeyTypes } from '@/utils/scaling-component-binding';
-import { MouseEventHandler, useEffect, useMemo, useState } from 'react';
-import { Controller, useWatch } from 'react-hook-form';
-import Image from 'next/image';
 
 // Metric Types
 const componentPlanKeyTypes = getScalingComponentPlanKeyTypes();

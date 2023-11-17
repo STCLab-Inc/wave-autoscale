@@ -1,15 +1,17 @@
 'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { forEach } from 'lodash';
+
+import { getMetadataFormControls } from './metadata-form-controls';
 import {
   generateMetricDefinition,
   getMetricKeyTypes,
 } from '@/utils/metric-binding';
-import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
 import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
-import { forEach } from 'lodash';
-import { getMetadataFormControls } from './metadata-form-controls';
 
 // Metric Types
 const metricKeyTypes = getMetricKeyTypes();

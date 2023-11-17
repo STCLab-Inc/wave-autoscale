@@ -1,3 +1,5 @@
+import React from 'react';
+
 import PlanService from '@/services/plan';
 import SubContentHeaderProps from '../../subcontent-header';
 import PlanItemDrawerContainer from './plan-item-drawer-container';

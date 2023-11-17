@@ -1,16 +1,18 @@
 'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import MetricService from '@/services/metric';
 import { forEach } from 'lodash';
+
+import MetricService from '@/services/metric';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import {
   generateScalingComponentDefinition,
   getScalingComponentKeyTypes,
 } from '@/utils/scaling-component-binding';
-import { getMetadataFormControls } from './metadata-form-controls';
 import ScalingComponentService from '@/services/scaling-component';
+import { getMetadataFormControls } from './metadata-form-controls';
 
 // Metric Types
 const componentKeyTypes = getScalingComponentKeyTypes();
