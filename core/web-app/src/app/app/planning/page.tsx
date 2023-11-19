@@ -1,6 +1,11 @@
 export default function PlanningPage() {
   return (
-    <div></div>
+    <main className="flex h-full w-full flex-col">
+      <div>
+        <div className="flex w-full min-w-full flex-row items-center justify-between border-t border-gray-200 bg-gray-75" />
+      </div>
+    </main>
+
     // <div className="flex h-full w-full">
     //   <aside className="flex w-80 flex-col border-r border-base-300 bg-base-200">
     //     {/* Header of aside */}
