@@ -128,25 +128,31 @@ export default function AutoscalingHistoryPage() {
                 </label>
               </th>
               <th className="mx-4 flex h-full w-full flex-3 items-center">
-                <div className="flex items-center">Plan ID</div>
+                <span className="flex items-center break-words">Plan ID</span>
               </th>
               <th className="mx-4 flex h-full w-full flex-10 items-center">
-                <div className="flex items-center">Plan Item</div>
+                <span className="flex items-center break-words">Plan Item</span>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="flex items-center">Metric Values</div>
+                <span className="flex items-center break-words">
+                  Metric Values
+                </span>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="flex items-center">Metadata Values</div>
+                <span className="flex items-center break-words">
+                  Metadata Values
+                </span>
               </th>
               <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <div className="flex items-center">Fail Message</div>
+                <span className="flex items-center break-words">
+                  Fail Message
+                </span>
               </th>
               <th className="mx-4 flex h-full w-full flex-2 items-center">
-                <div className="flex items-center">Status</div>
+                <div className="items-centerbreak-words flex">Status</div>
               </th>
               <th className="mx-4 flex h-full w-full flex-5 items-center">
-                <div className="flex items-center">Date</div>
+                <div className="items-centerbreak-words flex">Date</div>
               </th>
             </tr>
           </thead>
