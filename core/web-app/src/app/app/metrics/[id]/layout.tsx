@@ -7,8 +7,8 @@ async function getMetricDefinition(dbId: string) {
   try {
     const metricDefinition = await MetricService.getMetric(dbId);
     return metricDefinition;
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error(error);
   }
 }
 
