@@ -8,42 +8,44 @@ import Menu from './menu';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-
-  const handleClick = () => {
-    router.push('/app');
-  };
-
   const pathname = usePathname();
 
-  const [overflowHiddenFlag, setOverflowHiddenFlag] = useState(false);
+  const urlPatterns = [
+    '/app/metrics/',
+    '/app/metrics/new',
+    '/app/scaling-components/',
+    '/app/scaling-components/new',
+    '/app/planning/',
+    '/app/planning/new',
+  ];
+
+  const [overflowHiddenFlag, setOverflowHiddenFlag] = useState(
+    urlPatterns.some((pattern) => pathname.includes(pattern))
+  );
 
   useEffect(() => {
     const currentURL = pathname;
 
-    if (
-      currentURL.includes('/app/metrics/') ||
-      currentURL.includes('/app/metrics/new') ||
-      currentURL.includes('/app/scaling-components/') ||
-      currentURL.includes('/app/scaling-components/new') ||
-      currentURL.includes('/app/planning/') ||
-      currentURL.includes('/app/planning/new')
-    ) {
+    if (urlPatterns.some((pattern) => currentURL.includes(pattern))) {
       setOverflowHiddenFlag(true);
     } else {
       setOverflowHiddenFlag(false);
     }
   }, [pathname]);
 
+  const containerClassName = `h-screen w-screen min-w-screen-md ${
+    overflowHiddenFlag ? 'overflow-hidden' : 'overflow-auto'
+  }`;
+
   return (
-    <div
-      className={`h-screen w-screen min-w-screen-md ${
-        overflowHiddenFlag ? 'overflow-hidden' : 'overflow-auto'
-      }`}
-    >
+    <div className={containerClassName}>
       <nav className="navbar h-14 w-full p-0 text-neutral-content">
         <div className="flex h-full w-full items-center pl-8 pr-8">
           <div className="flex h-full items-center justify-between">
-            <figure onClick={handleClick} className="cursor-pointer">
+            <figure
+              onClick={() => router.push('/app')}
+              className="cursor-pointer"
+            >
               <Image
                 src="/assets/images/wave-autoscale_symbol.svg"
                 alt="wave-autoscale_symbol.svg"
