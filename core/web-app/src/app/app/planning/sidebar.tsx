@@ -39,7 +39,7 @@ export default function PlanningSidebar() {
   return (
     <div className="flex h-full">
       <aside className="flex h-full w-72 flex-col border-r border-gray-200">
-        <div className="flex h-14 w-full  min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 pl-8 pr-8">
+        <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 pl-8 pr-8">
           <span className="font-Pretendard whitespace-nowrap text-lg font-semibold text-gray-1000">
             Plans {plans !== undefined ? `(${plans.length})` : undefined}
           </span>
