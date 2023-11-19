@@ -11,23 +11,34 @@ export default async function ScalingComponentDetailLayout({
   children: React.ReactNode;
   params: { id: string };
 }) {
-  let componentDefinition;
-
-  if (dbId && dbId !== NEW_PATH) {
-    try {
-      componentDefinition = await ScalingComponentService.getScalingComponent(
-        dbId
-      );
-      console.log({ componentDefinition });
-    } catch (error) {
-      console.error(error);
-    }
+  console.log(dbId);
+  if (dbId === NEW_PATH) {
+    return (
+      <div className="relative flex h-full w-full">
+        <ScalingComponentsPage />
+      </div>
+    );
   }
 
-  return (
-    <div className="relative flex h-full w-full">
-      <ScalingComponentsPage />
-      <ScalingComponentDetailDrawer componentDefinition={componentDefinition} />
-    </div>
-  );
+  try {
+    const componentDefinition =
+      await ScalingComponentService.getScalingComponent(dbId);
+    console.log({ componentDefinition });
+
+    return (
+      <div className="relative flex h-full w-full">
+        <ScalingComponentsPage />
+        <ScalingComponentDetailDrawer
+          componentDefinition={componentDefinition}
+        />
+      </div>
+    );
+  } catch (error) {
+    console.error(error);
+    return (
+      <div className="relative flex h-full w-full">
+        <ScalingComponentsPage />
+      </div>
+    );
+  }
 }
