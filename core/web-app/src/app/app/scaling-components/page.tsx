@@ -76,18 +76,22 @@ export default function ScalingComponentsPage() {
                   </label>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">
+                  <span className="flex items-center break-words">
                     Scaling Component Kind
-                  </div>
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">Scaling Component ID</div>
+                  <span className="flex items-center break-words">
+                    Scaling Component ID
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">Metadata Values</div>
+                  <span className="flex items-center break-words">
+                    Metadata Values
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-2 items-center">
-                  <div className="flex items-center">Actions</div>
+                  <span className="flex items-center break-words">Actions</span>
                 </th>
               </tr>
             </thead>

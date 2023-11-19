@@ -76,16 +76,22 @@ export default function MetricsPage() {
                   </label>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">Metric Kind</div>
+                  <span className="flex items-center break-words">
+                    Metric Kind
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">Metric ID</div>
+                  <span className="flex items-center break-words">
+                    Metric ID
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <div className="flex items-center">Metadata Values</div>
+                  <span className="flex items-center break-words">
+                    Metadata Values
+                  </span>
                 </th>
                 <th className="mx-4 flex h-full w-full flex-2 items-center">
-                  <div className="flex items-center">Actions</div>
+                  <span className="flex items-center break-words">Actions</span>
                 </th>
               </tr>
             </thead>
