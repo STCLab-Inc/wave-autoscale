@@ -8,9 +8,14 @@ import { MetricDefinition } from '@/types/bindings/metric-definition';
 import MetricService from '@/services/metric';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 
-async function getMetrics() {
-  const metrics = await MetricService.getMetrics();
-  return metrics;
+async function fetchMetrics() {
+  try {
+    const metrics = await MetricService.getMetrics();
+    return metrics;
+  } catch (error) {
+    console.error({ error });
+    return [];
+  }
 }
 
 interface MetricDefinitionEx extends MetricDefinition {
@@ -19,20 +24,15 @@ interface MetricDefinitionEx extends MetricDefinition {
 
 export default function MetricsPage() {
   const [metrics, setMetrics] = useState<MetricDefinitionEx[]>([]);
+  const [checkAllFlag, setCheckAllFlag] = useState(false);
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const metrics = await getMetrics();
-        setMetrics(metrics);
-      } catch (error) {
-        console.error({ error });
-      }
-    };
-    fetchMetrics();
+    async function fetchData() {
+      const metricsData = await fetchMetrics();
+      setMetrics(metricsData);
+    }
+    fetchData();
   }, []);
-
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
 
   const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -43,8 +43,6 @@ export default function MetricsPage() {
     }));
     setMetrics(updatedMetrics);
   };
-
-  console.log({ metrics });
 
   return (
     <main className="flex h-full w-full flex-col">
