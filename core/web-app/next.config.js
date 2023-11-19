@@ -6,7 +6,7 @@ const nextConfig = {
     appDir: true,
     esmExternals: 'loose',
   },
-  async redirects() {
+  /* async redirects() {
     return [
       {
         source: '/app/planning/:id',
@@ -14,7 +14,7 @@ const nextConfig = {
         permanent: true,
       },
     ];
-  },
+  }, */
   headers:
     process.env.NODE_ENV === 'development'
       ? () => [

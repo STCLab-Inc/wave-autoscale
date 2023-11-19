@@ -1,8 +1,9 @@
 'use client';
 
+import React, { useEffect } from 'react';
 import classNames from 'classnames';
 import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 
 function getTabClassNames(currentPathname: string, targetPath?: string) {
   return classNames(
@@ -46,6 +47,15 @@ function TabItem({
 export default function PlanningDetailTabs() {
   const pathname = usePathname();
   const { id } = useParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const currentURL = pathname;
+
+    if (!currentURL.includes('/app/planning/new')) {
+      router.push(`/app/planning/${id}/diagram`);
+    }
+  }, []);
 
   return (
     <div className="flex h-12 w-full items-center border-b px-4">
