@@ -8,15 +8,18 @@ export const getMetadataFormControls = (
 ) => {
   const metadataFormControls = keyTypes.map((keyType) => {
     return (
-      <div className="form-control mb-4 w-full" key={keyType.key}>
-        <label className="label">
-          <span className="label-text">{keyType.key}</span>
-          {/* <span className="label-text-alt">{keyType.description}</span> */}
+      <div className="form-control w-full px-4 py-2" key={keyType.key}>
+        <label className="label px-0 py-2">
+          <span className="text-md label-text px-2">{keyType.key}</span>
+          {/* <span className="label-text-alt">label-text-alt</span> */}
         </label>
         <input
           type={keyType.type === 'number' ? 'number' : 'text'}
-          placeholder=""
-          className="input-bordered input w-full"
+          placeholder={keyType.key}
+          className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
           {...register(keyType.key, {
             valueAsNumber: keyType.type === 'number',
           })}
