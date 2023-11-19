@@ -1,4 +1,5 @@
 'use client';
+
 import classNames from 'classnames';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,6 +10,10 @@ function getMenuClassNames(currentPathname: string, targetPath?: string) {
       ? 'text-gray-600 pr-4 pl-4'
       : 'text-gray-1000 pr-4 pl-4'
   );
+}
+
+function isActivePath(currentPathname: string, targetPath: string) {
+  return currentPathname.includes(targetPath);
 }
 
 function MenuItem({
@@ -24,7 +29,7 @@ function MenuItem({
     <li
       className={classNames(
         'flex-column mx-0.5 flex h-full items-center lg:flex-row',
-        pathname.includes(targetPath)
+        isActivePath(pathname, targetPath)
           ? 'border-b-4 border-purple-500'
           : 'border-b-4 border-white'
       )}
