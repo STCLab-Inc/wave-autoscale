@@ -13,6 +13,10 @@ function getTabClassNames(currentPathname: string, targetPath?: string) {
   );
 }
 
+function isActivePath(currentPathname: string, targetPath: string) {
+  return currentPathname.includes(targetPath);
+}
+
 function TabItem({
   pathname,
   targetPath,
@@ -26,7 +30,7 @@ function TabItem({
     <li
       className={classNames(
         'flex-column mx-0.5 flex h-full items-center lg:flex-row',
-        pathname.includes(targetPath)
+        isActivePath(pathname, targetPath)
           ? 'border-b-4 border-blue-400'
           : 'border-b-4 border-white'
       )}
