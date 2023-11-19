@@ -1,6 +1,7 @@
 import MetricService from '@/services/metric';
 import MetricDetailDrawer from '../../metric-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
+import MetricsPage from '../page';
 
 async function getMetricDefinition(dbId: string) {
   try {
@@ -25,5 +26,10 @@ export default async function MetricDetailLayout({
     metricDefinition = await getMetricDefinition(dbId);
     console.log({ metricDefinition });
   }
-  return <MetricDetailDrawer metricDefinition={metricDefinition} />;
+  return (
+    <div className="relative flex h-full w-full">
+      <MetricsPage />
+      <MetricDetailDrawer metricDefinition={metricDefinition} />;
+    </div>
+  );
 }

@@ -126,7 +126,7 @@ export default function MetricDetailDrawer({
   };
 
   return (
-    <div className="drawer drawer-end fixed inset-y-0 bottom-0 top-16 z-50">
+    <div className="metric-drawer drawer drawer-end absolute bottom-0 top-0 z-50 border-l border-t border-gray-200">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side">
         <label
