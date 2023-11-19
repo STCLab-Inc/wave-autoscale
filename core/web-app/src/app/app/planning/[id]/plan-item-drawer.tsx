@@ -20,22 +20,19 @@ export default function PlanItemDrawer({
 }: {
   planItemDefinition?: PlanItemDefinition;
 }) {
-  // react-hook-form
   const { register, handleSubmit, control, reset, setValue } = useForm();
-  // For Scaling Component List
+
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'scaling_components',
   });
-  //
+
   const topElement = useRef<HTMLDivElement>(null);
-  // Plan data management
   const { id: scalingPlanId } = useParams();
   const clearSelectedPlan = usePlanStore((state) => state.clearSelection);
   const updatePlanItem = usePlanStore((state) => state.updatePlanItem);
   const removePlanItem = usePlanStore((state) => state.removePlanItem);
 
-  // Initialize form data
   useEffect(() => {
     reset({
       scaling_components: [],
@@ -61,11 +58,6 @@ export default function PlanItemDrawer({
     }, 1);
   }, [planItemDefinition, topElement?.current]);
 
-  //
-  // Events
-  //
-
-  // Remove plan item
   const onClickRemove = async () => {
     if (!planItemDefinition) {
       return;
@@ -81,12 +73,10 @@ export default function PlanItemDrawer({
     clearSelectedPlan();
   };
 
-  // Exit plan editor
   const onClickExit = async () => {
     clearSelectedPlan();
   };
 
-  // Update plan item
   const onSubmit = async (data: any) => {
     const { id, description, priority, expression, scaling_components } = data;
     if (!planItemDefinition || !planItemDefinition.ui) {

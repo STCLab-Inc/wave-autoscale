@@ -13,9 +13,7 @@ export default function PlanningDetailDrawer({
 }: {
   planDefinition?: ScalingPlanDefinition;
 }) {
-  const { register, reset, handleSubmit, formState } = useForm({
-    mode: 'onBlur',
-  });
+  const { register, reset, handleSubmit, formState } = useForm();
 
   const router = useRouter();
 

@@ -14,7 +14,6 @@ import {
 import MetricService from '@/services/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 
-// Metric Types
 const metricKeyTypes = getMetricKeyTypes();
 const metricOptions = metricKeyTypes.map((metricKeyType) => (
   <option key={metricKeyType.metricName} value={metricKeyType.metricName}>
@@ -27,15 +26,7 @@ export default function MetricDetailDrawer({
 }: {
   metricDefinition?: MetricDefinition;
 }) {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    getValues,
-    reset,
-    formState: { errors },
-  } = useForm();
+  const { register, handleSubmit, setValue, getValues, reset } = useForm();
   const router = useRouter();
   const dbId = metricDefinition?.db_id;
   const isNew = !dbId;
@@ -61,9 +52,6 @@ export default function MetricDetailDrawer({
     }
   };
 
-  //
-  // Events
-  //
   useEffect(() => {
     if (isNew) {
       return;
@@ -85,14 +73,12 @@ export default function MetricDetailDrawer({
     const metricType = e.target.value;
     setSelectedMetricType(metricType);
 
-    // Clear metadata
     const id = getValues('id');
     reset();
     setValue('id', id);
     setValue('metric_kind', metricType);
   };
 
-  // Exit metrics drawer
   const onClickExit = async () => {
     goBack(false);
   };
@@ -100,7 +86,6 @@ export default function MetricDetailDrawer({
   const onClickInitialize = async () => {
     setSelectedMetricType('Metric Kind');
 
-    // Clear metadata
     const id = getValues('id');
     reset();
     setValue('id', id);
@@ -140,8 +125,6 @@ export default function MetricDetailDrawer({
       console.log(error);
     }
   };
-
-  console.log(metadataFormControls);
 
   return (
     <div className="metric-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">

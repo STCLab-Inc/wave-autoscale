@@ -14,7 +14,6 @@ import {
 import ScalingComponentService from '@/services/scaling-component';
 import { getMetadataFormControls } from './metadata-form-controls';
 
-// Scaling Component Types
 const componentKeyTypes = getScalingComponentKeyTypes();
 const componentOptions = componentKeyTypes.map((componentKeyType) => (
   <option
@@ -30,15 +29,7 @@ export default function ScalingComponentDetailDrawer({
 }: {
   componentDefinition?: ScalingComponentDefinition;
 }) {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    getValues,
-    reset,
-    formState: { errors },
-  } = useForm();
+  const { register, handleSubmit, setValue, getValues, reset } = useForm();
   const router = useRouter();
   const dbId = componentDefinition?.db_id;
   const isNew = !dbId;
@@ -65,11 +56,6 @@ export default function ScalingComponentDetailDrawer({
     }
   };
 
-  //
-  // Events
-  //
-
-  // Set default values
   useEffect(() => {
     if (isNew) {
       return;
@@ -91,14 +77,12 @@ export default function ScalingComponentDetailDrawer({
     const componentKind = e.target.value;
     setSelectedComponentKind(componentKind);
 
-    // Clear metadata
     const id = getValues('id');
     reset();
     setValue('id', id);
     setValue('component_kind', componentKind);
   };
 
-  // Exit scaling-components drawer
   const onClickExit = async () => {
     goBack(false);
   };
@@ -106,7 +90,6 @@ export default function ScalingComponentDetailDrawer({
   const onClickInitialize = async () => {
     setSelectedComponentKind('Scaling Component Kind');
 
-    // Clear metadata
     const id = getValues('id');
     reset();
     setValue('id', id);
