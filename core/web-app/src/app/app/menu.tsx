@@ -23,7 +23,7 @@ function MenuItem({
   return (
     <li
       className={classNames(
-        'flex-column flex h-full items-center lg:flex-row',
+        'flex-column mx-0.5 flex h-full items-center lg:flex-row',
         pathname.includes(targetPath)
           ? 'border-b-4 border-purple-500'
           : 'border-b-4 border-white'
@@ -63,7 +63,7 @@ export default function Menu() {
         targetPath="/app/scaling-components"
         label="Scaling Components"
       />
-      <li className="flex-column flex h-full items-center lg:flex-row">
+      <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
         <Link
           className={classNames(
             getMenuClassNames(pathname),
