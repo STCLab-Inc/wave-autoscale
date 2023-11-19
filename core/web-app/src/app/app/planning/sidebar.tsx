@@ -18,12 +18,10 @@ export default function PlanningSidebar() {
   const currentScalingPlanState = usePlanStore(
     (state) => state.currentScalingPlanState
   );
-  console.log({ currentScalingPlanState });
 
-  const [plans, setPlans] = useState([]);
+  const [plans, setPlans] = useState<ScalingPlanDefinitionEx[]>([]);
   const params = useParams();
   const selectedPlanId = params?.id;
-
   const pathname = usePathname();
 
   useEffect(() => {
@@ -34,14 +32,12 @@ export default function PlanningSidebar() {
     fetchPlans();
   }, [pathname]);
 
-  console.log(plans);
-
   return (
     <div className="flex h-full">
       <aside className="flex h-full w-72 flex-col border-r border-gray-200">
         <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 pl-8 pr-8">
           <span className="font-Pretendard whitespace-nowrap text-lg font-semibold text-gray-1000">
-            Plans {plans !== undefined ? `(${plans.length})` : undefined}
+            Plans ({plans.length})
           </span>
           <div className="flex items-center">
             <Link href="/app/planning/new">
@@ -52,7 +48,7 @@ export default function PlanningSidebar() {
           </div>
         </div>
         <div className="flex flex-col">
-          {plans?.map((plan: ScalingPlanDefinitionEx) => (
+          {plans.map((plan: ScalingPlanDefinitionEx) => (
             <Link
               href={`/app/planning/${plan.db_id}`}
               key={plan.db_id}
