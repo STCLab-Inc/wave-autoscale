@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import ContentHeader from '../content-header';
-import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import ScalingComponentService from '@/services/scaling-component';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 
 async function getScalingComponents() {
   const components = await ScalingComponentService.getScalingComponents();
@@ -21,6 +21,7 @@ export default function ScalingComponentsPage() {
   const [components, setComponents] = useState<ScalingComponentDefinitionEx[]>(
     []
   );
+  const [checkAllFlag, setCheckAllFlag] = useState(false);
 
   useEffect(() => {
     const fetchComponents = async () => {
@@ -34,14 +35,11 @@ export default function ScalingComponentsPage() {
     fetchComponents();
   }, []);
 
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
-
-  const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setCheckAllFlag(checked);
-    const updatedComponents = components.map((componentsItem) => ({
-      ...componentsItem,
-      isChecked: checked,
+  const handleCheckChange = (isChecked: boolean) => {
+    setCheckAllFlag(isChecked);
+    const updatedComponents = components.map((item) => ({
+      ...item,
+      isChecked,
     }));
     setComponents(updatedComponents);
   };
@@ -71,7 +69,7 @@ export default function ScalingComponentsPage() {
                       type="checkbox"
                       className="checkbox"
                       checked={checkAllFlag}
-                      onChange={handleCheckAllChange}
+                      onChange={(e) => handleCheckChange(e.target.checked)}
                     />
                   </label>
                 </th>
@@ -97,62 +95,52 @@ export default function ScalingComponentsPage() {
             </thead>
             <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
               {components.map(
-                (componentsItem: ScalingComponentDefinitionEx) => {
-                  return (
-                    <tr
-                      key={componentsItem.db_id}
-                      className="flex w-full border-b px-8 py-4"
-                    >
-                      <td className="mr-4 flex h-full flex-1 items-start">
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="checkbox"
-                            checked={componentsItem.isChecked}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              const updatedComponents = components.map((item) =>
-                                item.id === componentsItem.id
-                                  ? { ...item, isChecked: checked }
-                                  : item
-                              );
-                              setComponents(updatedComponents);
-                            }}
-                          />
-                        </label>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex items-center break-all">
-                          {componentsItem.component_kind}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex items-center break-all">
-                          {componentsItem.id}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex flex-col items-center">
-                          {renderKeyValuePairsWithJson(
-                            JSON.stringify(componentsItem.metadata),
-                            false
-                          )}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-2 items-start">
-                        <div className="flex items-center">
-                          <Link
-                            href={`/app/scaling-components/${componentsItem.db_id}`}
-                          >
-                            <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                              Details
-                            </button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
+                (componentsItem: ScalingComponentDefinitionEx) => (
+                  <tr
+                    key={componentsItem.db_id}
+                    className="flex w-full border-b px-8 py-4"
+                  >
+                    <td className="mr-4 flex h-full flex-1 items-start">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={componentsItem.isChecked}
+                          onChange={(e) => handleCheckChange(e.target.checked)}
+                        />
+                      </label>
+                    </td>
+                    <td className="mx-4 flex h-full w-full flex-8 items-start">
+                      <div className="flex items-center break-all">
+                        {componentsItem.component_kind}
+                      </div>
+                    </td>
+                    <td className="mx-4 flex h-full w-full flex-8 items-start">
+                      <div className="flex items-center break-all">
+                        {componentsItem.id}
+                      </div>
+                    </td>
+                    <td className="mx-4 flex h-full w-full flex-8 items-start">
+                      <div className="flex flex-col items-center">
+                        {renderKeyValuePairsWithJson(
+                          JSON.stringify(componentsItem.metadata),
+                          false
+                        )}
+                      </div>
+                    </td>
+                    <td className="mx-4 flex h-full w-full flex-2 items-start">
+                      <div className="flex items-center">
+                        <Link
+                          href={`/app/scaling-components/${componentsItem.db_id}`}
+                        >
+                          <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
+                            Details
+                          </button>
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                )
               )}
             </tbody>
           </table>
