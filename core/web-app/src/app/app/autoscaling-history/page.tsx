@@ -12,6 +12,8 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 import HistoryHeatmap from './history-heatmap';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 
+const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
+
 async function getHistory(from: Dayjs, to: Dayjs) {
   const history = await AutoscalingHistoryService.getHistoryByFromTo(from, to);
   return history;
@@ -27,8 +29,10 @@ interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
 
 export default function AutoscalingHistoryPage() {
   const searchParams = useSearchParams();
-  const from = searchParams.get('from') || DEFAULT_FROM.format('YYYY-MM-DD');
-  const to = searchParams.get('to') || DEFAULT_TO.format('YYYY-MM-DD');
+  const fromParam = searchParams.get('from');
+  const toParam = searchParams.get('to');
+  const from = fromParam || formatDate(DEFAULT_FROM);
+  const to = toParam || formatDate(DEFAULT_TO);
   const fromDayjs = useMemo(() => dayjs(from), [from]);
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
   const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
@@ -50,28 +54,24 @@ export default function AutoscalingHistoryPage() {
     fetchHistory();
   }, [fromDayjs, toDayjs]);
 
-  const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newFromDate = dayjs(e.target.value);
-    router.push(
-      `/app/autoscaling-history?from=${newFromDate.format(
-        'YYYY-MM-DD'
-      )}&to=${to}`
-    );
-  };
+  const handleDateChange = (field: 'from' | 'to', value: string) => {
+    const newDate = dayjs(value);
+    const isValidDate = newDate.isValid();
 
-  const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newToDate = dayjs(e.target.value);
-    router.push(
-      `/app/autoscaling-history?from=${from}&to=${newToDate.format(
-        'YYYY-MM-DD'
-      )}`
-    );
+    if (isValidDate) {
+      const params = {
+        from: field === 'from' ? formatDate(newDate) : from,
+        to: field === 'to' ? formatDate(newDate) : to,
+      };
+      router.push(
+        `/app/autoscaling-history?from=${params.from}&to=${params.to}`
+      );
+    }
   };
-
   const [checkAllFlag, setCheckAllFlag] = useState(false);
 
-  const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
+  const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
     setCheckAllFlag(checked);
     const updatedHistory = history.map((historyItem) => ({
       ...historyItem,
@@ -91,9 +91,11 @@ export default function AutoscalingHistoryPage() {
                 <input
                   type="date"
                   className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
-                  max={toDayjs.format('YYYY-MM-DD')}
+                  max={formatDate(toDayjs)}
                   value={from}
-                  onChange={handleFromDateChange}
+                  onChange={(event) =>
+                    handleDateChange('from', event.target.value)
+                  }
                 />
               </label>
             </div>
@@ -103,9 +105,11 @@ export default function AutoscalingHistoryPage() {
                 <input
                   type="date"
                   className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
-                  min={from}
+                  min={formatDate(fromDayjs)}
                   value={to}
-                  onChange={handleToDateChange}
+                  onChange={(event) =>
+                    handleDateChange('to', event.target.value)
+                  }
                 />
               </label>
             </div>
@@ -168,8 +172,8 @@ export default function AutoscalingHistoryPage() {
                       type="checkbox"
                       className="checkbox"
                       checked={historyItem.isChecked}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
+                      onChange={(event) => {
+                        const checked = event.target.checked;
                         const updatedHistory = history.map((item) =>
                           item.id === historyItem.id
                             ? { ...item, isChecked: checked }
