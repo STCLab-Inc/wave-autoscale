@@ -6,7 +6,7 @@ interface SubContentHeaderProps {
   right?: ReactNode;
 }
 
-export default function ContentHeader({
+export default function SubContentHeader({
   title,
   children,
   right,
