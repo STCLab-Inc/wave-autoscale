@@ -3,6 +3,7 @@ import ScalingComponentDetailDrawer from '../../scaling-component-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import ScalingComponentService from '@/services/scaling-component';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import ScalingComponentsPage from '../page';
 
 async function getScalingComponentDefinition(dbId: string) {
   try {
@@ -29,6 +30,9 @@ export default async function ScalingComponentDetailLayout({
     console.log({ componentDefinition: componentDefinition });
   }
   return (
-    <ScalingComponentDetailDrawer componentDefinition={componentDefinition} />
+    <div className="relative flex h-full w-full">
+      <ScalingComponentsPage />
+      <ScalingComponentDetailDrawer componentDefinition={componentDefinition} />
+    </div>
   );
 }
