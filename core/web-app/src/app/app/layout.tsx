@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 import Menu from './menu';
 
@@ -13,8 +13,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.push('/app');
   };
 
+  const pathname = usePathname();
+
+  const [overflowHiddenFlag, setOverflowHiddenFlag] = useState(false);
+
+  useEffect(() => {
+    const currentURL = pathname;
+
+    if (
+      currentURL.includes('/app/metrics/') ||
+      currentURL.includes('/app/metrics/new') ||
+      currentURL.includes('/app/scaling-components/') ||
+      currentURL.includes('/app/scaling-components/new')
+    ) {
+      setOverflowHiddenFlag(true);
+    } else {
+      setOverflowHiddenFlag(false);
+    }
+  }, [pathname]);
+
   return (
-    <div className="h-screen w-screen min-w-screen-md overflow-auto">
+    <div
+      className={`h-screen w-screen min-w-screen-md ${
+        overflowHiddenFlag ? 'overflow-hidden' : 'overflow-auto'
+      }`}
+    >
       <nav className="navbar h-14 w-full p-0 text-neutral-content">
         <div className="flex h-full w-full items-center pl-8 pr-8">
           <div className="flex h-full items-center justify-between">
