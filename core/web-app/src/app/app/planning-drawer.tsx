@@ -36,7 +36,7 @@ export default function PlanningDetailDrawer({
 
   // Exit metrics drawer
   const onClickExit = async () => {
-    goBack();
+    goBack(false);
   };
 
   const onClickInitialize = async () => {
@@ -52,7 +52,6 @@ export default function PlanningDetailDrawer({
     const planDefinition = generatePlanDefinition({ title });
     try {
       const response = await PlanService.createPlan(planDefinition);
-
       goBack(true);
     } catch (error) {
       console.log(error);
@@ -79,6 +78,7 @@ export default function PlanningDetailDrawer({
               <div className="flex px-4">
                 <button
                   className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50"
+                  type="button"
                   onClick={onClickInitialize}
                 >
                   RESET
@@ -92,6 +92,7 @@ export default function PlanningDetailDrawer({
                 <button
                   className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
                   onClick={onClickExit}
+                  type="button"
                 >
                   EXIT
                 </button>

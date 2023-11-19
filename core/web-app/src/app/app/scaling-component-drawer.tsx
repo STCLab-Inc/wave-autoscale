@@ -100,7 +100,7 @@ export default function ScalingComponentDetailDrawer({
 
   // Exit scaling-components drawer
   const onClickExit = async () => {
-    goBack();
+    goBack(false);
   };
 
   const onClickInitialize = async () => {
@@ -171,6 +171,7 @@ export default function ScalingComponentDetailDrawer({
                   <button
                     className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50"
                     onClick={onClickInitialize}
+                    type="button"
                   >
                     RESET
                   </button>
@@ -178,6 +179,7 @@ export default function ScalingComponentDetailDrawer({
                   <button
                     className="mr-1 flex h-8 items-center justify-center rounded-md border border-red-400  bg-red-400 pl-1 pr-1 text-sm text-gray-50"
                     onClick={onClickRemove}
+                    type="button"
                   >
                     <Image
                       src="/assets/icons/delete.svg"
@@ -198,6 +200,7 @@ export default function ScalingComponentDetailDrawer({
                 <button
                   className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
                   onClick={onClickExit}
+                  type="button"
                 >
                   EXIT
                 </button>
