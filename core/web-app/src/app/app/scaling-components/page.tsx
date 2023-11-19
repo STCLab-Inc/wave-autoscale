@@ -63,8 +63,8 @@ export default function ScalingComponentsPage() {
         />
         <div className="flex w-full flex-col">
           <table className="flex w-full flex-col">
-            <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-200 px-8 py-0 font-bold text-gray-800">
-              <tr className="flex h-full w-full">
+            <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
+              <tr className="flex h-full w-full px-8">
                 <th className="mr-4 flex h-full flex-1 items-center">
                   <label className="flex h-full items-center">
                     <input
@@ -95,13 +95,13 @@ export default function ScalingComponentsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b border-t px-8 py-0 text-gray-800">
+            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
               {components.map(
                 (componentsItem: ScalingComponentDefinitionEx) => {
                   return (
                     <tr
                       key={componentsItem.db_id}
-                      className="flex h-full w-full py-4"
+                      className="flex w-full border-b px-8 py-4"
                     >
                       <td className="mr-4 flex h-full flex-1 items-start">
                         <label className="flex items-center">

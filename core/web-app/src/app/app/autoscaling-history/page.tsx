@@ -115,8 +115,8 @@ export default function AutoscalingHistoryPage() {
       <div className="flex w-full flex-col">
         <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
         <table className="flex w-full flex-col">
-          <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-200 px-8 py-0 font-bold text-gray-800">
-            <tr className="flex h-full w-full">
+          <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
+            <tr className="flex h-full w-full px-8">
               <th className="mr-4 flex h-full flex-1 items-center">
                 <label className="flex h-full items-center">
                   <input
@@ -156,9 +156,12 @@ export default function AutoscalingHistoryPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b border-t px-8 py-0 text-gray-800">
+          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
             {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
-              <tr key={historyItem.id} className="flex h-full w-full py-4">
+              <tr
+                key={historyItem.id}
+                className="flex w-full border-b px-8 py-4"
+              >
                 <td className="mr-4 flex h-full flex-1 items-start">
                   <label className="flex items-center">
                     <input
