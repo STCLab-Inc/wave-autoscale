@@ -161,17 +161,10 @@ export default function MetricDetailDrawer({
               <div className="flex px-4">
                 {isNew ? (
                   <button
-                    className="mr-1 flex h-8 items-center justify-center rounded-md border border-red-400  bg-red-400 pl-1 pr-1 text-sm text-gray-50"
+                    className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50"
                     onClick={onClickInitialize}
                   >
-                    <Image
-                      src="/assets/icons/initialize.svg"
-                      alt="initialize.svg"
-                      priority={true}
-                      width={24}
-                      height={24}
-                      style={{ minWidth: '1.5rem', maxWidth: '1.5rem' }}
-                    />
+                    RESET
                   </button>
                 ) : (
                   <button
