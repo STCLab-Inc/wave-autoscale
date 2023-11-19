@@ -106,8 +106,8 @@ export default function MetricsPage() {
                           type="checkbox"
                           className="checkbox"
                           checked={metricsItem.isChecked}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
+                          onChange={(event) => {
+                            const checked = event.target.checked;
                             const updatedMetrics = metrics.map((item) =>
                               item.id === metricsItem.id
                                 ? { ...item, isChecked: checked }

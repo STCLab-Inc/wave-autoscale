@@ -69,7 +69,9 @@ export default function ScalingComponentsPage() {
                       type="checkbox"
                       className="checkbox"
                       checked={checkAllFlag}
-                      onChange={(e) => handleCheckChange(e.target.checked)}
+                      onChange={(event) =>
+                        handleCheckChange(event.target.checked)
+                      }
                     />
                   </label>
                 </th>
@@ -106,7 +108,9 @@ export default function ScalingComponentsPage() {
                           type="checkbox"
                           className="checkbox"
                           checked={componentsItem.isChecked}
-                          onChange={(e) => handleCheckChange(e.target.checked)}
+                          onChange={(event) =>
+                            handleCheckChange(event.target.checked)
+                          }
                         />
                       </label>
                     </td>
