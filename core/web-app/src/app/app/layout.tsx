@@ -24,7 +24,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       currentURL.includes('/app/metrics/') ||
       currentURL.includes('/app/metrics/new') ||
       currentURL.includes('/app/scaling-components/') ||
-      currentURL.includes('/app/scaling-components/new')
+      currentURL.includes('/app/scaling-components/new') ||
+      currentURL.includes('/app/planning/') ||
+      currentURL.includes('/app/planning/new')
     ) {
       setOverflowHiddenFlag(true);
     } else {
