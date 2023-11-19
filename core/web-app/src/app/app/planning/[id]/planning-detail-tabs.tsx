@@ -5,11 +5,12 @@ import classNames from 'classnames';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 
-function getTabClassNames(currentPathname: string, targetPath?: string) {
+function getTabClassNames(isActive: boolean) {
   return classNames(
-    !targetPath || currentPathname.indexOf(targetPath) < 0
-      ? 'text-gray-600 pr-4 pl-4'
-      : 'text-gray-1000 pr-4 pl-4'
+    'flex-column mx-0.5 flex h-full items-center lg:flex-row',
+    isActive
+      ? 'border-b-4 border-blue-400 text-gray-1000 pr-4 pl-4'
+      : 'border-b-4 border-white text-gray-600 pr-4 pl-4'
   );
 }
 
@@ -18,30 +19,17 @@ function isActivePath(currentPathname: string, targetPath: string) {
 }
 
 function TabItem({
-  pathname,
+  isActive,
   targetPath,
   label,
 }: {
-  pathname: string;
+  isActive: boolean;
   targetPath: string;
   label: string;
 }) {
   return (
-    <li
-      className={classNames(
-        'flex-column mx-0.5 flex h-full items-center lg:flex-row',
-        isActivePath(pathname, targetPath)
-          ? 'border-b-4 border-blue-400'
-          : 'border-b-4 border-white'
-      )}
-    >
-      <Link
-        className={classNames(
-          getTabClassNames(pathname, targetPath),
-          'whitespace-nowrap'
-        )}
-        href={targetPath}
-      >
+    <li className={getTabClassNames(isActive)}>
+      <Link className="whitespace-nowrap" href={targetPath}>
         {label}
       </Link>
     </li>
@@ -64,19 +52,22 @@ export default function PlanningDetailTabs() {
     }
   }, [pathname]);
 
+  const tabItems = [
+    { targetPath: `/app/planning/${id}/diagram`, label: 'Diagram' },
+    { targetPath: `/app/planning/${id}/code`, label: 'Code' },
+  ];
+
   return (
     <div className="flex h-12 w-full items-center border-b px-4">
       <ul className="flex h-full flex-row items-center pt-1 lg:flex-row">
-        <TabItem
-          pathname={pathname}
-          targetPath={`/app/planning/${id}/diagram`}
-          label="Diagram"
-        />
-        <TabItem
-          pathname={pathname}
-          targetPath={`/app/planning/${id}/code`}
-          label="Code"
-        />
+        {tabItems.map((tab, index) => (
+          <TabItem
+            key={index}
+            isActive={isActivePath(pathname, tab.targetPath)}
+            targetPath={tab.targetPath}
+            label={tab.label}
+          />
+        ))}
       </ul>
     </div>
   );
