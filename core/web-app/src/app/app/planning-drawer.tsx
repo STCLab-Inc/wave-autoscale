@@ -13,7 +13,9 @@ export default function PlanningDetailDrawer({
 }: {
   planDefinition?: ScalingPlanDefinition;
 }) {
-  const { register, reset, setFocus, handleSubmit } = useForm();
+  const { register, reset, handleSubmit, formState } = useForm({
+    mode: 'onBlur',
+  });
 
   const router = useRouter();
 
@@ -26,21 +28,15 @@ export default function PlanningDetailDrawer({
     }
   };
 
-  //
-  // Events
-  //
-
   const onClickOverlay = () => {
     goBack(false);
   };
 
-  // Exit metrics drawer
   const onClickExit = async () => {
     goBack(false);
   };
 
   const onClickInitialize = async () => {
-    // Clear metadata
     reset();
   };
 
@@ -58,8 +54,6 @@ export default function PlanningDetailDrawer({
     }
   };
 
-  console.log(planDefinition);
-
   return (
     <div className="plan-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
@@ -70,7 +64,7 @@ export default function PlanningDetailDrawer({
           onClick={onClickOverlay}
         />
         <div className="drawer-content flex h-full min-w-[25rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
-          <form className="" onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
               <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
                 Plan
@@ -86,6 +80,7 @@ export default function PlanningDetailDrawer({
                 <button
                   className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50"
                   type="submit"
+                  disabled={formState.isSubmitting}
                 >
                   SAVE
                 </button>
@@ -100,12 +95,13 @@ export default function PlanningDetailDrawer({
             </div>
 
             <div className="form-control w-full px-4 py-2">
-              <label className="label px-0 py-2">
+              <label htmlFor="title" className="label px-0 py-2">
                 <span className="text-md label-text px-2">Plan Title</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <input
                 type="text"
+                id="title"
                 placeholder="Plan Title"
                 className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
                 autoComplete="off"
