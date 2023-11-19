@@ -56,10 +56,13 @@ export default function PlanningDetailTabs() {
   useEffect(() => {
     const currentURL = pathname;
 
-    if (!currentURL.includes('/app/planning/new')) {
+    if (
+      !currentURL.includes('/app/planning/new') &&
+      !currentURL.includes('code')
+    ) {
       router.push(`/app/planning/${id}/diagram`);
     }
-  }, []);
+  }, [pathname]);
 
   return (
     <div className="flex h-12 w-full items-center border-b px-4">
