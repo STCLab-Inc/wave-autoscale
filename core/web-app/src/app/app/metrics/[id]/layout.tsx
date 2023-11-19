@@ -1,7 +1,10 @@
 import MetricService from '@/services/metric';
-import MetricDetailDrawer from '../../metric-drawer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
+
+import MetricDetailDrawer from '../../metric-drawer';
 import MetricsPage from '../page';
+
+const NEW_PATH = 'new';
 
 async function getMetricDefinition(dbId: string) {
   try {
@@ -11,8 +14,6 @@ async function getMetricDefinition(dbId: string) {
     console.error(error);
   }
 }
-
-const NEW_PATH = 'new';
 
 export default async function MetricDetailLayout({
   children,

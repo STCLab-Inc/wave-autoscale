@@ -1,8 +1,20 @@
 import ScalingComponentService from '@/services/scaling-component';
+import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+
 import ScalingComponentDetailDrawer from '../../scaling-component-drawer';
 import ScalingComponentsPage from '../page';
 
 const NEW_PATH = 'new';
+
+async function getScalingComponentDefinition(dbId: string) {
+  try {
+    const scalingComponentDefinition =
+      await ScalingComponentService.getScalingComponent(dbId);
+    return scalingComponentDefinition;
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 export default async function ScalingComponentDetailLayout({
   children,
@@ -11,23 +23,18 @@ export default async function ScalingComponentDetailLayout({
   children: React.ReactNode;
   params: { id: string };
 }) {
-  let componentDefinition;
-
+  let scalingComponentDefinition: ScalingComponentDefinition | undefined;
   if (dbId && dbId !== NEW_PATH) {
-    try {
-      componentDefinition = await ScalingComponentService.getScalingComponent(
-        dbId
-      );
-      console.log({ componentDefinition });
-    } catch (error) {
-      console.error(error);
-    }
+    scalingComponentDefinition = await getScalingComponentDefinition(dbId);
+    console.log({ scalingComponentDefinition });
   }
 
   return (
     <div className="relative flex h-full w-full">
       <ScalingComponentsPage />
-      <ScalingComponentDetailDrawer componentDefinition={componentDefinition} />
+      <ScalingComponentDetailDrawer
+        componentDefinition={scalingComponentDefinition}
+      />
     </div>
   );
 }
