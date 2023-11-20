@@ -13,14 +13,21 @@ pub struct MetricCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
     collector_log: bool,
+    running_apps: Option<HashMap<String, std::process::Child>>,
 }
 
 impl MetricCollectorManager {
-    pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
+    pub fn new(
+        wave_config: WaveConfig,
+        output_url: &str,
+        collector_log: bool,
+        running_apps: Option<HashMap<String, std::process::Child>>,
+    ) -> Self {
         Self {
             wave_config,
             output_url: output_url.to_string(),
             collector_log,
+            running_apps,
         }
     }
 
@@ -312,7 +319,7 @@ impl MetricCollectorManager {
         Ok(())
     }
 
-    pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
+    pub async fn run(&mut self, metric_definitions: &Vec<MetricDefinition>) {
         info!(
             "[metric-collector-manager] {} metric definitions",
             metric_definitions.len()
@@ -386,10 +393,22 @@ impl MetricCollectorManager {
                 collector_processes.push(telegraf_app_info);
             }
         }
+
+        // kill agent process
+        if let Some(running_apps) = &mut self.running_apps {
+            running_apps
+                .iter_mut()
+                .for_each(|(name, &mut ref mut child)| {
+                    let child_kill = child.kill();
+                    debug!("Killing {}, result={:?}", name, child_kill);
+                });
+        };
         if !collector_processes.is_empty() {
-            tokio::spawn(async move {
-                run_processes(&collector_processes);
-            });
+            // sleep 2 seconds
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            // run agent process
+            let running_apps = run_processes(&collector_processes);
+            self.running_apps = Some(running_apps);
         }
     }
 }
@@ -836,6 +855,7 @@ mod tests {
             wave_config,
             "http://localhost:3024/api/metrics-receiver",
             true,
+            None,
         )
     }
 

@@ -65,10 +65,11 @@ async fn main() {
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let metric_collector_manager = MetricCollectorManager::new(
+    let mut metric_collector_manager = MetricCollectorManager::new(
         wave_config.clone(),
         &output_url,
         !args.quiet && args.verbose,
+        None,
     );
 
     // Run API Server

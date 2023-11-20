@@ -5,8 +5,6 @@ use std::{
 };
 use tracing::debug;
 
-const WATCH_DURATION: u64 = 10;
-
 pub struct AppInfo {
     pub name: String,
     pub command: String,
@@ -41,30 +39,14 @@ fn spawn(app_info: &AppInfo) -> Result<Child> {
     }
 }
 
-pub fn run_processes(app_info_list: &Vec<AppInfo>) {
+pub fn run_processes(app_info_list: &Vec<AppInfo>) -> HashMap<String, Child> {
     let mut running_apps: HashMap<String, Child> = HashMap::new();
-    loop {
-        for app_info in app_info_list {
-            if !running_apps.contains_key(&app_info.name) {
-                debug!("Starting {}", app_info.name);
-                let child = spawn(app_info);
-                if let Ok(child) = child {
-                    running_apps.insert(app_info.name.clone(), child);
-                }
-            }
+    for app_info in app_info_list {
+        debug!(">> Starting {}", app_info.name);
+        let child = spawn(app_info);
+        if let Ok(child) = child {
+            running_apps.insert(app_info.name.clone(), child);
         }
-        let mut to_remove: Vec<String> = Vec::new();
-        for (name, child) in &mut running_apps {
-            if let Some(exit_status) = child.try_wait().unwrap() {
-                debug!("{} has exited with status: {}", name, exit_status);
-                to_remove.push(name.clone());
-            } else {
-                debug!("{} is still running", name);
-            }
-        }
-        for name in to_remove {
-            running_apps.remove(&name);
-        }
-        std::thread::sleep(std::time::Duration::from_secs(WATCH_DURATION));
     }
+    running_apps
 }
