@@ -2,8 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { decodeTime } from 'ulid';
 import Link from 'next/link';
 
@@ -12,6 +11,7 @@ import AutoscalingHistoryService from '@/services/autoscaling-history';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 import HistoryHeatmap from './history-heatmap';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import AutoscalingHistoryDetailDrawer from '../autoscaling-history-drawer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
@@ -24,7 +24,7 @@ const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
 
 interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
-  created_at: number;
+  created_at: string;
   isChecked: boolean;
 }
 
@@ -38,6 +38,11 @@ export default function AutoscalingHistoryPage() {
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
   const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
   const router = useRouter();
+
+  const pageParam = searchParams.get('page');
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const viewParam = searchParams.get('view');
+  const view = viewParam ? parseInt(viewParam, 10) : 10;
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -65,7 +70,9 @@ export default function AutoscalingHistoryPage() {
         to: field === 'to' ? formatDate(newDate) : to,
       };
       router.push(
-        `/app/autoscaling-history?from=${params.from}&to=${params.to}`
+        `/app/autoscaling-history?from=${params.from}&to=${
+          params.to
+        }&page=${1}&view=${itemsPerPage}`
       );
     }
   };
@@ -86,7 +93,7 @@ export default function AutoscalingHistoryPage() {
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalPageCount = Math.ceil(history.length / itemsPerPage);
+  const totalPageCount = Math.ceil(history.length / itemsPerPage) || 1;
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -102,6 +109,29 @@ export default function AutoscalingHistoryPage() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  useEffect(() => {
+    setCurrentPage(page ? page : 1);
+    setItemsPerPage(view ? view : ITEMS_PER_PAGE_OPTIONS[0]);
+  }, [page, view]);
+
+  useEffect(() => {
+    if (currentPage > totalPageCount) {
+      setCurrentPage(1);
+    }
+    router.push(
+      `/app/autoscaling-history?from=${from}&to=${to}&page=${currentPage}&view=${itemsPerPage}`
+    );
+  }, [currentPage, itemsPerPage]);
+
+  const [detailsModalFlag, setDetailsModalFlag] = useState(false);
+  const [historyItem, setHistoryItem] =
+    useState<AutoscalingHistoryDefinitionEx>();
+
+  const onClickDetails = (historyItem: AutoscalingHistoryDefinitionEx) => {
+    setHistoryItem(historyItem);
+    setDetailsModalFlag(true);
   };
 
   return (
@@ -169,8 +199,8 @@ export default function AutoscalingHistoryPage() {
             <button
               className={
                 currentPage === 1
-                  ? 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                  : 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+                  ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                  : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
               }
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
@@ -180,8 +210,8 @@ export default function AutoscalingHistoryPage() {
             <button
               className={
                 currentPage && totalPageCount && currentPage !== totalPageCount
-                  ? 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
-                  : 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                  ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                  : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
               }
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPageCount}
@@ -233,7 +263,7 @@ export default function AutoscalingHistoryPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
+          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
             {visibleHistory.map(
               (historyItem: AutoscalingHistoryDefinitionEx) => (
                 <tr
@@ -291,32 +321,31 @@ export default function AutoscalingHistoryPage() {
                   <td className="mx-4 flex h-full w-full flex-1 items-start">
                     <div className="flex items-center">
                       {historyItem.fail_message ? (
-                        <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
+                        <button className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
                           Failed
-                        </div>
+                        </button>
                       ) : (
-                        <div className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
+                        <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
                           Success
-                        </div>
+                        </button>
                       )}
                     </div>
                   </td>
                   <td className="mx-4 flex h-full w-full flex-2 items-start">
                     <div className="flex items-center break-all">
                       {dayjs
-                        .unix(historyItem.created_at / 1000)
+                        .unix(Number(historyItem.created_at) / 1000)
                         .format('YYYY/MM/DD HH:mm:ss')}
                     </div>
                   </td>
                   <td className="mx-4 flex h-full w-full flex-1 items-start">
                     <div className="flex items-center">
-                      <Link
-                        href={`/app/autoscaling-history/${historyItem.id}?from=${from}&to=${to}`}
+                      <button
+                        className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
+                        onClick={() => onClickDetails(historyItem)}
                       >
-                        <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                          Details
-                        </button>
-                      </Link>
+                        Details
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -325,6 +354,12 @@ export default function AutoscalingHistoryPage() {
           </tbody>
         </table>
       </div>
+      {detailsModalFlag && historyItem ? (
+        <AutoscalingHistoryDetailDrawer
+          autoscalingHistoryDefinition={historyItem}
+          exitFunction={() => setDetailsModalFlag(false)}
+        />
+      ) : null}
     </main>
   );
 }
