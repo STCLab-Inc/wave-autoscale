@@ -26,11 +26,13 @@ const componentOptions = componentKeyTypes.map((componentKeyType) => (
 
 export default function ScalingComponentDetailDrawer({
   componentDefinition,
+  exitFunction,
 }: {
-  componentDefinition?: ScalingComponentDefinition;
+  componentDefinition?: ScalingComponentDefinition | undefined;
+  exitFunction: () => void;
 }) {
   const { register, handleSubmit, setValue, getValues, reset } = useForm();
-  const router = useRouter();
+
   const dbId = componentDefinition?.db_id;
   const isNew = !dbId;
   const [selectedComponentKind, setSelectedComponentKind] = useState<string>();
@@ -47,20 +49,14 @@ export default function ScalingComponentDetailDrawer({
     }
   }, [selectedComponentKind]);
 
-  const goBack = (refresh?: boolean) => {
-    let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/'));
-    router.push(path);
-    if (refresh) {
-      router.refresh();
-    }
-  };
-
   useEffect(() => {
     if (isNew) {
       return;
     }
-    const { id, component_kind, metadata, ...rest } = componentDefinition;
+    const { kind, db_id, id, component_kind, metadata, ...rest } =
+      componentDefinition;
+    setValue('kind', kind);
+    setValue('db_id', db_id);
     setValue('id', id);
     setValue('component_kind', component_kind);
     forEach(metadata, (value, key) => {
@@ -70,7 +66,7 @@ export default function ScalingComponentDetailDrawer({
   }, [componentDefinition, isNew]);
 
   const onClickOverlay = () => {
-    goBack(false);
+    exitFunction();
   };
 
   const onChangeComponentKind = (e: any) => {
@@ -84,15 +80,13 @@ export default function ScalingComponentDetailDrawer({
   };
 
   const onClickExit = async () => {
-    goBack(false);
+    exitFunction();
   };
 
   const onClickInitialize = async () => {
     setSelectedComponentKind('Scaling Component Kind');
 
-    const id = getValues('id');
     reset();
-    setValue('id', id);
     setValue('component_kind', 'Scaling Component Kind');
   };
 
@@ -102,7 +96,7 @@ export default function ScalingComponentDetailDrawer({
     }
     try {
       await ScalingComponentService.deleteScalingComponent(dbId);
-      goBack(true);
+      exitFunction();
     } catch (error) {
       console.log(error);
     }
@@ -128,14 +122,14 @@ export default function ScalingComponentDetailDrawer({
         );
         console.log({ result });
       }
-      goBack(true);
+      exitFunction();
     } catch (error) {
       console.log(error);
     }
   };
 
   return (
-    <div className="scaling-components-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">
+    <div className="scaling-components-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
@@ -193,7 +187,7 @@ export default function ScalingComponentDetailDrawer({
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
                 <span className="text-md label-text px-2">
-                  Scaling Component Type
+                  Scaling Component Kind
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
