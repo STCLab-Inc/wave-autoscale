@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { forEach } from 'lodash';
 import { decodeTime } from 'ulid';
 import dayjs from 'dayjs';
-import { renderKeyValuePairsWithJson } from './keyvalue-renderer';
 
+import { renderKeyValuePairsWithJson } from './keyvalue-renderer';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 
 interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
@@ -15,11 +13,11 @@ interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
 
 export default function AutoscalingHistoryDetailDrawer({
   autoscalingHistoryDefinition,
+  exitFunction,
 }: {
   autoscalingHistoryDefinition?: AutoscalingHistoryDefinitionEx;
+  exitFunction: () => void;
 }) {
-  const router = useRouter();
-
   const [autoscalingHistory, setAutoscalingHistory] =
     useState<AutoscalingHistoryDefinitionEx>();
 
@@ -55,31 +53,16 @@ export default function AutoscalingHistoryDetailDrawer({
     }
   }, [autoscalingHistoryDefinition]);
 
-  const goBack = (refresh?: boolean) => {
-    const currentUrl = window.location.href;
-    const url = new URL(currentUrl);
-
-    const pathSegments = url.pathname.split('/');
-    pathSegments.pop();
-    url.pathname = pathSegments.join('/');
-
-    router.push(url.pathname + url.search);
-
-    if (refresh) {
-      router.refresh();
-    }
-  };
-
   const onClickOverlay = () => {
-    goBack(false);
+    exitFunction();
   };
 
   const onClickExit = async () => {
-    goBack(false);
+    exitFunction();
   };
 
   return (
-    <div className="autoscaling-history-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">
+    <div className="autoscaling-history-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
