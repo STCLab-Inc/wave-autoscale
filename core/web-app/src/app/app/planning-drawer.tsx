@@ -53,7 +53,7 @@ export default function PlanningDetailDrawer({
   };
 
   return (
-    <div className="plan-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">
+    <div className="plan-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
