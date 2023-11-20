@@ -100,7 +100,7 @@ export default function PlanItemDrawer({
   };
 
   return (
-    <div className="plan-drawer drawer drawer-end flex w-full min-w-[25rem] max-w-[25rem] flex-col">
+    <div className="plan-drawer drawer drawer-end flex w-full min-w-[48rem] max-w-[48rem] flex-col">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-l border-t border-gray-200">
         <div

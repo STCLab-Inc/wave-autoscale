@@ -61,7 +61,7 @@ export default function PlanningDetailDrawer({
           className="drawer-overlay"
           onClick={onClickOverlay}
         />
-        <div className="drawer-content flex h-full min-w-[25rem] max-w-[25rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
+        <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
               <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
