@@ -86,11 +86,11 @@ export default function AutoscalingHistoryPage() {
         title="Autoscaling History"
         right={
           <div className="flex items-center">
-            <div className="form-control mr-1">
+            <div className="form-control mr-2">
               <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
+                  className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
                   max={formatDate(toDayjs)}
                   value={from}
                   onChange={(event) =>
@@ -100,11 +100,11 @@ export default function AutoscalingHistoryPage() {
               </label>
             </div>
             <span>-</span>
-            <div className="form-control ml-1">
+            <div className="form-control ml-2">
               <label className="input-group-sm">
                 <input
                   type="date"
-                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
+                  className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
                   min={formatDate(fromDayjs)}
                   value={to}
                   onChange={(event) =>
