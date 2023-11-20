@@ -81,6 +81,29 @@ export default function AutoscalingHistoryPage() {
     setHistory(updatedHistory);
   };
 
+  const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPageCount = Math.ceil(history.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const visibleHistory = history.slice(startIndex, endIndex);
+
+  const handleItemsPerPageChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newItemsPerPage = parseInt(event.target.value, 10);
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
   return (
     <main className="flex h-full w-full flex-col">
       <ContentHeader
@@ -119,6 +142,55 @@ export default function AutoscalingHistoryPage() {
       />
       <div className="flex w-full flex-col">
         <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
+        <div className="flex items-center justify-end px-8 py-4">
+          <div className="mr-2 flex w-16 items-center">
+            <label className="select-group-sm">
+              <select
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+                className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+              >
+                {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mx-2 flex w-16 items-center justify-center">
+            <span className="px-2 text-center text-sm">
+              {currentPage} / {totalPageCount}
+            </span>
+          </div>
+
+          <div className="ml-2 flex h-8 items-center">
+            <button
+              className={
+                currentPage === 1
+                  ? 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                  : 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+              }
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              PREVIOUS
+            </button>
+            <button
+              className={
+                currentPage && totalPageCount && currentPage !== totalPageCount
+                  ? 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                  : 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+              }
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPageCount}
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
+
         <table className="flex w-full flex-col">
           <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
             <tr className="flex h-full w-full px-8">
@@ -162,92 +234,94 @@ export default function AutoscalingHistoryPage() {
             </tr>
           </thead>
           <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
-            {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
-              <tr
-                key={historyItem.id}
-                className="flex w-full border-b px-8 py-4"
-              >
-                <td className="mr-4 flex h-full flex-1 items-start">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={historyItem.isChecked}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        const updatedHistory = history.map((item) =>
-                          item.id === historyItem.id
-                            ? { ...item, isChecked: checked }
-                            : item
-                        );
-                        setHistory(updatedHistory);
-                      }}
-                    />
-                  </label>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-4 items-start">
-                  <div className="flex items-center break-all">
-                    {historyItem.plan_id}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-10 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
-                      historyItem.metric_values_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-5 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
-                      historyItem.metadata_values_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-3 items-start">
-                  <div className="flex flex-col items-center">
-                    {historyItem.fail_message &&
-                      renderKeyValuePairsWithJson(
-                        historyItem.fail_message,
+            {visibleHistory.map(
+              (historyItem: AutoscalingHistoryDefinitionEx) => (
+                <tr
+                  key={historyItem.id}
+                  className="flex w-full border-b px-8 py-4"
+                >
+                  <td className="mr-4 flex h-full flex-1 items-start">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="checkbox"
+                        checked={historyItem.isChecked}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          const updatedHistory = history.map((item) =>
+                            item.id === historyItem.id
+                              ? { ...item, isChecked: checked }
+                              : item
+                          );
+                          setHistory(updatedHistory);
+                        }}
+                      />
+                    </label>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-4 items-start">
+                    <div className="flex items-center break-all">
+                      {historyItem.plan_id}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-10 items-start">
+                    <div className="flex flex-col items-center">
+                      {renderKeyValuePairsWithJson(
+                        historyItem.metric_values_json,
                         false
                       )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-1 items-start">
-                  <div className="flex items-center">
-                    {historyItem.fail_message ? (
-                      <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
-                        Failed
-                      </div>
-                    ) : (
-                      <div className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                        Success
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-2 items-start">
-                  <div className="flex items-center break-all">
-                    {dayjs
-                      .unix(historyItem.created_at / 1000)
-                      .format('YYYY/MM/DD HH:mm:ss')}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-1 items-start">
-                  <div className="flex items-center">
-                    <Link
-                      href={`/app/autoscaling-history/${historyItem.id}?from=${from}&to=${to}`}
-                    >
-                      <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                        Details
-                      </button>
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-5 items-start">
+                    <div className="flex flex-col items-center">
+                      {renderKeyValuePairsWithJson(
+                        historyItem.metadata_values_json,
+                        false
+                      )}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-3 items-start">
+                    <div className="flex flex-col items-center">
+                      {historyItem.fail_message &&
+                        renderKeyValuePairsWithJson(
+                          historyItem.fail_message,
+                          false
+                        )}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-1 items-start">
+                    <div className="flex items-center">
+                      {historyItem.fail_message ? (
+                        <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
+                          Failed
+                        </div>
+                      ) : (
+                        <div className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
+                          Success
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-2 items-start">
+                    <div className="flex items-center break-all">
+                      {dayjs
+                        .unix(historyItem.created_at / 1000)
+                        .format('YYYY/MM/DD HH:mm:ss')}
+                    </div>
+                  </td>
+                  <td className="mx-4 flex h-full w-full flex-1 items-start">
+                    <div className="flex items-center">
+                      <Link
+                        href={`/app/autoscaling-history/${historyItem.id}?from=${from}&to=${to}`}
+                      >
+                        <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
+                          Details
+                        </button>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>

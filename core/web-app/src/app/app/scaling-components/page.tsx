@@ -44,6 +44,29 @@ export default function ScalingComponentsPage() {
     setComponents(updatedComponents);
   };
 
+  const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPageCount = Math.ceil(components.length / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const visibleComponents = components.slice(startIndex, endIndex);
+
+  const handleItemsPerPageChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newItemsPerPage = parseInt(event.target.value, 10);
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
   return (
     <main className="flex h-full w-full flex-col">
       <div>
@@ -60,6 +83,57 @@ export default function ScalingComponentsPage() {
           }
         />
         <div className="flex w-full flex-col">
+          <div className="flex items-center justify-end px-8 py-4">
+            <div className="mr-2 flex w-16 items-center">
+              <label className="select-group-sm">
+                <select
+                  value={itemsPerPage}
+                  onChange={handleItemsPerPageChange}
+                  className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                >
+                  {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mx-2 flex w-16 items-center justify-center">
+              <span className="px-2 text-center text-sm">
+                {currentPage} / {totalPageCount}
+              </span>
+            </div>
+
+            <div className="ml-2 flex h-8 items-center">
+              <button
+                className={
+                  currentPage === 1
+                    ? 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                    : 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+                }
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                PREVIOUS
+              </button>
+              <button
+                className={
+                  currentPage &&
+                  totalPageCount &&
+                  currentPage !== totalPageCount
+                    ? 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                    : 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                }
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPageCount}
+              >
+                NEXT
+              </button>
+            </div>
+          </div>
+
           <table className="flex w-full flex-col">
             <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
               <tr className="flex h-full w-full px-8">
@@ -95,8 +169,8 @@ export default function ScalingComponentsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
-              {components.map(
+            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
+              {visibleComponents.map(
                 (componentsItem: ScalingComponentDefinitionEx) => (
                   <tr
                     key={componentsItem.db_id}
