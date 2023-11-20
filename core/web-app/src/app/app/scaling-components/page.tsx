@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import ContentHeader from '../content-header';
 import ScalingComponentService from '@/services/scaling-component';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import ScalingComponentDetailDrawer from '../scaling-component-drawer';
 
 async function getScalingComponents() {
   const components = await ScalingComponentService.getScalingComponents();
@@ -18,6 +19,14 @@ interface ScalingComponentDefinitionEx extends ScalingComponentDefinition {
 }
 
 export default function ScalingComponentsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const pageParam = searchParams.get('page');
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const viewParam = searchParams.get('view');
+  const view = viewParam ? parseInt(viewParam, 10) : 10;
+
   const [components, setComponents] = useState<ScalingComponentDefinitionEx[]>(
     []
   );
@@ -49,7 +58,7 @@ export default function ScalingComponentsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalPageCount = Math.ceil(components.length / itemsPerPage);
+  const totalPageCount = Math.ceil(components.length / itemsPerPage) || 1;
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -67,6 +76,41 @@ export default function ScalingComponentsPage() {
     setCurrentPage(newPage);
   };
 
+  useEffect(() => {
+    setCurrentPage(page ? page : 1);
+    setItemsPerPage(view ? view : ITEMS_PER_PAGE_OPTIONS[0]);
+  }, [page, view]);
+
+  useEffect(() => {
+    if (currentPage > totalPageCount) {
+      setCurrentPage(1);
+    }
+    router.push(
+      `/app/scaling-components?page=${currentPage}&view=${itemsPerPage}`
+    );
+  }, [currentPage, itemsPerPage]);
+
+  const [detailsModalFlag, setDetailsModalFlag] = useState(false);
+  const [scalingComponentsItem, setScalingComponentsItem] =
+    useState<ScalingComponentDefinitionEx>();
+
+  const onClickDetails = (
+    scalingComponentsItem: ScalingComponentDefinitionEx | undefined
+  ) => {
+    setScalingComponentsItem(scalingComponentsItem);
+    setDetailsModalFlag(true);
+  };
+
+  useEffect(() => {
+    async function fetchData() {
+      const componentsData = await getScalingComponents();
+      setComponents(componentsData);
+    }
+    if (!detailsModalFlag) {
+      fetchData();
+    }
+  }, [detailsModalFlag]);
+
   return (
     <main className="flex h-full w-full flex-col">
       <div>
@@ -74,11 +118,12 @@ export default function ScalingComponentsPage() {
           title="Scaling Components"
           right={
             <div className="flex items-center">
-              <Link href="/app/scaling-components/new">
-                <button className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50">
-                  ADD COMPONENT
-                </button>
-              </Link>
+              <button
+                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                onClick={() => onClickDetails(undefined)}
+              >
+                ADD COMPONENT
+              </button>
             </div>
           }
         />
@@ -110,8 +155,8 @@ export default function ScalingComponentsPage() {
               <button
                 className={
                   currentPage === 1
-                    ? 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                    : 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+                    ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                    : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
                 }
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
@@ -123,8 +168,8 @@ export default function ScalingComponentsPage() {
                   currentPage &&
                   totalPageCount &&
                   currentPage !== totalPageCount
-                    ? 'ml-1 mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
-                    : 'ml-1 mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                    ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                    : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                 }
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPageCount}
@@ -164,7 +209,7 @@ export default function ScalingComponentsPage() {
                     Metadata Values
                   </span>
                 </th>
-                <th className="mx-4 flex h-full w-full flex-2 items-center">
+                <th className="mx-4 flex h-full w-full flex-1 items-center">
                   <span className="flex items-center break-words">Actions</span>
                 </th>
               </tr>
@@ -206,15 +251,14 @@ export default function ScalingComponentsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="mx-4 flex h-full w-full flex-2 items-start">
+                    <td className="mx-4 flex h-full w-full flex-1 items-start">
                       <div className="flex items-center">
-                        <Link
-                          href={`/app/scaling-components/${componentsItem.db_id}`}
+                        <button
+                          className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
+                          onClick={() => onClickDetails(componentsItem)}
                         >
-                          <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                            Details
-                          </button>
-                        </Link>
+                          Details
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -224,6 +268,12 @@ export default function ScalingComponentsPage() {
           </table>
         </div>
       </div>
+      {detailsModalFlag ? (
+        <ScalingComponentDetailDrawer
+          componentDefinition={scalingComponentsItem}
+          exitFunction={() => setDetailsModalFlag(false)}
+        />
+      ) : null}
     </main>
   );
 }
