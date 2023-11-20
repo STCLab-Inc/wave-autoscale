@@ -17,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     '/app/scaling-components/new',
     '/app/planning/',
     '/app/planning/new',
+    '/app/autoscaling-history/',
   ];
 
   const [overflowHiddenFlag, setOverflowHiddenFlag] = useState(

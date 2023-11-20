@@ -5,6 +5,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { decodeTime } from 'ulid';
+import Link from 'next/link';
 
 import ContentHeader from '../content-header';
 import AutoscalingHistoryService from '@/services/autoscaling-history';
@@ -131,32 +132,32 @@ export default function AutoscalingHistoryPage() {
                   />
                 </label>
               </th>
-              <th className="mx-4 flex h-full w-full flex-3 items-center">
+              <th className="mx-4 flex h-full w-full flex-4 items-center">
                 <span className="flex items-center break-words">Plan ID</span>
               </th>
               <th className="mx-4 flex h-full w-full flex-10 items-center">
-                <span className="flex items-center break-words">Plan Item</span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
                 <span className="flex items-center break-words">
                   Metric Values
                 </span>
               </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
+              <th className="mx-4 flex h-full w-full flex-5 items-center">
                 <span className="flex items-center break-words">
                   Metadata Values
                 </span>
               </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
+              <th className="mx-4 flex h-full w-full flex-3 items-center">
                 <span className="flex items-center break-words">
                   Fail Message
                 </span>
               </th>
-              <th className="mx-4 flex h-full w-full flex-2 items-center">
-                <div className="items-centerbreak-words flex">Status</div>
+              <th className="mx-4 flex h-full w-full flex-1 items-center">
+                <div className="flex items-center break-words">Status</div>
               </th>
-              <th className="mx-4 flex h-full w-full flex-5 items-center">
-                <div className="items-centerbreak-words flex">Date</div>
+              <th className="mx-4 flex h-full w-full flex-2 items-center">
+                <div className="flex items-center break-words">Date</div>
+              </th>
+              <th className="mx-4 flex h-full w-full flex-1 items-center">
+                <div className="flex items-center break-words">Actions</div>
               </th>
             </tr>
           </thead>
@@ -184,7 +185,7 @@ export default function AutoscalingHistoryPage() {
                     />
                   </label>
                 </td>
-                <td className="mx-4 flex h-full w-full flex-3 items-start">
+                <td className="mx-4 flex h-full w-full flex-4 items-start">
                   <div className="flex items-center break-all">
                     {historyItem.plan_id}
                   </div>
@@ -192,20 +193,12 @@ export default function AutoscalingHistoryPage() {
                 <td className="mx-4 flex h-full w-full flex-10 items-start">
                   <div className="flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
-                      historyItem.plan_item_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
                       historyItem.metric_values_json,
                       false
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
+                <td className="mx-4 flex h-full w-full flex-5 items-start">
                   <div className="flex flex-col items-center">
                     {renderKeyValuePairsWithJson(
                       historyItem.metadata_values_json,
@@ -213,7 +206,7 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
+                <td className="mx-4 flex h-full w-full flex-3 items-start">
                   <div className="flex flex-col items-center">
                     {historyItem.fail_message &&
                       renderKeyValuePairsWithJson(
@@ -222,7 +215,7 @@ export default function AutoscalingHistoryPage() {
                       )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full flex-2 items-start">
+                <td className="mx-4 flex h-full w-full flex-1 items-start">
                   <div className="flex items-center">
                     {historyItem.fail_message ? (
                       <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
@@ -235,11 +228,22 @@ export default function AutoscalingHistoryPage() {
                     )}
                   </div>
                 </td>
-                <td className="mx-4 flex h-full w-full flex-5 items-start">
+                <td className="mx-4 flex h-full w-full flex-2 items-start">
                   <div className="flex items-center break-all">
                     {dayjs
                       .unix(historyItem.created_at / 1000)
                       .format('YYYY/MM/DD HH:mm:ss')}
+                  </div>
+                </td>
+                <td className="mx-4 flex h-full w-full flex-1 items-start">
+                  <div className="flex items-center">
+                    <Link
+                      href={`/app/autoscaling-history/${historyItem.id}?from=${from}&to=${to}`}
+                    >
+                      <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
+                        Details
+                      </button>
+                    </Link>
                   </div>
                 </td>
               </tr>
