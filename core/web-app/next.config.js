@@ -6,15 +6,6 @@ const nextConfig = {
     appDir: true,
     esmExternals: 'loose',
   },
-  async redirects() {
-    return [
-      {
-        source: '/app/planning/:id',
-        destination: '/app/planning/:id/diagram',
-        permanent: true,
-      },
-    ];
-  },
   headers:
     process.env.NODE_ENV === 'development'
       ? () => [
