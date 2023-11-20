@@ -14,6 +14,20 @@ export function renderKeyValuePairs(
       if (value != null && typeof value === 'object') {
         value = renderKeyValuePairs(value, indentFlag, 1);
       }
+
+      if (Array.isArray(value)) {
+        return (
+          <div
+            key={key}
+            className={classNames('mb-2 w-full', {
+              'ml-4': indentFlag,
+            })}
+          >
+            <div className="whitespace-normal break-all">{value}</div>
+          </div>
+        );
+      }
+
       if (!value) {
         return null;
       }
