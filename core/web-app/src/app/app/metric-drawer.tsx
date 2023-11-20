@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { forEach } from 'lodash';
 import Image from 'next/image';
@@ -23,55 +22,51 @@ const metricOptions = metricKeyTypes.map((metricKeyType) => (
 
 export default function MetricDetailDrawer({
   metricDefinition,
+  exitFunction,
 }: {
-  metricDefinition?: MetricDefinition;
+  metricDefinition?: MetricDefinition | undefined;
+  exitFunction: () => void;
 }) {
   const { register, handleSubmit, setValue, getValues, reset } = useForm();
-  const router = useRouter();
+
   const dbId = metricDefinition?.db_id;
   const isNew = !dbId;
-  const [selectedMetricType, setSelectedMetricType] = useState<string>();
+  const [selectedMetricKind, setSelectedMetricKind] = useState<string>();
 
   const metadataFormControls = useMemo(() => {
-    if (selectedMetricType) {
+    if (selectedMetricKind) {
       const keyTypes = metricKeyTypes.find(
-        (metricKeyType) => metricKeyType.metricName === selectedMetricType
+        (metricKeyType) => metricKeyType.metricName === selectedMetricKind
       )?.keyTypes;
       if (keyTypes) {
         return getMetadataFormControls(keyTypes, register);
       }
     }
-  }, [selectedMetricType]);
-
-  const goBack = (refresh?: boolean) => {
-    let path = window.location.href;
-    path = path.slice(0, path.lastIndexOf('/'));
-    router.push(path);
-    if (refresh) {
-      router.refresh();
-    }
-  };
+  }, [selectedMetricKind]);
 
   useEffect(() => {
     if (isNew) {
       return;
     }
-    const { id, metric_kind, metadata, ...rest } = metricDefinition;
+    const { kind, db_id, id, collector, metadata, metric_kind, ...rest } =
+      metricDefinition;
+    setValue('kind', kind);
+    setValue('db_id', db_id);
     setValue('id', id);
-    setValue('metric_kind', metric_kind);
+    setValue('collector', collector);
     forEach(metadata, (value, key) => {
       setValue(key, value);
     });
-    setSelectedMetricType(metric_kind);
+    setSelectedMetricKind(metric_kind);
   }, [metricDefinition, isNew]);
 
   const onClickOverlay = () => {
-    goBack(false);
+    exitFunction();
   };
 
   const onChangeMetricType = (e: any) => {
     const metricType = e.target.value;
-    setSelectedMetricType(metricType);
+    setSelectedMetricKind(metricType);
 
     const id = getValues('id');
     reset();
@@ -80,15 +75,13 @@ export default function MetricDetailDrawer({
   };
 
   const onClickExit = async () => {
-    goBack(false);
+    exitFunction();
   };
 
   const onClickInitialize = async () => {
-    setSelectedMetricType('Metric Kind');
+    setSelectedMetricKind('Metric Kind');
 
-    const id = getValues('id');
     reset();
-    setValue('id', id);
     setValue('metric_kind', 'Metric Kind');
   };
 
@@ -98,14 +91,14 @@ export default function MetricDetailDrawer({
     }
     try {
       await MetricService.deleteMetric(dbId);
-      goBack(true);
+      exitFunction();
     } catch (error) {
       console.log(error);
     }
   };
 
   const onSubmit = async (data: any) => {
-    const { id, metric_kind, ...metadata } = data;
+    const { kind, db_id, id, collector, metadata, metric_kind, ...rest } = data;
     const metricDefinition = generateMetricDefinition({
       id,
       db_id: isNew ? '' : dbId,
@@ -120,14 +113,14 @@ export default function MetricDetailDrawer({
         const result = await MetricService.updateMetric(metricDefinition);
         console.log({ result });
       }
-      goBack(true);
+      exitFunction();
     } catch (error) {
       console.log(error);
     }
   };
 
   return (
-    <div className="metric-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full border-t border-gray-200">
+    <div className="metric-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
@@ -184,7 +177,7 @@ export default function MetricDetailDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Metric Type</span>
+                <span className="text-md label-text px-2">Metric Kind</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <select
