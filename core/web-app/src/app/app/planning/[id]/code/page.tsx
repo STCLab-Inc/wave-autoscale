@@ -1,11 +1,12 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
-import { usePlanStore } from '../../plan-store';
-import { useEffect, useState } from 'react';
 import { YAMLParseError } from 'yaml';
+
+import { usePlanStore } from '../../plan-store';
 
 // This is a dynamic import that will only be rendered in the client side.
 // This is because AceEditor is not compatible with SSR.
@@ -25,12 +26,17 @@ export default function PlanningDetailCodePage() {
 
   // If scalingPlanId changes, fetch the scaling plan then it updates plans and nodes.
   useEffect(() => {
-    const fetch = async () => {
-      await load(scalingPlanId);
+    const fetch = async (id: string) => {
+      await load(id);
       const yamlCode = await getYAMLCode();
       setValue('expression', yamlCode);
     };
-    fetch();
+
+    if (Array.isArray(scalingPlanId)) {
+      fetch(scalingPlanId[0]);
+    } else {
+      fetch(scalingPlanId);
+    }
   }, [scalingPlanId]);
 
   const onSubmit = async (data: any) => {
@@ -56,13 +62,15 @@ export default function PlanningDetailCodePage() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex h-full flex-col p-4"
+      className="flex h-full w-full flex-col"
     >
-      <div className="mb-4 flex items-center justify-end">
-        <button className="btn-outline btn-primary btn-sm btn">Update</button>
+      <div className="flex border-b px-4 py-4">
+        <button className="left-4 top-4 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600">
+          UPDATE
+        </button>
       </div>
 
-      <div className="textarea-bordered textarea textarea-md h-full w-full">
+      <div className="textarea-bordered textarea textarea-md h-full w-full rounded-none border-none p-4">
         <Controller
           control={control}
           name="expression"

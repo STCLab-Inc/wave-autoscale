@@ -1,29 +1,22 @@
-import classNames from 'classnames';
 import { ReactNode } from 'react';
+
+interface ContentHeaderProps {
+  title: string;
+  children?: ReactNode;
+  right?: ReactNode;
+}
 
 export default function ContentHeader({
   title,
   children,
   right,
-}: {
-  title: string;
-  children?: ReactNode;
-  right?: ReactNode;
-}) {
+}: ContentHeaderProps) {
   return (
-    <div
-      className={classNames(
-        'h-22 prose flex w-full min-w-full flex-col border-b border-base-300 bg-slate-50 px-3 pt-3',
-        {
-          'pb-3': !children,
-        }
-      )}
-    >
-      {/* Plan Title */}
-      <div className="flex-start flex">
-        <h3 className="m-3 flex-1">{title}</h3>
-        {right}
+    <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75">
+      <div className="font-Pretendard truncate whitespace-nowrap px-8 text-lg font-semibold text-gray-1000">
+        {title}
       </div>
+      <div className="flex px-8">{right}</div>
       {children}
     </div>
   );

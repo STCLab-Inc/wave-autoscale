@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+
 import { usePlanStore } from '../plan-store';
 
 export default function PlanningDetailControls() {
@@ -8,13 +9,16 @@ export default function PlanningDetailControls() {
 
   const onClickDeploy = async () => {
     await push();
-    alert('deployed!');
+    alert('Deployed!');
   };
 
   return (
-    <div className="flex items-center pr-3">
-      <button className="btn-primary btn-sm btn" onClick={onClickDeploy}>
-        Deploy
+    <div className="flex items-center">
+      <button
+        className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+        onClick={onClickDeploy}
+      >
+        DEPLOY
       </button>
     </div>
   );

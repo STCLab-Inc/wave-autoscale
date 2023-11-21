@@ -201,6 +201,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
             ui: {},
             description: '',
             expression: '',
+            cron_expression: null,
             scaling_components: [],
             priority: 0,
           },
