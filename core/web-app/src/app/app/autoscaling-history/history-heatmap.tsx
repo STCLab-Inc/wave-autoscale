@@ -1,5 +1,3 @@
-'use client';
-
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
 import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
@@ -10,16 +8,17 @@ interface HistoryHeatmapProps {
   from: Dayjs;
   to: Dayjs;
 }
+
 function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
   const dataForHeatmap = useMemo(() => {
     if (!history) {
       return [];
     }
-    const groupedByDate = groupBy(history, (historyItem) => {
-      return dayjs.unix(historyItem.created_at).format('YYYY-MM-DD');
-    });
 
-    // Fill in missing dates
+    const groupedByDate = groupBy(history, (historyItem) =>
+      dayjs.unix(historyItem.created_at / 1000).format('YYYY-MM-DD')
+    );
+
     let current = from;
     while (current.isBefore(to) || current.isSame(to)) {
       const date = current.format('YYYY-MM-DD');
@@ -30,15 +29,12 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
     }
 
     const data = Object.entries(groupedByDate)
-      .sort(([dateA], [dateB]) => {
-        return dateA < dateB ? -1 : 1;
-      })
+      .sort(([dateA], [dateB]) => (dateA < dateB ? -1 : 1))
       .map(([date, historyItems]) => {
-        const groupedByHour = groupBy(historyItems, (historyItem) => {
-          return dayjs.unix(historyItem.created_at).format('HH');
-        });
+        const groupedByHour = groupBy(historyItems, (historyItem) =>
+          dayjs.unix(historyItem.created_at / 1000).format('HH')
+        );
 
-        // Fill in missing hours
         for (let i = 0; i < 24; i++) {
           const hour = i.toString().padStart(2, '0');
           if (!groupedByHour[hour]) {
@@ -54,10 +50,16 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
               return {
                 x: hour,
                 y: historyItems.length,
+                z: historyItems.some(
+                  (historyItem) => historyItem.fail_message !== undefined
+                )
+                  ? 'Failed'
+                  : 'Success',
               };
             }),
         };
       });
+
     return data;
   }, [history, from, to]);
 
@@ -76,16 +78,11 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
   return (
     <div className="h-80 w-full">
       <ResponsiveHeatMapCanvas
-        // forceSquare={true}
         data={dataForHeatmap}
-        xInnerPadding={0.1}
-        yInnerPadding={0.1}
-        margin={{ top: 70, right: 80, bottom: 20, left: 120 }}
+        margin={{ top: 50, right: 70, bottom: 30, left: 140 }}
         axisTop={{
           tickSize: 0,
           tickPadding: 10,
-          // tickRotation: -90,
-          legend: 'Time',
           legendOffset: -40,
           legendPosition: 'middle',
         }}
@@ -93,11 +90,12 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
           tickSize: 0,
           tickPadding: 20,
           tickRotation: 0,
+          format: (value) => value.replace(/-/g, '/'),
         }}
         colors={{
           type: 'diverging',
-          divergeAt: 0.4,
-          scheme: 'greens',
+          divergeAt: 0.3,
+          scheme: 'turbo',
           minValue: 0,
           maxValue,
         }}
@@ -107,9 +105,27 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
         enableLabels={true}
         labelTextColor={{
           from: 'color',
-          modifiers: [['brighter', 2]],
+          modifiers: [['brighter', 3]],
         }}
         annotations={[]}
+        tooltip={({ cell }) => (
+          <div
+            className={`p-2 text-white shadow-md ${
+              cell.data.z === 'Failed' ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
+            }`}
+          >
+            <div className="text-xs">
+              Date: {cell.serieId.replace(/-/g, '/')}
+            </div>
+            <div className="text-xs">
+              Time: {cell.data.x}:00~{cell.data.x}:59
+            </div>
+            <div className="text-xs">Activity: {cell.data.y}</div>
+            {cell.data.z === 'Failed' ? (
+              <div className="text-xs">Status: {cell.data.z}</div>
+            ) : null}
+          </div>
+        )}
       />
     </div>
   );

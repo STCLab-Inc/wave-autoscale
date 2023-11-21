@@ -6,9 +6,9 @@ export default function PlanningLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full w-full flex-row">
       <PlanningSidebar />
-      <main className="flex flex-1 flex-col">{children}</main>
+      {children}
     </div>
   );
 }

@@ -3,8 +3,11 @@ import { Dayjs } from 'dayjs';
 
 class AutoscalingHistoryServiceClass {
   async getHistoryByFromTo(from: Dayjs, to: Dayjs) {
+    /* TODO */
     const response = await DataLayer.get(
-      `/api/autoscaling-history?from=${from.toISOString()}&to=${to.toISOString()}`
+      `/api/autoscaling-history?from=${
+        from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
+      }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
     );
     return response.data;
   }
