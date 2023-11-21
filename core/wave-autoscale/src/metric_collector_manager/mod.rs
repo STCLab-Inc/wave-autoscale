@@ -17,17 +17,12 @@ pub struct MetricCollectorManager {
 }
 
 impl MetricCollectorManager {
-    pub fn new(
-        wave_config: WaveConfig,
-        output_url: &str,
-        collector_log: bool,
-        running_apps: Option<HashMap<String, std::process::Child>>,
-    ) -> Self {
+    pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
         Self {
             wave_config,
             output_url: output_url.to_string(),
             collector_log,
-            running_apps,
+            running_apps: None,
         }
     }
 
@@ -395,18 +390,16 @@ impl MetricCollectorManager {
             running_apps
                 .iter_mut()
                 .for_each(|(name, &mut ref mut child)| {
-                    if let Err(child_kill) = child.kill() {
-                        // retry 3 times
-                        for idx in 1..4 {
-                            if child.kill().is_ok() {
-                                break;
-                            };
-                            error!("Failed to kill {} - try {}, {:?}", name, idx, child_kill);
-                            if idx == 3 {
-                                panic!("Failed to kill {}", name);
-                            }
+                    // retry 3 times
+                    for idx in 1..4 {
+                        if child.kill().is_ok() {
+                            break;
+                        };
+                        error!("Failed to kill {} - try {}, {:?}", name, idx, child);
+                        if idx == 3 {
+                            panic!("Failed to kill {}", name);
                         }
-                    };
+                    }
                     debug!("Killing {}", name);
                 });
             // sleep 2 seconds
@@ -863,7 +856,6 @@ mod tests {
             wave_config,
             "http://localhost:3024/api/metrics-receiver",
             true,
-            None,
         )
     }
 
@@ -1393,9 +1385,6 @@ mod tests {
 
     #[test]
     fn retry_test() {
-        fn return_err() -> Result<(), ()> {
-            Err(())
-        }
         fn return_ok_of_num(ok_num: i32) -> Result<(), ()> {
             if ok_num == 2 {
                 return Ok(());
@@ -1403,18 +1392,16 @@ mod tests {
             Err(())
         }
         let mut retry_count = 0;
-        if let Err(_result) = return_err() {
-            // retry 3 times
-            for idx in 1..4 {
-                retry_count += 1;
-                if return_ok_of_num(idx).is_ok() {
-                    break;
-                };
-                if idx == 3 {
-                    panic!("Failed to kill");
-                }
+        // retry 3 times
+        for idx in 1..4 {
+            retry_count += 1;
+            if return_ok_of_num(idx).is_ok() {
+                break;
+            };
+            if idx == 3 {
+                panic!("Failed to kill");
             }
-        };
+        }
         assert_eq!(retry_count, 2);
     }
 }

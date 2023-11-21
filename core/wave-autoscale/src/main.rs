@@ -69,7 +69,6 @@ async fn main() {
         wave_config.clone(),
         &output_url,
         !args.quiet && args.verbose,
-        None,
     );
 
     // Run API Server
