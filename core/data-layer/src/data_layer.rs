@@ -211,7 +211,7 @@ impl DataLayer {
 
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
-            let mut lastest_total_cnt: i32 = 0;
+            let mut lastest_total_cnt: i64 = 0;
             loop {
                 // 1 second
                 tokio::time::sleep(tokio::time::Duration::from_millis(watch_duration_ms)).await;
@@ -244,7 +244,7 @@ impl DataLayer {
                 // check row changed (insert or delete)
                 let query_string = match database_kind {
                     AnyKind::Postgres => {
-                        "SELECT COUNT(1) AS cnt FROM metric; SELECT COUNT(1) AS cnt FROM scaling_component; SELECT COUNT(1) AS cnt FROM plan;"
+                        "(SELECT COUNT(1) AS cnt FROM metric) UNION ALL (SELECT COUNT(1) AS cnt FROM scaling_component) UNION ALL (SELECT COUNT(1) AS cnt FROM plan)"
                     }
                     AnyKind::Sqlite => {
                         "SELECT COUNT(1) AS cnt FROM metric; SELECT COUNT(1) AS cnt FROM scaling_component; SELECT COUNT(1) AS cnt FROM plan;"
@@ -259,9 +259,9 @@ impl DataLayer {
                     error!("Failed to fetch count from the database, result: {:?}", result_cnt.err().unwrap());
                     continue;
                 };
-                let mut total_cnt: i32 = 0;
+                let mut total_cnt: i64 = 0;
                 for row in &result_cnt_string {
-                    let cnt: i32 = row.get("cnt");
+                    let cnt: i64 = row.get("cnt");
                     total_cnt += cnt;
                 }
 
