@@ -120,16 +120,7 @@ async fn main() {
 
     // Run the main application(controller) in a loop
     // If watch_duration is 0, run the main application(controller) only once
-    let mut once = false;
-    while !once
-        || (watch_receiver.is_some() && watch_receiver.as_mut().unwrap().changed().await.is_ok())
-    {
-        if once {
-            // let change = watch_receiver.as_mut().unwrap().borrow();
-        } else {
-            once = true;
-        }
-
+    while watch_receiver.is_some() && watch_receiver.as_mut().unwrap().changed().await.is_ok() {
         // Update metric collectors
         let shared_data_layer = shared_data_layer.clone();
         let metric_definitions = shared_data_layer.get_all_metrics().await;

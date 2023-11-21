@@ -211,19 +211,19 @@ impl DataLayer {
 
         tokio::spawn(async move {
             let mut lastest_updated_at_hash: String = String::new();
-            let mut lastest_total_cnt: i64 = 0;
             loop {
                 // 1 second
                 tokio::time::sleep(tokio::time::Duration::from_millis(watch_duration_ms)).await;
                 debug!("Watching the definition in the db");
 
                 // REFACTOR: Use type state pattern to avoid this match
+                // watch all data for changed definition
                 let query_string = match database_kind {
                     AnyKind::Postgres => {
-                        "(SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1)"
+                        "(SELECT updated_at FROM metric) UNION (SELECT updated_at FROM scaling_component) UNION (SELECT updated_at FROM plan)"
                     }
                     AnyKind::Sqlite => {
-                        "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;"
+                        "SELECT updated_at FROM metric; SELECT updated_at FROM scaling_component; SELECT updated_at FROM plan;"
                     }
                     AnyKind::MySql => {
                         // Return error because MySQL is not supported yet
@@ -241,58 +241,17 @@ impl DataLayer {
                     updated_at_hash_string.push_str(&updated_at.to_string());
                 }
 
-                // check row changed (insert or delete)
-                let query_string = match database_kind {
-                    AnyKind::Postgres => {
-                        "(SELECT COUNT(1) AS cnt FROM metric) UNION ALL (SELECT COUNT(1) AS cnt FROM scaling_component) UNION ALL (SELECT COUNT(1) AS cnt FROM plan)"
-                    }
-                    AnyKind::Sqlite => {
-                        "SELECT COUNT(1) AS cnt FROM metric; SELECT COUNT(1) AS cnt FROM scaling_component; SELECT COUNT(1) AS cnt FROM plan;"
-                    }
-                    AnyKind::MySql => {
-                        // Return error because MySQL is not supported yet
-                        panic!("MySQL is not supported yet");
-                    }
-                };
-                let result_cnt = sqlx::query(query_string).fetch_all(&pool).await;
-                let Ok(result_cnt_string) = result_cnt else {
-                    error!("Failed to fetch count from the database, result: {:?}", result_cnt.err().unwrap());
-                    continue;
-                };
-                let mut total_cnt: i64 = 0;
-                for row in &result_cnt_string {
-                    let cnt: i64 = row.get("cnt");
-                    total_cnt += cnt;
-                }
-
-                let mut is_send = false;
                 if lastest_updated_at_hash != updated_at_hash_string {
-                    // Send signals after the first time
-                    if !lastest_updated_at_hash.is_empty() {
-                        let timestamp = Utc::now().to_rfc3339();
-                        let result = notify_sender.send(timestamp);
-                        if result.is_err() {
-                            error!(
-                                "Failed to send notify signal - timestamp: {}",
-                                result.err().unwrap().to_string()
-                            );
-                        }
-                        is_send = true;
-                    }
-                    lastest_updated_at_hash = updated_at_hash_string;
-                }
-
-                if !is_send && total_cnt != lastest_total_cnt {
                     let timestamp = Utc::now().to_rfc3339();
                     let result = notify_sender.send(timestamp);
                     if result.is_err() {
                         error!(
-                            "Failed to send notify signal - cnt: {}",
+                            "Failed to send notify signal - timestamp: {}",
                             result.err().unwrap().to_string()
                         );
                     }
+                    lastest_updated_at_hash = updated_at_hash_string;
                 }
-                lastest_total_cnt = total_cnt;
             }
         });
         notify_receiver
