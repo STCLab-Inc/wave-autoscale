@@ -1,55 +1,69 @@
 import classNames from 'classnames';
+import React from 'react';
+
+interface RenderKeyValuePairsProps {
+  [key: string]: any;
+}
 
 export function renderKeyValuePairs(
-  keyValuePairs: { [key: string]: any },
+  keyValuePairs: RenderKeyValuePairsProps,
   indent?: boolean,
   depth = 0
-) {
+): React.ReactNode {
   const indentFlag = indent ?? true;
 
-  return Object.keys(keyValuePairs)
-    .sort()
-    .map((key) => {
-      let value = keyValuePairs[key];
-      if (value != null && typeof value === 'object') {
-        value = renderKeyValuePairs(value, indentFlag, 1);
-      }
+  return (
+    <div
+      className={classNames('w-full pb-2', {
+        'pl-4': indentFlag && depth > 0,
+      })}
+    >
+      {Object.keys(keyValuePairs)
+        .sort()
+        .flatMap((key) => {
+          const value = keyValuePairs[key];
 
-      if (Array.isArray(value)) {
-        return (
-          <div
-            key={key}
-            className={classNames('mb-2 w-full', {
-              'ml-4': indentFlag,
-            })}
-          >
-            <div className="whitespace-normal break-all">{value}</div>
-          </div>
-        );
-      }
+          if (value != null && typeof value === 'object') {
+            return (
+              <div key={key}>
+                <div className="whitespace-normal break-all font-bold">
+                  {key}
+                </div>
+                {renderKeyValuePairs(value, indentFlag, depth + 1)}
+              </div>
+            );
+          }
 
-      if (!value) {
-        return null;
-      }
+          if (Array.isArray(value)) {
+            return (
+              <div key={key}>
+                <div className="whitespace-normal break-all font-bold">
+                  {key}
+                </div>
+                <div className="whitespace-normal break-all">{value}</div>
+              </div>
+            );
+          }
 
-      return (
-        <div
-          key={key}
-          className={classNames('mb-2 w-full', {
-            'ml-4': indentFlag,
-          })}
-        >
-          <div className="whitespace-normal break-all font-bold">{key}</div>
-          <div className="whitespace-normal break-all">{value}</div>
-        </div>
-      );
-    });
+          if (!value) {
+            return null;
+          }
+
+          return (
+            <div key={key}>
+              <div className="whitespace-normal break-all font-bold">{key}</div>
+              <div className="whitespace-normal break-all">{value}</div>
+            </div>
+          );
+        })}
+    </div>
+  );
 }
 
 export function renderKeyValuePairsWithJson(
   jsonString: string,
   indent?: boolean
-) {
+): React.ReactNode {
   const indentFlag = indent ?? true;
 
   try {
@@ -58,10 +72,11 @@ export function renderKeyValuePairsWithJson(
   } catch (error) {
     /* console.log({ error }); */
   }
+
   return indentFlag ? (
     <div>{jsonString}</div>
   ) : (
-    <div className="mb-2 w-full">
+    <div className="w-full pb-2">
       <div className="whitespace-normal break-all ">{jsonString}</div>
     </div>
   );
