@@ -64,7 +64,16 @@ export default function PlanningDiagramFlow({
   const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
   /* const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI); */
 
-  // Initialize
+  /* Copy */
+  const [copiedPlan, setCopiedPlan] = useState<any>(null);
+  const [copiedMetric, setCopiedMetric] = useState<any>(null);
+  const [copiedScalingComponent, setCopiedScalingComponent] =
+    useState<any>(null);
+
+  const [renderingPlansItem, setRenderingPlansItem] = useState<
+    ScalingPlanDefinitionEx | undefined
+  >(undefined);
+
   useEffect(() => {
     const fetch = async () => {
       const promises = [
@@ -75,89 +84,98 @@ export default function PlanningDiagramFlow({
       setMetricMap(keyBy(results[0], 'id'));
       setScalingComponentMap(keyBy(results[1], 'id'));
       if (plansItem) {
-        plansItem.plans.forEach((plan) => {
-          const expression = plan.expression;
-          const metricIdsInPlan = new Set<string>();
-          const scalingComponentIdsInPlan = new Set<string>();
-          if (expression) {
-            // 1. Metric Ids
-            try {
-              const ast = acorn.parse(expression, {
-                ecmaVersion: 2020,
-                sourceType: 'script',
-              });
-              walk.simple(ast, {
-                ObjectExpression(node: any) {
-                  // Check if this ObjectExpression is part of a BinaryExpression
-                  const metricIdProperty = node.properties.find(
-                    (property: any) => {
-                      return (
-                        property.key.type === 'Identifier' &&
-                        property.key.name === 'metric_id'
-                      );
+        const newRenderingPlansItem = produce(plansItem, (draft) => {
+          draft.plans.forEach((plan) => {
+            const expression = plan.expression;
+            const metricIdsInPlan = new Set<string>();
+            const scalingComponentIdsInPlan = new Set<string>();
+            if (expression) {
+              // 1. Metric Ids
+              try {
+                const ast = acorn.parse(expression, {
+                  ecmaVersion: 2020,
+                  sourceType: 'script',
+                });
+                walk.simple(ast, {
+                  ObjectExpression(node: any) {
+                    const metricIdProperty = node.properties.find(
+                      (property: any) => {
+                        return (
+                          property.key.type === 'Identifier' &&
+                          property.key.name === 'metric_id'
+                        );
+                      }
+                    );
+
+                    if (
+                      metricIdProperty &&
+                      metricIdProperty.value.type === 'Literal'
+                    ) {
+                      const metricIdValue = metricIdProperty.value.value;
+                      metricIdsInPlan.add(metricIdValue);
                     }
-                  );
-
-                  if (
-                    metricIdProperty &&
-                    metricIdProperty.value.type === 'Literal'
-                  ) {
-                    const metricIdValue = metricIdProperty.value.value;
-                    metricIdsInPlan.add(metricIdValue);
-                  }
-                },
-              });
-            } catch (error) {
-              metricIdsInPlan.add('Not found');
-              // TODO: Error handling
+                  },
+                });
+              } catch (error) {
+                metricIdsInPlan.add('Not found');
+                // TODO: Error handling
+              }
             }
-          }
 
-          // 2. Scaling Component Ids
-          plan.scaling_components?.forEach((component) => {
-            scalingComponentIdsInPlan.add(component.component_id);
+            // 2. Scaling Component Ids
+            plan.scaling_components?.forEach((component) => {
+              scalingComponentIdsInPlan.add(component.component_id);
+            });
+
+            // Update the plan with the new ui property
+            plan.ui = {
+              ...(plan.ui ?? {}),
+              metrics: Array.from(metricIdsInPlan).map(
+                (metricId) =>
+                  ({
+                    id: metricId,
+                    selected: false,
+                  } as MetricUI)
+              ),
+              scalingComponents: Array.from(scalingComponentIdsInPlan).map(
+                (scalingComponentId) =>
+                  ({
+                    id: scalingComponentId,
+                    selected: false,
+                  } as ScalingComponentUI)
+              ),
+            };
           });
-          plan.ui = {
-            ...(plan.ui ?? {}),
-            metrics: Array.from(metricIdsInPlan).map(
-              (metricId) =>
-                ({
-                  id: metricId,
-                  selected: false,
-                } as MetricUI)
-            ),
-            scalingComponents: Array.from(scalingComponentIdsInPlan).map(
-              (scalingComponentId) =>
-                ({
-                  id: scalingComponentId,
-                  selected: false,
-                } as ScalingComponentUI)
-            ),
-          };
         });
+
+        // Update the state with the new renderingPlansItem
+        setRenderingPlansItem(newRenderingPlansItem);
       }
     };
+
     fetch();
   }, [plansItem]);
 
   // Nodes are the plans and metrics
   const nodes = useMemo(() => {
-    if (plansItem) {
-      console.log(plansItem);
+    if (renderingPlansItem) {
+      // Use renderingPlansItem instead of plansItem for rendering
       const POSITION_X_OFFSET = 400;
       const POSITION_Y_OFFSET = 200;
       const metrics = unionBy(
-        flatten(plansItem.plans?.map((plan) => plan?.ui?.metrics)),
+        flatten(renderingPlansItem.plans?.map((plan) => plan?.ui?.metrics)),
         'id'
       );
       const scalingComponents = unionBy(
-        flatten(plansItem.plans?.map((plan) => plan?.ui?.scalingComponents)),
+        flatten(
+          renderingPlansItem.plans?.map((plan) => plan?.ui?.scalingComponents)
+        ),
         'id'
       );
 
       const maxWidth =
         Math.max(
-          plansItem.plans?.length,
+          renderingPlansItem.plans?.length,
           metrics?.length,
           scalingComponents?.length
         ) * POSITION_X_OFFSET;
@@ -170,7 +188,7 @@ export default function PlanningDiagramFlow({
           position: {
             x: 0,
             y:
-              (POSITION_Y_OFFSET * plansItem.plans?.length) / 2 -
+              (POSITION_Y_OFFSET * renderingPlansItem.plans?.length) / 2 -
               POSITION_Y_OFFSET / 2,
           },
           data: {
@@ -181,7 +199,7 @@ export default function PlanningDiagramFlow({
         };
       });
 
-      const planNodes = plansItem.plans.map((plan, index) => {
+      const planNodes = renderingPlansItem.plans.map((plan, index) => {
         return {
           // Default properties
           id: plan.id,
@@ -206,7 +224,7 @@ export default function PlanningDiagramFlow({
             position: {
               x: 4 * POSITION_X_OFFSET,
               y:
-                (POSITION_Y_OFFSET * plansItem.plans?.length) / 2 -
+                (POSITION_Y_OFFSET * renderingPlansItem.plans?.length) / 2 -
                 POSITION_Y_OFFSET / 2,
             },
             data: {
@@ -222,13 +240,14 @@ export default function PlanningDiagramFlow({
 
       return [...planNodes, ...metricNodes, ...scalingComponentNodes];
     }
-  }, [plansItem, metricMap, scalingComponentMap]);
+  }, [renderingPlansItem, metricMap, scalingComponentMap]);
 
   const edges = useMemo(() => {
-    if (plansItem) {
+    if (renderingPlansItem) {
+      // Use renderingPlansItem instead of plansItem for rendering
       const edgesForPlanAndMetric: Edge[] = [];
       const edgesForPlanAndScalingComponent: Edge[] = [];
-      plansItem.plans.forEach((plan) => {
+      renderingPlansItem.plans.forEach((plan) => {
         const metrics = plan?.ui?.metrics;
         if (metrics?.length) {
           metrics?.forEach((metric: MetricUI) => {
@@ -267,7 +286,7 @@ export default function PlanningDiagramFlow({
       });
       return [...edgesForPlanAndMetric, ...edgesForPlanAndScalingComponent];
     }
-  }, [plansItem, metricMap, scalingComponentMap]);
+  }, [renderingPlansItem, metricMap, scalingComponentMap]);
 
   const onNodesChange = (nodes: NodeChange[]) => {
     if (plansItem) {
@@ -301,7 +320,6 @@ export default function PlanningDiagramFlow({
       });
     }
   };
-
   return (
     <ReactFlow
       nodes={nodes}
