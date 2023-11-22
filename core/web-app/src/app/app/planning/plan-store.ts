@@ -137,17 +137,33 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           if (expression) {
             // 1. Metric Ids
             try {
-              // Abstract Syntax Tree
               const ast = acorn.parse(expression, {
                 ecmaVersion: 2020,
                 sourceType: 'script',
               });
               walk.simple(ast, {
-                Identifier(node: any) {
-                  metricIdsInPlan.add(node.name);
+                ObjectExpression(node: any) {
+                  // Check if this ObjectExpression is part of a BinaryExpression
+                  const metricIdProperty = node.properties.find(
+                    (property: any) => {
+                      return (
+                        property.key.type === 'Identifier' &&
+                        property.key.name === 'metric_id'
+                      );
+                    }
+                  );
+
+                  if (
+                    metricIdProperty &&
+                    metricIdProperty.value.type === 'Literal'
+                  ) {
+                    const metricIdValue = metricIdProperty.value.value;
+                    metricIdsInPlan.add(metricIdValue);
+                  }
                 },
               });
             } catch (error) {
+              metricIdsInPlan.add('Not found');
               // TODO: Error handling
             }
           }
@@ -156,7 +172,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           plan.scaling_components?.forEach((component) => {
             scalingComponentIdsInPlan.add(component.component_id);
           });
-
           plan.ui = {
             ...(plan.ui ?? {}),
             metrics: Array.from(metricIdsInPlan).map(
