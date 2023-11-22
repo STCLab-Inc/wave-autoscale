@@ -1,135 +1,112 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { forEach } from 'lodash';
+import React, { useEffect } from 'react';
+
+import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
+// import 'ace-builds/src-noconflict/ext-language_tools';
+import AceEditor from 'react-ace';
+import 'ace-builds/src-noconflict/mode-javascript';
+import 'ace-builds/src-noconflict/snippets/javascript';
+import 'ace-builds/src-noconflict/theme-xcode';
+import 'ace-builds/src-noconflict/mode-yaml';
 
-import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
-import {
-  generateScalingComponentDefinition,
-  getScalingComponentKeyTypes,
-} from '@/utils/scaling-component-binding';
 import ScalingComponentService from '@/services/scaling-component';
-import { getMetadataFormControls } from './metadata-form-controls';
-
-const componentKeyTypes = getScalingComponentKeyTypes();
-const componentOptions = componentKeyTypes.map((componentKeyType) => (
-  <option
-    key={componentKeyType.componentName}
-    value={componentKeyType.componentName}
-  >
-    {componentKeyType.componentName}
-  </option>
-));
+import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import { generateScalingComponentDefinition } from '@/utils/scaling-component-binding';
 
 export default function ScalingComponentDetailDrawer({
-  componentDefinition,
-  exitFunction,
+  scalingComponentsItem,
+  setDetailsModalFlag,
+  setFetchFlag,
 }: {
-  componentDefinition?: ScalingComponentDefinition | undefined;
-  exitFunction: () => void;
+  scalingComponentsItem?: ScalingComponentDefinition;
+  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
+  setFetchFlag: (fetchFlag: boolean) => void;
 }) {
-  const { register, handleSubmit, setValue, getValues, reset } = useForm();
+  const { register, handleSubmit, control, setValue, reset } = useForm();
 
-  const dbId = componentDefinition?.db_id;
+  const dbId = scalingComponentsItem?.db_id;
   const isNew = !dbId;
-  const [selectedComponentKind, setSelectedComponentKind] = useState<string>();
 
-  const metadataFormControls = useMemo(() => {
-    if (selectedComponentKind) {
-      const keyTypes = componentKeyTypes.find(
-        (componentKeyType) =>
-          componentKeyType.componentName === selectedComponentKind
-      )?.keyTypes;
-      if (keyTypes) {
-        return getMetadataFormControls(keyTypes, register);
-      }
-    }
-  }, [selectedComponentKind]);
+  const yaml = require('js-yaml');
 
   useEffect(() => {
     if (isNew) {
       return;
     }
+
     const { kind, db_id, id, component_kind, metadata, ...rest } =
-      componentDefinition;
+      scalingComponentsItem;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('component_kind', component_kind);
-    forEach(metadata, (value, key) => {
-      setValue(key, value);
-    });
-    setSelectedComponentKind(component_kind);
-  }, [componentDefinition, isNew]);
+    setValue('metadata', yaml.dump(metadata));
+  }, [scalingComponentsItem]);
 
   const onClickOverlay = () => {
-    exitFunction();
-  };
-
-  const onChangeComponentKind = (e: any) => {
-    const componentKind = e.target.value;
-    setSelectedComponentKind(componentKind);
-
-    const id = getValues('id');
-    reset();
-    setValue('id', id);
-    setValue('component_kind', componentKind);
+    setFetchFlag(true);
+    setDetailsModalFlag(false);
   };
 
   const onClickExit = async () => {
-    exitFunction();
+    setFetchFlag(true);
+    setDetailsModalFlag(false);
   };
 
   const onClickInitialize = async () => {
-    setSelectedComponentKind('Scaling Component Kind');
-
     reset();
-    setValue('component_kind', 'Scaling Component Kind');
   };
 
   const onClickRemove = async () => {
-    if (isNew || !dbId) {
+    if (isNew) {
       return;
     }
     try {
-      await ScalingComponentService.deleteScalingComponent(dbId);
-      exitFunction();
+      const response = await ScalingComponentService.deleteScalingComponent(
+        dbId
+      );
+      console.info({ response });
+
+      setFetchFlag(true);
+      setDetailsModalFlag(false);
     } catch (error) {
       console.log(error);
     }
   };
 
   const onSubmit = async (data: any) => {
-    const { id, component_kind, ...metadata } = data;
-    const componentDefinition = generateScalingComponentDefinition({
-      id,
-      db_id: isNew ? '' : dbId,
-      component_kind,
-      metadata,
+    const { kind, db_id, id, component_kind, metadata, ...rest } = data;
+
+    const scalingComponentsItem = generateScalingComponentDefinition({
+      kind: 'ScalingComponent',
+      id: id,
+      db_id: dbId,
+      component_kind: component_kind,
+      metadata: yaml.load(metadata),
     });
     try {
       if (isNew) {
-        const result = await ScalingComponentService.createScalingComponent(
-          componentDefinition
+        const response = await ScalingComponentService.createScalingComponent(
+          scalingComponentsItem
         );
-        console.log({ result, isNew });
+        console.log({ response, isNew });
       } else {
-        const result = await ScalingComponentService.updateScalingComponent(
-          componentDefinition
+        const response = await ScalingComponentService.updateScalingComponent(
+          scalingComponentsItem
         );
-        console.log({ result });
+        console.info({ response });
       }
-      exitFunction();
+      setFetchFlag(true);
+      setDetailsModalFlag(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
   return (
-    <div className="scaling-components-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
+    <div className="scaling-component-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
@@ -187,26 +164,6 @@ export default function ScalingComponentDetailDrawer({
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
                 <span className="text-md label-text px-2">
-                  Scaling Component Kind
-                </span>
-                {/* <span className="label-text-alt">label-text-alt</span> */}
-              </label>
-              <select
-                className="select-bordered select my-2 flex w-full truncate rounded-md text-sm focus:outline-none"
-                defaultValue="Scaling Component Kind"
-                {...register('component_kind', {
-                  required: true,
-                  onChange: onChangeComponentKind,
-                })}
-              >
-                <option disabled>Scaling Component Kind</option>
-                {componentOptions}
-              </select>
-            </div>
-
-            <div className="form-control w-full px-4 py-2">
-              <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
                   Scaling Component ID
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
@@ -222,7 +179,63 @@ export default function ScalingComponentDetailDrawer({
               />
             </div>
 
-            {metadataFormControls}
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">
+                  Scaling Component Kind
+                </span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <input
+                type="text"
+                placeholder="Scaling Component Kind"
+                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                {...register('component_kind', { required: true })}
+              />
+            </div>
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">
+                  Scaling Component Metadata
+                </span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
+                <Controller
+                  control={control}
+                  name="metadata"
+                  render={({ field: { onChange, value } }) => (
+                    <AceEditor
+                      mode="yaml"
+                      theme="xcode"
+                      onChange={onChange}
+                      value={value}
+                      editorProps={{
+                        $blockScrolling: true,
+                      }}
+                      setOptions={{
+                        showLineNumbers: false,
+                        // TODO: Autocomplete
+                        // https://github.com/ajaxorg/ace/wiki/How-to-enable-Autocomplete-in-the-Ace-editor
+                        enableBasicAutocompletion: true,
+                        enableLiveAutocompletion: true,
+                        enableSnippets: true,
+                        showGutter: false,
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: '40rem',
+                      }}
+                    />
+                  )}
+                />
+              </div>
+            </div>
           </form>
         </div>
       </div>
