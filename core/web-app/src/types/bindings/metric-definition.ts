@@ -6,6 +6,5 @@ export interface MetricDefinition {
   db_id: string;
   id: string;
   collector: string;
-  metric_kind: string;
   metadata: object;
 }

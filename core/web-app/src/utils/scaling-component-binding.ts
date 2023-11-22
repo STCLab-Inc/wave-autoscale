@@ -56,9 +56,10 @@ export function getScalingComponentPlanKeyTypes(): ScalingComponentKeyType[] {
   });
 
   // k8s Deployment
-  const k8sDeploymentComponent = getInterfaceKeyTypes<K8sDeploymentPlanMetadata>({
-    replicas: 0,
-  });
+  const k8sDeploymentComponent =
+    getInterfaceKeyTypes<K8sDeploymentPlanMetadata>({
+      replicas: 0,
+    });
   componentKeyTypes.push({
     componentName: 'kubernetes-deployment',
     keyTypes: k8sDeploymentComponent,
@@ -68,18 +69,20 @@ export function getScalingComponentPlanKeyTypes(): ScalingComponentKeyType[] {
 }
 
 export function generateScalingComponentDefinition({
+  kind,
   id,
   db_id,
   component_kind,
   metadata,
 }: {
+  kind: string;
   id: string;
   db_id?: string;
   component_kind: string;
   metadata: any;
 }) {
   return {
-    kind: 'ScalingComponent',
+    kind: kind,
     id,
     db_id,
     component_kind,

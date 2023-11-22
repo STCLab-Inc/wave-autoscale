@@ -72,7 +72,7 @@ export default function ScalingComponentDetailDrawer({
       setFetchFlag(true);
       setDetailsModalFlag(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
@@ -91,7 +91,7 @@ export default function ScalingComponentDetailDrawer({
         const response = await ScalingComponentService.createScalingComponent(
           scalingComponentsItem
         );
-        console.log({ response, isNew });
+        console.info({ response, isNew });
       } else {
         const response = await ScalingComponentService.updateScalingComponent(
           scalingComponentsItem

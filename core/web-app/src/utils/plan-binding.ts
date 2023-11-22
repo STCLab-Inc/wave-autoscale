@@ -2,21 +2,23 @@ import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition'
 import { nanoid } from 'nanoid';
 
 export function generatePlanDefinition({
-  id = `generated-id-${nanoid(5)}`,
-  db_id = '',
-  title,
-  plans = [],
+  kind,
+  id,
+  db_id,
+  metadata,
+  plans,
 }: {
+  kind: string;
   id?: string;
   db_id?: string;
-  title: string;
+  metadata?: any;
   plans?: any[];
 }) {
   return {
-    kind: 'ScalingPlan',
-    db_id,
+    kind: kind,
     id,
-    metadata: { title },
+    db_id,
+    metadata,
     plans,
   } as ScalingPlanDefinition;
 }
