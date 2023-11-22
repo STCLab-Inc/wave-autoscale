@@ -56,6 +56,7 @@ export default function AutoscalingHistoryPage() {
 
   const fetchAutoscalingHistory = async () => {
     try {
+      const id = autosclingHistoryItem?.id;
       let autoscalingHistory = await getAutoscalingHistory(fromDayjs, toDayjs);
       autoscalingHistory = autoscalingHistory.map(
         (autosclingHistoryItem: AutoscalingHistoryDefinition) => ({
@@ -64,6 +65,11 @@ export default function AutoscalingHistoryPage() {
         })
       );
       setAutoscalingHistory(autoscalingHistory);
+      setAutosclingHistoryItem(
+        autoscalingHistory.find(
+          (item: AutoscalingHistoryDefinition) => item.id === id
+        )
+      );
     } catch (error) {
       console.error({ error });
       return [];

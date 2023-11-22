@@ -33,8 +33,12 @@ export default function MetricsPage() {
 
   const fetchMetrics = async () => {
     try {
+      const db_id = metricsItem?.db_id;
       let metrics = await getMetrics();
       setMetrics(metrics);
+      setMetricsItem(
+        metrics.find((item: MetricDefinitionEx) => item.db_id === db_id)
+      );
     } catch (error) {
       console.error({ error });
       return [];
