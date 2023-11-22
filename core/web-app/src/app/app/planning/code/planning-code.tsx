@@ -3,13 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import dynamic from 'next/dynamic';
-import {
-  YAMLParseError,
-  parse as parseYaml,
-  stringify as stringifyYaml,
-} from 'yaml';
+import { YAMLParseError, parse as parseYaml } from 'yaml';
+import { produce } from 'immer';
 
-import { usePlanStore } from '../plan-store';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import PlanService from '@/services/plan';
 
@@ -54,7 +50,25 @@ export default function PlanningCodeComponent({
   };
 
   useEffect(() => {
-    setValue('yamlCode', yaml.dump(plansItem));
+    const yamlCode = yaml.dump(plansItem);
+    const parsedYaml = parseYaml(yamlCode);
+    const { kind, db_id, id, metadata, plans, ...rest } = parsedYaml;
+    const newScalingPlanDefinition: ScalingPlanDefinitionEx = {
+      kind,
+      db_id,
+      id,
+      metadata,
+      plans,
+    };
+    const scalingPlanForCode = produce(
+      newScalingPlanDefinition,
+      (draft: any) => {
+        draft.plans?.forEach((plan: any) => {
+          delete plan.ui;
+        });
+      }
+    );
+    setValue('yamlCode', yaml.dump(scalingPlanForCode));
   }, [plansItem]);
 
   const onSubmit = async (data: any) => {
