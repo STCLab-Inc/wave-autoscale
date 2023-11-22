@@ -8,14 +8,20 @@ interface RenderKeyValuePairsProps {
 export function renderKeyValuePairs(
   keyValuePairs: RenderKeyValuePairsProps,
   indent?: boolean,
-  depth = 0
+  depth = 0,
+  preventIndent?: boolean
 ): React.ReactNode {
   const indentFlag = indent ?? true;
+  const preventIndentFlag = preventIndent ?? false;
 
   return (
     <div
       className={classNames('w-full', {
-        'pl-4': indentFlag && depth > 0 && !Array.isArray(keyValuePairs),
+        'pl-4':
+          indentFlag &&
+          depth > 0 &&
+          !Array.isArray(keyValuePairs) &&
+          !preventIndentFlag,
       })}
     >
       {Object.keys(keyValuePairs)
@@ -25,7 +31,7 @@ export function renderKeyValuePairs(
 
           if (value != null && typeof value === 'object') {
             return Array.isArray(keyValuePairs) ? (
-              renderKeyValuePairs(value, indentFlag, depth + 1)
+              renderKeyValuePairs(value, indentFlag, depth + 1, true)
             ) : (
               <div key={key}>
                 <div className="whitespace-normal break-all font-bold">
@@ -60,8 +66,6 @@ export function renderKeyValuePairsWithJson(
   indent?: boolean
 ): React.ReactNode {
   const indentFlag = indent ?? true;
-
-  console.log(jsonString);
 
   try {
     const keyValuePairs = JSON.parse(jsonString);
