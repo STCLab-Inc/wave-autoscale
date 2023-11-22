@@ -37,10 +37,16 @@ export default function ScalingComponentsPage() {
 
   const fetchScalingComponents = async () => {
     try {
+      const db_id = scalingComponentsItem?.db_id;
       let scalingComponents = await getScalingComponents();
       setScalingComponents(scalingComponents);
+      setScalingComponentsItem(
+        scalingComponents.find(
+          (item: ScalingComponentDefinitionEx) => item.db_id === db_id
+        )
+      );
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return [];
     }
   };

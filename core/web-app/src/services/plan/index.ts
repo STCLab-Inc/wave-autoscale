@@ -23,6 +23,11 @@ class PlanServiceClass {
     const response = await DataLayer.put(`/api/plans/${plan.db_id}`, plan);
     return response.data;
   }
+
+  async deletePlan(id: string) {
+    const response = await DataLayer.delete(`/api/plans/${id}`);
+    return response.data;
+  }
 }
 
 const PlanService = new PlanServiceClass();
