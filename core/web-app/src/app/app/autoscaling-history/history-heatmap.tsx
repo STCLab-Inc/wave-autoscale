@@ -1,21 +1,22 @@
-import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
+import Reat, { memo, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
-import { memo, useMemo } from 'react';
+
+import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
 
 interface HistoryHeatmapProps {
-  history: any;
+  autoscalingHistory: any;
   from: Dayjs;
   to: Dayjs;
 }
 
-function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
+function HistoryHeatmap({ autoscalingHistory, from, to }: HistoryHeatmapProps) {
   const dataForHeatmap = useMemo(() => {
-    if (!history) {
+    if (!autoscalingHistory) {
       return [];
     }
 
-    const groupedByDate = groupBy(history, (historyItem) =>
+    const groupedByDate = groupBy(autoscalingHistory, (historyItem) =>
       dayjs.unix(historyItem.created_at / 1000).format('YYYY-MM-DD')
     );
 
@@ -61,7 +62,7 @@ function HistoryHeatmap({ history, from, to }: HistoryHeatmapProps) {
       });
 
     return data;
-  }, [history, from, to]);
+  }, [autoscalingHistory, from, to]);
 
   const maxValue = useMemo(() => {
     let maxValue = 0;
