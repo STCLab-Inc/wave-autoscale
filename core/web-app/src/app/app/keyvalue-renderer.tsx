@@ -33,18 +33,6 @@ export function renderKeyValuePairs(
               </div>
             );
           }
-
-          if (Array.isArray(value)) {
-            return (
-              <div key={key}>
-                <div className="whitespace-normal break-all font-bold">
-                  {key}
-                </div>
-                <div className="whitespace-normal break-all">{value}</div>
-              </div>
-            );
-          }
-
           if (!value) {
             return null;
           }
@@ -65,6 +53,8 @@ export function renderKeyValuePairsWithJson(
   indent?: boolean
 ): React.ReactNode {
   const indentFlag = indent ?? true;
+
+  console.log(jsonString);
 
   try {
     const keyValuePairs = JSON.parse(jsonString);
