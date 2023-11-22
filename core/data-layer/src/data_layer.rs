@@ -217,12 +217,13 @@ impl DataLayer {
                 debug!("Watching the definition in the db");
 
                 // REFACTOR: Use type state pattern to avoid this match
+                // watch all data for changed definition
                 let query_string = match database_kind {
                     AnyKind::Postgres => {
-                        "(SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1) UNION (SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1)"
+                        "(SELECT updated_at FROM metric) UNION (SELECT updated_at FROM scaling_component) UNION (SELECT updated_at FROM plan)"
                     }
                     AnyKind::Sqlite => {
-                        "SELECT updated_at FROM metric ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM scaling_component ORDER BY updated_at DESC LIMIT 1; SELECT updated_at FROM plan ORDER BY updated_at DESC LIMIT 1;"
+                        "SELECT updated_at FROM metric; SELECT updated_at FROM scaling_component; SELECT updated_at FROM plan;"
                     }
                     AnyKind::MySql => {
                         // Return error because MySQL is not supported yet
@@ -241,16 +242,13 @@ impl DataLayer {
                 }
 
                 if lastest_updated_at_hash != updated_at_hash_string {
-                    // Send signals after the first time
-                    if !lastest_updated_at_hash.is_empty() {
-                        let timestamp = Utc::now().to_rfc3339();
-                        let result = notify_sender.send(timestamp);
-                        if result.is_err() {
-                            error!(
-                                "Failed to send notify signal: {}",
-                                result.err().unwrap().to_string()
-                            );
-                        }
+                    let timestamp = Utc::now().to_rfc3339();
+                    let result = notify_sender.send(timestamp);
+                    if result.is_err() {
+                        error!(
+                            "Failed to send notify signal - timestamp: {}",
+                            result.err().unwrap().to_string()
+                        );
                     }
                     lastest_updated_at_hash = updated_at_hash_string;
                 }
