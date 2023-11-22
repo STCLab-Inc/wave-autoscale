@@ -14,8 +14,8 @@ export function renderKeyValuePairs(
 
   return (
     <div
-      className={classNames('w-full pb-2', {
-        'pl-4': indentFlag && depth > 0,
+      className={classNames('w-full', {
+        'pl-4': indentFlag && depth > 0 && !Array.isArray(keyValuePairs),
       })}
     >
       {Object.keys(keyValuePairs)
@@ -24,7 +24,9 @@ export function renderKeyValuePairs(
           const value = keyValuePairs[key];
 
           if (value != null && typeof value === 'object') {
-            return (
+            return Array.isArray(keyValuePairs) ? (
+              renderKeyValuePairs(value, indentFlag, depth + 1)
+            ) : (
               <div key={key}>
                 <div className="whitespace-normal break-all font-bold">
                   {key}
@@ -33,11 +35,16 @@ export function renderKeyValuePairs(
               </div>
             );
           }
+
           if (!value) {
             return null;
           }
 
-          return (
+          return Array.isArray(keyValuePairs) ? (
+            <div key={key}>
+              <div className="whitespace-normal break-all">{value}</div>
+            </div>
+          ) : (
             <div key={key}>
               <div className="whitespace-normal break-all font-bold">{key}</div>
               <div className="whitespace-normal break-all">{value}</div>
