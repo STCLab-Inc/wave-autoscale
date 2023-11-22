@@ -1,22 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+
 import { decodeTime } from 'ulid';
 import dayjs from 'dayjs';
 
-import { renderKeyValuePairsWithJson } from './keyvalue-renderer';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
+
+import { renderKeyValuePairsWithJson } from './keyvalue-renderer';
 
 interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
   created_at: string;
 }
 
 export default function AutoscalingHistoryDetailDrawer({
-  autoscalingHistoryDefinition,
+  autosclingHistoryItem,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  autoscalingHistoryDefinition?: AutoscalingHistoryDefinitionEx;
+  autosclingHistoryItem?: AutoscalingHistoryDefinitionEx;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
@@ -24,7 +26,7 @@ export default function AutoscalingHistoryDetailDrawer({
     useState<AutoscalingHistoryDefinitionEx>();
 
   useEffect(() => {
-    if (autoscalingHistoryDefinition) {
+    if (autosclingHistoryItem) {
       const {
         id,
         plan_db_id,
@@ -35,7 +37,7 @@ export default function AutoscalingHistoryDetailDrawer({
         fail_message,
         created_at,
         ...rest
-      } = autoscalingHistoryDefinition;
+      } = autosclingHistoryItem;
 
       setAutoscalingHistory({
         ...rest,
@@ -51,13 +53,15 @@ export default function AutoscalingHistoryDetailDrawer({
           .format('YYYY/MM/DD HH:mm:ss'),
       });
     }
-  }, [autoscalingHistoryDefinition]);
+  }, [autosclingHistoryItem]);
 
   const onClickOverlay = () => {
+    setFetchFlag(true);
     setDetailsModalFlag(false);
   };
 
   const onClickExit = async () => {
+    setFetchFlag(true);
     setDetailsModalFlag(false);
   };
 
