@@ -32,7 +32,6 @@ export default function ScalingComponentsPage() {
   const [scalingComponents, setScalingComponents] = useState<
     ScalingComponentDefinitionEx[]
   >([]);
-
   const [scalingComponentsItem, setScalingComponentsItem] =
     useState<ScalingComponentDefinitionEx>();
 

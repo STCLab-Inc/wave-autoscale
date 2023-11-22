@@ -51,7 +51,6 @@ export default function AutoscalingHistoryPage() {
   const [autoscalingHistory, setAutoscalingHistory] = useState<
     AutoscalingHistoryDefinitionEx[]
   >([]);
-
   const [autosclingHistoryItem, setAutosclingHistoryItem] =
     useState<AutoscalingHistoryDefinitionEx>();
 
