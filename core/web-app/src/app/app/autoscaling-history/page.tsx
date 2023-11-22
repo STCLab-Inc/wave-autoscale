@@ -12,7 +12,7 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 import ContentHeader from '../content-header';
 import HistoryHeatmap from './history-heatmap';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
-import AutoscalingHistoryDetailDrawer from '../autoscaling-history-drawer';
+import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
@@ -399,7 +399,7 @@ export default function AutoscalingHistoryPage() {
             </table>
           </div>
         </div>
-        {detailsModalFlag && autosclingHistoryItem ? (
+        {detailsModalFlag ? (
           <AutoscalingHistoryDetailDrawer
             autosclingHistoryItem={autosclingHistoryItem}
             setDetailsModalFlag={setDetailsModalFlag}
