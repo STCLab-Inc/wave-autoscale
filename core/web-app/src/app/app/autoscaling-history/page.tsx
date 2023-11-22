@@ -1,23 +1,27 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import dayjs, { Dayjs } from 'dayjs';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { decodeTime } from 'ulid';
-import Link from 'next/link';
 
-import ContentHeader from '../content-header';
+import dayjs, { Dayjs } from 'dayjs';
+import { decodeTime } from 'ulid';
+
 import AutoscalingHistoryService from '@/services/autoscaling-history';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
+
+import ContentHeader from '../content-header';
 import HistoryHeatmap from './history-heatmap';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 import AutoscalingHistoryDetailDrawer from '../autoscaling-history-drawer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
-async function getHistory(from: Dayjs, to: Dayjs) {
-  const history = await AutoscalingHistoryService.getHistoryByFromTo(from, to);
-  return history;
+async function getAutoscalingHistory(from: Dayjs, to: Dayjs) {
+  const autoscalingHistory = await AutoscalingHistoryService.getHistoryByFromTo(
+    from,
+    to
+  );
+  return autoscalingHistory;
 }
 
 const DEFAULT_FROM = dayjs().subtract(7, 'days');
@@ -29,37 +33,46 @@ interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
 }
 
 export default function AutoscalingHistoryPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+
   const fromParam = searchParams.get('from');
   const toParam = searchParams.get('to');
   const from = fromParam || formatDate(DEFAULT_FROM);
   const to = toParam || formatDate(DEFAULT_TO);
   const fromDayjs = useMemo(() => dayjs(from), [from]);
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
-  const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
-  const router = useRouter();
 
   const pageParam = searchParams.get('page');
   const page = pageParam ? parseInt(pageParam, 10) : 1;
   const viewParam = searchParams.get('view');
   const view = viewParam ? parseInt(viewParam, 10) : 10;
 
-  const fetchHistory = async () => {
+  const [autoscalingHistory, setAutoscalingHistory] = useState<
+    AutoscalingHistoryDefinitionEx[]
+  >([]);
+
+  const [autosclingHistoryItem, setAutosclingHistoryItem] =
+    useState<AutoscalingHistoryDefinitionEx>();
+
+  const fetchAutoscalingHistory = async () => {
     try {
-      let history = await getHistory(fromDayjs, toDayjs);
-      history = history.map((historyItem: AutoscalingHistoryDefinition) => ({
-        ...historyItem,
-        created_at: decodeTime(historyItem.id),
-      }));
-      setHistory(history);
+      let autoscalingHistory = await getAutoscalingHistory(fromDayjs, toDayjs);
+      autoscalingHistory = autoscalingHistory.map(
+        (autosclingHistoryItem: AutoscalingHistoryDefinition) => ({
+          ...autosclingHistoryItem,
+          created_at: decodeTime(autosclingHistoryItem.id),
+        })
+      );
+      setAutoscalingHistory(autoscalingHistory);
     } catch (error) {
       console.error({ error });
+      return [];
     }
-    setFetchFlag(false);
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchAutoscalingHistory();
   }, [fromDayjs, toDayjs]);
 
   const handleDateChange = (field: 'from' | 'to', value: string) => {
@@ -78,16 +91,17 @@ export default function AutoscalingHistoryPage() {
       );
     }
   };
+
   const [checkAllFlag, setCheckAllFlag] = useState(false);
 
   const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
     setCheckAllFlag(checked);
-    const updatedHistory = history.map((historyItem) => ({
-      ...historyItem,
+    const updatedHistory = autoscalingHistory.map((autosclingHistoryItem) => ({
+      ...autosclingHistoryItem,
       isChecked: checked,
     }));
-    setHistory(updatedHistory);
+    setAutoscalingHistory(updatedHistory);
   };
 
   const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
@@ -95,11 +109,15 @@ export default function AutoscalingHistoryPage() {
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalPageCount = Math.ceil(history.length / itemsPerPage) || 1;
+  const totalPageCount =
+    Math.ceil(autoscalingHistory.length / itemsPerPage) || 1;
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const visibleHistory = history.slice(startIndex, endIndex);
+  const visibleAutoscalingHistory = autoscalingHistory.slice(
+    startIndex,
+    endIndex
+  );
 
   const handleItemsPerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -128,11 +146,11 @@ export default function AutoscalingHistoryPage() {
   }, [currentPage, itemsPerPage]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
-  const [historyItem, setHistoryItem] =
-    useState<AutoscalingHistoryDefinitionEx>();
 
-  const onClickDetails = (historyItem: AutoscalingHistoryDefinitionEx) => {
-    setHistoryItem(historyItem);
+  const onClickDetails = (
+    autosclingHistoryItem: AutoscalingHistoryDefinitionEx
+  ) => {
+    setAutosclingHistoryItem(autosclingHistoryItem);
     setDetailsModalFlag(true);
   };
 
@@ -140,7 +158,8 @@ export default function AutoscalingHistoryPage() {
 
   useEffect(() => {
     if (fetchFlag) {
-      fetchHistory();
+      fetchAutoscalingHistory();
+      setFetchFlag(false);
     }
   }, [fetchFlag]);
 
@@ -183,7 +202,11 @@ export default function AutoscalingHistoryPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
+            <HistoryHeatmap
+              autoscalingHistory={autoscalingHistory}
+              from={fromDayjs}
+              to={toDayjs}
+            />
             <div className="flex items-center justify-end px-8 py-4">
               <div className="mr-2 flex w-16 items-center">
                 <label className="select-group-sm">
@@ -280,10 +303,10 @@ export default function AutoscalingHistoryPage() {
                 </tr>
               </thead>
               <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
-                {visibleHistory.map(
-                  (historyItem: AutoscalingHistoryDefinitionEx) => (
+                {visibleAutoscalingHistory.map(
+                  (autosclingHistoryItem: AutoscalingHistoryDefinitionEx) => (
                     <tr
-                      key={historyItem.id}
+                      key={autosclingHistoryItem.id}
                       className="flex w-full border-b px-8 py-4"
                     >
                       <td className="mr-4 flex h-full flex-1 items-start">
@@ -291,28 +314,29 @@ export default function AutoscalingHistoryPage() {
                           <input
                             type="checkbox"
                             className="checkbox"
-                            checked={historyItem.isChecked}
+                            checked={autosclingHistoryItem.isChecked}
                             onChange={(event) => {
                               const checked = event.target.checked;
-                              const updatedHistory = history.map((item) =>
-                                item.id === historyItem.id
-                                  ? { ...item, isChecked: checked }
-                                  : item
+                              const updatedHistory = autoscalingHistory.map(
+                                (item) =>
+                                  item.id === autosclingHistoryItem.id
+                                    ? { ...item, isChecked: checked }
+                                    : item
                               );
-                              setHistory(updatedHistory);
+                              setAutoscalingHistory(updatedHistory);
                             }}
                           />
                         </label>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-4 items-start">
                         <div className="flex items-center break-all">
-                          {historyItem.plan_id}
+                          {autosclingHistoryItem.plan_id}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-10 items-start">
                         <div className="flex flex-col items-center">
                           {renderKeyValuePairsWithJson(
-                            historyItem.metric_values_json,
+                            autosclingHistoryItem.metric_values_json,
                             true
                           )}
                         </div>
@@ -320,23 +344,23 @@ export default function AutoscalingHistoryPage() {
                       <td className="mx-4 flex h-full w-full flex-5 items-start">
                         <div className="flex flex-col items-center">
                           {renderKeyValuePairsWithJson(
-                            historyItem.metadata_values_json,
+                            autosclingHistoryItem.metadata_values_json,
                             true
                           )}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-3 items-start">
                         <div className="flex flex-col items-center">
-                          {historyItem.fail_message &&
+                          {autosclingHistoryItem.fail_message &&
                             renderKeyValuePairsWithJson(
-                              historyItem.fail_message,
+                              autosclingHistoryItem.fail_message,
                               true
                             )}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-1 items-start">
                         <div className="flex items-center">
-                          {historyItem.fail_message ? (
+                          {autosclingHistoryItem.fail_message ? (
                             <button className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
                               Failed
                             </button>
@@ -350,7 +374,9 @@ export default function AutoscalingHistoryPage() {
                       <td className="mx-4 flex h-full w-full flex-2 items-start">
                         <div className="flex items-center break-all">
                           {dayjs
-                            .unix(Number(historyItem.created_at) / 1000)
+                            .unix(
+                              Number(autosclingHistoryItem.created_at) / 1000
+                            )
                             .format('YYYY/MM/DD HH:mm:ss')}
                         </div>
                       </td>
@@ -358,7 +384,9 @@ export default function AutoscalingHistoryPage() {
                         <div className="flex items-center">
                           <button
                             className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
-                            onClick={() => onClickDetails(historyItem)}
+                            onClick={() =>
+                              onClickDetails(autosclingHistoryItem)
+                            }
                           >
                             Details
                           </button>
@@ -371,9 +399,9 @@ export default function AutoscalingHistoryPage() {
             </table>
           </div>
         </div>
-        {detailsModalFlag && historyItem ? (
+        {detailsModalFlag && autosclingHistoryItem ? (
           <AutoscalingHistoryDetailDrawer
-            autoscalingHistoryDefinition={historyItem}
+            autosclingHistoryItem={autosclingHistoryItem}
             setDetailsModalFlag={setDetailsModalFlag}
             setFetchFlag={setFetchFlag}
           />
