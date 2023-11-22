@@ -13,17 +13,17 @@ interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
 
 export default function AutoscalingHistoryDetailDrawer({
   autoscalingHistoryDefinition,
-  exitFunction,
+  setDetailsModalFlag,
+  setFetchFlag,
 }: {
   autoscalingHistoryDefinition?: AutoscalingHistoryDefinitionEx;
-  exitFunction: () => void;
+  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
+  setFetchFlag: (fetchFlag: boolean) => void;
 }) {
   const [autoscalingHistory, setAutoscalingHistory] =
     useState<AutoscalingHistoryDefinitionEx>();
 
   useEffect(() => {
-    console.log(autoscalingHistoryDefinition);
-
     if (autoscalingHistoryDefinition) {
       const {
         id,
@@ -54,11 +54,11 @@ export default function AutoscalingHistoryDetailDrawer({
   }, [autoscalingHistoryDefinition]);
 
   const onClickOverlay = () => {
-    exitFunction();
+    setDetailsModalFlag(false);
   };
 
   const onClickExit = async () => {
-    exitFunction();
+    setDetailsModalFlag(false);
   };
 
   return (
@@ -107,7 +107,7 @@ export default function AutoscalingHistoryDetailDrawer({
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
                   autoscalingHistory?.plan_item_json || '{}',
-                  false
+                  true
                 )}
               </span>
             </div>
@@ -122,7 +122,7 @@ export default function AutoscalingHistoryDetailDrawer({
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
                   autoscalingHistory?.metric_values_json || '{}',
-                  false
+                  true
                 )}
               </span>
             </div>
@@ -137,7 +137,7 @@ export default function AutoscalingHistoryDetailDrawer({
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
                   autoscalingHistory?.metadata_values_json || '{}',
-                  false
+                  true
                 )}
               </span>
             </div>
