@@ -320,10 +320,13 @@ export default function PlanningDiagramFlow({
       });
     }
   };
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      // Reference: https://reactflow.dev/learn/troubleshooting
+      // Description: It looks like you have created a new nodeTypes or edgeTypes object. If this wasn't on purpose please define the nodeTypes/edgeTypes outside of the component or memoize them.
       nodeTypes={nodeTypes}
       fitView={true}
       fitViewOptions={{
