@@ -4,8 +4,8 @@ import React, { useEffect } from 'react';
 
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
-// import 'ace-builds/src-noconflict/ext-language_tools';
 import AceEditor from 'react-ace';
+import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';

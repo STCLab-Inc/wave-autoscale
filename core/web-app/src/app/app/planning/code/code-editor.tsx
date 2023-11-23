@@ -1,11 +1,13 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import React, { memo } from 'react';
+
 import AceEditor from 'react-ace';
-import 'ace-builds/src-noconflict/mode-yaml';
-// import 'ace-builds/src-noconflict/snippets/yaml';
+import 'ace-builds/src-noconflict/ext-language_tools';
+import 'ace-builds/src-noconflict/mode-javascript';
+import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
-import { memo } from 'react';
+import 'ace-builds/src-noconflict/mode-yaml';
 
 function EditorContainer(params: any) {
   const { onChange, value, annotations } = params;
