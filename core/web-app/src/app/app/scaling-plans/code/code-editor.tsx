@@ -9,7 +9,7 @@ import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import 'ace-builds/src-noconflict/mode-yaml';
 
-function EditorContainer(params: any) {
+function codeEditor(params: any) {
   const { onChange, value, annotations } = params;
 
   return (
@@ -40,4 +40,4 @@ function EditorContainer(params: any) {
   );
 }
 
-export default memo(EditorContainer);
+export default memo(codeEditor);

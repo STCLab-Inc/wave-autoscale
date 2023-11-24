@@ -1,49 +1,52 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import classNames from 'classnames';
 
-import PlanService from '@/services/plan';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 
 interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
 }
 
-export default function PlanningSidebar({
-  plans,
-  plansItem,
-  setPlansItem,
+export default function ScalingPlansSidebar({
+  scalingPlans,
+  scalingPlansItem,
+  setScalingPlansItem,
   detailsModalFlag,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  plans: ScalingPlanDefinitionEx[];
-  plansItem: ScalingPlanDefinitionEx | undefined;
-  setPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
+  scalingPlans: ScalingPlanDefinitionEx[];
+  scalingPlansItem: ScalingPlanDefinitionEx | undefined;
+  setScalingPlansItem: (
+    scalingPlan: ScalingPlanDefinitionEx | undefined
+  ) => void;
   detailsModalFlag: boolean;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
-  const onClickDetails = (planItem: ScalingPlanDefinitionEx | undefined) => {
-    setPlansItem(planItem);
+  const onClickDetails = (
+    scalingPlanItem: ScalingPlanDefinitionEx | undefined
+  ) => {
+    setScalingPlansItem(scalingPlanItem);
     setDetailsModalFlag(true);
   };
 
-  const onClickMenu = (plan: ScalingPlanDefinitionEx | undefined) => {
-    if (plansItem === plan) {
-      setPlansItem(undefined);
+  const onClickMenu = (scalingPlan: ScalingPlanDefinitionEx | undefined) => {
+    if (scalingPlansItem === scalingPlan) {
+      setScalingPlansItem(undefined);
     } else {
-      setPlansItem(plan);
+      setScalingPlansItem(scalingPlan);
     }
   };
 
   return (
     <div className="flex h-full">
-      <aside className="flex h-full w-72 flex-col border-r border-gray-200">
+      <aside className="flex h-full w-96 flex-col border-r border-gray-200">
         <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 pl-8 pr-8">
           <span className="font-Pretendard whitespace-nowrap text-lg font-semibold text-gray-1000">
-            Plans ({plans.length})
+            Scaling Plans ({scalingPlans.length})
           </span>
           <div className="flex items-center">
             <button
@@ -56,25 +59,25 @@ export default function PlanningSidebar({
           </div>
         </div>
         <div className="flex flex-col">
-          {plans.map((plan: ScalingPlanDefinitionEx) => (
+          {scalingPlans.map((scalingPlan: ScalingPlanDefinitionEx) => (
             <button
-              key={plan.db_id}
-              onClick={() => onClickMenu(plan)}
+              key={scalingPlan.db_id}
+              onClick={() => onClickMenu(scalingPlan)}
               className={classNames(
                 'flex h-12 w-full cursor-pointer items-center border-b px-8',
                 {
                   'hover:bg-blue-100 hover:text-blue-600':
-                    plan.db_id !== plansItem?.db_id,
-                  'bg-primary': plan.db_id === plansItem?.db_id,
+                    scalingPlan.db_id !== scalingPlansItem?.db_id,
+                  'bg-primary': scalingPlan.db_id === scalingPlansItem?.db_id,
                 }
               )}
             >
               <span
                 className={classNames('truncate', {
-                  'text-white': plan.db_id === plansItem?.db_id,
+                  'text-white': scalingPlan.db_id === scalingPlansItem?.db_id,
                 })}
               >
-                {plan.id}
+                {scalingPlan.id}
               </span>
             </button>
           ))}

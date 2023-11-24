@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 
-function MetricNode({ data }: { data: any }) {
+function DiagramNodeMetric({ data }: { data: any }) {
   const { label, collector } = data;
   return (
     <div className="rounded-md border-2 border-stone-400 bg-white px-4 py-2 shadow-md">
@@ -25,4 +25,4 @@ function MetricNode({ data }: { data: any }) {
   );
 }
 
-export default memo(MetricNode);
+export default memo(DiagramNodeMetric);

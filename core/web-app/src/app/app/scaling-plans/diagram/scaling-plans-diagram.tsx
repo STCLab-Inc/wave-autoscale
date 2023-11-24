@@ -13,15 +13,15 @@ interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
 }
 
-export default function PlanningDiagramComponent({
-  plansItem,
-  setPlansItem,
+export default function ScalingPlansDiagram({
+  scalingPlansItem,
+  setScalingPlansItem,
   detailsModalFlag,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  plansItem?: ScalingPlanDefinitionEx | undefined;
-  setPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
+  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
+  setScalingPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
   detailsModalFlag: boolean;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
@@ -30,8 +30,8 @@ export default function PlanningDiagramComponent({
     <div className="h-full w-full">
       <ReactFlowProvider>
         <PlanningDiagramFlow
-          plansItem={plansItem}
-          setPlansItem={setPlansItem}
+          scalingPlansItem={scalingPlansItem}
+          setScalingPlansItem={setScalingPlansItem}
           detailsModalFlag={detailsModalFlag}
           setDetailsModalFlag={setDetailsModalFlag}
           setFetchFlag={setFetchFlag}

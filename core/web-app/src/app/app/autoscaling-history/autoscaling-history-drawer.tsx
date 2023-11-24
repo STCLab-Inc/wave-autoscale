@@ -92,7 +92,7 @@ export default function AutoscalingHistoryDetailDrawer({
 
           <div className="form-control w-full px-4 py-2">
             <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Plan ID</span>
+              <span className="text-md label-text px-2">Scaling Plan ID</span>
               {/* <span className="label-text-alt">label-text-alt</span> */}
             </label>
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
@@ -104,7 +104,7 @@ export default function AutoscalingHistoryDetailDrawer({
 
           <div className="form-control w-full px-4 py-2">
             <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Plan Item</span>
+              <span className="text-md label-text px-2">Scaling Plan Item</span>
               {/* <span className="label-text-alt">label-text-alt</span> */}
             </label>
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">

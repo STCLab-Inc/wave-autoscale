@@ -1,4 +1,4 @@
-export default async function PlanningLayout({
+export default async function ScalingPlansLayout({
   children,
 }: {
   children: React.ReactNode;

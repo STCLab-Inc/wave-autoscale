@@ -12,29 +12,31 @@ import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import 'ace-builds/src-noconflict/mode-yaml';
 
-import PlanService from '@/services/plan';
+import ScalingPlanService from '@/services/scaling-plan';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
-import { generatePlanDefinition } from '@/utils/plan-binding';
+import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 
 interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
 }
 
-export default function PlanningDrawer({
-  plansItem,
-  setPlansItem,
+export default function ScalingPlansDrawer({
+  scalingPlansItem,
+  setScalingPlansItem,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  plansItem?: ScalingPlanDefinitionEx | undefined;
-  setPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
+  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
+  setScalingPlansItem: (
+    scalingPlan: ScalingPlanDefinitionEx | undefined
+  ) => void;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
   const { register, handleSubmit, control, setValue, getValues, reset } =
     useForm();
 
-  const dbId = plansItem?.db_id;
+  const dbId = scalingPlansItem?.db_id;
   const isNew = !dbId;
 
   const yaml = require('js-yaml');
@@ -44,7 +46,7 @@ export default function PlanningDrawer({
       return;
     }
 
-    const { kind, db_id, id, metadata, plans, ...rest } = plansItem;
+    const { kind, db_id, id, metadata, plans, ...rest } = scalingPlansItem;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
@@ -70,8 +72,8 @@ export default function PlanningDrawer({
         });
       }
     );
-    setValue('plans', yaml.dump(scalingPlanForDiagram));
-  }, [plansItem, isNew]);
+    setValue('plans', yaml.dump(scalingPlanForDiagram.plans));
+  }, [scalingPlansItem, isNew]);
 
   const onClickOverlay = () => {
     setFetchFlag(true);
@@ -92,10 +94,10 @@ export default function PlanningDrawer({
       return;
     }
     try {
-      const response = await PlanService.deletePlan(dbId);
+      const response = await ScalingPlanService.deleteScalingPlan(dbId);
       console.info({ response });
 
-      setPlansItem(undefined);
+      setScalingPlansItem(undefined);
       setFetchFlag(true);
       setDetailsModalFlag(false);
     } catch (error) {
@@ -105,20 +107,23 @@ export default function PlanningDrawer({
 
   const onSubmit = async (data: any) => {
     const { kind, db_id, id, metadata, plans, ...rest } = data;
-
-    const plansItem = generatePlanDefinition({
+    const scalingPlansItem = generateScalingPlanDefinition({
       kind: 'ScalingPlan',
       id: id,
-      db_id: dbId,
+      db_id: db_id,
       metadata: yaml.load(metadata),
       plans: yaml.load(plans),
     });
     try {
       if (isNew) {
-        const result = await PlanService.createPlan(plansItem);
+        const result = await ScalingPlanService.createScalingPlan(
+          scalingPlansItem
+        );
         console.info({ result, isNew });
       } else {
-        const result = await PlanService.updatePlan(plansItem);
+        const result = await ScalingPlanService.updateScalingPlan(
+          scalingPlansItem
+        );
         console.info({ result });
       }
       setFetchFlag(true);
@@ -141,7 +146,7 @@ export default function PlanningDrawer({
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
               <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
-                Plan
+                Scaling Plan
               </span>
               <div className="flex px-4">
                 {isNew ? (
@@ -186,12 +191,12 @@ export default function PlanningDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Plan ID</span>
+                <span className="text-md label-text px-2">Scaling Plan ID</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <input
                 type="text"
-                placeholder="Plan ID"
+                placeholder="Scaling Plan ID"
                 className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
                 autoComplete="off"
                 autoCapitalize="off"
@@ -202,7 +207,9 @@ export default function PlanningDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Plan Metadata</span>
+                <span className="text-md label-text px-2">
+                  Scaling Plan Metadata
+                </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">

@@ -35,7 +35,7 @@ function TabItem({
   );
 }
 
-export default function PlanningTabs({
+export default function ScalingPlansTabs({
   viewMode,
   setViewMode,
 }: {

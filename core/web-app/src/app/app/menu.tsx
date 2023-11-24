@@ -59,14 +59,19 @@ export default function Menu() {
       />
       <MenuItem
         pathname={pathname}
-        targetPath="/app/planning"
-        label="Planning"
+        targetPath="/app/scaling-plans"
+        label="Scaling Plans"
       />
       <MenuItem pathname={pathname} targetPath="/app/metrics" label="Metrics" />
       <MenuItem
         pathname={pathname}
         targetPath="/app/scaling-components"
         label="Scaling Components"
+      />
+      <MenuItem
+        pathname={pathname}
+        targetPath="/app/dashboard"
+        label="Dashboard"
       />
       <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
         <Link

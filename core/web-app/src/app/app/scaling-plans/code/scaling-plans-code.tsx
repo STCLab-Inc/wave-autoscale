@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import dynamic from 'next/dynamic';
-import { YAMLParseError, parse as parseYaml } from 'yaml';
 import { produce } from 'immer';
+import { YAMLParseError } from 'yaml';
 
+import ScalingPlanService from '@/services/scaling-plan';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
-import PlanService from '@/services/plan';
+import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 
 interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
@@ -19,16 +20,16 @@ const EditorContainerDynamic = dynamic(() => import('./code-editor'), {
   ssr: false,
 });
 
-export default function PlanningCodeComponent({
-  plansItem,
-  setPlansItem,
-  detailsModalFlag,
+export default function ScalingPlansCode({
+  scalingPlansItem,
+  setScalingPlansItem,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  plansItem?: ScalingPlanDefinitionEx | undefined;
-  setPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
-  detailsModalFlag: boolean;
+  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
+  setScalingPlansItem: (
+    scalingPlan: ScalingPlanDefinitionEx | undefined
+  ) => void;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
@@ -38,51 +39,26 @@ export default function PlanningCodeComponent({
 
   const yaml = require('js-yaml');
 
-  const fetchPlans = async () => {
-    const response = await PlanService.getPlans();
-    setPlansItem(
+  const fetchScalingPlans = async () => {
+    const response = await ScalingPlanService.getScalingPlans();
+    setScalingPlansItem(
       response[
         response.findIndex(
-          (plan: ScalingPlanDefinitionEx) => plan.db_id === plansItem?.db_id
+          (scalingPlan: ScalingPlanDefinitionEx) =>
+            scalingPlan.db_id === scalingPlansItem?.db_id
         )
       ]
     );
   };
 
   useEffect(() => {
-    const yamlCode = yaml.dump(plansItem);
-    const parsedYaml = parseYaml(yamlCode);
-    const { kind, db_id, id, metadata, plans, ...rest } = parsedYaml;
-    const newScalingPlanDefinition: ScalingPlanDefinitionEx = {
-      kind,
-      db_id,
-      id,
-      metadata,
-      plans,
-    };
-    const scalingPlanForCode = produce(
-      newScalingPlanDefinition,
-      (draft: any) => {
-        draft.plans?.forEach((plan: any) => {
-          delete plan.ui;
-          plan.expression && !plan.cron_expression
-            ? delete plan.cron_expression
-            : null;
-          plan.cron_expression && !plan.expression
-            ? delete plan.expression
-            : null;
-        });
-      }
-    );
-    setValue('plan', yaml.dump(scalingPlanForCode));
-  }, [plansItem]);
-
-  const onSubmit = async (data: any) => {
-    const { yamlCode } = data;
-
-    try {
-      const parsedYaml = await parseYaml(yamlCode);
-      const { kind, db_id, id, metadata, plans, ...rest } = parsedYaml;
+    if (scalingPlansItem) {
+      const { kind, db_id, id, metadata, plans, ...rest } = scalingPlansItem;
+      setValue('kind', kind);
+      setValue('db_id', db_id);
+      setValue('id', id);
+      setValue('metadata', yaml.dump(metadata));
+      setValue('plans', yaml.dump(plans));
       const newScalingPlanDefinition: ScalingPlanDefinitionEx = {
         kind,
         db_id,
@@ -90,12 +66,36 @@ export default function PlanningCodeComponent({
         metadata,
         plans,
       };
-      const result = await PlanService.updatePlan(newScalingPlanDefinition);
-      fetchPlans();
-      setFetchFlag(true);
-      setValue('yamlCode', yaml.dump(plansItem));
+      const scalingPlanForCode = produce(
+        newScalingPlanDefinition,
+        (draft: any) => {
+          draft.plans?.forEach((plan: any) => {
+            delete plan.ui;
+            plan.expression && !plan.cron_expression
+              ? delete plan.cron_expression
+              : null;
+            plan.cron_expression && !plan.expression
+              ? delete plan.expression
+              : null;
+          });
+        }
+      );
+      setValue('scaling_plan', yaml.dump(scalingPlanForCode));
+    }
+  }, [scalingPlansItem]);
 
+  const onSubmit = async (data: any) => {
+    const { kind, db_id, id, metadata, plans, scaling_plan, ...rest } = data;
+    const scalingPlansItem = generateScalingPlanDefinition(
+      yaml.load(data.scaling_plan)
+    );
+    try {
+      const result = await ScalingPlanService.updateScalingPlan(
+        scalingPlansItem
+      );
       console.info({ result });
+      fetchScalingPlans();
+      setFetchFlag(true);
     } catch (error: any) {
       const { message, linePos } = error as YAMLParseError;
       if (linePos?.[0] && message) {
@@ -125,7 +125,7 @@ export default function PlanningCodeComponent({
       <div className="textarea-bordered textarea textarea-md h-full w-full rounded-none border-none p-4">
         <Controller
           control={control}
-          name="plan"
+          name="scaling_plan"
           render={({ field: { onChange, value } }) => (
             <EditorContainerDynamic
               onChange={onChange}

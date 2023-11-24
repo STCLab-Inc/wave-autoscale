@@ -1,7 +1,6 @@
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
-import { nanoid } from 'nanoid';
 
-export function generatePlanDefinition({
+export function generateScalingPlanDefinition({
   kind,
   id,
   db_id,

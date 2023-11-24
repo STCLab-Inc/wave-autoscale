@@ -1,11 +1,12 @@
-import PlanService from '@/services/plan';
-import { PlanItemDefinition } from '@/types/bindings/plan-item-definition';
-import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import { enableMapSet, produce } from 'immer';
 import { create } from 'zustand';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+
+import ScalingPlanService from '@/services/scaling-plan';
+import { ScalingPlansItemDefinition } from '@/types/bindings/scaling-plans-item-definition';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 
 enableMapSet();
 
@@ -18,34 +19,34 @@ export interface ScalingComponentUI {
   selected?: boolean;
 }
 
-interface ScalingPlanState {
+interface ScalingPlansState {
   // The Plan has PlanItems
   scalingPlan: ScalingPlanDefinition;
   // For UI
-  selectedPlanItem?: PlanItemDefinition;
+  selectedScalingPlansItem?: ScalingPlansItemDefinition;
   modifiedAt?: Date;
   savedAt?: Date;
 }
 
-interface PlanState {
+interface ScalingPlanState {
   // Cache
-  cache: Map<string, ScalingPlanState>;
+  cache: Map<string, ScalingPlansState>;
   // Get current scaling plan. Do not modify it directly
-  currentScalingPlanState?: ScalingPlanState;
+  currentScalingPlanState?: ScalingPlansState;
   currentScalingPlanId?: string;
   // Load from server. It should be called before any other actions
   load: (scalingPlanId: string) => Promise<void>;
   // Save to server
   push: () => Promise<void>;
   // Get current scaling plan state
-  getCurrentScalingPlanState: (state?: any) => ScalingPlanState;
+  getCurrentScalingPlanState: (state?: any) => ScalingPlansState;
   // For internal use
   syncCurrentScalingPlan: () => void;
   // For current scaling plan
-  addPlanItem: () => void;
-  updatePlanItem: (plan: PlanItemDefinition) => void;
-  updatePlanItemUI: (plan: PlanItemDefinition) => void;
-  removePlanItem: (planId: string) => void;
+  addScalingPlanItem: () => void;
+  updateScalingPlanItem: (scalingPlan: ScalingPlansItemDefinition) => void;
+  updateScalingPlanItemUI: (scalingPlan: ScalingPlansItemDefinition) => void;
+  removeScalingPlanItem: (scalingPlanId: string) => void;
   clearSelection: () => void;
   // General actions, not related to current scaling plan
   needToSave: (scalingPlanId: string) => boolean;
@@ -53,9 +54,9 @@ interface PlanState {
   applyYAMLCode: (yamlCode: string) => void;
 }
 
-export const usePlanStore = create<PlanState>((set, get) => ({
+export const useScalingPlanStore = create<ScalingPlanState>((set, get) => ({
   // Cache
-  cache: new Map<string, ScalingPlanState>(),
+  cache: new Map<string, ScalingPlansState>(),
   currentScalingPlanState: undefined,
   currentScalingPlanId: undefined,
 
@@ -67,16 +68,18 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     // If there is no cache
     if (!scalingPlanState) {
       // Load from server
-      const scalingPlan = await PlanService.getPlan(scalingPlanId);
+      const scalingPlan = await ScalingPlanService.getScalingPlan(
+        scalingPlanId
+      );
       scalingPlanState = {
         scalingPlan,
         modifiedAt: undefined,
         savedAt: undefined,
-        selectedPlanItem: undefined,
+        selectedScalingPlansItem: undefined,
       };
       // Save to cache
       set(
-        produce((state: PlanState) => {
+        produce((state: ScalingPlanState) => {
           if (scalingPlanState) {
             state.cache.set(scalingPlanId, scalingPlanState);
           }
@@ -85,7 +88,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
     // Set current scaling plan
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         state.currentScalingPlanState = scalingPlanState;
         state.currentScalingPlanId = scalingPlanId;
       })
@@ -97,10 +100,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const scalingPlanState = state.getCurrentScalingPlanState();
     const scalingPlan = scalingPlanState.scalingPlan;
     try {
-      const response = await PlanService.updatePlan(scalingPlan);
+      const response = await ScalingPlanService.updateScalingPlan(scalingPlan);
       // TODO: Handle response
       set(
-        produce((state: PlanState) => {
+        produce((state: ScalingPlanState) => {
           const scalingPlanState = state.getCurrentScalingPlanState(state);
           scalingPlanState.savedAt = new Date();
         })
@@ -126,14 +129,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   },
   syncCurrentScalingPlan: () => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
         // Update metric ids and scaling component ids
-        plans.forEach((plan) => {
-          const expression = plan.expression;
-          const metricIdsInPlan = new Set<string>();
-          const scalingComponentIdsInPlan = new Set<string>();
+        scalingPlans.forEach((scalingPlan) => {
+          const expression = scalingPlan.expression;
+          const metricIdsInScalingPlan = new Set<string>();
+          const scalingComponentIdsInScalingPlan = new Set<string>();
           if (expression) {
             // 1. Metric Ids
             try {
@@ -158,30 +161,30 @@ export const usePlanStore = create<PlanState>((set, get) => ({
                     metricIdProperty.value.type === 'Literal'
                   ) {
                     const metricIdValue = metricIdProperty.value.value;
-                    metricIdsInPlan.add(metricIdValue);
+                    metricIdsInScalingPlan.add(metricIdValue);
                   }
                 },
               });
             } catch (error) {
-              metricIdsInPlan.add('Not found');
+              metricIdsInScalingPlan.add('Not found');
               // TODO: Error handling
             }
           }
 
           // 2. Scaling Component Ids
-          plan.scaling_components?.forEach((component) => {
-            scalingComponentIdsInPlan.add(component.component_id);
+          scalingPlan.scaling_components?.forEach((component) => {
+            scalingComponentIdsInScalingPlan.add(component.component_id);
           });
-          plan.ui = {
-            ...(plan.ui ?? {}),
-            metrics: Array.from(metricIdsInPlan).map(
+          scalingPlan.ui = {
+            ...(scalingPlan.ui ?? {}),
+            metrics: Array.from(metricIdsInScalingPlan).map(
               (metricId) =>
                 ({
                   id: metricId,
                   selected: false,
                 } as MetricUI)
             ),
-            scalingComponents: Array.from(scalingComponentIdsInPlan).map(
+            scalingComponents: Array.from(scalingComponentIdsInScalingPlan).map(
               (scalingComponentId) =>
                 ({
                   id: scalingComponentId,
@@ -195,22 +198,22 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       })
     );
   },
-  addPlanItem: () => {
+  addScalingPlanItem: () => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
         // Generate new id
-        const ID_PREFIX = 'plan_';
-        let postfixNumber = plans.length + 1;
+        const ID_PREFIX = 'scaling_plans_';
+        let postfixNumber = scalingPlans.length + 1;
         let id = `${ID_PREFIX}${postfixNumber}`;
         // Find a unique id
-        while (plans.find((plan) => plan.id === id)) {
+        while (scalingPlans.find((scalingPlan) => scalingPlan.id === id)) {
           postfixNumber++;
           id = `${ID_PREFIX}${postfixNumber}`;
         }
         scalingPlanState.scalingPlan.plans = [
-          ...plans,
+          ...scalingPlans,
           {
             id,
             ui: {},
@@ -226,59 +229,59 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     );
     get().syncCurrentScalingPlan();
   },
-  updatePlanItem: (plan: PlanItemDefinition) => {
+  updateScalingPlanItem: (scalingPlan: ScalingPlansItemDefinition) => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
-        const index = plans.findIndex(
-          (p: PlanItemDefinition) => p.id === plan.id
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
+        const index = scalingPlans.findIndex(
+          (p: ScalingPlansItemDefinition) => p.id === scalingPlan.id
         );
         if (index === -1) {
-          throw new Error(`Plan item ${plan.id} not found`);
+          throw new Error(`Plan item ${scalingPlan.id} not found`);
         }
-        plans[index] = {
-          ...plans[index],
-          ...plan,
+        scalingPlans[index] = {
+          ...scalingPlans[index],
+          ...scalingPlan,
         };
         scalingPlanState.modifiedAt = new Date();
       })
     );
     get().syncCurrentScalingPlan();
   },
-  updatePlanItemUI: (plan: PlanItemDefinition) => {
+  updateScalingPlanItemUI: (scalingPlan: ScalingPlansItemDefinition) => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
-        const index = plans.findIndex(
-          (p: PlanItemDefinition) => p.id === plan.id
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
+        const index = scalingPlans.findIndex(
+          (p: ScalingPlansItemDefinition) => p.id === scalingPlan.id
         );
         if (index === -1) {
-          throw new Error(`Plan item ${plan.id} not found`);
+          throw new Error(`Plan item ${scalingPlan.id} not found`);
         }
-        plans[index] = plan;
-        const selectedPlan = plans.find(
-          (p: PlanItemDefinition) => p.ui?.selected
+        scalingPlans[index] = scalingPlan;
+        const selectedScalingPlan = scalingPlans.find(
+          (p: ScalingPlansItemDefinition) => p.ui?.selected
         );
-        scalingPlanState.selectedPlanItem = selectedPlan;
+        scalingPlanState.selectedScalingPlansItem = selectedScalingPlan;
         scalingPlanState.modifiedAt = new Date();
       })
     );
     get().syncCurrentScalingPlan();
   },
-  removePlanItem: (planId: string) => {
+  removeScalingPlanItem: (scalingPlanId: string) => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
-        const index = plans.findIndex(
-          (p: PlanItemDefinition) => p.id === planId
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
+        const index = scalingPlans.findIndex(
+          (p: ScalingPlansItemDefinition) => p.id === scalingPlanId
         );
         if (index === -1) {
-          throw new Error(`Plan item ${planId} not found`);
+          throw new Error(`Scaling plan item ${scalingPlanId} not found`);
         }
-        plans.splice(index, 1);
+        scalingPlans.splice(index, 1);
         scalingPlanState.modifiedAt = new Date();
       })
     );
@@ -287,16 +290,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
   clearSelection: () => {
     set(
-      produce((state: PlanState) => {
+      produce((state: ScalingPlanState) => {
         const scalingPlanState = state.getCurrentScalingPlanState(state);
-        const plans = scalingPlanState.scalingPlan.plans;
-        const index = plans.findIndex(
-          (p: PlanItemDefinition) => p.ui?.selected
+        const scalingPlans = scalingPlanState.scalingPlan.plans;
+        const index = scalingPlans.findIndex(
+          (p: ScalingPlansItemDefinition) => p.ui?.selected
         );
         if (index !== -1) {
-          plans[index].ui.selected = false;
+          scalingPlans[index].ui.selected = false;
         }
-        scalingPlanState.selectedPlanItem = undefined;
+        scalingPlanState.selectedScalingPlansItem = undefined;
       })
     );
     get().syncCurrentScalingPlan();
@@ -322,8 +325,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const scalingPlan = scalingPlanState.scalingPlan;
     const scalingPlanForCode = produce(scalingPlan, (draft: any) => {
       delete draft.db_id;
-      draft.plans?.forEach((plan: any) => {
-        delete plan.ui;
+      draft.plans?.forEach((scalingPlan: any) => {
+        delete scalingPlan.ui;
       });
     });
     const code = stringifyYaml(scalingPlanForCode);
@@ -334,7 +337,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     try {
       const newScalingPlan = parseYaml(code);
       set(
-        produce((state: PlanState) => {
+        produce((state: ScalingPlanState) => {
           const scalingPlanState = state.getCurrentScalingPlanState(state);
           const dbId = scalingPlanState.scalingPlan.db_id;
           scalingPlanState.scalingPlan = newScalingPlan;

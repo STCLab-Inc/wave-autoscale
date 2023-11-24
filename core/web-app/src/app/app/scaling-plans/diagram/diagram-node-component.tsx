@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 
-function ScalingComponentNode({ data }: { data: any }) {
+function DiagramNodeComponent({ data }: { data: any }) {
   const { label, componentKind } = data;
   return (
     <div className="rounded-md border-2 border-stone-400 bg-white px-4 py-2 shadow-md">
@@ -27,4 +27,4 @@ function ScalingComponentNode({ data }: { data: any }) {
   );
 }
 
-export default memo(ScalingComponentNode);
+export default memo(DiagramNodeComponent);

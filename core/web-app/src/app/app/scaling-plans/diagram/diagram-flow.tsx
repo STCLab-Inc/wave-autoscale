@@ -18,14 +18,14 @@ import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition'
 import MetricService from '@/services/metric';
 import ScalingComponentService from '@/services/scaling-component';
 
-import PlanNode from './diagram-node-plan';
-import MetricNode from './diagram-node-metric';
-import ScalingComponentNode from './diagram-node-component';
+import DiagramNodePlan from './diagram-node-plan';
+import DiagramNodeMetric from './diagram-node-metric';
+import DiagramNodeComponent from './diagram-node-component';
 
 const nodeTypes = {
-  plan: PlanNode,
-  metric: MetricNode,
-  scalingComponent: ScalingComponentNode,
+  scalingPlan: DiagramNodePlan,
+  metric: DiagramNodeMetric,
+  scalingComponent: DiagramNodeComponent,
 };
 
 export interface MetricUI {
@@ -41,30 +41,23 @@ interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
 }
 
-export default function PlanningDiagramFlow({
-  plansItem,
-  setPlansItem,
+export default function DiagramFlow({
+  scalingPlansItem,
+  setScalingPlansItem,
   detailsModalFlag,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  plansItem?: ScalingPlanDefinitionEx | undefined;
-  setPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
+  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
+  setScalingPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
   detailsModalFlag: boolean;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
-  // const metricIds = usePlanStore(
-  //   (state) => state.currentScalingPlanState?.metricIds || []
-  // );
-  // const scalingComponentIds = usePlanStore(
-  //   (state) => state.currentScalingPlanState?.scalingComponentIds || []
-  // );
   const [metricMap, setMetricMap] = useState<any>({});
   const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
-  /* const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI); */
 
-  const [renderingPlansItem, setRenderingPlansItem] = useState<
+  const [renderingScalingPlansItem, setRenderingScalingPlansItem] = useState<
     ScalingPlanDefinitionEx | undefined
   >(undefined);
 
@@ -77,12 +70,12 @@ export default function PlanningDiagramFlow({
       const results = await Promise.all(promises);
       setMetricMap(keyBy(results[0], 'id'));
       setScalingComponentMap(keyBy(results[1], 'id'));
-      if (plansItem) {
-        const newRenderingPlansItem = produce(plansItem, (draft) => {
+      if (scalingPlansItem) {
+        const newRenderingPlansItem = produce(scalingPlansItem, (draft) => {
           draft.plans.forEach((plan) => {
             const expression = plan.expression;
-            const metricIdsInPlan = new Set<string>();
-            const scalingComponentIdsInPlan = new Set<string>();
+            const metricIdsInScalingPlan = new Set<string>();
+            const scalingComponentIdsInScalingPlan = new Set<string>();
             if (expression) {
               // 1. Metric Ids
               try {
@@ -106,32 +99,34 @@ export default function PlanningDiagramFlow({
                       metricIdProperty.value.type === 'Literal'
                     ) {
                       const metricIdValue = metricIdProperty.value.value;
-                      metricIdsInPlan.add(metricIdValue);
+                      metricIdsInScalingPlan.add(metricIdValue);
                     }
                   },
                 });
               } catch (error) {
-                metricIdsInPlan.add('Not found');
+                metricIdsInScalingPlan.add('Not found');
                 // TODO: Error handling
               }
             }
 
             // 2. Scaling Component Ids
             plan.scaling_components?.forEach((component) => {
-              scalingComponentIdsInPlan.add(component.component_id);
+              scalingComponentIdsInScalingPlan.add(component.component_id);
             });
 
             // Update the plan with the new ui property
             plan.ui = {
               ...(plan.ui ?? {}),
-              metrics: Array.from(metricIdsInPlan).map(
+              metrics: Array.from(metricIdsInScalingPlan).map(
                 (metricId) =>
                   ({
                     id: metricId,
                     selected: false,
                   } as MetricUI)
               ),
-              scalingComponents: Array.from(scalingComponentIdsInPlan).map(
+              scalingComponents: Array.from(
+                scalingComponentIdsInScalingPlan
+              ).map(
                 (scalingComponentId) =>
                   ({
                     id: scalingComponentId,
@@ -143,33 +138,37 @@ export default function PlanningDiagramFlow({
         });
 
         // Update the state with the new renderingPlansItem
-        setRenderingPlansItem(newRenderingPlansItem);
+        setRenderingScalingPlansItem(newRenderingPlansItem);
       }
     };
 
     fetch();
-  }, [plansItem]);
+  }, [scalingPlansItem]);
 
   // Nodes are the plans and metrics
   const nodes = useMemo(() => {
-    if (renderingPlansItem) {
+    if (renderingScalingPlansItem) {
       // Use renderingPlansItem instead of plansItem for rendering
       const POSITION_X_OFFSET = 400;
       const POSITION_Y_OFFSET = 200;
       const metrics = unionBy(
-        flatten(renderingPlansItem.plans?.map((plan) => plan?.ui?.metrics)),
+        flatten(
+          renderingScalingPlansItem.plans?.map((plan) => plan?.ui?.metrics)
+        ),
         'id'
       );
       const scalingComponents = unionBy(
         flatten(
-          renderingPlansItem.plans?.map((plan) => plan?.ui?.scalingComponents)
+          renderingScalingPlansItem.plans?.map(
+            (plan) => plan?.ui?.scalingComponents
+          )
         ),
         'id'
       );
 
       const maxWidth =
         Math.max(
-          renderingPlansItem.plans?.length,
+          renderingScalingPlansItem.plans?.length,
           metrics?.length,
           scalingComponents?.length
         ) * POSITION_X_OFFSET;
@@ -182,7 +181,8 @@ export default function PlanningDiagramFlow({
           position: {
             x: 0,
             y:
-              (POSITION_Y_OFFSET * renderingPlansItem.plans?.length) / 2 -
+              (POSITION_Y_OFFSET * renderingScalingPlansItem.plans?.length) /
+                2 -
               POSITION_Y_OFFSET / 2,
           },
           data: {
@@ -193,21 +193,23 @@ export default function PlanningDiagramFlow({
         };
       });
 
-      const planNodes = renderingPlansItem.plans.map((plan, index) => {
-        return {
-          // Default properties
-          id: plan.id,
-          type: 'plan',
-          position: {
-            x: 2 * POSITION_X_OFFSET,
-            y: index * POSITION_Y_OFFSET,
-          },
-          data: { label: plan.id },
-          draggable: false,
-          // Get the ui property from the plan
-          ...plan?.ui,
-        };
-      });
+      const scalingPlanNodes = renderingScalingPlansItem.plans.map(
+        (plan, index) => {
+          return {
+            // Default properties
+            id: plan.id,
+            type: 'plan',
+            position: {
+              x: 2 * POSITION_X_OFFSET,
+              y: index * POSITION_Y_OFFSET,
+            },
+            data: { label: plan.id },
+            draggable: false,
+            // Get the ui property from the plan
+            ...plan?.ui,
+          };
+        }
+      );
 
       const scalingComponentNodes = scalingComponents.map(
         (scalingComponent: ScalingComponentUI, index) => {
@@ -218,7 +220,8 @@ export default function PlanningDiagramFlow({
             position: {
               x: 4 * POSITION_X_OFFSET,
               y:
-                (POSITION_Y_OFFSET * renderingPlansItem.plans?.length) / 2 -
+                (POSITION_Y_OFFSET * renderingScalingPlansItem.plans?.length) /
+                  2 -
                 POSITION_Y_OFFSET / 2,
             },
             data: {
@@ -232,20 +235,20 @@ export default function PlanningDiagramFlow({
         }
       );
 
-      return [...planNodes, ...metricNodes, ...scalingComponentNodes];
+      return [...scalingPlanNodes, ...metricNodes, ...scalingComponentNodes];
     }
-  }, [renderingPlansItem, metricMap, scalingComponentMap]);
+  }, [renderingScalingPlansItem, metricMap, scalingComponentMap]);
 
   const edges = useMemo(() => {
-    if (renderingPlansItem) {
+    if (renderingScalingPlansItem) {
       // Use renderingPlansItem instead of plansItem for rendering
-      const edgesForPlanAndMetric: Edge[] = [];
-      const edgesForPlanAndScalingComponent: Edge[] = [];
-      renderingPlansItem.plans.forEach((plan) => {
+      const edgesForScalingPlanAndMetric: Edge[] = [];
+      const edgesForScalingPlanAndScalingComponent: Edge[] = [];
+      renderingScalingPlansItem.plans.forEach((plan) => {
         const metrics = plan?.ui?.metrics;
         if (metrics?.length) {
           metrics?.forEach((metric: MetricUI) => {
-            edgesForPlanAndMetric.push({
+            edgesForScalingPlanAndMetric.push({
               id: `${plan.id}-${metric.id}`,
               source: metric.id,
               target: plan.id,
@@ -263,7 +266,7 @@ export default function PlanningDiagramFlow({
         const scalingComponents = plan?.ui?.scalingComponents;
         if (scalingComponents?.length) {
           scalingComponents?.forEach((scalingComponent: ScalingComponentUI) => {
-            edgesForPlanAndMetric.push({
+            edgesForScalingPlanAndMetric.push({
               id: `${plan.id}-${scalingComponent?.id}`,
               source: plan.id,
               target: scalingComponent?.id,
@@ -278,15 +281,18 @@ export default function PlanningDiagramFlow({
           });
         }
       });
-      return [...edgesForPlanAndMetric, ...edgesForPlanAndScalingComponent];
+      return [
+        ...edgesForScalingPlanAndMetric,
+        ...edgesForScalingPlanAndScalingComponent,
+      ];
     }
-  }, [renderingPlansItem, metricMap, scalingComponentMap]);
+  }, [renderingScalingPlansItem, metricMap, scalingComponentMap]);
 
   const onNodesChange = (nodes: NodeChange[]) => {
-    if (plansItem) {
+    if (scalingPlansItem) {
       // Find the plan by id
       const findPlan = (planId: string) =>
-        plansItem.plans.find((plan) => plan.id === planId);
+        scalingPlansItem.plans.find((plan) => plan.id === planId);
 
       // Update the plan with new attributes
       nodes.forEach((node) => {

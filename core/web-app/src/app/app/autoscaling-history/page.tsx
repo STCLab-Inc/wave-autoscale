@@ -278,7 +278,7 @@ export default function AutoscalingHistoryPage() {
                   </th>
                   <th className="mx-4 flex h-full w-full flex-4 items-center">
                     <span className="flex items-center break-words">
-                      Plan ID
+                      Scaling Plan ID
                     </span>
                   </th>
                   <th className="mx-4 flex h-full w-full flex-10 items-center">

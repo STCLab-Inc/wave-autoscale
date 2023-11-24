@@ -4,7 +4,13 @@ import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import classNames from 'classnames';
 
-function PlanNode({ data, selected }: { data: any; selected?: boolean }) {
+function DiagramNodePlan({
+  data,
+  selected,
+}: {
+  data: any;
+  selected?: boolean;
+}) {
   return (
     <div
       className={classNames(
@@ -19,7 +25,7 @@ function PlanNode({ data, selected }: { data: any; selected?: boolean }) {
           🗺️
         </div>
         <div className="ml-2 flex flex-col justify-center">
-          <div className="text-xs text-gray-500">Plan</div>
+          <div className="text-xs text-gray-500">Scaling Plan</div>
           <div className="text-sm font-bold">{data.label}</div>
         </div>
       </div>
@@ -38,4 +44,4 @@ function PlanNode({ data, selected }: { data: any; selected?: boolean }) {
   );
 }
 
-export default memo(PlanNode);
+export default memo(DiagramNodePlan);
