@@ -29,15 +29,14 @@ function DiagramNodePlan({
           <div className="text-sm font-bold">{data.label}</div>
         </div>
       </div>
-
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-16 !bg-primary"
       />
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="w-16 !bg-primary"
       />
     </div>

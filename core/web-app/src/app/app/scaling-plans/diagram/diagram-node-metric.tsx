@@ -18,7 +18,7 @@ function DiagramNodeMetric({ data }: { data: any }) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="w-16 !bg-primary"
       />
     </div>

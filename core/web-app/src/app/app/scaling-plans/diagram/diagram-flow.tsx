@@ -8,6 +8,7 @@ import ReactFlow, {
   Edge,
   NodeChange,
   MarkerType,
+  Position,
 } from 'reactflow';
 import { flatten, keyBy, unionBy } from 'lodash';
 import { produce } from 'immer';
@@ -166,13 +167,6 @@ export default function DiagramFlow({
         'id'
       );
 
-      const maxWidth =
-        Math.max(
-          renderingScalingPlansItem.plans?.length,
-          metrics?.length,
-          scalingComponents?.length
-        ) * POSITION_X_OFFSET;
-
       const metricNodes = metrics.map((metric: MetricUI, index) => {
         return {
           // Default properties
@@ -190,6 +184,8 @@ export default function DiagramFlow({
             collector: metricMap[metric?.id]?.collector,
           },
           draggable: false,
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
         };
       });
 
@@ -198,7 +194,7 @@ export default function DiagramFlow({
           return {
             // Default properties
             id: plan.id,
-            type: 'plan',
+            type: 'scalingPlan',
             position: {
               x: 2 * POSITION_X_OFFSET,
               y: index * POSITION_Y_OFFSET,
@@ -207,6 +203,8 @@ export default function DiagramFlow({
             draggable: false,
             // Get the ui property from the plan
             ...plan?.ui,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
           };
         }
       );
@@ -231,6 +229,8 @@ export default function DiagramFlow({
                 'Not defined',
             },
             draggable: false,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
           };
         }
       );
@@ -253,7 +253,7 @@ export default function DiagramFlow({
               source: metric.id,
               target: plan.id,
               animated: true,
-              type: 'default',
+              type: 'straight',
               markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 20,
@@ -271,7 +271,7 @@ export default function DiagramFlow({
               source: plan.id,
               target: scalingComponent?.id,
               animated: true,
-              type: 'default',
+              type: 'straight',
               markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 20,

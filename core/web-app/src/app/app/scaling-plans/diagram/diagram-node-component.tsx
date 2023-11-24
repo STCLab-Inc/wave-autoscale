@@ -17,10 +17,9 @@ function DiagramNodeComponent({ data }: { data: any }) {
           {/* <div className="text-sm">{label}</div> */}
         </div>
       </div>
-
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-16 !bg-primary"
       />
     </div>
