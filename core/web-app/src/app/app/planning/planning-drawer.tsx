@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
+import { produce } from 'immer';
 import AceEditor from 'react-ace';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-javascript';
@@ -48,7 +49,28 @@ export default function PlanningDrawer({
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('metadata', yaml.dump(metadata));
-    setValue('plans', yaml.dump(plans));
+    const newScalingPlanDefinition: ScalingPlanDefinitionEx = {
+      kind,
+      db_id,
+      id,
+      metadata,
+      plans,
+    };
+    const scalingPlanForDiagram = produce(
+      newScalingPlanDefinition,
+      (draft: any) => {
+        draft.plans?.forEach((plan: any) => {
+          delete plan.ui;
+          plan.expression && !plan.cron_expression
+            ? delete plan.cron_expression
+            : null;
+          plan.cron_expression && !plan.expression
+            ? delete plan.expression
+            : null;
+        });
+      }
+    );
+    setValue('plans', yaml.dump(scalingPlanForDiagram));
   }, [plansItem, isNew]);
 
   const onClickOverlay = () => {

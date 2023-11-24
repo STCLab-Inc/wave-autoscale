@@ -64,12 +64,6 @@ export default function PlanningDiagramFlow({
   const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
   /* const updatePlanItemUI = usePlanStore((state) => state.updatePlanItemUI); */
 
-  /* Copy */
-  const [copiedPlan, setCopiedPlan] = useState<any>(null);
-  const [copiedMetric, setCopiedMetric] = useState<any>(null);
-  const [copiedScalingComponent, setCopiedScalingComponent] =
-    useState<any>(null);
-
   const [renderingPlansItem, setRenderingPlansItem] = useState<
     ScalingPlanDefinitionEx | undefined
   >(undefined);

@@ -65,10 +65,16 @@ export default function PlanningCodeComponent({
       (draft: any) => {
         draft.plans?.forEach((plan: any) => {
           delete plan.ui;
+          plan.expression && !plan.cron_expression
+            ? delete plan.cron_expression
+            : null;
+          plan.cron_expression && !plan.expression
+            ? delete plan.expression
+            : null;
         });
       }
     );
-    setValue('yamlCode', yaml.dump(scalingPlanForCode));
+    setValue('plan', yaml.dump(scalingPlanForCode));
   }, [plansItem]);
 
   const onSubmit = async (data: any) => {
@@ -119,7 +125,7 @@ export default function PlanningCodeComponent({
       <div className="textarea-bordered textarea textarea-md h-full w-full rounded-none border-none p-4">
         <Controller
           control={control}
-          name="yamlCode"
+          name="plan"
           render={({ field: { onChange, value } }) => (
             <EditorContainerDynamic
               onChange={onChange}
