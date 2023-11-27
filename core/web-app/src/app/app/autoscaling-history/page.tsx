@@ -248,7 +248,7 @@ export default function AutoscalingHistoryPage() {
                     </select>
                   </label>
                 </div>
-                <div className="mx-2 flex items-center justify-center">
+                <div className="min-h-8 mx-2 flex min-w-[8rem] items-center justify-center rounded-md border border-gray-200">
                   <span className="px-2 text-center text-sm">
                     {currentPage} / {totalPage}
                   </span>
