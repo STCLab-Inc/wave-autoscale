@@ -109,9 +109,7 @@ export default function InflowPage() {
     setTotalPage(Math.ceil(inflow.length / sizePerPage) || 1);
   }, [inflow, from, to, currentPage, totalPage, sizePerPage]);
 
-  const startIndex = (currentPage - 1) * sizePerPage;
-  const endIndex = startIndex + sizePerPage;
-  const visibleInflow = inflow.slice(startIndex, endIndex);
+  const [visibleInflow, setVisibleInflow] = useState<InflowDefinitionEx[]>([]);
 
   const handleSizePerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -163,6 +161,52 @@ export default function InflowPage() {
     }
   }, [fetchFlag]);
 
+  const FILTER_PER_PAGE_OPTIONS = [
+    { value: 'filter', label: 'Filter' },
+    { value: 'id', label: 'Inflow ID' },
+    { value: 'collector', label: 'Collector' },
+    { value: 'metric_id', label: 'Metric ID' },
+    { value: 'json_value', label: 'JSON Value' },
+    { value: 'created_at', label: 'Date' },
+  ];
+
+  const [selectedField, setSelectedField] = useState('filter');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleFieldChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedField(event.target.value);
+  };
+
+  useEffect(() => {
+    if (searchTerm || selectedField !== 'filter') {
+      const filteredInflow = inflow.filter((item: any) => {
+        const fieldValue =
+          selectedField !== 'created_at'
+            ? item[selectedField]?.toString().toLowerCase()
+            : dayjs
+                .unix(Number(item[selectedField]) / 1000)
+                .format('YYYY/MM/DD HH:mm:ss');
+
+        return fieldValue?.includes(searchTerm.toLowerCase());
+      });
+      setTotalPage(Math.ceil(filteredInflow.length / sizePerPage) || 1);
+      setVisibleInflow(
+        filteredInflow.slice(
+          (currentPage - 1) * sizePerPage,
+          (currentPage - 1) * sizePerPage + sizePerPage
+        )
+      );
+    } else {
+      setTotalPage(Math.ceil(inflow.length / sizePerPage) || 1);
+      setVisibleInflow(
+        inflow.slice(
+          (currentPage - 1) * sizePerPage,
+          (currentPage - 1) * sizePerPage + sizePerPage
+        )
+      );
+    }
+  }, [inflow, selectedField, searchTerm, currentPage, sizePerPage, totalPage]);
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -204,26 +248,54 @@ export default function InflowPage() {
           <div className="flex w-full flex-col">
             {/* <HistoryHeatmap inflow={inflow} from={fromDayjs} to={toDayjs} /> */}
             <div className="flex items-center justify-end px-8 py-4">
-              <div className="mr-2 flex items-center">
-                <label className="select-group-sm">
-                  <select
-                    value={sizePerPage}
-                    onChange={handleSizePerPageChange}
-                    className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                  >
-                    {SIZE_PER_PAGE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="mr-2 flex h-8 items-center">
+                <div className="mr-2 flex items-center">
+                  <label className="select-group-sm">
+                    <select
+                      value={selectedField}
+                      onChange={handleFieldChange}
+                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                    >
+                      {FILTER_PER_PAGE_OPTIONS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mx-2 flex items-center justify-center">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="input-bordered input input-sm max-w-[130px] cursor-text px-2 focus:outline-none"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="mx-2 flex items-center justify-center">
-                <span className="px-2 text-center text-sm">
-                  {currentPage} / {totalPage}
-                </span>
+              <div className="mx-2 flex h-8 items-center">
+                <div className="mr-2 flex items-center">
+                  <label className="select-group-sm">
+                    <select
+                      value={sizePerPage}
+                      onChange={handleSizePerPageChange}
+                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                    >
+                      {SIZE_PER_PAGE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mx-2 flex items-center justify-center">
+                  <span className="px-2 text-center text-sm">
+                    {currentPage} / {totalPage}
+                  </span>
+                </div>
               </div>
 
               <div className="ml-2 flex h-8 items-center">
