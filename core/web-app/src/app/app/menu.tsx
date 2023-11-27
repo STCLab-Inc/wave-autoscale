@@ -68,11 +68,7 @@ export default function Menu() {
         targetPath="/app/scaling-components"
         label="Scaling Components"
       />
-      <MenuItem
-        pathname={pathname}
-        targetPath="/app/dashboard"
-        label="Dashboard"
-      />
+      <MenuItem pathname={pathname} targetPath="/app/inflow" label="Inflow" />
       <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
         <Link
           className={classNames(
