@@ -26,8 +26,8 @@ export default function ScalingComponentsPage() {
 
   const pageParam = searchParams.get('page');
   const page = pageParam ? parseInt(pageParam, 10) : 1;
-  const viewParam = searchParams.get('view');
-  const view = viewParam ? parseInt(viewParam, 10) : 10;
+  const sizeParam = searchParams.get('size');
+  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
 
   const [scalingComponents, setScalingComponents] = useState<
     ScalingComponentDefinitionEx[]
@@ -37,12 +37,12 @@ export default function ScalingComponentsPage() {
 
   const fetchScalingComponents = async () => {
     try {
-      const db_id = scalingComponentsItem?.db_id;
-      let scalingComponents = await getScalingComponents();
-      setScalingComponents(scalingComponents);
+      const id = scalingComponentsItem?.db_id;
+      let scalingComponentsData = await getScalingComponents();
+      setScalingComponents(scalingComponentsData);
       setScalingComponentsItem(
-        scalingComponents.find(
-          (item: ScalingComponentDefinitionEx) => item.db_id === db_id
+        scalingComponentsData.find(
+          (item: ScalingComponentDefinitionEx) => item.db_id === id
         )
       );
     } catch (error) {
@@ -60,32 +60,37 @@ export default function ScalingComponentsPage() {
   const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
     setCheckAllFlag(checked);
-    const updatedComponents = scalingComponents.map(
-      (scalingComponentsItem) => ({
-        ...scalingComponentsItem,
+    const updatedScalingComponentsData = scalingComponents.map(
+      (updatedScalingComponentsDataItem) => ({
+        ...updatedScalingComponentsDataItem,
         isChecked: checked,
       })
     );
-    setScalingComponents(updatedComponents);
+    setScalingComponents(updatedScalingComponentsData);
   };
 
-  const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+  const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
 
-  const totalPageCount =
-    Math.ceil(scalingComponents.length / itemsPerPage) || 1;
+  useEffect(() => {
+    setTotalPage(Math.ceil(scalingComponents.length / sizePerPage) || 1);
+  }, [scalingComponents, currentPage, totalPage, sizePerPage]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const visibleComponents = scalingComponents.slice(startIndex, endIndex);
+  const startIndex = (currentPage - 1) * sizePerPage;
+  const endIndex = startIndex + sizePerPage;
+  const visibleScalingComponents = scalingComponents.slice(
+    startIndex,
+    endIndex
+  );
 
-  const handleItemsPerPageChange = (
+  const handleSizePerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
-    setItemsPerPage(newItemsPerPage);
+    setSizePerPage(newItemsPerPage);
     setCurrentPage(1);
   };
 
@@ -94,18 +99,18 @@ export default function ScalingComponentsPage() {
   };
 
   useEffect(() => {
-    setCurrentPage(page ? page : 1);
-    setItemsPerPage(view ? view : ITEMS_PER_PAGE_OPTIONS[0]);
-  }, [page, view]);
+    setCurrentPage(page || 1);
+    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+  }, [page, size]);
 
   useEffect(() => {
-    if (currentPage > totalPageCount) {
+    if (currentPage > totalPage) {
       setCurrentPage(1);
     }
     router.push(
-      `/app/scaling-components?page=${currentPage}&view=${itemsPerPage}`
+      `/app/scaling-components?page=${currentPage}&size=${sizePerPage}`
     );
-  }, [currentPage, itemsPerPage, pageParam, viewParam]);
+  }, [scalingComponents, currentPage, totalPage, sizePerPage]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
@@ -147,11 +152,11 @@ export default function ScalingComponentsPage() {
               <div className="mr-2 flex items-center">
                 <label className="select-group-sm">
                   <select
-                    value={itemsPerPage}
-                    onChange={handleItemsPerPageChange}
+                    value={sizePerPage}
+                    onChange={handleSizePerPageChange}
                     className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
                   >
-                    {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                    {SIZE_PER_PAGE_OPTIONS.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -162,7 +167,7 @@ export default function ScalingComponentsPage() {
 
               <div className="mx-2 flex items-center justify-center">
                 <span className="px-2 text-center text-sm">
-                  {currentPage} / {totalPageCount}
+                  {currentPage} / {totalPage}
                 </span>
               </div>
 
@@ -180,14 +185,12 @@ export default function ScalingComponentsPage() {
                 </button>
                 <button
                   className={
-                    currentPage &&
-                    totalPageCount &&
-                    currentPage !== totalPageCount
+                    currentPage && totalPage && currentPage !== totalPage
                       ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
                       : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                   }
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPageCount}
+                  disabled={currentPage === totalPage}
                 >
                   NEXT
                 </button>
@@ -230,7 +233,7 @@ export default function ScalingComponentsPage() {
                 </tr>
               </thead>
               <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
-                {visibleComponents.map(
+                {visibleScalingComponents.map(
                   (componentsItem: ScalingComponentDefinitionEx) => (
                     <tr
                       key={componentsItem.db_id}

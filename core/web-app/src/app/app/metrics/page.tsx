@@ -25,19 +25,19 @@ export default function MetricsPage() {
 
   const pageParam = searchParams.get('page');
   const page = pageParam ? parseInt(pageParam, 10) : 1;
-  const viewParam = searchParams.get('view');
-  const view = viewParam ? parseInt(viewParam, 10) : 10;
+  const sizeParam = searchParams.get('size');
+  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
 
   const [metrics, setMetrics] = useState<MetricDefinitionEx[]>([]);
   const [metricsItem, setMetricsItem] = useState<MetricDefinitionEx>();
 
   const fetchMetrics = async () => {
     try {
-      const db_id = metricsItem?.db_id;
-      let metrics = await getMetrics();
-      setMetrics(metrics);
+      const id = metricsItem?.db_id;
+      let metricsData = await getMetrics();
+      setMetrics(metricsData);
       setMetricsItem(
-        metrics.find((item: MetricDefinitionEx) => item.db_id === db_id)
+        metricsData.find((item: MetricDefinitionEx) => item.db_id === id)
       );
     } catch (error) {
       console.error({ error });
@@ -54,29 +54,32 @@ export default function MetricsPage() {
   const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     setCheckAllFlag(checked);
-    const updatedMetrics = metrics.map((metricsItem) => ({
-      ...metricsItem,
+    const updatedMetricsData = metrics.map((updatedMetricsDataItem) => ({
+      ...updatedMetricsDataItem,
       isChecked: checked,
     }));
-    setMetrics(updatedMetrics);
+    setMetrics(updatedMetricsData);
   };
 
-  const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+  const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
 
-  const totalPageCount = Math.ceil(metrics.length / itemsPerPage) || 1;
+  useEffect(() => {
+    setTotalPage(Math.ceil(metrics.length / sizePerPage) || 1);
+  }, [metrics, currentPage, totalPage, sizePerPage]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const startIndex = (currentPage - 1) * sizePerPage;
+  const endIndex = startIndex + sizePerPage;
   const visibleMetrics = metrics.slice(startIndex, endIndex);
 
-  const handleItemsPerPageChange = (
+  const handleSizePerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
-    setItemsPerPage(newItemsPerPage);
+    setSizePerPage(newItemsPerPage);
     setCurrentPage(1);
   };
 
@@ -85,16 +88,16 @@ export default function MetricsPage() {
   };
 
   useEffect(() => {
-    setCurrentPage(page ? page : 1);
-    setItemsPerPage(view ? view : ITEMS_PER_PAGE_OPTIONS[0]);
-  }, [page, view]);
+    setCurrentPage(page || 1);
+    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+  }, [page, size]);
 
   useEffect(() => {
-    if (currentPage > totalPageCount) {
+    if (currentPage > totalPage) {
       setCurrentPage(1);
     }
-    router.push(`/app/metrics?page=${currentPage}&view=${itemsPerPage}`);
-  }, [currentPage, itemsPerPage, pageParam, viewParam]);
+    router.push(`/app/metrics?page=${currentPage}&size=${sizePerPage}`);
+  }, [metrics, currentPage, totalPage, sizePerPage]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
@@ -134,11 +137,11 @@ export default function MetricsPage() {
               <div className="mr-2 flex items-center">
                 <label className="select-group-sm">
                   <select
-                    value={itemsPerPage}
-                    onChange={handleItemsPerPageChange}
+                    value={sizePerPage}
+                    onChange={handleSizePerPageChange}
                     className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
                   >
-                    {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                    {SIZE_PER_PAGE_OPTIONS.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -149,7 +152,7 @@ export default function MetricsPage() {
 
               <div className="mx-2 flex items-center justify-center">
                 <span className="px-2 text-center text-sm">
-                  {currentPage} / {totalPageCount}
+                  {currentPage} / {totalPage}
                 </span>
               </div>
 
@@ -167,14 +170,12 @@ export default function MetricsPage() {
                 </button>
                 <button
                   className={
-                    currentPage &&
-                    totalPageCount &&
-                    currentPage !== totalPageCount
+                    currentPage && totalPage && currentPage !== totalPage
                       ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
                       : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                   }
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPageCount}
+                  disabled={currentPage === totalPage}
                 >
                   NEXT
                 </button>
