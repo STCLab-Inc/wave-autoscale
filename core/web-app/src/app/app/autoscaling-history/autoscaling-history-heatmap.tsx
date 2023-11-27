@@ -4,20 +4,28 @@ import { groupBy } from 'lodash';
 
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
 
-interface HistoryHeatmapProps {
+interface AutoscalingHistoryHeatmapProps {
   autoscalingHistory: any;
   from: Dayjs;
   to: Dayjs;
 }
 
-function HistoryHeatmap({ autoscalingHistory, from, to }: HistoryHeatmapProps) {
+function AutoscalingHistoryHeatmap({
+  autoscalingHistory,
+  from,
+  to,
+}: AutoscalingHistoryHeatmapProps) {
   const dataForHeatmap = useMemo(() => {
     if (!autoscalingHistory) {
       return [];
     }
 
-    const groupedByDate = groupBy(autoscalingHistory, (historyItem) =>
-      dayjs.unix(historyItem.created_at / 1000).format('YYYY-MM-DD')
+    const groupedByDate = groupBy(
+      autoscalingHistory,
+      (autoscalingHistoryItem) =>
+        dayjs
+          .unix(autoscalingHistoryItem.created_at / 1000)
+          .format('YYYY-MM-DD')
     );
 
     let current = from;
@@ -31,9 +39,11 @@ function HistoryHeatmap({ autoscalingHistory, from, to }: HistoryHeatmapProps) {
 
     const data = Object.entries(groupedByDate)
       .sort(([dateA], [dateB]) => (dateA < dateB ? -1 : 1))
-      .map(([date, historyItems]) => {
-        const groupedByHour = groupBy(historyItems, (historyItem) =>
-          dayjs.unix(historyItem.created_at / 1000).format('HH')
+      .map(([date, autoscalingHistoryItems]) => {
+        const groupedByHour = groupBy(
+          autoscalingHistoryItems,
+          (autoscalingHistoryItem) =>
+            dayjs.unix(autoscalingHistoryItem.created_at / 1000).format('HH')
         );
 
         for (let i = 0; i < 24; i++) {
@@ -47,12 +57,13 @@ function HistoryHeatmap({ autoscalingHistory, from, to }: HistoryHeatmapProps) {
           id: date,
           data: Object.entries(groupedByHour)
             .sort(([hourA], [hourB]) => (hourA < hourB ? -1 : 1))
-            .map(([hour, historyItems]) => {
+            .map(([hour, autoscalingHistoryItems]) => {
               return {
                 x: hour,
-                y: historyItems.length,
-                z: historyItems.some(
-                  (historyItem) => historyItem.fail_message !== undefined
+                y: autoscalingHistoryItems.length,
+                z: autoscalingHistoryItems.some(
+                  (autoscalingHistoryItem) =>
+                    autoscalingHistoryItem.fail_message !== undefined
                 )
                   ? 'Failed'
                   : 'Success',
@@ -132,4 +143,4 @@ function HistoryHeatmap({ autoscalingHistory, from, to }: HistoryHeatmapProps) {
   );
 }
 
-export default memo(HistoryHeatmap);
+export default memo(AutoscalingHistoryHeatmap);

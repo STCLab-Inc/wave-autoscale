@@ -10,17 +10,15 @@ import AutoscalingHistoryService from '@/services/autoscaling-history';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 
 import ContentHeader from '../content-header';
-import HistoryHeatmap from './history-heatmap';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
+import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
 async function getAutoscalingHistory(from: Dayjs, to: Dayjs) {
-  const autoscalingHistory = await AutoscalingHistoryService.getHistoryByFromTo(
-    from,
-    to
-  );
+  const autoscalingHistory =
+    await AutoscalingHistoryService.getAutoscalingHistoryByFromTo(from, to);
   return autoscalingHistory;
 }
 
@@ -40,13 +38,13 @@ export default function AutoscalingHistoryPage() {
   const toParam = searchParams.get('to');
   const from = fromParam || formatDate(DEFAULT_FROM);
   const to = toParam || formatDate(DEFAULT_TO);
-  const fromDayjs = useMemo(() => dayjs(from), [from]);
+  const fromDayjs = useMemo(() => dayjs(from).startOf('day'), [from]);
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
 
   const pageParam = searchParams.get('page');
   const page = pageParam ? parseInt(pageParam, 10) : 1;
-  const viewParam = searchParams.get('view');
-  const view = viewParam ? parseInt(viewParam, 10) : 10;
+  const sizeParam = searchParams.get('size');
+  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
 
   const [autoscalingHistory, setAutoscalingHistory] = useState<
     AutoscalingHistoryDefinitionEx[]
@@ -57,16 +55,19 @@ export default function AutoscalingHistoryPage() {
   const fetchAutoscalingHistory = async () => {
     try {
       const id = autosclingHistoryItem?.id;
-      let autoscalingHistory = await getAutoscalingHistory(fromDayjs, toDayjs);
-      autoscalingHistory = autoscalingHistory.map(
-        (autosclingHistoryItem: AutoscalingHistoryDefinition) => ({
-          ...autosclingHistoryItem,
-          created_at: decodeTime(autosclingHistoryItem.id),
+      let autoscalingHistoryData = await getAutoscalingHistory(
+        fromDayjs,
+        toDayjs
+      );
+      autoscalingHistoryData = autoscalingHistoryData.map(
+        (autoscalingHistoryDataItem: AutoscalingHistoryDefinition) => ({
+          ...autoscalingHistoryDataItem,
+          created_at: decodeTime(autoscalingHistoryDataItem.id),
         })
       );
-      setAutoscalingHistory(autoscalingHistory);
+      setAutoscalingHistory(autoscalingHistoryData);
       setAutosclingHistoryItem(
-        autoscalingHistory.find(
+        autoscalingHistoryData.find(
           (item: AutoscalingHistoryDefinition) => item.id === id
         )
       );
@@ -92,7 +93,7 @@ export default function AutoscalingHistoryPage() {
       router.push(
         `/app/autoscaling-history?from=${params.from}&to=${
           params.to
-        }&page=${1}&view=${itemsPerPage}`
+        }&page=${1}&view=${sizePerPage}`
       );
     }
   };
@@ -102,33 +103,37 @@ export default function AutoscalingHistoryPage() {
   const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
     setCheckAllFlag(checked);
-    const updatedHistory = autoscalingHistory.map((autosclingHistoryItem) => ({
-      ...autosclingHistoryItem,
-      isChecked: checked,
-    }));
-    setAutoscalingHistory(updatedHistory);
+    const updatedAutoscalingHistoryData = autoscalingHistory.map(
+      (updatedAutoscalingHistoryDataItem) => ({
+        ...updatedAutoscalingHistoryDataItem,
+        isChecked: checked,
+      })
+    );
+    setAutoscalingHistory(updatedAutoscalingHistoryData);
   };
 
-  const ITEMS_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+  const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
 
-  const totalPageCount =
-    Math.ceil(autoscalingHistory.length / itemsPerPage) || 1;
+  useEffect(() => {
+    setTotalPage(Math.ceil(autoscalingHistory.length / sizePerPage) || 1);
+  }, [autoscalingHistory, from, to, currentPage, totalPage, sizePerPage]);
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const startIndex = (currentPage - 1) * sizePerPage;
+  const endIndex = startIndex + sizePerPage;
   const visibleAutoscalingHistory = autoscalingHistory.slice(
     startIndex,
     endIndex
   );
 
-  const handleItemsPerPageChange = (
+  const handleSizePerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
-    setItemsPerPage(newItemsPerPage);
+    setSizePerPage(newItemsPerPage);
     setCurrentPage(1);
   };
 
@@ -137,18 +142,26 @@ export default function AutoscalingHistoryPage() {
   };
 
   useEffect(() => {
-    setCurrentPage(page ? page : 1);
-    setItemsPerPage(view ? view : ITEMS_PER_PAGE_OPTIONS[0]);
-  }, [page, view]);
+    setCurrentPage(page || 1);
+    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+  }, [page, size]);
 
   useEffect(() => {
-    if (currentPage > totalPageCount) {
+    if (currentPage > totalPage) {
       setCurrentPage(1);
     }
     router.push(
-      `/app/autoscaling-history?from=${from}&to=${to}&page=${currentPage}&view=${itemsPerPage}`
+      `/app/autoscaling-history?from=${from}&to=${to}&page=${currentPage}&size=${sizePerPage}`
     );
-  }, [currentPage, itemsPerPage, fromParam, toParam, pageParam, viewParam]);
+  }, [
+    autoscalingHistory,
+    from,
+    to,
+    currentPage,
+    totalPage,
+    sizePerPage,
+    searchParams.toString(),
+  ]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
@@ -207,7 +220,7 @@ export default function AutoscalingHistoryPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <HistoryHeatmap
+            <AutoscalingHistoryHeatmap
               autoscalingHistory={autoscalingHistory}
               from={fromDayjs}
               to={toDayjs}
@@ -216,11 +229,11 @@ export default function AutoscalingHistoryPage() {
               <div className="mr-2 flex items-center">
                 <label className="select-group-sm">
                   <select
-                    value={itemsPerPage}
-                    onChange={handleItemsPerPageChange}
+                    value={sizePerPage}
+                    onChange={handleSizePerPageChange}
                     className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
                   >
-                    {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                    {SIZE_PER_PAGE_OPTIONS.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -231,7 +244,7 @@ export default function AutoscalingHistoryPage() {
 
               <div className="mx-2 flex items-center justify-center">
                 <span className="px-2 text-center text-sm">
-                  {currentPage} / {totalPageCount}
+                  {currentPage} / {totalPage}
                 </span>
               </div>
 
@@ -249,14 +262,12 @@ export default function AutoscalingHistoryPage() {
                 </button>
                 <button
                   className={
-                    currentPage &&
-                    totalPageCount &&
-                    currentPage !== totalPageCount
+                    currentPage && totalPage && currentPage !== totalPage
                       ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
                       : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                   }
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPageCount}
+                  disabled={currentPage === totalPage}
                 >
                   NEXT
                 </button>
@@ -322,13 +333,13 @@ export default function AutoscalingHistoryPage() {
                             checked={autosclingHistoryItem.isChecked}
                             onChange={(event) => {
                               const checked = event.target.checked;
-                              const updatedHistory = autoscalingHistory.map(
-                                (item) =>
+                              const updatedAutoscalingHistory =
+                                autoscalingHistory.map((item) =>
                                   item.id === autosclingHistoryItem.id
                                     ? { ...item, isChecked: checked }
                                     : item
-                              );
-                              setAutoscalingHistory(updatedHistory);
+                                );
+                              setAutoscalingHistory(updatedAutoscalingHistory);
                             }}
                           />
                         </label>

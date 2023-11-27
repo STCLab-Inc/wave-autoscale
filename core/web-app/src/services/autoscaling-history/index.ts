@@ -2,7 +2,7 @@ import { DataLayer } from '@/infra/data-layer';
 import { Dayjs } from 'dayjs';
 
 class AutoscalingHistoryServiceClass {
-  async getHistoryByFromTo(from: Dayjs, to: Dayjs) {
+  async getAutoscalingHistoryByFromTo(from: Dayjs, to: Dayjs) {
     /* TODO */
     const response = await DataLayer.get(
       `/api/autoscaling-history?from=${
