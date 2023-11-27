@@ -79,12 +79,9 @@ export default function ScalingComponentsPage() {
     setTotalPage(Math.ceil(scalingComponents.length / sizePerPage) || 1);
   }, [scalingComponents, currentPage, totalPage, sizePerPage]);
 
-  const startIndex = (currentPage - 1) * sizePerPage;
-  const endIndex = startIndex + sizePerPage;
-  const visibleScalingComponents = scalingComponents.slice(
-    startIndex,
-    endIndex
-  );
+  const [visibleScalingComponents, setVisibleScalingComponents] = useState<
+    ScalingComponentDefinitionEx[]
+  >([]);
 
   const handleSizePerPageChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -136,6 +133,15 @@ export default function ScalingComponentsPage() {
     }
   }, [fetchFlag]);
 
+  useEffect(() => {
+    setVisibleScalingComponents(
+      scalingComponents.slice(
+        (currentPage - 1) * sizePerPage,
+        (currentPage - 1) * sizePerPage + sizePerPage
+      )
+    );
+  }, [scalingComponents, currentPage, sizePerPage, totalPage]);
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -155,26 +161,27 @@ export default function ScalingComponentsPage() {
           />
           <div className="flex w-full flex-col">
             <div className="flex items-center justify-end px-8 py-4">
-              <div className="mr-2 flex items-center">
-                <label className="select-group-sm">
-                  <select
-                    value={sizePerPage}
-                    onChange={handleSizePerPageChange}
-                    className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                  >
-                    {SIZE_PER_PAGE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="mx-2 flex items-center justify-center">
-                <span className="px-2 text-center text-sm">
-                  {currentPage} / {totalPage}
-                </span>
+              <div className="mx-2 flex h-8 items-center">
+                <div className="mr-2 flex items-center">
+                  <label className="select-group-sm">
+                    <select
+                      value={sizePerPage}
+                      onChange={handleSizePerPageChange}
+                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                    >
+                      {SIZE_PER_PAGE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mx-2 flex items-center justify-center">
+                  <span className="px-2 text-center text-sm">
+                    {currentPage} / {totalPage}
+                  </span>
+                </div>
               </div>
 
               <div className="ml-2 flex h-8 items-center">
