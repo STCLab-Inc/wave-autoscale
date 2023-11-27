@@ -23,6 +23,7 @@ const EditorContainerDynamic = dynamic(() => import('./code-editor'), {
 export default function ScalingPlansCode({
   scalingPlansItem,
   setScalingPlansItem,
+  detailsModalFlag,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
@@ -30,6 +31,7 @@ export default function ScalingPlansCode({
   setScalingPlansItem: (
     scalingPlan: ScalingPlanDefinitionEx | undefined
   ) => void;
+  detailsModalFlag: boolean;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {

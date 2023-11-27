@@ -148,7 +148,7 @@ export default function AutoscalingHistoryPage() {
     router.push(
       `/app/autoscaling-history?from=${from}&to=${to}&page=${currentPage}&view=${itemsPerPage}`
     );
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, fromParam, toParam, pageParam, viewParam]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
@@ -213,7 +213,7 @@ export default function AutoscalingHistoryPage() {
               to={toDayjs}
             />
             <div className="flex items-center justify-end px-8 py-4">
-              <div className="mr-2 flex w-16 items-center">
+              <div className="mr-2 flex items-center">
                 <label className="select-group-sm">
                   <select
                     value={itemsPerPage}
@@ -229,7 +229,7 @@ export default function AutoscalingHistoryPage() {
                 </label>
               </div>
 
-              <div className="mx-2 flex w-16 items-center justify-center">
+              <div className="mx-2 flex items-center justify-center">
                 <span className="px-2 text-center text-sm">
                   {currentPage} / {totalPageCount}
                 </span>

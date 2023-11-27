@@ -94,7 +94,7 @@ export default function MetricsPage() {
       setCurrentPage(1);
     }
     router.push(`/app/metrics?page=${currentPage}&view=${itemsPerPage}`);
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, pageParam, viewParam]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
@@ -131,7 +131,7 @@ export default function MetricsPage() {
           />
           <div className="flex w-full flex-col">
             <div className="flex items-center justify-end px-8 py-4">
-              <div className="mr-2 flex w-16 items-center">
+              <div className="mr-2 flex items-center">
                 <label className="select-group-sm">
                   <select
                     value={itemsPerPage}
@@ -147,7 +147,7 @@ export default function MetricsPage() {
                 </label>
               </div>
 
-              <div className="mx-2 flex w-16 items-center justify-center">
+              <div className="mx-2 flex items-center justify-center">
                 <span className="px-2 text-center text-sm">
                   {currentPage} / {totalPageCount}
                 </span>
