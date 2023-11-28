@@ -159,7 +159,7 @@ export default function MetricsPage() {
                     </select>
                   </label>
                 </div>
-                <div className="min-h-8 mx-2 flex items-center justify-center rounded-md border border-gray-200">
+                <div className="min-h-8 mx-2 flex min-w-[100px] items-center justify-center rounded-md border border-gray-200">
                   <span className="px-4 text-center text-sm">
                     {currentPage} / {totalPage}
                   </span>
