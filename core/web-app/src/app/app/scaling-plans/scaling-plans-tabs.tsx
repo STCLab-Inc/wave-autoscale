@@ -6,10 +6,10 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 
 function getTabClassNames(isActive: boolean) {
   return classNames(
-    'flex-column mx-0.5 flex h-full items-center lg:flex-row',
+    'flex-column mx-0.5 flex h-full items-center lg:flex-row px-4',
     isActive
-      ? 'border-b-4 border-blue-400 text-gray-1000 pr-4 pl-4'
-      : 'border-b-4 border-white text-gray-600 pr-4 pl-4'
+      ? 'border-b-4 border-blue-400 text-gray-1000'
+      : 'border-b-4 border-white text-gray-600'
   );
 }
 

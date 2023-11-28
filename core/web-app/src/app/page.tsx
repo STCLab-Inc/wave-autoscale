@@ -1,4 +1,5 @@
 'use client';
+
 import Image from 'next/image';
 import { Inter } from 'next/font/google';
 import classNames from 'classnames';
@@ -6,6 +7,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const inter = Inter({ subsets: ['latin'] });
+
+function getPaddingClassNames(windowWidth: number) {
+  return windowWidth < 768 ? 'p-5' : 'p-10';
+}
 
 export default function Home() {
   const [windowWidth, setWindowWidth] = useState<number>(0);
@@ -22,8 +27,6 @@ export default function Home() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
-
-  const paddingClass = windowWidth < 768 ? 'p-5' : 'p-10';
 
   const cardClass = classNames('card m-12 shadow-2xl mx-auto max-w-lg', {
     'sm:card-side': windowWidth < 640,
@@ -56,7 +59,7 @@ export default function Home() {
             style={{ minWidth: '5rem', maxWidth: '5rem' }}
           />
         </figure>
-        <figure className={`bg-black ${paddingClass}`}>
+        <figure className={`bg-black ${getPaddingClassNames(windowWidth)}`}>
           <Image
             src="/assets/images/wave-autoscale_text.svg"
             alt="wave-autoscale_text.svg"

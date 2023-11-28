@@ -1,14 +1,15 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-function getMenuClassNames(currentPathname: string, targetPath?: string) {
+function getTextMenuClassNames(currentPathname: string, targetPath?: string) {
   return classNames(
     !targetPath || currentPathname.indexOf(targetPath) < 0
-      ? 'text-gray-600 pr-4 pl-4'
-      : 'text-gray-1000 pr-4 pl-4'
+      ? 'text-gray-600'
+      : 'text-gray-1000'
   );
 }
 
@@ -36,8 +37,9 @@ function MenuItem({
     >
       <Link
         className={classNames(
-          getMenuClassNames(pathname, targetPath),
-          'whitespace-nowrap'
+          getTextMenuClassNames(pathname, targetPath),
+
+          'whitespace-nowrap px-4'
         )}
         href={targetPath}
       >
@@ -72,8 +74,8 @@ export default function Menu() {
       <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
         <Link
           className={classNames(
-            getMenuClassNames(pathname),
-            'whitespace-nowrap'
+            getTextMenuClassNames(pathname),
+            'whitespace-nowrap px-4'
           )}
           href="https://github.com/STCLab-Inc/wave-autoscale"
           target="_blank"
