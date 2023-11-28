@@ -10,14 +10,29 @@ import InflowService from '@/services/inflow';
 import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import ContentHeader from '../content-header';
-/* import HistoryHeatmap from './history-heatmap'; */
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 import InflowDetailDrawer from './inflow-drawer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
-async function getInflow(from: Dayjs, to: Dayjs) {
-  const inflow = await InflowService.getInflowByFromTo(from, to);
+async function getInflowByFromToInDatabase(from: Dayjs, to: Dayjs) {
+  const inflow = await InflowService.getInflowByFromToInDatabase(from, to);
+  return inflow;
+}
+async function getInflowMetricIdInMemory() {
+  const inflow = await InflowService.getInflowMetricIdInMemory();
+  return inflow;
+}
+async function getInflowWithMetricIdByFromToInMemory(
+  metric_id: String,
+  from: Dayjs,
+  to: Dayjs
+) {
+  const inflow = await InflowService.getInflowWithMetricIdByFromToInMemory(
+    metric_id,
+    from,
+    to
+  );
   return inflow;
 }
 
@@ -48,18 +63,34 @@ export default function InflowPage() {
   const [inflow, setInflow] = useState<InflowDefinitionEx[]>([]);
   const [inflowItem, setInflowItem] = useState<InflowDefinitionEx>();
 
+  const [sourceType, setSourceType] = useState<string>('MEMORY');
+  const [metricIds, setMetricIds] = useState<string[]>(['Metric ID']);
+  const [metricId, setMetricId] = useState<string>('');
+
   const fetchInflow = async () => {
     try {
-      const id = inflowItem?.id;
-      let inflowData = await getInflow(fromDayjs, toDayjs);
-      inflowData = inflowData.map((inflowDataItem: InflowDefinition) => ({
-        ...inflowDataItem,
-        created_at: decodeTime(inflowDataItem.id),
-      }));
-      setInflow(inflowData);
-      setInflowItem(
-        inflowData.find((item: InflowDefinition) => item.id === id)
-      );
+      if (sourceType === 'DATABASE') {
+        const id = inflowItem?.id;
+        let inflowData = await getInflowByFromToInDatabase(fromDayjs, toDayjs);
+        inflowData = inflowData.map((inflowDataItem: InflowDefinition) => ({
+          ...inflowDataItem,
+          created_at: decodeTime(inflowDataItem.id),
+        }));
+        setInflow(inflowData);
+        setInflowItem(
+          inflowData.find((item: InflowDefinition) => item.id === id)
+        );
+      } else if (sourceType === 'MEMORY' && !metricId) {
+        let metricIdsData = await getInflowMetricIdInMemory();
+        setMetricIds([...metricIds, ...metricIdsData]);
+      } else if (sourceType === 'MEMORY' && metricId) {
+        let inflowData = await getInflowWithMetricIdByFromToInMemory(
+          metricId,
+          fromDayjs,
+          toDayjs
+        );
+        setInflow(inflowData);
+      }
     } catch (error) {
       console.error({ error });
       return [];
@@ -68,7 +99,14 @@ export default function InflowPage() {
 
   useEffect(() => {
     fetchInflow();
-  }, [fromDayjs, toDayjs]);
+  }, [fromDayjs, toDayjs, metricId]);
+
+  useEffect(() => {
+    setInflow([]);
+    setMetricIds(['Metric ID']);
+    setMetricId('');
+    fetchInflow();
+  }, [sourceType]);
 
   const handleDateChange = (field: 'from' | 'to', value: string) => {
     const newDate = dayjs(value);
@@ -166,7 +204,11 @@ export default function InflowPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleFieldChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedField(event.target.value);
+    if (sourceType === 'MEMORY') {
+      setMetricId(event.target.value);
+    } else if (sourceType === 'DATABASE') {
+      setSelectedField(event.target.value);
+    }
   };
 
   useEffect(() => {
@@ -207,6 +249,24 @@ export default function InflowPage() {
             title="Inflow"
             right={
               <div className="flex items-center">
+                <div className="form-control mr-8 w-36">
+                  <label className="label cursor-pointer">
+                    <span className="label-text text-sm text-gray-1000">
+                      {sourceType}
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="toggle-primary toggle"
+                      checked={sourceType === 'MEMORY'}
+                      onChange={() =>
+                        sourceType === 'MEMORY'
+                          ? setSourceType('DATABASE')
+                          : setSourceType('MEMORY')
+                      }
+                    />
+                  </label>
+                </div>
+
                 <div className="form-control mr-2">
                   <label className="input-group-sm">
                     <input
@@ -237,201 +297,348 @@ export default function InflowPage() {
               </div>
             }
           />
-          <div className="flex w-full flex-col">
-            {/* <HistoryHeatmap inflow={inflow} from={fromDayjs} to={toDayjs} /> */}
-            <div className="flex items-center justify-end px-8 py-4">
-              <div className="mr-2 flex h-8 items-center">
-                <div className="mr-2 flex items-center">
-                  <label className="select-group-sm">
-                    <select
-                      value={selectedField}
-                      onChange={handleFieldChange}
-                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                    >
-                      {FILTER_PER_PAGE_OPTIONS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="mx-2 flex items-center justify-center">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="input-bordered input input-sm max-w-[130px] cursor-text px-2 focus:outline-none"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="mx-2 flex h-8 items-center">
-                <div className="mr-2 flex items-center">
-                  <label className="select-group-sm">
-                    <select
-                      value={sizePerPage}
-                      onChange={handleSizePerPageChange}
-                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                    >
-                      {SIZE_PER_PAGE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="min-h-8 mx-2 flex items-center justify-center rounded-md border border-gray-200">
-                  <span className="px-4 text-center text-sm">
-                    {currentPage} / {totalPage}
-                  </span>
-                </div>
-              </div>
-
-              <div className="ml-2 flex h-8 items-center">
-                <button
-                  className={
-                    currentPage === 1
-                      ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  PREVIOUS
-                </button>
-                <button
-                  className={
-                    currentPage && totalPage && currentPage !== totalPage
-                      ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPage}
-                >
-                  NEXT
-                </button>
-              </div>
-            </div>
-
-            <table className="flex w-full flex-col">
-              <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-                <tr className="flex h-full w-full px-8">
-                  <th className="mr-4 flex h-full flex-1 items-center">
-                    <label className="flex h-full items-center">
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={checkAllFlag}
-                        onChange={handleCheckAllChange}
-                      />
+          {sourceType === 'MEMORY' ? (
+            <div className="flex w-full flex-col">
+              <div className="flex items-center justify-end px-8 py-4">
+                <div className="mx-2 flex h-8 items-center">
+                  <div className="mr-2 flex items-center">
+                    <label className="select-group-sm">
+                      <select
+                        value={metricId}
+                        onChange={handleFieldChange}
+                        className="focus:outline-noneselect select-sm min-w-[250px] cursor-pointer rounded-md border border-gray-200 px-2"
+                      >
+                        {metricIds.map((item, key) => (
+                          <option key={key} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
                     </label>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-4 items-center">
-                    <span className="flex items-center break-words">
-                      Inflow ID
+                  </div>
+                </div>
+
+                <div className="mx-2 flex h-8 items-center">
+                  <div className="mr-2 flex items-center">
+                    <label className="select-group-sm">
+                      <select
+                        value={sizePerPage}
+                        onChange={handleSizePerPageChange}
+                        className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                      >
+                        {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
+                          <option key={key} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="min-h-8 mx-2 flex min-w-[100px] items-center justify-center rounded-md border border-gray-200">
+                    <span className="px-4 text-center text-sm">
+                      {currentPage} / {totalPage}
                     </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-2 items-center">
-                    <span className="flex items-center break-words">
-                      Collector
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-4 items-center">
-                    <span className="flex items-center break-words">
-                      Metric ID
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-10 items-center">
-                    <span className="flex items-center break-words">
-                      JSON Value
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-2 items-center">
-                    <div className="flex items-center break-words">Date</div>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-1 items-center">
-                    <div className="flex items-center break-words">Actions</div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
-                {visibleInflow.map((InflowItem: InflowDefinitionEx) => (
-                  <tr
-                    key={InflowItem.id}
-                    className="flex w-full border-b px-8 py-4"
+                  </div>
+                </div>
+
+                <div className="ml-2 flex h-8 items-center">
+                  <button
+                    className={
+                      currentPage === 1
+                        ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                        : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+                    }
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
                   >
-                    <td className="mr-4 flex h-full flex-1 items-start">
-                      <label className="flex items-center">
+                    PREVIOUS
+                  </button>
+                  <button
+                    className={
+                      currentPage && totalPage && currentPage !== totalPage
+                        ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                        : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                    }
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPage}
+                  >
+                    NEXT
+                  </button>
+                </div>
+              </div>
+
+              <table className="flex w-full flex-col">
+                <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
+                  <tr className="flex h-full w-full px-8">
+                    <th className="mr-4 flex h-full flex-1 items-center">
+                      <label className="flex h-full items-center">
                         <input
                           type="checkbox"
                           className="checkbox"
-                          checked={InflowItem.isChecked}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            const updatedInflowItem = inflow.map((item) =>
-                              item.id === InflowItem.id
-                                ? { ...item, isChecked: checked }
-                                : item
-                            );
-                            setInflow(updatedInflowItem);
-                          }}
+                          checked={checkAllFlag}
+                          onChange={handleCheckAllChange}
                         />
                       </label>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-4 items-start">
-                      <div className="flex items-center break-all">
-                        {InflowItem.id}
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-10 items-center">
+                      <span className="flex items-center break-words">
+                        JSON Value
+                      </span>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-1 items-center">
+                      <div className="flex items-center break-words">
+                        Actions
                       </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-2 items-start">
-                      <div className="flex items-center break-all">
-                        {InflowItem.collector}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-4 items-start">
-                      <div className="flex items-center break-all">
-                        {InflowItem.metric_id}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-10 items-start">
-                      <div className="flex flex-col items-center">
-                        {renderKeyValuePairsWithJson(
-                          InflowItem.json_value,
-                          true
-                        )}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-2 items-start">
-                      <div className="flex items-center break-all">
-                        {dayjs
-                          .unix(Number(InflowItem.created_at) / 1000)
-                          .format('YYYY/MM/DD HH:mm:ss')}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-1 items-start">
-                      <div className="flex items-center">
-                        <button
-                          className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
-                          onClick={() => onClickDetails(InflowItem)}
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
+                  {visibleInflow.map((InflowItem: InflowDefinitionEx) => (
+                    <tr
+                      key={InflowItem.id}
+                      className="flex w-full border-b px-8 py-4"
+                    >
+                      <td className="mr-4 flex h-full flex-1 items-start">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="checkbox"
+                            checked={InflowItem.isChecked}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              const updatedInflowItem = inflow.map((item) =>
+                                item.id === InflowItem.id
+                                  ? { ...item, isChecked: checked }
+                                  : item
+                              );
+                              setInflow(updatedInflowItem);
+                            }}
+                          />
+                        </label>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-10 items-start">
+                        <div className="flex flex-col items-center">
+                          {renderKeyValuePairsWithJson(
+                            InflowItem.json_value,
+                            true
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="mx-4 flex h-full w-full flex-1 items-start">
+                        <div className="flex items-center">
+                          <button
+                            className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
+                            onClick={() => onClickDetails(InflowItem)}
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : sourceType === 'DATABASE' ? (
+            <div className="flex w-full flex-col">
+              <div className="flex items-center justify-end px-8 py-4">
+                <div className="mx-2 flex h-8 items-center">
+                  <div className="mr-2 flex items-center">
+                    <label className="select-group-sm">
+                      <select
+                        value={selectedField}
+                        onChange={handleFieldChange}
+                        className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                      >
+                        {FILTER_PER_PAGE_OPTIONS.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mx-2 flex items-center justify-center">
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      className="input-bordered input input-sm max-w-[130px] cursor-text px-2 focus:outline-none"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mx-2 flex h-8 items-center">
+                  <div className="mr-2 flex items-center">
+                    <label className="select-group-sm">
+                      <select
+                        value={sizePerPage}
+                        onChange={handleSizePerPageChange}
+                        className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
+                      >
+                        {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
+                          <option key={key} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="min-h-8 mx-2 flex min-w-[100px] items-center justify-center rounded-md border border-gray-200">
+                    <span className="px-4 text-center text-sm">
+                      {currentPage} / {totalPage}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="ml-2 flex h-8 items-center">
+                  <button
+                    className={
+                      currentPage === 1
+                        ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                        : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
+                    }
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    PREVIOUS
+                  </button>
+                  <button
+                    className={
+                      currentPage && totalPage && currentPage !== totalPage
+                        ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
+                        : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
+                    }
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPage}
+                  >
+                    NEXT
+                  </button>
+                </div>
+              </div>
+
+              <table className="flex w-full flex-col">
+                <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
+                  <tr className="flex h-full w-full px-8">
+                    <th className="mr-4 flex h-full flex-1 items-center">
+                      <label className="flex h-full items-center">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={checkAllFlag}
+                          onChange={handleCheckAllChange}
+                        />
+                      </label>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-4 items-center">
+                      <span className="flex items-center break-words">
+                        Inflow ID
+                      </span>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-2 items-center">
+                      <span className="flex items-center break-words">
+                        Collector
+                      </span>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-4 items-center">
+                      <span className="flex items-center break-words">
+                        Metric ID
+                      </span>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-10 items-center">
+                      <span className="flex items-center break-words">
+                        JSON Value
+                      </span>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-2 items-center">
+                      <div className="flex items-center break-words">Date</div>
+                    </th>
+                    <th className="mx-4 flex h-full w-full flex-1 items-center">
+                      <div className="flex items-center break-words">
+                        Actions
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
+                  {visibleInflow.map((InflowItem: InflowDefinitionEx) => (
+                    <tr
+                      key={InflowItem.id}
+                      className="flex w-full border-b px-8 py-4"
+                    >
+                      <td className="mr-4 flex h-full flex-1 items-start">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="checkbox"
+                            checked={InflowItem.isChecked}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              const updatedInflowItem = inflow.map((item) =>
+                                item.id === InflowItem.id
+                                  ? { ...item, isChecked: checked }
+                                  : item
+                              );
+                              setInflow(updatedInflowItem);
+                            }}
+                          />
+                        </label>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-4 items-start">
+                        <div className="flex items-center break-all">
+                          {InflowItem.id}
+                        </div>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-2 items-start">
+                        <div className="flex items-center break-all">
+                          {InflowItem.collector}
+                        </div>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-4 items-start">
+                        <div className="flex items-center break-all">
+                          {InflowItem.metric_id}
+                        </div>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-10 items-start">
+                        <div className="flex flex-col items-center">
+                          {renderKeyValuePairsWithJson(
+                            InflowItem.json_value,
+                            true
+                          )}
+                        </div>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-2 items-start">
+                        <div className="flex items-center break-all">
+                          {dayjs
+                            .unix(Number(InflowItem.created_at) / 1000)
+                            .format('YYYY/MM/DD HH:mm:ss')}
+                        </div>
+                      </td>
+                      <td className="mx-4 flex h-full w-full flex-1 items-start">
+                        <div className="flex items-center">
+                          <button
+                            className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
+                            onClick={() => onClickDetails(InflowItem)}
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
         {detailsModalFlag ? (
           <InflowDetailDrawer
             inflowItem={inflowItem}
             setDetailsModalFlag={setDetailsModalFlag}
             setFetchFlag={setFetchFlag}
+            sourceType={sourceType}
           />
         ) : null}
       </div>

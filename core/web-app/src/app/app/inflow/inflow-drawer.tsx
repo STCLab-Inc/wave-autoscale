@@ -17,30 +17,41 @@ export default function InflowDetailDrawer({
   inflowItem,
   setDetailsModalFlag,
   setFetchFlag,
+  sourceType,
 }: {
   inflowItem?: InflowDefinitionEx;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
+  sourceType: string;
 }) {
   const [inflow, setInflow] = useState<InflowDefinitionEx>();
 
   useEffect(() => {
     if (inflowItem) {
-      const { id, collector, metric_id, json_value, created_at, ...rest } =
-        inflowItem;
+      if (sourceType === 'MEMORY') {
+        const { json_value, ...rest } = inflowItem;
 
-      setInflow({
-        ...rest,
-        id,
-        collector,
-        metric_id,
-        json_value,
-        created_at: dayjs
-          .unix(decodeTime(id) / 1000)
-          .format('YYYY/MM/DD HH:mm:ss'),
-      });
+        setInflow({
+          json_value,
+          ...rest,
+        });
+      } else if (sourceType === 'DATABASE') {
+        const { id, collector, metric_id, json_value, created_at, ...rest } =
+          inflowItem;
+
+        setInflow({
+          id,
+          collector,
+          metric_id,
+          json_value,
+          created_at: dayjs
+            .unix(decodeTime(id) / 1000)
+            .format('YYYY/MM/DD HH:mm:ss'),
+          ...rest,
+        });
+      }
     }
-  }, [inflowItem]);
+  }, [inflowItem, sourceType]);
 
   const onClickOverlay = () => {
     setFetchFlag(true);
@@ -61,80 +72,116 @@ export default function InflowDetailDrawer({
           className="drawer-overlay"
           onClick={onClickOverlay}
         />
-        <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
-          <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
-            <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
-              Inflow
-            </span>
-            <div className="flex px-4">
-              <button
-                className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
-                onClick={onClickExit}
-                type="button"
-              >
-                EXIT
-              </button>
-            </div>
-          </div>
-
-          <div className="form-control w-full px-4 py-2">
-            <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Inflow ID</span>
-              {/* <span className="label-text-alt">label-text-alt</span> */}
-            </label>
-            <div className="min-h-12 flex items-center rounded-md border border-gray-200">
-              <span className="my-2 w-full px-4 text-sm">{inflow?.id}</span>
-            </div>
-          </div>
-
-          <div className="form-control w-full px-4 py-2">
-            <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Collector</span>
-              {/* <span className="label-text-alt">label-text-alt</span> */}
-            </label>
-            <div className="min-h-12 flex items-center rounded-md border border-gray-200">
-              <span className="my-2 w-full px-4 text-sm">
-                {inflow?.collector}
+        {sourceType === 'MEMORY' ? (
+          <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
+            <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
+              <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
+                Inflow
               </span>
+              <div className="flex px-4">
+                <button
+                  className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
+                  onClick={onClickExit}
+                  type="button"
+                >
+                  EXIT
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="form-control w-full px-4 py-2">
-            <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Metric ID</span>
-              {/* <span className="label-text-alt">label-text-alt</span> */}
-            </label>
-            <div className="min-h-12 flex items-center rounded-md border border-gray-200">
-              <span className="my-2 w-full px-4 text-sm">
-                {inflow?.metric_id}
-              </span>
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">JSON Value</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">
+                  {renderKeyValuePairsWithJson(
+                    inflow?.json_value || '{}',
+                    true
+                  )}
+                </span>
+              </div>
             </div>
           </div>
+        ) : sourceType === 'DATABASE' ? (
+          <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
+            <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-dashed border-gray-400 bg-gray-75">
+              <span className="font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000">
+                Inflow
+              </span>
+              <div className="flex px-4">
+                <button
+                  className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
+                  onClick={onClickExit}
+                  type="button"
+                >
+                  EXIT
+                </button>
+              </div>
+            </div>
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Inflow ID</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">{inflow?.id}</span>
+              </div>
+            </div>
 
-          <div className="form-control w-full px-4 py-2">
-            <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">JSON Value</span>
-              {/* <span className="label-text-alt">label-text-alt</span> */}
-            </label>
-            <div className="min-h-12 flex items-center rounded-md border border-gray-200">
-              <span className="my-2 w-full px-4 text-sm">
-                {renderKeyValuePairsWithJson(inflow?.json_value || '{}', true)}
-              </span>
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Collector</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">
+                  {inflow?.collector}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="form-control w-full px-4 py-2">
-            <label className="label px-0 py-2">
-              <span className="text-md label-text px-2">Date</span>
-              {/* <span className="label-text-alt">label-text-alt</span> */}
-            </label>
-            <div className="min-h-12 flex items-center rounded-md border border-gray-200">
-              <span className="my-2 w-full px-4 text-sm">
-                {inflow?.created_at}
-              </span>
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Metric ID</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">
+                  {inflow?.metric_id}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">JSON Value</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">
+                  {renderKeyValuePairsWithJson(
+                    inflow?.json_value || '{}',
+                    true
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text px-2">Date</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <div className="min-h-12 flex items-center rounded-md border border-gray-200">
+                <span className="my-2 w-full px-4 text-sm">
+                  {inflow?.created_at}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
