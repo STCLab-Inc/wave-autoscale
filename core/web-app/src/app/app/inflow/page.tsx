@@ -135,15 +135,7 @@ export default function InflowPage() {
     router.push(
       `/app/inflow?from=${from}&to=${to}&page=${currentPage}&size=${sizePerPage}`
     );
-  }, [
-    inflow,
-    from,
-    to,
-    currentPage,
-    totalPage,
-    sizePerPage,
-    searchParams.toString(),
-  ]);
+  }, [inflow, from, to, currentPage, totalPage, sizePerPage, searchParams]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 

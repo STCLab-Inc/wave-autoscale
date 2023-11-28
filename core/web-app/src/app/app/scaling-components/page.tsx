@@ -107,13 +107,7 @@ export default function ScalingComponentsPage() {
     router.push(
       `/app/scaling-components?page=${currentPage}&size=${sizePerPage}`
     );
-  }, [
-    scalingComponents,
-    currentPage,
-    totalPage,
-    sizePerPage,
-    searchParams.toString(),
-  ]);
+  }, [scalingComponents, currentPage, totalPage, sizePerPage, searchParams]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 

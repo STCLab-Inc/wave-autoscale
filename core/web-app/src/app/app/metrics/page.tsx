@@ -97,7 +97,7 @@ export default function MetricsPage() {
       setCurrentPage(1);
     }
     router.push(`/app/metrics?page=${currentPage}&size=${sizePerPage}`);
-  }, [metrics, currentPage, totalPage, sizePerPage, searchParams.toString()]);
+  }, [metrics, currentPage, totalPage, sizePerPage, searchParams]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 

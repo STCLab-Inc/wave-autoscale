@@ -157,7 +157,7 @@ export default function AutoscalingHistoryPage() {
     currentPage,
     totalPage,
     sizePerPage,
-    searchParams.toString(),
+    searchParams,
   ]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
