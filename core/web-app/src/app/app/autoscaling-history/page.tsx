@@ -240,8 +240,8 @@ export default function AutoscalingHistoryPage() {
                       onChange={handleSizePerPageChange}
                       className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
                     >
-                      {SIZE_PER_PAGE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
+                      {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
+                        <option key={key} value={option}>
                           {option}
                         </option>
                       ))}
