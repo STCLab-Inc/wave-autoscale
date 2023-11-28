@@ -66,7 +66,7 @@ export default function AutoscalingHistoryDetailDrawer({
   };
 
   return (
-    <div className="autoscaling-history-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-50 w-full">
+    <div className="autoscaling-history-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-20 w-full">
       <input id="drawer" type="checkbox" className="drawer-toggle" checked />
       <div className="drawer-side h-full border-t border-gray-200">
         <label

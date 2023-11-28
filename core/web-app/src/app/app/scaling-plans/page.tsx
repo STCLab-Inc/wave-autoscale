@@ -95,7 +95,9 @@ export default function ScalingPlansPage() {
               />
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div className="flex h-full w-full flex-col border-t "></div>
+        )}
       </div>
       {detailsModalFlag ? (
         <ScalingPlansDrawer
