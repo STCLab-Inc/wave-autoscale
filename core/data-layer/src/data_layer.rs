@@ -1,9 +1,8 @@
 use crate::{
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
-        autoscaling_history_definition::AutoscalingHistoryDefinition,
-        object_kind::ObjectKind,
-        source_metrics::{SourceMetrics, SourceMetricsDefinition},
+        autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
+        source_metrics::SourceMetrics,
     },
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
@@ -946,50 +945,21 @@ impl DataLayer {
         Ok(metric_values)
     }
 
-    // Get SourceMetricsDefinition by from and to date from the database
-    pub async fn get_inflow_by_date_in_database(
-        &self,
-        from_date: DateTime<Utc>,
-        to_date: DateTime<Utc>,
-    ) -> Result<Vec<SourceMetricsDefinition>> {
-        let mut inflow: Vec<SourceMetricsDefinition> = Vec::new();
-        // Convert from and to date to Ulid.
-        // e.g. 2021-01-01 00:00:00.000 -> 01F8ZQZ1Z0Z000000000000000
-        let from = Ulid::from_parts(from_date.timestamp_millis() as u64, 0).to_string();
-        // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
-        let to_date = to_date + chrono::Duration::milliseconds(1);
-        let to = Ulid::from_parts(to_date.timestamp_millis() as u64, 0).to_string();
-
-        // Query
-        let query_string = "SELECT id, collector, metric_id, json_value FROM source_metrics WHERE id BETWEEN $1 AND $2";
-        let result = sqlx::query(query_string)
-            .bind(from)
-            .bind(to)
-            .fetch_all(&self.pool)
-            .await;
-
-        if result.is_err() {
-            return Err(anyhow!(result.err().unwrap().to_string()));
-        }
-        let result = result.unwrap();
-
-        for row in result {
-            inflow.push(SourceMetricsDefinition {
-                id: row.get("id"),
-                collector: row.get("collector"),
-                metric_id: row.get("metric_id"),
-                json_value: row.get("json_value"),
-            });
-        }
-
-        Ok(inflow)
-    }
-    // Get metric id from the memory
-    pub async fn get_inflow_metric_id_in_memory(&self) -> Result<Vec<String>> {
+    // Get inflow metric id
+    pub async fn get_inflow_metric_id(&self) -> Result<Vec<String>> {
         let mut metric_ids: Vec<String> = Vec::new();
 
-        // Acquire read lock on SOURCE_METRICS_DATA
-        let source_metrics_data = SOURCE_METRICS_DATA.read().unwrap();
+        // Acquire read lock on source metrics data
+        let source_metrics_data = match SOURCE_METRICS_DATA.read() {
+            Ok(data) => data,
+            Err(err) => {
+                eprintln!(
+                    "Failed to acquire read lock on SOURCE_METRICS_DATA: {}",
+                    err
+                );
+                return Ok(metric_ids);
+            }
+        };
 
         // Extract metric_ids from source_metrics
         for metric_id in source_metrics_data.source_metrics.keys() {
@@ -998,8 +968,8 @@ impl DataLayer {
 
         Ok(metric_ids)
     }
-    // Get SourceMetrics by from and to date with metric id from the memory
-    pub async fn get_inflow_by_date_with_metric_id_in_memory(
+    // Get inflow with metric id by from and to date
+    pub async fn get_inflow_with_metric_id_by_date(
         &self,
         metric_id: String,
         from_date: DateTime<Utc>,
@@ -1010,7 +980,8 @@ impl DataLayer {
         let to = (to_date + chrono::Duration::milliseconds(1)).timestamp_millis();
 
         let mut source_metrics: Vec<SourceMetrics> = Vec::new();
-        // Acquire read lock on SOURCE_METRICS_DATA
+
+        // Acquire read lock on source metrics data
         let source_metrics_data = match SOURCE_METRICS_DATA.read() {
             Ok(data) => data,
             Err(err) => {
@@ -1022,7 +993,7 @@ impl DataLayer {
             }
         };
 
-        // Extract source_metrics with metric_id
+        // Extract source metrics data with metric id
         if let Some(source_metrics_item) = source_metrics_data.source_metrics.get(&metric_id) {
             // Extract json_value from the source_metrics_item
             for (_key, value) in source_metrics_item.iter() {
@@ -1032,51 +1003,58 @@ impl DataLayer {
             }
         }
 
-        // Iterate over source_metrics and filter based on timestamp
-        for entry in source_metrics.iter() {
+        // Iterate over source metrics data and filter based on timestamp
+        for source_metrics_item in source_metrics.iter() {
             // Parse json_value from the entry
-            let json_value: serde_json::Value = match serde_json::from_str(&entry.json_value) {
-                Ok(value) => value,
-                Err(err) => {
-                    eprintln!("Failed to parse JSON: {}", err);
-                    continue;
-                }
-            };
+            let json_value: serde_json::Value =
+                match serde_json::from_str(&source_metrics_item.json_value) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        eprintln!("Failed to parse JSON: {}", err);
+                        continue;
+                    }
+                };
 
-            // Check if json_value is an array
-            if let Some(entries) = json_value.as_array() {
+            // Check if json value is an array
+            if let Some(json_values) = json_value.as_array() {
                 // Iterate over each object in the array
-                for entry in entries {
-                    // Check if the entry has a timestamp field
-                    if let Some(timestamp_str) = entry
+                for json_values_item in json_values {
+                    // Check if the json values item has a timestamp field
+                    if let Some(json_values_item_timestamp) = json_values_item
                         .get("timestamp")
                         .and_then(|timestamp| timestamp.as_str())
                     {
-                        // Convert timestamp_str to DateTime<Utc>
-                        if let Ok(entry_timestamp) = DateTime::parse_from_str(timestamp_str, "%+")
-                            .map(|datetime| datetime.with_timezone(&Utc))
+                        if let Ok(parse_json_values_item_timestamp) =
+                            DateTime::parse_from_str(json_values_item_timestamp, "%+")
+                                .map(|datetime| datetime.with_timezone(&Utc))
                         {
                             // Check if the timestamp is within the specified range
-                            if entry_timestamp.timestamp_millis() >= from
-                                && entry_timestamp.timestamp_millis() <= to
+                            if parse_json_values_item_timestamp.timestamp_millis() >= from
+                                && parse_json_values_item_timestamp.timestamp_millis() <= to
                             {
                                 // Add to the result vector
                                 inflow.push(SourceMetrics {
-                                    json_value: entry.to_string(),
+                                    json_value: json_values_item.to_string(),
                                 });
                                 // Break out of the loop if at least one valid entry is found
                                 break;
                             }
                         } else {
-                            eprintln!("Failed to parse timestamp from string: {}", timestamp_str);
+                            eprintln!(
+                                "Failed to parse timestamp from string: {}",
+                                json_values_item_timestamp
+                            );
                         }
                     } else {
                         // Print a message indicating that the timestamp field is not found
-                        eprintln!("Timestamp field is not found in JSON object: {:?}", entry);
+                        eprintln!(
+                            "Timestamp field is not found in array element: {:?}",
+                            json_values_item
+                        );
                     }
                 }
             } else {
-                eprintln!("json_value is not an array: {:?}", json_value);
+                eprintln!("Failed to read from array: {:?}", json_value);
             }
         }
 
