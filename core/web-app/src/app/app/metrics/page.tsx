@@ -144,7 +144,7 @@ export default function MetricsPage() {
           <div className="flex w-full flex-col">
             <div className="flex items-center justify-end px-8 py-4">
               <div className="mx-2 flex h-8 items-center">
-                <div className="mr-2 flex items-center">
+                <div className="mx-2 flex items-center">
                   <label className="select-group-sm">
                     <select
                       value={sizePerPage}

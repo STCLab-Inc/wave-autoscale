@@ -9,9 +9,9 @@ import { decodeTime } from 'ulid';
 import AutoscalingHistoryService from '@/services/autoscaling-history';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 
-import ContentHeader from '../content-header';
 import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
+import ContentHeader from '../content-header';
 import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
@@ -233,7 +233,7 @@ export default function AutoscalingHistoryPage() {
             />
             <div className="flex items-center justify-end px-8 py-4">
               <div className="mx-2 flex h-8 items-center">
-                <div className="mr-2 flex items-center">
+                <div className="mx-2 flex items-center">
                   <label className="select-group-sm">
                     <select
                       value={sizePerPage}
