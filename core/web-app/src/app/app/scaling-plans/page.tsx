@@ -74,7 +74,7 @@ export default function ScalingPlansPage() {
       <div className="flex h-full w-full flex-col">
         {scalingPlansItem ? (
           <div className="flex h-full w-full flex-col">
-            <ContentHeader type="SUB" title={scalingPlansItem.id} />
+            <ContentHeader type="INNER" title={scalingPlansItem.id} />
             <ScalingPlansTabs viewMode={viewMode} setViewMode={setViewMode} />
             {viewMode === 'diagram' ? (
               <ScalingPlanDiagramComponent

@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 
 import classNames from 'classnames';
 
-type ContentHeaderType = 'MAIN' | 'SUB';
+type ContentHeaderType = 'OUTER' | 'INNER';
 
 interface ContentHeaderProps {
   type?: ContentHeaderType;
@@ -13,11 +13,11 @@ interface ContentHeaderProps {
 
 function getContentHeaderClassNames(type?: string) {
   switch (type) {
-    case 'SUB':
+    case 'INNER':
       return classNames(
         'flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-t border-gray-200'
       );
-    case 'MAIN':
+    case 'OUTER':
     default:
       return classNames(
         'flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75'
@@ -27,11 +27,11 @@ function getContentHeaderClassNames(type?: string) {
 
 function getContentHeaderTitleClassNames(type?: string) {
   switch (type) {
-    case 'SUB':
+    case 'INNER':
       return classNames(
         'font-Pretendard truncate whitespace-nowrap px-4 text-lg font-semibold text-gray-1000'
       );
-    case 'MAIN':
+    case 'OUTER':
     default:
       return classNames(
         'font-Pretendard truncate whitespace-nowrap px-8 text-lg font-semibold text-gray-1000'
@@ -41,9 +41,9 @@ function getContentHeaderTitleClassNames(type?: string) {
 
 function getContentHeaderRightClassNames(type?: string) {
   switch (type) {
-    case 'SUB':
+    case 'INNER':
       return classNames('flex px-4');
-    case 'MAIN':
+    case 'OUTER':
     default:
       return classNames('flex px-8');
   }

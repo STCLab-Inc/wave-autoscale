@@ -185,7 +185,7 @@ export default function InflowPage() {
       <div className="flex h-full w-full flex-col">
         <div className="flex h-full w-full flex-col">
           <ContentHeader
-            type="MAIN"
+            type="OUTER"
             title="Inflow"
             right={
               <div className="flex items-center">
