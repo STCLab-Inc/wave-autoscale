@@ -1,4 +1,48 @@
 import Link from 'next/link';
+import { type } from 'os';
+
+const menuItems = [
+  {
+    href: 'https://www.waveautoscale.com/',
+    label: 'Wave Autoscale',
+    type: 'TITLE',
+  },
+  {
+    href: 'https://www.waveautoscale.com/about/introduction',
+    label: 'Introduction',
+    type: 'CONTENT',
+  },
+  {
+    href: 'https://www.waveautoscale.com/about/key-features',
+    label: 'Features',
+    type: 'CONTENT',
+  },
+  {
+    href: 'https://www.waveautoscale.com/about/principles',
+    label: 'Principles',
+    type: 'CONTENT',
+  },
+  {
+    href: 'https://www.waveautoscale.com/blog',
+    label: 'Blog',
+    type: 'CONTENT',
+  },
+];
+
+const featureItems = [
+  {
+    title: 'Auto Scaling',
+    description: 'Effortlessly adjust resources based on demand.',
+  },
+  {
+    title: 'High Availability',
+    description: 'Ensure your applications are always available.',
+  },
+  {
+    title: 'Scalability',
+    description: 'Scale your applications effortlessly as you grow.',
+  },
+];
 
 export default function AppPage() {
   return (
@@ -6,32 +50,31 @@ export default function AppPage() {
       {/* Header */}
       <header className="bg-blue-800 px-10 py-4">
         <div className="container mx-auto flex flex-col items-center justify-between sm:flex-row">
-          <Link href="https://www.waveautoscale.com/">
-            <button className="text-2xl font-extrabold hover:text-blue-300">
-              Wave Autoscale
-            </button>
-          </Link>
+          {menuItems.map((item, index) => {
+            return (
+              item.type === 'TITLE' && (
+                <Link key={index} href={item.href}>
+                  <button className="text-2xl font-extrabold hover:text-blue-300">
+                    {item.label}
+                  </button>
+                </Link>
+              )
+            );
+          })}
           <ul className="flex space-x-4 text-xl">
-            <li>
-              <Link href="https://www.waveautoscale.com/about/introduction">
-                <button className="hover:text-blue-300">Introduction</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="https://www.waveautoscale.com/about/key-features">
-                <button className="hover:text-blue-300">Features</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="https://www.waveautoscale.com/about/principles">
-                <button className="hover:text-blue-300">Principles</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="https://www.waveautoscale.com/blog">
-                <button className="hover:text-blue-300">Blog</button>
-              </Link>
-            </li>
+            {menuItems.map((item, index) => {
+              return (
+                item.type === 'CONTENT' && (
+                  <li>
+                    <Link key={index} href={item.href}>
+                      <button className="hover:text-blue-300">
+                        {item.label}
+                      </button>
+                    </Link>
+                  </li>
+                )
+              );
+            })}
           </ul>
         </div>
       </header>
@@ -59,33 +102,16 @@ export default function AppPage() {
             Discover Our Features
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:gap-12 md:grid-cols-2 lg:grid-cols-3">
-            {/* Feature 1 */}
-            <div className="rounded-lg bg-blue-900 p-6 sm:p-8">
-              <h3 className="mb-3 text-2xl font-semibold sm:text-2xl">
-                Auto Scaling
-              </h3>
-              <p className="text-lg sm:text-xl">
-                Effortlessly adjust resources based on demand.
-              </p>
-            </div>
-            {/* Feature 2 */}
-            <div className="rounded-lg bg-blue-900 p-6 sm:p-8">
-              <h3 className="mb-3 text-2xl font-semibold sm:text-2xl">
-                High Availability
-              </h3>
-              <p className="text-lg sm:text-xl">
-                Ensure your applications are always available.
-              </p>
-            </div>
-            {/* Feature 3 */}
-            <div className="rounded-lg bg-blue-900 p-6 sm:p-8">
-              <h3 className="mb-3 text-2xl font-semibold sm:text-2xl">
-                Scalability
-              </h3>
-              <p className="text-lg sm:text-xl">
-                Scale your applications effortlessly as you grow.
-              </p>
-            </div>
+            {featureItems.map((item, index) => {
+              return (
+                <div key={index} className="rounded-lg bg-blue-900 p-6 sm:p-8">
+                  <h3 className="mb-3 text-2xl font-semibold sm:text-2xl">
+                    {item.title}
+                  </h3>
+                  <p className="text-lg sm:text-xl">{item.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
