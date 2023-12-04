@@ -72,7 +72,7 @@ export function renderKeyValuePairsWithJson(
     const keyValuePairs = JSON.parse(jsonString);
     return renderKeyValuePairs(keyValuePairs, indentFlag);
   } catch (error) {
-    console.error({ error });
+    /* console.error({ error }); */
   }
 
   return indentFlag ? (
