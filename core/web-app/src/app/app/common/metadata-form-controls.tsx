@@ -1,5 +1,6 @@
-import { MetadataKeyType } from '@/utils/metadata-key-type';
 import { FieldValues, UseFormRegister } from 'react-hook-form';
+
+import { MetadataKeyType } from '@/utils/metadata-key-type';
 
 const createMetadataControl = (
   keyType: MetadataKeyType,
