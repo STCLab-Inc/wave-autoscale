@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 
-import Menu from './menu';
+import Menu from './common/menu';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -90,7 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
-        {menuFlag ? (
+        {menuFlag && (
           <div className="absolute top-16 z-30 flex w-full flex-col items-center overflow-y-auto border-b border-gray-200 bg-base-100 px-8 py-8">
             <Menu
               type="FOLD"
@@ -99,7 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               setMenuFlag={setMenuFlag}
             />
           </div>
-        ) : null}
+        )}
       </nav>
       <main className="wa-main">{children}</main>
     </div>
