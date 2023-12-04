@@ -330,7 +330,7 @@ export default function AutoscalingHistoryPage() {
                 {visibleAutoscalingHistory.map(
                   (autosclingHistoryItem: AutoscalingHistoryDefinitionEx) => (
                     <tr
-                      key={autosclingHistoryItem.id}
+                      key={autosclingHistoryItem.plan_db_id}
                       className="flex w-full border-b px-8 py-4"
                     >
                       <td className="mr-4 flex h-full flex-1 items-start">
