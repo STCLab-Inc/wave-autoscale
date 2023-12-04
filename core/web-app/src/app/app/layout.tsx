@@ -82,10 +82,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </figure>
             <div className="ml-10 flex h-full w-full items-center">
               <Menu
+                type="UNFOLD"
                 windowWidth={windowWidth}
                 menuFlag={menuFlag}
                 setMenuFlag={setMenuFlag}
-                responsive={true}
               />
             </div>
           </div>
@@ -93,10 +93,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {menuFlag ? (
           <div className="absolute top-16 z-30 flex w-full flex-col items-center overflow-y-auto border-b border-gray-200 bg-base-100 px-8 py-8">
             <Menu
+              type="FOLD"
               windowWidth={windowWidth}
               menuFlag={menuFlag}
               setMenuFlag={setMenuFlag}
-              responsive={false}
             />
           </div>
         ) : null}

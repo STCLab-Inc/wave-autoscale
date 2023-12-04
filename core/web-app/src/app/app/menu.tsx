@@ -11,18 +11,19 @@ type MenuItemType = 'UNFOLD' | 'FOLD';
 
 interface MenuItemProps {
   type?: MenuItemType;
-  pathname: string;
+  isActive: boolean;
   targetPath: string;
   label: string;
+  onClick?: () => void;
 }
 
 function MenuItem({
   type = 'UNFOLD',
-  pathname,
+  isActive,
   targetPath,
   label,
+  onClick,
 }: MenuItemProps) {
-  const isActive = pathname.includes(targetPath);
   return (
     <li
       className={classNames(
@@ -37,6 +38,7 @@ function MenuItem({
           type === 'UNFOLD' ? '' : type === 'FOLD' ? ' py-2' : ''
         )}
         href={targetPath}
+        onClick={onClick}
       >
         {label}
       </Link>
@@ -53,6 +55,18 @@ interface MenuProps {
   setMenuFlag: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+const menuItems = [
+  { targetPath: '/app/autoscaling-history', label: 'Autoscaling History' },
+  { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
+  { targetPath: '/app/metrics', label: 'Metrics' },
+  { targetPath: '/app/scaling-components', label: 'Scaling Components' },
+  { targetPath: '/app/inflow', label: 'Inflow' },
+  {
+    targetPath: 'https://github.com/STCLab-Inc/wave-autoscale',
+    label: 'Github',
+  },
+];
+
 export default function Menu({
   type,
   windowWidth,
@@ -60,18 +74,6 @@ export default function Menu({
   setMenuFlag,
 }: MenuProps) {
   const pathname = usePathname();
-
-  const menuItems = [
-    { targetPath: '/app/autoscaling-history', label: 'Autoscaling History' },
-    { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
-    { targetPath: '/app/metrics', label: 'Metrics' },
-    { targetPath: '/app/scaling-components', label: 'Scaling Components' },
-    { targetPath: '/app/inflow', label: 'Inflow' },
-    {
-      targetPath: 'https://github.com/STCLab-Inc/wave-autoscale',
-      label: 'Github',
-    },
-  ];
 
   return windowWidth < 880 ? (
     type === 'UNFOLD' ? (
@@ -96,14 +98,24 @@ export default function Menu({
     ) : type === 'FOLD' ? (
       <ul className="flex h-full flex-col items-center lg:flex-row">
         {menuItems.map((item, index) => (
-          <MenuItem type={type} key={index} pathname={pathname} {...item} />
+          <MenuItem
+            type={type}
+            key={index}
+            isActive={pathname.includes(item.targetPath)}
+            {...item}
+          />
         ))}
       </ul>
     ) : null
   ) : (
     <ul className="flex h-full flex-row items-center pt-1 lg:flex-row">
       {menuItems.map((item, index) => (
-        <MenuItem type={type} key={index} pathname={pathname} {...item} />
+        <MenuItem
+          type={type}
+          key={index}
+          isActive={pathname.includes(item.targetPath)}
+          {...item}
+        />
       ))}
     </ul>
   );
