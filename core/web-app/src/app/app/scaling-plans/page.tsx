@@ -6,12 +6,11 @@ import ScalingPlanService from '@/services/scaling-plan';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 
 import ScalingPlansSidebar from './scaling-plans-sidebar';
-import SubContentHeader from '../subcontent-header';
 import ScalingPlansTabs from './scaling-plans-tabs';
 import ScalingPlanDiagramComponent from './diagram/scaling-plans-diagram';
 import ScalingPlanCodeComponent from './code/scaling-plans-code';
-
 import ScalingPlansDrawer from './scaling-plans-drawer';
+import ContentHeader from '../common/content-header';
 
 async function getScalingPlans() {
   const scalingPlans = await ScalingPlanService.getScalingPlans();
@@ -75,7 +74,7 @@ export default function ScalingPlansPage() {
       <div className="flex h-full w-full flex-col">
         {scalingPlansItem ? (
           <div className="flex h-full w-full flex-col">
-            <SubContentHeader title={scalingPlansItem.id} />
+            <ContentHeader type="SUB" title={scalingPlansItem.id} />
             <ScalingPlansTabs viewMode={viewMode} setViewMode={setViewMode} />
             {viewMode === 'diagram' ? (
               <ScalingPlanDiagramComponent

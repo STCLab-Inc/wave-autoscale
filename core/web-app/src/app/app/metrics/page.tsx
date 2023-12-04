@@ -6,9 +6,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import MetricService from '@/services/metric';
 
-import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import MetricDetailDrawer from './metric-drawer';
+import ContentHeader from '../common/content-header';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 async function getMetrics() {
   const metrics = await MetricService.getMetrics();
@@ -129,6 +129,7 @@ export default function MetricsPage() {
       <div className="flex h-full w-full flex-col">
         <div className="flex h-full w-full flex-col">
           <ContentHeader
+            type="MAIN"
             title="Metrics"
             right={
               <div className="flex items-center">

@@ -6,9 +6,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import ScalingComponentService from '@/services/scaling-component';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 
-import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import ScalingComponentDetailDrawer from './scaling-component-drawer';
+import ContentHeader from '../common/content-header';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 async function getScalingComponents() {
   const scalingComponents =
@@ -141,6 +141,7 @@ export default function ScalingComponentsPage() {
       <div className="flex h-full w-full flex-col">
         <div className="flex h-full w-full flex-col">
           <ContentHeader
+            type="MAIN"
             title="Scaling Components"
             right={
               <div className="flex items-center">

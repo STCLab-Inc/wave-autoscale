@@ -9,7 +9,7 @@ import InflowService from '@/services/inflow';
 import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import InflowDetailDrawer from './inflow-drawer';
-import ContentHeader from '../content-header';
+import ContentHeader from '../common/content-header';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
@@ -185,6 +185,7 @@ export default function InflowPage() {
       <div className="flex h-full w-full flex-col">
         <div className="flex h-full w-full flex-col">
           <ContentHeader
+            type="MAIN"
             title="Inflow"
             right={
               <div className="flex items-center">

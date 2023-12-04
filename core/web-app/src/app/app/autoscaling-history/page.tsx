@@ -11,7 +11,7 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 
 import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
-import ContentHeader from '../content-header';
+import ContentHeader from '../common/content-header';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
@@ -192,6 +192,7 @@ export default function AutoscalingHistoryPage() {
       <div className="flex h-full w-full flex-col">
         <div className="flex h-full w-full flex-col">
           <ContentHeader
+            type="MAIN"
             title="Autoscaling History"
             right={
               <div className="flex items-center">
