@@ -7,7 +7,7 @@ import { MetricDefinition } from '@/types/bindings/metric-definition';
 import MetricService from '@/services/metric';
 
 import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import MetricDetailDrawer from './metric-drawer';
 
 async function getMetrics() {

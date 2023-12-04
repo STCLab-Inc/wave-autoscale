@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 
 import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 interface InflowDefinitionEx extends InflowDefinition {
   created_at: string;

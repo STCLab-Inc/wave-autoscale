@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
 
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
   created_at: string;

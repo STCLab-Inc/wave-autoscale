@@ -12,7 +12,7 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
 import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 

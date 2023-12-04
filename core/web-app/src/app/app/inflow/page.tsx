@@ -10,7 +10,7 @@ import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import InflowDetailDrawer from './inflow-drawer';
 import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 

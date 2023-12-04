@@ -7,7 +7,7 @@ import ScalingComponentService from '@/services/scaling-component';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 
 import ContentHeader from '../content-header';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import ScalingComponentDetailDrawer from './scaling-component-drawer';
 
 async function getScalingComponents() {
