@@ -1,52 +1,41 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+
 import classNames from 'classnames';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-function getTextMenuClassNames(currentPathname: string, targetPath?: string) {
-  return classNames(
-    !targetPath || currentPathname.indexOf(targetPath) < 0
-      ? 'text-gray-600'
-      : 'text-gray-1000'
-  );
-}
+type MenuItemType = 'UNFOLD' | 'FOLD';
 
-function isActivePath(currentPathname: string, targetPath: string) {
-  return currentPathname.includes(targetPath);
-}
-
-function MenuItem({
-  pathname,
-  targetPath,
-  label,
-  responsive,
-}: {
+interface MenuItemProps {
+  type?: MenuItemType;
   pathname: string;
   targetPath: string;
   label: string;
-  responsive?: boolean;
-}) {
-  const responsiveFlag = responsive ?? true;
+}
 
+function MenuItem({
+  type = 'UNFOLD',
+  pathname,
+  targetPath,
+  label,
+}: MenuItemProps) {
+  const isActive = pathname.includes(targetPath);
   return (
     <li
       className={classNames(
         'flex-column mx-0.5 flex h-full items-center lg:flex-row',
-        isActivePath(pathname, targetPath)
-          ? 'border-b-4 border-purple-500'
-          : 'border-b-4 border-white'
+        isActive ? 'border-b-4 border-purple-500' : 'border-b-4 border-white'
       )}
     >
       <Link
-        className={
-          classNames(
-            getTextMenuClassNames(pathname, targetPath),
-            'whitespace-nowrap px-4'
-          ) + (!responsiveFlag ? ' py-2' : '')
-        }
+        className={classNames(
+          isActive ? 'text-gray-1000' : 'text-gray-600',
+          'whitespace-nowrap px-4',
+          type === 'UNFOLD' ? '' : type === 'FOLD' ? ' py-2' : ''
+        )}
         href={targetPath}
       >
         {label}
@@ -55,21 +44,37 @@ function MenuItem({
   );
 }
 
+type MenuType = 'UNFOLD' | 'FOLD';
+
+interface MenuProps {
+  type?: MenuType;
+  windowWidth: number;
+  menuFlag?: boolean;
+  setMenuFlag: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
 export default function Menu({
+  type,
   windowWidth,
   menuFlag,
   setMenuFlag,
-  responsive,
-}: {
-  windowWidth: number;
-  menuFlag: boolean;
-  setMenuFlag: React.Dispatch<React.SetStateAction<boolean>>;
-  responsive: boolean;
-}) {
+}: MenuProps) {
   const pathname = usePathname();
 
+  const menuItems = [
+    { targetPath: '/app/autoscaling-history', label: 'Autoscaling History' },
+    { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
+    { targetPath: '/app/metrics', label: 'Metrics' },
+    { targetPath: '/app/scaling-components', label: 'Scaling Components' },
+    { targetPath: '/app/inflow', label: 'Inflow' },
+    {
+      targetPath: 'https://github.com/STCLab-Inc/wave-autoscale',
+      label: 'Github',
+    },
+  ];
+
   return windowWidth < 880 ? (
-    responsive ? (
+    type === 'UNFOLD' ? (
       <ul className="flex h-full w-full flex-row items-center justify-end pt-1 lg:flex-row">
         <figure
           onClick={() => setMenuFlag((menuFlag) => !menuFlag)}
@@ -88,83 +93,18 @@ export default function Menu({
           />
         </figure>
       </ul>
-    ) : (
+    ) : type === 'FOLD' ? (
       <ul className="flex h-full flex-col items-center lg:flex-row">
-        <MenuItem
-          pathname={pathname}
-          targetPath="/app/autoscaling-history"
-          label="Autoscaling History"
-          responsive={responsive}
-        />
-        <MenuItem
-          pathname={pathname}
-          targetPath="/app/scaling-plans"
-          label="Scaling Plans"
-          responsive={responsive}
-        />
-        <MenuItem
-          pathname={pathname}
-          targetPath="/app/metrics"
-          label="Metrics"
-          responsive={responsive}
-        />
-        <MenuItem
-          pathname={pathname}
-          targetPath="/app/scaling-components"
-          label="Scaling Components"
-          responsive={responsive}
-        />
-        <MenuItem
-          pathname={pathname}
-          targetPath="/app/inflow"
-          label="Inflow"
-          responsive={responsive}
-        />
-        <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
-          <Link
-            className={classNames(
-              getTextMenuClassNames(pathname),
-              'whitespace-nowrap px-4 py-2'
-            )}
-            href="https://github.com/STCLab-Inc/wave-autoscale"
-            target="_blank"
-          >
-            Github
-          </Link>
-        </li>
+        {menuItems.map((item, index) => (
+          <MenuItem type={type} key={index} pathname={pathname} {...item} />
+        ))}
       </ul>
-    )
+    ) : null
   ) : (
     <ul className="flex h-full flex-row items-center pt-1 lg:flex-row">
-      <MenuItem
-        pathname={pathname}
-        targetPath="/app/autoscaling-history"
-        label="Autoscaling History"
-      />
-      <MenuItem
-        pathname={pathname}
-        targetPath="/app/scaling-plans"
-        label="Scaling Plans"
-      />
-      <MenuItem pathname={pathname} targetPath="/app/metrics" label="Metrics" />
-      <MenuItem
-        pathname={pathname}
-        targetPath="/app/scaling-components"
-        label="Scaling Components"
-      />
-      <MenuItem pathname={pathname} targetPath="/app/inflow" label="Inflow" />
-      <li className="flex-column mx-0.5 flex h-full items-center lg:flex-row">
-        <Link
-          className={classNames(
-            getTextMenuClassNames(pathname),
-            'whitespace-nowrap px-4'
-          )}
-          href="https://github.com/STCLab-Inc/wave-autoscale"
-          target="_blank"
-        >
-          Github
-        </Link>
-      </li>
+      {menuItems.map((item, index) => (
+        <MenuItem type={type} key={index} pathname={pathname} {...item} />
+      ))}
     </ul>
   );
 }
