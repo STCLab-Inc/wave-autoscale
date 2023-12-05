@@ -83,9 +83,7 @@ export default function ScalingComponentsPage() {
     ScalingComponentDefinitionEx[]
   >([]);
 
-  const handleSizePerPageChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
     setSizePerPage(newItemsPerPage);
     setCurrentPage(1);
@@ -161,7 +159,7 @@ export default function ScalingComponentsPage() {
                   <label className="select-group-sm">
                     <select
                       value={sizePerPage}
-                      onChange={handleSizePerPageChange}
+                      onChange={handleSizePerPage}
                       className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
                     >
                       {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
