@@ -23,38 +23,50 @@ interface TableProps {
 }
 
 export const TableComponent: React.FC<TableProps> = ({
-  data,
+  data: originalData,
   setData,
-  /*  */
   selectAll,
   handleSelectAll,
-  /*  */
   sizePerPageOptions = [10, 20, 50, 100, 200, 500],
   sizePerPage,
   handleSizePerPage,
-  /*  */
   currentPage,
   totalPage,
   handleCurrentPage,
-  /*  */
   onClickDetails,
 }) => {
   const [dataPerPage, setDataPerPage] = useState<any[]>([]);
+  const [tempCurrentPage, setTempCurrentPage] = useState(currentPage);
+
+  const [cloneData, setCloneData] = useState(
+    JSON.parse(JSON.stringify(originalData))
+  );
 
   useEffect(() => {
-    setDataPerPage(
-      data.slice(
-        (currentPage - 1) * sizePerPage,
-        (currentPage - 1) * sizePerPage + sizePerPage
-      )
-    );
-  }, [data, currentPage, sizePerPage, totalPage]);
+    setCloneData(JSON.parse(JSON.stringify(originalData)));
+  }, [originalData]);
 
-  const [tempCurrentPage, setTempCurrentPage] = useState(currentPage);
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * sizePerPage;
+    const endIndex = startIndex + sizePerPage;
+    setDataPerPage(cloneData.slice(startIndex, endIndex));
+  }, [cloneData, currentPage, sizePerPage, totalPage]);
 
   useEffect(() => {
     setTempCurrentPage(currentPage);
   }, [currentPage]);
+
+  const handleCheckboxChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    dataItem: { id: any }
+  ) => {
+    const checked = event.target.checked;
+    const newData = cloneData;
+    const updatedData = newData.map((item: { id: any }) =>
+      item.id === dataItem.id ? { ...item, isChecked: checked } : item
+    );
+    setCloneData(updatedData);
+  };
 
   /*  */
 
@@ -237,15 +249,9 @@ export const TableComponent: React.FC<TableProps> = ({
                           type="checkbox"
                           className="checkbox"
                           checked={dataItem[item.content]}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            const checkData = data.map((item) =>
-                              item.id === dataItem.id
-                                ? { ...item, isChecked: checked }
-                                : item
-                            );
-                            setData(checkData);
-                          }}
+                          onChange={(event) =>
+                            handleCheckboxChange(event, dataItem)
+                          }
                         />
                       </label>
                     </td>
