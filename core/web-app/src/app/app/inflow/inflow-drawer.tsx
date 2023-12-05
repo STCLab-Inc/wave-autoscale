@@ -2,27 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { decodeTime } from 'ulid';
-import dayjs from 'dayjs';
-
 import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
-
-interface InflowDefinitionEx extends InflowDefinition {
-  created_at: string;
-}
 
 export default function InflowDetailDrawer({
   inflowItem,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  inflowItem?: InflowDefinitionEx;
+  inflowItem?: InflowDefinition;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
-  const [inflow, setInflow] = useState<InflowDefinitionEx>();
+  const [inflow, setInflow] = useState<InflowDefinition>();
 
   useEffect(() => {
     if (inflowItem) {
@@ -47,7 +40,12 @@ export default function InflowDetailDrawer({
 
   return (
     <div className="inflow-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-20 w-full">
-      <input id="drawer" type="checkbox" className="drawer-toggle" checked />
+      <input
+        id="drawer"
+        type="checkbox"
+        className="drawer-toggle"
+        defaultChecked={true}
+      />
       <div className="drawer-side h-full border-t border-gray-200">
         <label
           htmlFor="drawer"
