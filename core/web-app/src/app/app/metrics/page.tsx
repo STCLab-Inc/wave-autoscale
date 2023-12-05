@@ -49,11 +49,11 @@ export default function MetricsPage() {
     fetchMetrics();
   }, []);
 
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
 
-  const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
-    setCheckAllFlag(checked);
+    setSelectAll(checked);
     const updatedMetricsData = metrics.map((updatedMetricsDataItem) => ({
       ...updatedMetricsDataItem,
       isChecked: checked,
@@ -201,8 +201,8 @@ export default function MetricsPage() {
                       <input
                         type="checkbox"
                         className="checkbox"
-                        checked={checkAllFlag}
-                        onChange={handleCheckAllChange}
+                        checked={selectAll}
+                        onChange={handleSelectAll}
                       />
                     </label>
                   </th>

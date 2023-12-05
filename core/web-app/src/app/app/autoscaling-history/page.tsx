@@ -98,11 +98,11 @@ export default function AutoscalingHistoryPage() {
     }
   };
 
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
 
-  const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
-    setCheckAllFlag(checked);
+    setSelectAll(checked);
     const updatedAutoscalingHistoryData = autoscalingHistory.map(
       (updatedAutoscalingHistoryDataItem) => ({
         ...updatedAutoscalingHistoryDataItem,
@@ -290,8 +290,8 @@ export default function AutoscalingHistoryPage() {
                       <input
                         type="checkbox"
                         className="checkbox"
-                        checked={checkAllFlag}
-                        onChange={handleCheckAllChange}
+                        checked={selectAll}
+                        onChange={handleSelectAll}
                       />
                     </label>
                   </th>
