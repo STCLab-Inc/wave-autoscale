@@ -29,12 +29,16 @@ export default function InflowDetailDrawer({
   }, [inflowItem]);
 
   const onClickOverlay = () => {
-    setFetchFlag(true);
+    /* TODO */
+    /* Possible triggers for data synchronization. */
+    /* setFetchFlag(true); */
     setDetailsModalFlag(false);
   };
 
   const onClickExit = async () => {
-    setFetchFlag(true);
+    /* TODO */
+    /* Possible triggers for data synchronization. */
+    /* setFetchFlag(true); */
     setDetailsModalFlag(false);
   };
 

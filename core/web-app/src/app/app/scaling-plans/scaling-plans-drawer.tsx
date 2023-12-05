@@ -76,12 +76,14 @@ export default function ScalingPlansDrawer({
   }, [scalingPlansItem, isNew]);
 
   const onClickOverlay = () => {
-    setFetchFlag(true);
+    /* TODO */
+    /* Possible triggers for data synchronization. */
     setDetailsModalFlag(false);
   };
 
   const onClickExit = async () => {
-    setFetchFlag(true);
+    /* TODO */
+    /* Possible triggers for data synchronization. */
     setDetailsModalFlag(false);
   };
 
