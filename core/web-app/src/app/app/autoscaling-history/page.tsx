@@ -49,12 +49,12 @@ export default function AutoscalingHistoryPage() {
   const [autoscalingHistory, setAutoscalingHistory] = useState<
     AutoscalingHistoryDefinitionEx[]
   >([]);
-  const [autosclingHistoryItem, setAutosclingHistoryItem] =
+  const [autoscalingHistoryItem, setAutoscalingHistoryItem] =
     useState<AutoscalingHistoryDefinitionEx>();
 
   const fetchAutoscalingHistory = async () => {
     try {
-      const id = autosclingHistoryItem?.id;
+      const id = autoscalingHistoryItem?.id;
       let autoscalingHistoryData = await getAutoscalingHistory(
         fromDayjs,
         toDayjs
@@ -66,7 +66,7 @@ export default function AutoscalingHistoryPage() {
         })
       );
       setAutoscalingHistory(autoscalingHistoryData);
-      setAutosclingHistoryItem(
+      setAutoscalingHistoryItem(
         autoscalingHistoryData.find(
           (item: AutoscalingHistoryDefinition) => item.id === id
         )
@@ -163,9 +163,9 @@ export default function AutoscalingHistoryPage() {
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
   const onClickDetails = (
-    autosclingHistoryItem: AutoscalingHistoryDefinitionEx
+    autoscalingHistoryItem: AutoscalingHistoryDefinitionEx
   ) => {
-    setAutosclingHistoryItem(autosclingHistoryItem);
+    setAutoscalingHistoryItem(autoscalingHistoryItem);
     setDetailsModalFlag(true);
   };
 
@@ -328,9 +328,10 @@ export default function AutoscalingHistoryPage() {
               </thead>
               <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
                 {visibleAutoscalingHistory.map(
-                  (autosclingHistoryItem: AutoscalingHistoryDefinitionEx) => (
+                  (autoscalingHistoryItem: AutoscalingHistoryDefinitionEx) => (
                     <tr
-                      key={autosclingHistoryItem.plan_db_id}
+                      /* id values are distinct from each other, but due to a bug, the following error occurs - Warning: Each child in a list should have a unique "key" prop. */
+                      key={autoscalingHistoryItem.id}
                       className="flex w-full border-b px-8 py-4"
                     >
                       <td className="mr-4 flex h-full flex-1 items-start">
@@ -338,12 +339,12 @@ export default function AutoscalingHistoryPage() {
                           <input
                             type="checkbox"
                             className="checkbox"
-                            checked={autosclingHistoryItem.isChecked}
+                            checked={autoscalingHistoryItem.isChecked}
                             onChange={(event) => {
                               const checked = event.target.checked;
                               const updatedAutoscalingHistory =
                                 autoscalingHistory.map((item) =>
-                                  item.id === autosclingHistoryItem.id
+                                  item.id === autoscalingHistoryItem.id
                                     ? { ...item, isChecked: checked }
                                     : item
                                 );
@@ -354,13 +355,13 @@ export default function AutoscalingHistoryPage() {
                       </td>
                       <td className="mx-4 flex h-full w-full flex-4 items-start">
                         <div className="flex items-center break-all">
-                          {autosclingHistoryItem.plan_id}
+                          {autoscalingHistoryItem.plan_id}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-10 items-start">
                         <div className="flex flex-col items-center">
                           {renderKeyValuePairsWithJson(
-                            autosclingHistoryItem.metric_values_json,
+                            autoscalingHistoryItem.metric_values_json,
                             true
                           )}
                         </div>
@@ -368,23 +369,23 @@ export default function AutoscalingHistoryPage() {
                       <td className="mx-4 flex h-full w-full flex-5 items-start">
                         <div className="flex flex-col items-center">
                           {renderKeyValuePairsWithJson(
-                            autosclingHistoryItem.metadata_values_json,
+                            autoscalingHistoryItem.metadata_values_json,
                             true
                           )}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-3 items-start">
                         <div className="flex flex-col items-center">
-                          {autosclingHistoryItem.fail_message &&
+                          {autoscalingHistoryItem.fail_message &&
                             renderKeyValuePairsWithJson(
-                              autosclingHistoryItem.fail_message,
+                              autoscalingHistoryItem.fail_message,
                               true
                             )}
                         </div>
                       </td>
                       <td className="mx-4 flex h-full w-full flex-1 items-start">
                         <div className="flex items-center">
-                          {autosclingHistoryItem.fail_message ? (
+                          {autoscalingHistoryItem.fail_message ? (
                             <button className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
                               Failed
                             </button>
@@ -399,7 +400,7 @@ export default function AutoscalingHistoryPage() {
                         <div className="flex items-center break-all">
                           {dayjs
                             .unix(
-                              Number(autosclingHistoryItem.created_at) / 1000
+                              Number(autoscalingHistoryItem.created_at) / 1000
                             )
                             .format('YYYY/MM/DD HH:mm:ss')}
                         </div>
@@ -409,7 +410,7 @@ export default function AutoscalingHistoryPage() {
                           <button
                             className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
                             onClick={() =>
-                              onClickDetails(autosclingHistoryItem)
+                              onClickDetails(autoscalingHistoryItem)
                             }
                           >
                             Details
@@ -425,7 +426,7 @@ export default function AutoscalingHistoryPage() {
         </div>
         {detailsModalFlag ? (
           <AutoscalingHistoryDetailDrawer
-            autosclingHistoryItem={autosclingHistoryItem}
+            autoscalingHistoryItem={autoscalingHistoryItem}
             setDetailsModalFlag={setDetailsModalFlag}
             setFetchFlag={setFetchFlag}
           />

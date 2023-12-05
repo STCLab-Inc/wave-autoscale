@@ -14,11 +14,11 @@ interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
 }
 
 export default function AutoscalingHistoryDetailDrawer({
-  autosclingHistoryItem,
+  autoscalingHistoryItem,
   setDetailsModalFlag,
   setFetchFlag,
 }: {
-  autosclingHistoryItem?: AutoscalingHistoryDefinitionEx;
+  autoscalingHistoryItem?: AutoscalingHistoryDefinitionEx;
   setDetailsModalFlag: (detailsModalFlag: boolean) => void;
   setFetchFlag: (fetchFlag: boolean) => void;
 }) {
@@ -26,7 +26,7 @@ export default function AutoscalingHistoryDetailDrawer({
     useState<AutoscalingHistoryDefinitionEx>();
 
   useEffect(() => {
-    if (autosclingHistoryItem) {
+    if (autoscalingHistoryItem) {
       const {
         id,
         plan_db_id,
@@ -37,7 +37,7 @@ export default function AutoscalingHistoryDetailDrawer({
         fail_message,
         created_at,
         ...rest
-      } = autosclingHistoryItem;
+      } = autoscalingHistoryItem;
 
       setAutoscalingHistory({
         ...rest,
@@ -53,7 +53,7 @@ export default function AutoscalingHistoryDetailDrawer({
           .format('YYYY/MM/DD HH:mm:ss'),
       });
     }
-  }, [autosclingHistoryItem]);
+  }, [autoscalingHistoryItem]);
 
   const onClickOverlay = () => {
     setFetchFlag(true);
