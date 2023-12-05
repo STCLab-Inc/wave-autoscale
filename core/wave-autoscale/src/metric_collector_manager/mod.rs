@@ -1,3 +1,4 @@
+pub mod process;
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -7,12 +8,12 @@ use std::fs::File;
 use std::io::Write;
 use tar::Archive;
 use tracing::{debug, error, info};
-use utils::process::{run_processes, AppInfo};
 use utils::wave_config::WaveConfig;
 pub struct MetricCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
     collector_log: bool,
+    running_apps: Option<HashMap<String, std::process::Child>>,
 }
 
 impl MetricCollectorManager {
@@ -21,6 +22,7 @@ impl MetricCollectorManager {
             wave_config,
             output_url: output_url.to_string(),
             collector_log,
+            running_apps: None,
         }
     }
 
@@ -312,20 +314,16 @@ impl MetricCollectorManager {
         Ok(())
     }
 
-    pub async fn run(&self, metric_definitions: &Vec<MetricDefinition>) {
+    pub async fn run(&mut self, metric_definitions: &Vec<MetricDefinition>) {
         info!(
             "[metric-collector-manager] {} metric definitions",
             metric_definitions.len()
         );
-        if metric_definitions.is_empty() {
-            debug!("No metric definitions");
-            return;
-        }
         // TODO: Validate the attribute 'collector' in metric_definitions. Now only support Vector
         // Prepare the collector binaries
         self.prepare_collector_binaries(metric_definitions).await;
 
-        let mut collector_processes: Vec<AppInfo> = Vec::new();
+        let mut collector_processes: Vec<process::AppInfo> = Vec::new();
 
         // Find the metric definitions that use Vector collector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
@@ -346,7 +344,7 @@ impl MetricCollectorManager {
 
             if save_result.is_ok() {
                 // Run the collector binaries
-                let vector_app_info = AppInfo {
+                let vector_app_info = process::AppInfo {
                     name: "vector".to_string(),
                     command: format!("{}/vector", vector_dir_path),
                     args: Some(vec!["--config-toml".to_string(), vector_config_path]),
@@ -376,7 +374,7 @@ impl MetricCollectorManager {
 
             if save_result.is_ok() {
                 // Run the collector binaries
-                let telegraf_app_info = AppInfo {
+                let telegraf_app_info = process::AppInfo {
                     name: "telegraf".to_string(),
                     command: format!("{}/telegraf", telegraf_dir_path),
                     args: Some(vec!["--config".to_string(), telegraf_config_path]),
@@ -386,10 +384,32 @@ impl MetricCollectorManager {
                 collector_processes.push(telegraf_app_info);
             }
         }
+
+        // kill agent process
+        if let Some(running_apps) = &mut self.running_apps {
+            running_apps
+                .iter_mut()
+                .for_each(|(name, &mut ref mut child)| {
+                    // retry 3 times
+                    for idx in 1..4 {
+                        if child.kill().is_ok() {
+                            break;
+                        };
+                        error!("Failed to kill {} - try {}, {:?}", name, idx, child);
+                        if idx == 3 {
+                            panic!("Failed to kill {}", name);
+                        }
+                    }
+                    debug!("Killing {}", name);
+                });
+            // sleep 2 seconds
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        };
+
         if !collector_processes.is_empty() {
-            tokio::spawn(async move {
-                run_processes(&collector_processes);
-            });
+            // run agent process
+            let running_apps = process::run_processes(&collector_processes);
+            self.running_apps = Some(running_apps);
         }
     }
 }
@@ -1361,5 +1381,27 @@ mod tests {
         let metric_definition_fail_1 =
             serde_yaml::from_str::<MetricDefinition>(metric_yaml_fail_1).unwrap();
         assert!(!validate_telegraf_definition(&metric_definition_fail_1));
+    }
+
+    #[test]
+    fn retry_test() {
+        fn return_ok_of_num(ok_num: i32) -> Result<(), ()> {
+            if ok_num == 2 {
+                return Ok(());
+            }
+            Err(())
+        }
+        let mut retry_count = 0;
+        // retry 3 times
+        for idx in 1..4 {
+            retry_count += 1;
+            if return_ok_of_num(idx).is_ok() {
+                break;
+            };
+            if idx == 3 {
+                panic!("Failed to kill");
+            }
+        }
+        assert_eq!(retry_count, 2);
     }
 }
