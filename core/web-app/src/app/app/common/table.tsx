@@ -4,12 +4,20 @@ import dayjs from 'dayjs';
 
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
+type TableFormat = {
+  label: string;
+  type: string;
+  weight: string;
+  content: string;
+  format?: string;
+  status?: any;
+  function?: any;
+};
+
 interface TableProps {
-  data: any[];
-  setData: (data: any[]) => void;
+  tableFormat: TableFormat[];
   /*  */
-  selectAll?: boolean;
-  handleSelectAll?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  data: any[];
   /*  */
   sizePerPageOptions?: number[];
   sizePerPage: number;
@@ -18,22 +26,20 @@ interface TableProps {
   currentPage: number;
   totalPage: number;
   handleCurrentPage: (newPage: number) => void;
-  /*  */
-  onClickDetails: (item: any) => void;
 }
 
 export const TableComponent: React.FC<TableProps> = ({
+  tableFormat,
+  /*  */
   data: originalData,
-  setData,
-  selectAll,
-  handleSelectAll,
+  /*  */
   sizePerPageOptions = [10, 20, 50, 100, 200, 500],
   sizePerPage,
   handleSizePerPage,
+  /*  */
   currentPage,
   totalPage,
   handleCurrentPage,
-  onClickDetails,
 }) => {
   const [dataPerPage, setDataPerPage] = useState<any[]>([]);
   const [tempCurrentPage, setTempCurrentPage] = useState(currentPage);
@@ -58,53 +64,15 @@ export const TableComponent: React.FC<TableProps> = ({
 
   const handleCheckboxChange = (
     event: React.ChangeEvent<HTMLInputElement>,
-    dataItem: any
+    dataItem: { id: any }
   ) => {
     const checked = event.target.checked;
     const newData = cloneData;
-    const updatedData = newData.map((item: any) =>
+    const updatedData = newData.map((item: { id: any }) =>
       item === dataItem ? { ...item, isChecked: checked } : item
     );
     setCloneData(updatedData);
   };
-
-  /*  */
-
-  interface TempItem {
-    label: string;
-    type: string;
-    weight: string;
-    content: string;
-    format?: string;
-    status?: any;
-    function?: any;
-  }
-
-  const tempData: TempItem[] = [
-    {
-      label: 'checkbox',
-      type: 'checkbox',
-      content: 'isChecked',
-      weight: '1',
-      status: selectAll,
-      function: handleSelectAll,
-    },
-    {
-      label: 'JSON Value',
-      type: 'span',
-      content: 'json_value',
-      format: 'json',
-      weight: '10',
-    },
-    {
-      label: 'Actions',
-      type: 'button',
-      content: 'dataItem',
-      format: 'click',
-      weight: '1',
-      function: onClickDetails,
-    },
-  ];
 
   return (
     <div className="flex w-full flex-col">
@@ -184,7 +152,7 @@ export const TableComponent: React.FC<TableProps> = ({
       <table className="flex w-full flex-col">
         <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
           <tr className="flex h-full w-full px-8">
-            {tempData.map((item, index) => {
+            {tableFormat.map((item, index) => {
               if (item.type === 'checkbox') {
                 return (
                   <th
@@ -223,7 +191,7 @@ export const TableComponent: React.FC<TableProps> = ({
               key={dataItem.id}
               className="flex w-full border-b px-8 py-4"
             >
-              {tempData.map((item, index) => {
+              {tableFormat.map((item, index) => {
                 if (item.type === 'checkbox') {
                   return (
                     <td

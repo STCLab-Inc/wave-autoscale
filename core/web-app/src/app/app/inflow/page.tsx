@@ -10,7 +10,7 @@ import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import InflowDetailDrawer from './inflow-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from './inflow-table';
+import { TableComponent } from '../common/table';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
@@ -170,6 +170,32 @@ export default function InflowPage() {
     setMetricId(event.target.value);
   };
 
+  const tableFormat = [
+    {
+      label: 'checkbox',
+      type: 'checkbox',
+      content: 'isChecked',
+      weight: '1',
+      status: selectAll,
+      function: handleSelectAll,
+    },
+    {
+      label: 'JSON Value',
+      type: 'span',
+      content: 'json_value',
+      format: 'json',
+      weight: '10',
+    },
+    {
+      label: 'Actions',
+      type: 'button',
+      content: 'dataItem',
+      format: 'click',
+      weight: '1',
+      function: onClickDetails,
+    },
+  ];
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -226,11 +252,9 @@ export default function InflowPage() {
           />
           <div className="flex w-full flex-col">
             <TableComponent
-              data={inflow}
-              setData={setInflow}
+              tableFormat={tableFormat}
               /*  */
-              selectAll={selectAll}
-              handleSelectAll={handleSelectAll}
+              data={inflow}
               /*  */
               sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
               sizePerPage={sizePerPage}
@@ -239,8 +263,6 @@ export default function InflowPage() {
               currentPage={currentPage}
               totalPage={totalPage}
               handleCurrentPage={handleCurrentPage}
-              /*  */
-              onClickDetails={onClickDetails}
             />
           </div>
         </div>

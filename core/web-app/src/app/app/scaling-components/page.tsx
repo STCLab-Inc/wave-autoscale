@@ -8,7 +8,7 @@ import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-d
 
 import ScalingComponentDetailDrawer from './scaling-component-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from './scaling-component-table';
+import { TableComponent } from '../common/table';
 
 async function getScalingComponents() {
   const scalingComponents =
@@ -125,6 +125,46 @@ export default function ScalingComponentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlag]);
 
+  const tableFormat = [
+    {
+      label: 'checkbox',
+      type: 'checkbox',
+      content: 'isChecked',
+      weight: '1',
+      status: selectAll,
+      function: handleSelectAll,
+    },
+    {
+      label: 'Scaling Component ID',
+      type: 'span',
+      content: 'id',
+      format: 'plain',
+      weight: '8',
+    },
+    {
+      label: 'Scaling Component Kind',
+      type: 'span',
+      content: 'component_kind',
+      format: 'plain',
+      weight: '8',
+    },
+    {
+      label: 'Metadata',
+      type: 'span',
+      content: 'metadata',
+      format: 'json',
+      weight: '10',
+    },
+    {
+      label: 'Actions',
+      type: 'button',
+      content: 'dataItem',
+      format: 'click',
+      weight: '1',
+      function: onClickDetails,
+    },
+  ];
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -145,11 +185,9 @@ export default function ScalingComponentsPage() {
           />
           <div className="flex w-full flex-col">
             <TableComponent
-              data={scalingComponents}
-              setData={setScalingComponents}
+              tableFormat={tableFormat}
               /*  */
-              selectAll={selectAll}
-              handleSelectAll={handleSelectAll}
+              data={scalingComponents}
               /*  */
               sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
               sizePerPage={sizePerPage}
@@ -158,8 +196,6 @@ export default function ScalingComponentsPage() {
               currentPage={currentPage}
               totalPage={totalPage}
               handleCurrentPage={handleCurrentPage}
-              /*  */
-              onClickDetails={onClickDetails}
             />
           </div>
         </div>

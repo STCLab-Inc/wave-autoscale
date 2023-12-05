@@ -12,7 +12,7 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from './autoscaling-history-table';
+import { TableComponent } from '../common/table';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
@@ -176,6 +176,67 @@ export default function AutoscalingHistoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlag]);
 
+  const tableFormat = [
+    {
+      label: 'checkbox',
+      type: 'checkbox',
+      content: 'isChecked',
+      weight: '1',
+      status: selectAll,
+      function: handleSelectAll,
+    },
+    {
+      label: 'Scaling Plan ID',
+      type: 'span',
+      content: 'plan_id',
+      format: 'plain',
+      weight: '4',
+    },
+    {
+      label: 'Metric Values',
+      type: 'span',
+      content: 'metric_values_json',
+      format: 'json',
+      weight: '10',
+    },
+    {
+      label: 'Metadata Values',
+      type: 'span',
+      content: 'metadata_values_json',
+      format: 'json',
+      weight: '5',
+    },
+    {
+      label: 'Fail Message',
+      type: 'span',
+      content: 'fail_message',
+      weight: '3',
+    },
+    {
+      label: 'Status',
+      type: 'button',
+      content: 'fail_message',
+      format: 'alternate',
+      weight: '1',
+      function: onClickDetails,
+    },
+    {
+      label: 'Date',
+      type: 'span',
+      content: 'created_at',
+      format: 'unix',
+      weight: '2',
+    },
+    {
+      label: 'Action',
+      type: 'button',
+      content: 'dataItem',
+      format: 'click',
+      weight: '1',
+      function: onClickDetails,
+    },
+  ];
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -220,11 +281,9 @@ export default function AutoscalingHistoryPage() {
               to={toDayjs}
             />
             <TableComponent
-              data={autoscalingHistory}
-              setData={setAutoscalingHistory}
+              tableFormat={tableFormat}
               /*  */
-              selectAll={selectAll}
-              handleSelectAll={handleSelectAll}
+              data={autoscalingHistory}
               /*  */
               sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
               sizePerPage={sizePerPage}
@@ -233,8 +292,6 @@ export default function AutoscalingHistoryPage() {
               currentPage={currentPage}
               totalPage={totalPage}
               handleCurrentPage={handleCurrentPage}
-              /*  */
-              onClickDetails={onClickDetails}
             />
           </div>
         </div>

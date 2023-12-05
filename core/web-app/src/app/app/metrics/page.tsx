@@ -8,7 +8,7 @@ import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 import MetricDetailDrawer from './metric-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from './metric-table';
+import { TableComponent } from '../common/table';
 
 async function getMetrics() {
   const metrics = await MetricService.getMetrics();
@@ -113,6 +113,46 @@ export default function MetricsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlag]);
 
+  const tableFormat = [
+    {
+      label: 'checkbox',
+      type: 'checkbox',
+      content: 'isChecked',
+      weight: '1',
+      status: selectAll,
+      function: handleSelectAll,
+    },
+    {
+      label: 'Metric ID',
+      type: 'span',
+      content: 'id',
+      format: 'plain',
+      weight: '4',
+    },
+    {
+      label: 'Collector',
+      type: 'span',
+      content: 'collector',
+      format: 'plain',
+      weight: '2',
+    },
+    {
+      label: 'Metadata',
+      type: 'span',
+      content: 'metadata',
+      format: 'json',
+      weight: '10',
+    },
+    {
+      label: 'Actions',
+      type: 'button',
+      content: 'dataItem',
+      format: 'click',
+      weight: '1',
+      function: onClickDetails,
+    },
+  ];
+
   return (
     <main className="flex h-full w-full flex-row">
       <div className="flex h-full w-full flex-col">
@@ -133,11 +173,9 @@ export default function MetricsPage() {
           />
           <div className="flex w-full flex-col">
             <TableComponent
-              data={metrics}
-              setData={setMetrics}
+              tableFormat={tableFormat}
               /*  */
-              selectAll={selectAll}
-              handleSelectAll={handleSelectAll}
+              data={metrics}
               /*  */
               sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
               sizePerPage={sizePerPage}
@@ -146,8 +184,6 @@ export default function MetricsPage() {
               currentPage={currentPage}
               totalPage={totalPage}
               handleCurrentPage={handleCurrentPage}
-              /*  */
-              onClickDetails={onClickDetails}
             />
           </div>
         </div>
