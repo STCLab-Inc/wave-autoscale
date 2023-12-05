@@ -10,7 +10,7 @@ import { InflowDefinition } from '@/types/bindings/inflow-definition';
 
 import InflowDetailDrawer from './inflow-drawer';
 import ContentHeader from '../common/content-header';
-import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import { TableComponent } from './inflow-table';
 
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
@@ -18,8 +18,8 @@ async function getInflowMetricId() {
   const metric_ids = await InflowService.getInflowMetricId();
   return metric_ids;
 }
-async function getInflowWithMetricIdByFromToInMemory(
-  metric_id: String,
+async function getInflowWithMetricIdByDate(
+  metric_id: string,
   from: Dayjs,
   to: Dayjs
 ) {
@@ -35,7 +35,6 @@ const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
 
 interface InflowDefinitionEx extends InflowDefinition {
-  created_at: string;
   isChecked: boolean;
 }
 
@@ -67,7 +66,7 @@ export default function InflowPage() {
         let metricIdsData = await getInflowMetricId();
         setMetricIds([...metricIds, ...metricIdsData]);
       } else if (metricId) {
-        let inflowData = await getInflowWithMetricIdByFromToInMemory(
+        let inflowData = await getInflowWithMetricIdByDate(
           metricId,
           fromDayjs,
           toDayjs
@@ -82,9 +81,10 @@ export default function InflowPage() {
 
   useEffect(() => {
     fetchInflow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDayjs, toDayjs, metricId]);
 
-  const handleDateChange = (field: 'from' | 'to', value: string) => {
+  const handleDate = (field: 'from' | 'to', value: string) => {
     const newDate = dayjs(value);
     const isValidDate = newDate.isValid();
 
@@ -123,8 +123,6 @@ export default function InflowPage() {
     setTotalPage(Math.ceil(inflow.length / sizePerPage) || 1);
   }, [inflow, from, to, currentPage, totalPage, sizePerPage]);
 
-  const [visibleInflow, setVisibleInflow] = useState<InflowDefinitionEx[]>([]);
-
   const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
     setSizePerPage(newItemsPerPage);
@@ -138,20 +136,22 @@ export default function InflowPage() {
   useEffect(() => {
     setCurrentPage(page || 1);
     setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size]);
 
   useEffect(() => {
-    if (currentPage > totalPage) {
+    if (currentPage > totalPage || currentPage < 1) {
       setCurrentPage(1);
     }
     router.push(
       `/app/inflow?from=${from}&to=${to}&page=${currentPage}&size=${sizePerPage}`
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inflow, from, to, currentPage, totalPage, sizePerPage, searchParams]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
 
-  const onClickDetails = (InflowItem: InflowDefinitionEx) => {
+  const onClickDetails = (InflowItem: InflowDefinitionEx | undefined) => {
     setInflowItem(InflowItem);
     setDetailsModalFlag(true);
   };
@@ -163,16 +163,8 @@ export default function InflowPage() {
       fetchInflow();
       setFetchFlag(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlag]);
-
-  useEffect(() => {
-    setVisibleInflow(
-      inflow.slice(
-        (currentPage - 1) * sizePerPage,
-        (currentPage - 1) * sizePerPage + sizePerPage
-      )
-    );
-  }, [inflow, currentPage, sizePerPage, totalPage]);
 
   const handleFieldChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setMetricId(event.target.value);
@@ -187,6 +179,23 @@ export default function InflowPage() {
             title="Inflow"
             right={
               <div className="flex items-center">
+                <div className="mx-4 flex h-8 items-center">
+                  <div className="mx-2 flex items-center">
+                    <label className="select-group-sm">
+                      <select
+                        value={metricId}
+                        onChange={handleFieldChange}
+                        className="focus:outline-noneselect select-sm min-w-[250px] cursor-pointer rounded-md border border-gray-200 px-2"
+                      >
+                        {metricIds.map((item, index) => (
+                          <option key={index} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
                 <div className="form-control mr-2">
                   <label className="input-group-sm">
                     <input
@@ -195,7 +204,7 @@ export default function InflowPage() {
                       max={formatDate(toDayjs)}
                       value={from}
                       onChange={(event) =>
-                        handleDateChange('from', event.target.value)
+                        handleDate('from', event.target.value)
                       }
                     />
                   </label>
@@ -208,9 +217,7 @@ export default function InflowPage() {
                       className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
                       min={formatDate(fromDayjs)}
                       value={to}
-                      onChange={(event) =>
-                        handleDateChange('to', event.target.value)
-                      }
+                      onChange={(event) => handleDate('to', event.target.value)}
                     />
                   </label>
                 </div>
@@ -218,144 +225,23 @@ export default function InflowPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <div className="flex items-center justify-end px-8 py-4">
-              <div className="mx-2 flex h-8 items-center">
-                <div className="mx-2 flex items-center">
-                  <label className="select-group-sm">
-                    <select
-                      value={metricId}
-                      onChange={handleFieldChange}
-                      className="focus:outline-noneselect select-sm min-w-[250px] cursor-pointer rounded-md border border-gray-200 px-2"
-                    >
-                      {metricIds.map((item, key) => (
-                        <option key={key} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </div>
-
-              <div className="mx-2 flex h-8 items-center">
-                <div className="mx-2 flex items-center">
-                  <label className="select-group-sm">
-                    <select
-                      value={sizePerPage}
-                      onChange={handleSizePerPage}
-                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                    >
-                      {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
-                        <option key={key} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="min-h-8 mx-2 flex min-w-[100px] items-center justify-center rounded-md border border-gray-200">
-                  <span className="px-4 text-center text-sm">
-                    {currentPage} / {totalPage}
-                  </span>
-                </div>
-              </div>
-
-              <div className="ml-2 flex h-8 items-center">
-                <button
-                  className={
-                    currentPage === 1
-                      ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handleCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  PREVIOUS
-                </button>
-                <button
-                  className={
-                    currentPage && totalPage && currentPage !== totalPage
-                      ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handleCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPage}
-                >
-                  NEXT
-                </button>
-              </div>
-            </div>
-
-            <table className="flex w-full flex-col">
-              <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-                <tr className="flex h-full w-full px-8">
-                  <th className="mr-4 flex h-full flex-1 items-center">
-                    <label className="flex h-full items-center">
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={selectAll}
-                        onChange={handleSelectAll}
-                      />
-                    </label>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-10 items-center">
-                    <span className="flex items-center break-words">
-                      JSON Value
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-1 items-center">
-                    <div className="flex items-center break-words">Actions</div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
-                {visibleInflow.map((InflowItem: InflowDefinitionEx) => (
-                  <tr
-                    key={InflowItem.id}
-                    className="flex w-full border-b px-8 py-4"
-                  >
-                    <td className="mr-4 flex h-full flex-1 items-start">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          checked={InflowItem.isChecked}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            const updatedInflowItem = inflow.map((item) =>
-                              item.id === InflowItem.id
-                                ? { ...item, isChecked: checked }
-                                : item
-                            );
-                            setInflow(updatedInflowItem);
-                          }}
-                        />
-                      </label>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-10 items-start">
-                      <div className="flex flex-col items-center">
-                        {renderKeyValuePairsWithJson(
-                          InflowItem.json_value,
-                          true
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="mx-4 flex h-full w-full flex-1 items-start">
-                      <div className="flex items-center">
-                        <button
-                          className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
-                          onClick={() => onClickDetails(InflowItem)}
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TableComponent
+              data={inflow}
+              setData={setInflow}
+              /*  */
+              selectAll={selectAll}
+              handleSelectAll={handleSelectAll}
+              /*  */
+              sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
+              sizePerPage={sizePerPage}
+              handleSizePerPage={handleSizePerPage}
+              /*  */
+              currentPage={currentPage}
+              totalPage={totalPage}
+              handleCurrentPage={handleCurrentPage}
+              /*  */
+              onClickDetails={onClickDetails}
+            />
           </div>
         </div>
         {detailsModalFlag ? (

@@ -8,7 +8,7 @@ import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-d
 
 import ScalingComponentDetailDrawer from './scaling-component-drawer';
 import ContentHeader from '../common/content-header';
-import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import { TableComponent } from './scaling-component-table';
 
 async function getScalingComponents() {
   const scalingComponents =
@@ -53,6 +53,7 @@ export default function ScalingComponentsPage() {
 
   useEffect(() => {
     fetchScalingComponents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [selectAll, setSelectAll] = useState(false);
@@ -79,10 +80,6 @@ export default function ScalingComponentsPage() {
     setTotalPage(Math.ceil(scalingComponents.length / sizePerPage) || 1);
   }, [scalingComponents, currentPage, totalPage, sizePerPage]);
 
-  const [visibleScalingComponents, setVisibleScalingComponents] = useState<
-    ScalingComponentDefinitionEx[]
-  >([]);
-
   const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newItemsPerPage = parseInt(event.target.value, 10);
     setSizePerPage(newItemsPerPage);
@@ -96,15 +93,17 @@ export default function ScalingComponentsPage() {
   useEffect(() => {
     setCurrentPage(page || 1);
     setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size]);
 
   useEffect(() => {
-    if (currentPage > totalPage) {
+    if (currentPage > totalPage || currentPage < 1) {
       setCurrentPage(1);
     }
     router.push(
       `/app/scaling-components?page=${currentPage}&size=${sizePerPage}`
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scalingComponents, currentPage, totalPage, sizePerPage, searchParams]);
 
   const [detailsModalFlag, setDetailsModalFlag] = useState(false);
@@ -123,16 +122,8 @@ export default function ScalingComponentsPage() {
       fetchScalingComponents();
       setFetchFlag(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlag]);
-
-  useEffect(() => {
-    setVisibleScalingComponents(
-      scalingComponents.slice(
-        (currentPage - 1) * sizePerPage,
-        (currentPage - 1) * sizePerPage + sizePerPage
-      )
-    );
-  }, [scalingComponents, currentPage, sizePerPage, totalPage]);
 
   return (
     <main className="flex h-full w-full flex-row">
@@ -153,150 +144,23 @@ export default function ScalingComponentsPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <div className="flex items-center justify-end px-8 py-4">
-              <div className="mx-2 flex h-8 items-center">
-                <div className="mx-2 flex items-center">
-                  <label className="select-group-sm">
-                    <select
-                      value={sizePerPage}
-                      onChange={handleSizePerPage}
-                      className="focus:outline-noneselect select-sm max-w-[130px] cursor-pointer rounded-md border border-gray-200 px-2"
-                    >
-                      {SIZE_PER_PAGE_OPTIONS.map((option, key) => (
-                        <option key={key} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="min-h-8 mx-2 flex min-w-[100px] items-center justify-center rounded-md border border-gray-200">
-                  <span className="px-4 text-center text-sm">
-                    {currentPage} / {totalPage}
-                  </span>
-                </div>
-              </div>
-
-              <div className="ml-2 flex h-8 items-center">
-                <button
-                  className={
-                    currentPage === 1
-                      ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handleCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  PREVIOUS
-                </button>
-                <button
-                  className={
-                    currentPage && totalPage && currentPage !== totalPage
-                      ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
-                      : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
-                  }
-                  onClick={() => handleCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPage}
-                >
-                  NEXT
-                </button>
-              </div>
-            </div>
-
-            <table className="flex w-full flex-col">
-              <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-                <tr className="flex h-full w-full px-8">
-                  <th className="mr-4 flex h-full flex-1 items-center">
-                    <label className="flex h-full items-center">
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={selectAll}
-                        onChange={handleSelectAll}
-                      />
-                    </label>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-8 items-center">
-                    <span className="flex items-center break-words">
-                      Scaling Component ID
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-8 items-center">
-                    <span className="flex items-center break-words">
-                      Scaling Component Kind
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-8 items-center">
-                    <span className="flex items-center break-words">
-                      Metadata Values
-                    </span>
-                  </th>
-                  <th className="mx-4 flex h-full w-full flex-1 items-center">
-                    <span className="flex items-center break-words">
-                      Actions
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between py-0 text-gray-800">
-                {visibleScalingComponents.map(
-                  (componentsItem: ScalingComponentDefinitionEx) => (
-                    <tr
-                      key={componentsItem.db_id}
-                      className="flex w-full border-b px-8 py-4"
-                    >
-                      <td className="mr-4 flex h-full flex-1 items-start">
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="checkbox"
-                            checked={componentsItem.isChecked}
-                            onChange={(event) => {
-                              const checked = event.target.checked;
-                              const updatedComponents = scalingComponents.map(
-                                (item) =>
-                                  item.id === componentsItem.id
-                                    ? { ...item, isChecked: checked }
-                                    : item
-                              );
-                              setScalingComponents(updatedComponents);
-                            }}
-                          />
-                        </label>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex items-center break-all">
-                          {componentsItem.id}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex items-center break-all">
-                          {componentsItem.component_kind}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-8 items-start">
-                        <div className="flex flex-col items-center">
-                          {renderKeyValuePairsWithJson(
-                            JSON.stringify(componentsItem.metadata),
-                            true
-                          )}
-                        </div>
-                      </td>
-                      <td className="mx-4 flex h-full w-full flex-1 items-start">
-                        <div className="flex items-center">
-                          <button
-                            className="badge-info badge bg-[#99E3D0] px-2 py-3 text-white"
-                            onClick={() => onClickDetails(componentsItem)}
-                          >
-                            Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+            <TableComponent
+              data={scalingComponents}
+              setData={setScalingComponents}
+              /*  */
+              selectAll={selectAll}
+              handleSelectAll={handleSelectAll}
+              /*  */
+              sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
+              sizePerPage={sizePerPage}
+              handleSizePerPage={handleSizePerPage}
+              /*  */
+              currentPage={currentPage}
+              totalPage={totalPage}
+              handleCurrentPage={handleCurrentPage}
+              /*  */
+              onClickDetails={onClickDetails}
+            />
           </div>
         </div>
       </div>
