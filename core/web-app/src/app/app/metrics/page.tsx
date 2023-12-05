@@ -81,7 +81,7 @@ export default function MetricsPage() {
     setCurrentPage(1);
   };
 
-  const handlePageChange = (newPage: number) => {
+  const handleCurrentPage = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
@@ -172,7 +172,7 @@ export default function MetricsPage() {
                       ? 'mr-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                       : 'mr-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50'
                   }
-                  onClick={() => handlePageChange(currentPage - 1)}
+                  onClick={() => handleCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
                   PREVIOUS
@@ -183,7 +183,7 @@ export default function MetricsPage() {
                       ? 'ml-1 flex h-8 cursor-pointer items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50'
                       : 'ml-1 flex h-8 cursor-not-allowed items-center justify-center rounded-md border border-gray-400 bg-gray-400 pl-5 pr-5 text-sm text-gray-50'
                   }
-                  onClick={() => handlePageChange(currentPage + 1)}
+                  onClick={() => handleCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPage}
                 >
                   NEXT
