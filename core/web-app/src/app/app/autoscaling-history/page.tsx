@@ -48,8 +48,7 @@ export default function AutoscalingHistoryPage() {
   const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [fetchFlag, setFetchFlag] = useState(false);
+  const [forceFetch, setForceFetch] = useState(false);
 
   // Data
   const [autoscalingHistory, setAutoscalingHistory] = useState<
@@ -101,12 +100,12 @@ export default function AutoscalingHistoryPage() {
 
   // ?????
   useEffect(() => {
-    if (fetchFlag) {
+    if (forceFetch) {
       fetchAutoscalingHistory();
-      setFetchFlag(false);
+      setForceFetch(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchFlag]);
+  }, [forceFetch]);
 
   // Fetch Autoscaling History Data
   const fetchAutoscalingHistory = async () => {
@@ -179,7 +178,6 @@ export default function AutoscalingHistoryPage() {
     autoscalingHistoryItem: AutoscalingHistoryDefinitionEx | undefined
   ) => {
     setSelectedAutoscalingHistory(autoscalingHistoryItem);
-    setDetailModalVisible(true);
   };
 
   const tableFormat = [
@@ -301,10 +299,10 @@ export default function AutoscalingHistoryPage() {
             />
           </div>
         </div>
-        {detailModalVisible ? (
+        {selectedAutoscalingHistory ? (
           <AutoscalingHistoryDetailDrawer
             autoscalingHistoryItem={selectedAutoscalingHistory}
-            onVisibility={setDetailModalVisible}
+            onClose={() => setSelectedAutoscalingHistory(undefined)}
           />
         ) : null}
       </div>

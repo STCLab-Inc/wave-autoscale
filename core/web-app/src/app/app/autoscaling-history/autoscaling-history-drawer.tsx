@@ -7,10 +7,10 @@ import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition
 
 function AutoscalingHistoryDetailDrawer({
   autoscalingHistoryItem,
-  onVisibility,
+  onClose,
 }: {
   autoscalingHistoryItem: AutoscalingHistoryDefinitionEx;
-  onVisibility: (visible: boolean) => void;
+  onClose: () => void;
 }) {
   // const [autoscalingHistory, setAutoscalingHistory] =
   //   useState<AutoscalingHistoryDefinitionEx>();
@@ -48,13 +48,13 @@ function AutoscalingHistoryDetailDrawer({
   const onClickOverlay = () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    onVisibility(false);
+    onClose();
   };
 
   const onClickExit = async () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    onVisibility(false);
+    onClose();
   };
 
   if (!autoscalingHistoryItem) {
