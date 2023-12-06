@@ -3,6 +3,9 @@ type: 'application'
 owners:
   defaultOwner: '@wave-autoscale-team'
 
+env:
+  NEXT_PUBLIC_API_BASE_URL: 'http://localhost:3024'
+
 tasks:
   install:
     command: 'npm install'
@@ -10,15 +13,10 @@ tasks:
       - './package.json'
       - './package-lock.json'
       - './node_modules/**/*'
-  # Override the lint, audit task to use the next.js lint command
   lint:
     command: 'next lint'
     inputs:
       - '@globs(sources)'
-    options:
-      mergeArgs: 'replace'
-      mergeDeps: 'replace'
-      mergeInputs: 'replace'
   audit:
     command: 'npm audit'
     inputs:
@@ -30,7 +28,7 @@ tasks:
       - 'install'
       - 'lint'
   run:
-    command: 'next dev'
+    command: 'next dev --port 3025'
     inputs:
       - '@globs(sources)'
       - 'tsconfig.json'
