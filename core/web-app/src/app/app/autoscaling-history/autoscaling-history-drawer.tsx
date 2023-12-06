@@ -1,73 +1,65 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-
+import React, { memo, useEffect, useState } from 'react';
 import { decodeTime } from 'ulid';
 import dayjs from 'dayjs';
-
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
-
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
 
-interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
-  created_at: string;
-}
-
-export default function AutoscalingHistoryDetailDrawer({
+function AutoscalingHistoryDetailDrawer({
   autoscalingHistoryItem,
-  setDetailsModalFlag,
-  setFetchFlag,
+  onVisibility,
 }: {
-  autoscalingHistoryItem?: AutoscalingHistoryDefinitionEx;
-  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
-  setFetchFlag: (fetchFlag: boolean) => void;
+  autoscalingHistoryItem: AutoscalingHistoryDefinitionEx;
+  onVisibility: (visible: boolean) => void;
 }) {
-  const [autoscalingHistory, setAutoscalingHistory] =
-    useState<AutoscalingHistoryDefinitionEx>();
+  // const [autoscalingHistory, setAutoscalingHistory] =
+  //   useState<AutoscalingHistoryDefinitionEx>();
 
-  useEffect(() => {
-    if (autoscalingHistoryItem) {
-      const {
-        id,
-        plan_db_id,
-        plan_id,
-        plan_item_json,
-        metric_values_json,
-        metadata_values_json,
-        fail_message,
-        created_at,
-        ...rest
-      } = autoscalingHistoryItem;
+  // useEffect(() => {
+  //   if (autoscalingHistoryItem) {
+  //     const {
+  //       id,
+  //       plan_db_id,
+  //       plan_id,
+  //       plan_item_json,
+  //       metric_values_json,
+  //       metadata_values_json,
+  //       fail_message,
+  //       created_at,
+  //       ...rest
+  //     } = autoscalingHistoryItem;
 
-      setAutoscalingHistory({
-        ...rest,
-        id,
-        plan_db_id,
-        plan_id,
-        plan_item_json,
-        metric_values_json,
-        metadata_values_json,
-        fail_message,
-        created_at: dayjs
-          .unix(decodeTime(id) / 1000)
-          .format('YYYY/MM/DD HH:mm:ss'),
-      });
-    }
-  }, [autoscalingHistoryItem]);
+  //     setAutoscalingHistory({
+  //       ...rest,
+  //       id,
+  //       plan_db_id,
+  //       plan_id,
+  //       plan_item_json,
+  //       metric_values_json,
+  //       metadata_values_json,
+  //       fail_message,
+  //       created_at: dayjs
+  //         .unix(decodeTime(id) / 1000)
+  //         .format('YYYY/MM/DD HH:mm:ss'),
+  //     });
+  //   }
+  // }, [autoscalingHistoryItem]);
 
   const onClickOverlay = () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
+    onVisibility(false);
   };
 
   const onClickExit = async () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
+    onVisibility(false);
   };
+
+  if (!autoscalingHistoryItem) {
+    return null;
+  }
 
   return (
     <div className="autoscaling-history-drawer drawer drawer-end fixed bottom-0 right-0 top-16 z-20 w-full">
@@ -94,7 +86,7 @@ export default function AutoscalingHistoryDetailDrawer({
                 onClick={onClickExit}
                 type="button"
               >
-                EXIT
+                Close
               </button>
             </div>
           </div>
@@ -106,7 +98,7 @@ export default function AutoscalingHistoryDetailDrawer({
             </label>
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
-                {autoscalingHistory?.plan_id}
+                {autoscalingHistoryItem?.plan_id}
               </span>
             </div>
           </div>
@@ -119,7 +111,7 @@ export default function AutoscalingHistoryDetailDrawer({
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
-                  autoscalingHistory?.plan_item_json || '{}',
+                  autoscalingHistoryItem?.plan_item_json || '{}',
                   true
                 )}
               </span>
@@ -134,7 +126,7 @@ export default function AutoscalingHistoryDetailDrawer({
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
-                  autoscalingHistory?.metric_values_json || '{}',
+                  autoscalingHistoryItem?.metric_values_json || '{}',
                   true
                 )}
               </span>
@@ -149,7 +141,7 @@ export default function AutoscalingHistoryDetailDrawer({
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
                 {renderKeyValuePairsWithJson(
-                  autoscalingHistory?.metadata_values_json || '{}',
+                  autoscalingHistoryItem?.metadata_values_json || '{}',
                   true
                 )}
               </span>
@@ -163,7 +155,7 @@ export default function AutoscalingHistoryDetailDrawer({
             </label>
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
-                {autoscalingHistory?.fail_message}
+                {autoscalingHistoryItem?.fail_message}
               </span>
             </div>
           </div>
@@ -175,7 +167,10 @@ export default function AutoscalingHistoryDetailDrawer({
             </label>
             <div className="min-h-12 flex items-center rounded-md border border-gray-200">
               <span className="my-2 w-full px-4 text-sm">
-                {autoscalingHistory?.created_at}
+                {/* {autoscalingHistoryItem?.created_at} */}
+                {dayjs
+                  .unix(autoscalingHistoryItem?.created_at / 1000)
+                  .format('YYYY/MM/DD HH:mm:ss')}
               </span>
             </div>
           </div>
@@ -184,3 +179,5 @@ export default function AutoscalingHistoryDetailDrawer({
     </div>
   );
 }
+
+export default memo(AutoscalingHistoryDetailDrawer);

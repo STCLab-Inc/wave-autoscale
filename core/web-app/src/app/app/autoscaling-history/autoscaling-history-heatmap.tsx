@@ -1,11 +1,12 @@
-import Reat, { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
-
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
+import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
 
+// Interfaces
 interface AutoscalingHistoryHeatmapProps {
-  autoscalingHistory: any;
+  autoscalingHistory: AutoscalingHistoryDefinitionEx[];
   from: Dayjs;
   to: Dayjs;
 }

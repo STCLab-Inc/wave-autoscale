@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
 import dayjs from 'dayjs';
-
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 
 interface TableProps {
