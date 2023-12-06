@@ -723,6 +723,36 @@ impl DataLayer {
         }
         Ok(autoscaling_history)
     }
+    pub async fn generate_autoscaling_history_samples(&self, sample_size: usize) -> Result<()> {
+        for _ in 0..sample_size {
+            let autoscaling_history = AutoscalingHistoryDefinition {
+                id: Ulid::new().to_string(),
+                plan_db_id: Ulid::new().to_string(),
+                plan_id: Ulid::new().to_string(),
+                plan_item_json: json!({
+                    "id": Ulid::new().to_string(),
+                    "item": rand::random::<f64>(),
+                })
+                .to_string(),
+                metric_values_json: json!({
+                    "id": Ulid::new().to_string(),
+                    "value": rand::random::<f64>(),
+                })
+                .to_string(),
+                metadata_values_json: json!({
+                    "id": Ulid::new().to_string(),
+                })
+                .to_string(),
+                fail_message: if rand::random() {
+                    Some("test_fail_message".to_string())
+                } else {
+                    None
+                },
+            };
+            self.add_autoscaling_history(autoscaling_history).await?;
+        }
+        Ok(())
+    }
     // Remove the old AutoscalingHistory from the database
     pub async fn remove_old_autoscaling_history(&self, to_date: DateTime<Utc>) -> Result<()> {
         // e.g. 2021-01-01 00:00:00.000 + 0.001 -> 01F8ZQZ1Z0Z000000000000000
