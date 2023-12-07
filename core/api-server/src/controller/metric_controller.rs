@@ -21,7 +21,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 #[get("/api/metrics")]
 async fn get_metrics(app_state: web::Data<AppState>) -> impl Responder {
     debug!("Getting all metrics");
-    let metrics = app_state.data_layer.get_all_metrics().await;
+    let metrics = app_state.data_layer.get_all_metrics_json().await;
     if metrics.is_err() {
         error!("Failed to get metrics: {:?}", metrics);
         return HttpResponse::InternalServerError().body(format!("{:?}", metrics));

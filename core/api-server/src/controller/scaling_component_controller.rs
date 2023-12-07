@@ -16,7 +16,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 async fn get_scaling_components(app_state: web::Data<AppState>) -> impl Responder {
     // HttpResponse::Ok().body("Hello world!")
     // const scaling_components = &app
-    let scaling_components = app_state.data_layer.get_all_scaling_components().await;
+    let scaling_components = app_state.data_layer.get_all_scaling_components_json().await;
     if scaling_components.is_err() {
         return HttpResponse::InternalServerError().body(format!("{:?}", scaling_components));
     }
