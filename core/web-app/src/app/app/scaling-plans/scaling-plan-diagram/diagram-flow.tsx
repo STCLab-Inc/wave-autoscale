@@ -14,14 +14,12 @@ import { flatten, keyBy, unionBy } from 'lodash';
 import { produce } from 'immer';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
-
-import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import MetricService from '@/services/metric';
 import ScalingComponentService from '@/services/scaling-component';
-
 import DiagramNodePlan from './diagram-node-plan';
 import DiagramNodeMetric from './diagram-node-metric';
 import DiagramNodeComponent from './diagram-node-component';
+import { ScalingPlanDefinitionEx } from '../scaling-plan-definition-ex';
 
 const nodeTypes = {
   scalingPlan: DiagramNodePlan,
@@ -38,26 +36,13 @@ export interface ScalingComponentUI {
   selected?: boolean;
 }
 
-interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
-  metadata: { cool_down: number; interval: number; title: string };
-}
-
 export default function DiagramFlow({
-  scalingPlansItem,
-  setScalingPlansItem,
-  detailsModalFlag,
-  setDetailsModalFlag,
-  setFetchFlag,
+  scalingPlan,
 }: {
-  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
-  setScalingPlansItem: (plan: ScalingPlanDefinitionEx | undefined) => void;
-  detailsModalFlag: boolean;
-  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
-  setFetchFlag: (fetchFlag: boolean) => void;
+  scalingPlan?: ScalingPlanDefinitionEx | undefined;
 }) {
   const [metricMap, setMetricMap] = useState<any>({});
   const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
-
   const [renderingScalingPlansItem, setRenderingScalingPlansItem] = useState<
     ScalingPlanDefinitionEx | undefined
   >(undefined);
@@ -71,8 +56,8 @@ export default function DiagramFlow({
       const results = await Promise.all(promises);
       setMetricMap(keyBy(results[0], 'id'));
       setScalingComponentMap(keyBy(results[1], 'id'));
-      if (scalingPlansItem) {
-        const newRenderingPlansItem = produce(scalingPlansItem, (draft) => {
+      if (scalingPlan) {
+        const newRenderingPlansItem = produce(scalingPlan, (draft) => {
           draft.plans.forEach((plan) => {
             const expression = plan.expression;
             const metricIdsInScalingPlan = new Set<string>();
@@ -144,7 +129,7 @@ export default function DiagramFlow({
     };
 
     fetch();
-  }, [scalingPlansItem]);
+  }, [scalingPlan]);
 
   // Nodes are the plans and metrics
   const nodes = useMemo(() => {
@@ -289,10 +274,10 @@ export default function DiagramFlow({
   }, [renderingScalingPlansItem, metricMap, scalingComponentMap]);
 
   const onNodesChange = (nodes: NodeChange[]) => {
-    if (scalingPlansItem) {
+    if (scalingPlan) {
       // Find the plan by id
       const findPlan = (planId: string) =>
-        scalingPlansItem.plans.find((plan) => plan.id === planId);
+        scalingPlan.plans.find((plan) => plan.id === planId);
 
       // Update the plan with new attributes
       nodes.forEach((node) => {
@@ -313,7 +298,7 @@ export default function DiagramFlow({
             const newPlan = produce(plan, (draft) => {
               draft.ui = { ...draft.ui, selected: node.selected };
             });
-            setDetailsModalFlag(true);
+            // setDetailsModalFlag(true);
             /* updatePlanItemUI(newPlan); */
           }
         }

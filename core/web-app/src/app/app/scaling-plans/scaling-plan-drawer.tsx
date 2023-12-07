@@ -1,7 +1,4 @@
-'use client';
-
 import React, { useEffect } from 'react';
-
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
 import { produce } from 'immer';
@@ -11,42 +8,35 @@ import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import 'ace-builds/src-noconflict/mode-yaml';
-
 import ScalingPlanService from '@/services/scaling-plan';
-import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
+import { ScalingPlanDefinitionEx } from './scaling-plan-definition-ex';
+import yaml from 'js-yaml';
 
-interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
-  metadata: { cool_down: number; interval: number; title: string };
-}
-
-export default function ScalingPlansDrawer({
-  scalingPlansItem,
-  setScalingPlansItem,
-  setDetailsModalFlag,
-  setFetchFlag,
+export default function ScalingPlanDrawer({
+  scalingPlan: scalingPlan,
+  onClose,
+  onChange,
 }: {
-  scalingPlansItem?: ScalingPlanDefinitionEx | undefined;
-  setScalingPlansItem: (
-    scalingPlan: ScalingPlanDefinitionEx | undefined
-  ) => void;
-  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
-  setFetchFlag: (fetchFlag: boolean) => void;
+  scalingPlan?: ScalingPlanDefinitionEx | undefined;
+  // setScalingPlansItem: (
+  //   scalingPlan: ScalingPlanDefinitionEx | undefined
+  // ) => void;
+  // setDetailsModalFlag: (detailsModalFlag: boolean) => void;
+  onClose: () => void;
+  onChange: () => void;
 }) {
   const { register, handleSubmit, control, setValue, getValues, reset } =
     useForm();
 
-  const dbId = scalingPlansItem?.db_id;
-  const isNew = !dbId;
-
-  const yaml = require('js-yaml');
+  const isNew = !scalingPlan?.db_id;
 
   useEffect(() => {
-    if (isNew) {
+    if (isNew || !scalingPlan) {
       return;
     }
 
-    const { kind, db_id, id, metadata, plans, ...rest } = scalingPlansItem;
+    const { kind, db_id, id, metadata, plans, ...rest } = scalingPlan;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
@@ -73,35 +63,40 @@ export default function ScalingPlansDrawer({
       }
     );
     setValue('plans', yaml.dump(scalingPlanForDiagram.plans));
-  }, [scalingPlansItem, isNew]);
+  }, [scalingPlan, isNew]);
 
   const onClickOverlay = () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    setDetailsModalFlag(false);
+    onClose();
   };
 
   const onClickExit = async () => {
     /* TODO */
     /* Possible triggers for data synchronization. */
-    setDetailsModalFlag(false);
+    onClose();
   };
 
-  const onClickInitialize = async () => {
+  const onClickReset = async () => {
     reset();
   };
 
   const onClickRemove = async () => {
-    if (isNew) {
+    const dbId = scalingPlan?.db_id;
+    if (!dbId) {
       return;
     }
+
+    if (isNew) {
+      onClose();
+      return;
+    }
+
     try {
       const response = await ScalingPlanService.deleteScalingPlan(dbId);
-      console.info({ response });
-
-      setScalingPlansItem(undefined);
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      // TODO: Check response
+      onChange();
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -109,27 +104,27 @@ export default function ScalingPlansDrawer({
 
   const onSubmit = async (data: any) => {
     const { kind, db_id, id, metadata, plans, ...rest } = data;
-    const scalingPlansItem = generateScalingPlanDefinition({
+    const newScalingPlan = generateScalingPlanDefinition({
       kind: 'ScalingPlan',
       id: id,
-      db_id: db_id,
-      metadata: yaml.load(metadata),
-      plans: yaml.load(plans),
+      db_id: isNew ? '' : db_id,
+      metadata: yaml.load(metadata ?? ''),
+      plans: yaml.load(plans ?? '') as any[],
     });
     try {
       if (isNew) {
         const result = await ScalingPlanService.createScalingPlan(
-          scalingPlansItem
+          newScalingPlan
         );
         console.info({ result, isNew });
       } else {
         const result = await ScalingPlanService.updateScalingPlan(
-          scalingPlansItem
+          newScalingPlan
         );
         console.info({ result });
       }
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      onChange();
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -159,7 +154,7 @@ export default function ScalingPlansDrawer({
                 {isNew ? (
                   <button
                     className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-red-400 bg-red-400 pl-5 pr-5 text-sm text-gray-50"
-                    onClick={onClickInitialize}
+                    onClick={onClickReset}
                     type="button"
                   >
                     RESET
@@ -198,25 +193,39 @@ export default function ScalingPlansDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Scaling Plan ID</span>
+                <span className="text-md label-text px-2">
+                  Scaling Plan ID (alphanumeric, lowercase and underscore)
+                </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              <input
-                type="text"
-                placeholder="Scaling Plan ID"
-                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                {...register('id', { required: true })}
+
+              <Controller
+                control={control}
+                name="id"
+                render={({ field: { onChange, value } }) => (
+                  <input
+                    type="text"
+                    placeholder="Scaling Plan ID"
+                    className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    onChange={(event) => {
+                      // let value = event.target.value;
+                      event.target.value = event.target.value?.replace(
+                        /[^a-z0-9_]/g,
+                        ''
+                      );
+                      onChange(event);
+                    }}
+                  />
+                )}
               />
             </div>
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
-                  Scaling Plan Metadata
-                </span>
+                <span className="text-md label-text px-2">Metadata (YAML)</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
@@ -254,7 +263,7 @@ export default function ScalingPlansDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Plans</span>
+                <span className="text-md label-text px-2">Plans (YAML)</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
