@@ -148,17 +148,43 @@ mod tests {
         data_layer.get_all_metrics().await.unwrap()
     }
 
-    // [GET] /api/metrics
+    // [GET] /api/metrics (get_all_metrics)
 
     #[actix_web::test]
     #[tracing_test::traced_test]
-    async fn test_get_metrics() {
+    async fn test_get_all_metrics() {
         let app_state = get_app_state_for_test().await;
         add_metrics_for_test(&app_state.data_layer).await;
         let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
         let req = test::TestRequest::get().uri("/api/metrics").to_request();
         let resp: Vec<MetricDefinition> = test::call_and_read_body_json(&app, req).await;
         assert_eq!(resp.len(), 2);
+    }
+
+    // [GET] /api/metrics (get_all_metrics_json)
+
+    #[actix_web::test]
+    #[tracing_test::traced_test]
+    async fn test_get_all_metrics_json() {
+        let app_state = get_app_state_for_test().await;
+        add_metrics_for_test(&app_state.data_layer).await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get().uri("/api/metrics").to_request();
+        let resp: Vec<serde_json::Value> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+        for metric in resp.iter() {
+            if let Some(created_at) = metric.get("created_at").and_then(|v| v.as_str()) {
+                assert!(!created_at.is_empty());
+            } else {
+                panic!("created_at field is missing or not a string");
+            }
+
+            if let Some(updated_at) = metric.get("updated_at").and_then(|v| v.as_str()) {
+                assert!(!updated_at.is_empty());
+            } else {
+                panic!("updated_at field is missing or not a string");
+            }
+        }
     }
 
     // [GET] /api/metrics/{db_id}

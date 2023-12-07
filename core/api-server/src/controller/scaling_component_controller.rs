@@ -92,3 +92,64 @@ async fn delete_scaling_component_by_id(
     }
     HttpResponse::Ok().body("ok")
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::test_utils::get_app_state_for_test;
+
+    use super::init;
+    use actix_web::{test, App};
+    use data_layer::{data_layer::DataLayer, types::object_kind::ObjectKind};
+    use std::collections::HashMap;
+
+    // Utility functions
+
+    async fn add_scaling_components_for_test(data_layer: &DataLayer) {
+        let _ = data_layer
+            .add_scaling_components(vec![
+                data_layer::ScalingComponentDefinition {
+                    id: "test1".to_string(),
+                    db_id: "test1".to_string(),
+                    component_kind: "test1".to_string(),
+                    kind: ObjectKind::ScalingComponent,
+                    metadata: HashMap::new(),
+                },
+                data_layer::ScalingComponentDefinition {
+                    id: "test2".to_string(),
+                    db_id: "test2".to_string(),
+                    component_kind: "test2".to_string(),
+                    kind: ObjectKind::ScalingComponent,
+                    metadata: HashMap::new(),
+                },
+            ])
+            .await;
+    }
+
+    // [GET] /api/scaling-components (get_all_scaling_components_json)
+
+    #[actix_web::test]
+    #[tracing_test::traced_test]
+    async fn test_get_all_scaling_components_json() {
+        let app_state = get_app_state_for_test().await;
+        add_scaling_components_for_test(&app_state.data_layer).await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get()
+            .uri("/api/scaling-components")
+            .to_request();
+        let resp: Vec<serde_json::Value> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+        for component in resp.iter() {
+            if let Some(created_at) = component.get("created_at").and_then(|v| v.as_str()) {
+                assert!(!created_at.is_empty());
+            } else {
+                panic!("created_at field is missing or not a string");
+            }
+
+            if let Some(updated_at) = component.get("updated_at").and_then(|v| v.as_str()) {
+                assert!(!updated_at.is_empty());
+            } else {
+                panic!("updated_at field is missing or not a string");
+            }
+        }
+    }
+}
