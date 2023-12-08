@@ -307,6 +307,31 @@ impl DataLayer {
         }
         Ok(metrics)
     }
+    // Get all metrics json from the database
+    pub async fn get_all_metrics_json(&self) -> Result<Vec<serde_json::Value>> {
+        let mut metrics: Vec<serde_json::Value> = Vec::new();
+        let query_string =
+            "SELECT db_id, id, collector, metadata, created_at, updated_at FROM metric";
+        let result = sqlx::query(query_string).fetch_all(&self.pool).await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        for row in result {
+            let metric = json!({
+                "kind": ObjectKind::Metric,
+                "db_id": row.try_get::<String, _>("db_id")?,
+                "id": row.try_get::<String, _>("id")?,
+                "collector": row.try_get::<String, _>("collector")?,
+                "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "created_at": row.try_get::<Option<String>, _>("created_at")?,
+                "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
+            });
+            metrics.push(metric);
+        }
+
+        Ok(metrics)
+    }
     // Get a metric from the database
     pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
         let query_string = "SELECT db_id, id, collector, metadata FROM metric WHERE db_id=$1";
@@ -433,6 +458,30 @@ impl DataLayer {
         }
         Ok(scaling_components)
     }
+    // Get all scaling components json from the database
+    pub async fn get_all_scaling_components_json(&self) -> Result<Vec<serde_json::Value>> {
+        let mut scaling_components: Vec<serde_json::Value> = Vec::new();
+        let query_string = "SELECT db_id, id, component_kind, metadata, created_at, updated_at FROM scaling_component";
+        let result = sqlx::query(query_string).fetch_all(&self.pool).await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        for row in result {
+            let scaling_component = json!({
+                "kind": ObjectKind::ScalingComponent,
+                "db_id": row.try_get::<String, _>("db_id")?,
+                "id": row.try_get::<String, _>("id")?,
+                "component_kind": row.try_get::<String, _>("component_kind")?,
+                "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "created_at": row.try_get::<Option<String>, _>("created_at")?,
+                "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
+            });
+            scaling_components.push(scaling_component);
+        }
+
+        Ok(scaling_components)
+    }
     // Get a scaling component from the database
     pub async fn get_scaling_component_by_id(
         &self,
@@ -555,6 +604,30 @@ impl DataLayer {
                 metadata: serde_json::from_str(row.get("metadata")).unwrap(),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
+        }
+        Ok(plans)
+    }
+    // Get all plans json from the database
+    pub async fn get_all_plans_json(&self) -> Result<Vec<serde_json::Value>> {
+        let mut plans: Vec<serde_json::Value> = Vec::new();
+        let query_string =
+            "SELECT db_id, id, plans, priority, metadata, created_at, updated_at FROM plan";
+        let result = sqlx::query(query_string).fetch_all(&self.pool).await;
+        if result.is_err() {
+            return Err(anyhow!(result.err().unwrap().to_string()));
+        }
+        let result = result.unwrap();
+        for row in result {
+            let plan = json!({
+                "kind": ObjectKind::ScalingPlan,
+                "db_id": row.try_get::<String, _>("db_id")?,
+                "id": row.try_get::<String, _>("id")?,
+                "plans": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("plans")?.as_str())?,
+                "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "created_at": row.try_get::<Option<String>, _>("created_at")?,
+                "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
+            });
+            plans.push(plan);
         }
         Ok(plans)
     }

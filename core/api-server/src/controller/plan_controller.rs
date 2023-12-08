@@ -15,7 +15,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 #[get("/api/plans")]
 async fn get_plans(app_state: web::Data<AppState>) -> impl Responder {
-    let plans = app_state.data_layer.get_all_plans().await;
+    let plans = app_state.data_layer.get_all_plans_json().await;
     if plans.is_err() {
         error!("Failed to get plans: {:?}", plans);
         return HttpResponse::InternalServerError().body(format!("{:?}", plans));
@@ -94,4 +94,89 @@ async fn delete_plan_by_id(
     }
     debug!("Deleted plan");
     HttpResponse::Ok().body("ok")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::test_utils::get_app_state_for_test;
+
+    use super::init;
+    use actix_web::{test, App};
+    use data_layer::{
+        data_layer::DataLayer,
+        types::{object_kind::ObjectKind, plan_item_definition::PlanItemDefinition},
+    };
+    use serde_json::json;
+    use std::collections::HashMap;
+
+    // Utility functions
+
+    async fn add_plans_for_test(data_layer: &DataLayer) {
+        let _ = data_layer
+            .add_plans(vec![
+                data_layer::ScalingPlanDefinition {
+                    id: "test1".to_string(),
+                    db_id: "test1".to_string(),
+                    kind: ObjectKind::ScalingPlan,
+                    metadata: HashMap::new(),
+                    plans: vec![PlanItemDefinition {
+                        id: "test1".to_string(),
+                        description: None,
+                        expression: None,
+                        cron_expression: None,
+                        ui: None,
+                        priority: 1,
+                        scaling_components: vec![json!({
+                            "name": "test1",
+                            "value": 1
+                        })],
+                    }],
+                },
+                data_layer::ScalingPlanDefinition {
+                    id: "test2".to_string(),
+                    db_id: "test2".to_string(),
+                    kind: ObjectKind::ScalingPlan,
+                    metadata: HashMap::new(),
+                    plans: vec![PlanItemDefinition {
+                        id: "test2".to_string(),
+                        description: None,
+                        expression: None,
+                        cron_expression: None,
+                        ui: None,
+                        priority: 1,
+                        scaling_components: vec![json!({
+                            "name": "test2",
+                            "value": 2
+                        })],
+                    }],
+                },
+            ])
+            .await;
+    }
+
+    // [GET] /api/plans (get_all_plans_json)
+
+    #[actix_web::test]
+    #[tracing_test::traced_test]
+    async fn test_get_all_plans_json() {
+        let app_state = get_app_state_for_test().await;
+        add_plans_for_test(&app_state.data_layer).await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::get().uri("/api/plans").to_request();
+        let resp: Vec<serde_json::Value> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(resp.len(), 2);
+        for plan in resp.iter() {
+            if let Some(created_at) = plan.get("created_at").and_then(|v| v.as_str()) {
+                assert!(!created_at.is_empty());
+            } else {
+                panic!("created_at field is missing or not a string");
+            }
+
+            if let Some(updated_at) = plan.get("updated_at").and_then(|v| v.as_str()) {
+                assert!(!updated_at.is_empty());
+            } else {
+                panic!("updated_at field is missing or not a string");
+            }
+        }
+    }
 }
