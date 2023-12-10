@@ -60,7 +60,7 @@ const menuItems = [
   { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
   { targetPath: '/app/metrics', label: 'Metrics' },
   { targetPath: '/app/scaling-components', label: 'Scaling Components' },
-  { targetPath: '/app/inflow', label: 'Inflow' },
+  { targetPath: '/app/inflow', label: 'Metrics Inflow' },
   {
     targetPath: 'https://github.com/STCLab-Inc/wave-autoscale',
     label: 'Github',
