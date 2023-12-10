@@ -1,63 +1,72 @@
-'use client';
-
 import React, { useEffect } from 'react';
-
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
-
+import MetricService from '@/services/metric';
+import { generateMetricDefinition } from '@/utils/metric-binding';
+import { MetricDefinition } from '@/types/bindings/metric-definition';
+import yaml from 'js-yaml';
 import AceEditor from 'react-ace';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/snippets/javascript';
 import 'ace-builds/src-noconflict/theme-xcode';
 import 'ace-builds/src-noconflict/mode-yaml';
+import {
+  DEFINITION_ID_RULE_DESCRIPTION,
+  transformDefinitionId,
+} from '@/utils/definition-id';
+import { METRIC_COLLECTORS } from '@/utils/metric-collector';
 
-import MetricService from '@/services/metric';
-import { generateMetricDefinition } from '@/utils/metric-binding';
-import { MetricDefinition } from '@/types/bindings/metric-definition';
+const METRIC_COLLECTOR_OPTIONS = [
+  {
+    name: 'Select a metric collector',
+    value: '',
+    description: '',
+  },
+  ...METRIC_COLLECTORS,
+].map((collector) => (
+  <option key={collector.value} value={collector.value}>
+    {collector.name} ({collector.description})
+  </option>
+));
 
 export default function MetricDetailDrawer({
-  metricsItem,
-  setDetailsModalFlag,
-  setFetchFlag,
+  metric,
+  onClose,
+  onChange,
 }: {
-  metricsItem?: MetricDefinition;
-  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
-  setFetchFlag: (fetchFlag: boolean) => void;
+  metric?: MetricDefinition;
+  onClose: () => void;
+  onChange: (fetchFlag: boolean) => void;
 }) {
-  const { register, handleSubmit, control, setValue, reset } = useForm();
-
-  const dbId = metricsItem?.db_id;
+  const {
+    formState: { isValid },
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    reset,
+  } = useForm();
+  const dbId = metric?.db_id;
   const isNew = !dbId;
-
-  const yaml = require('js-yaml');
 
   useEffect(() => {
     if (isNew) {
+      reset();
       return;
     }
 
-    const { kind, db_id, id, collector, metadata, ...rest } = metricsItem;
+    const { kind, db_id, id, collector, metadata, ...rest } = metric;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('collector', collector);
-    setValue('metadata', yaml.dump(metadata));
-  }, [metricsItem]);
-
-  const onClickOverlay = () => {
-    /* TODO */
-    /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
-  };
-
-  const onClickExit = async () => {
-    /* TODO */
-    /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
-  };
+    let metadataYaml = '';
+    if (Object.keys(metadata).length > 0) {
+      metadataYaml = yaml.dump(metadata);
+    }
+    setValue('metadata', metadataYaml);
+  }, [metric]);
 
   const onClickInitialize = async () => {
     reset();
@@ -71,8 +80,8 @@ export default function MetricDetailDrawer({
       const response = await MetricService.deleteMetric(dbId);
       console.info({ response });
 
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      onChange(true);
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -81,23 +90,25 @@ export default function MetricDetailDrawer({
   const onSubmit = async (data: any) => {
     const { kind, db_id, id, collector, metadata, ...rest } = data;
 
+    if (!isValid) {
+      alert('Please check the form again.');
+      return;
+    }
     const metricsItem = generateMetricDefinition({
       kind: 'Metric',
       id: id,
       db_id: dbId,
       collector: collector,
-      metadata: yaml.load(metadata),
+      metadata: yaml.load(metadata ?? ''),
     });
     try {
       if (isNew) {
         const response = await MetricService.createMetric(metricsItem);
-        console.info({ response, isNew });
       } else {
         const response = await MetricService.updateMetric(metricsItem);
-        console.info({ response });
       }
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      onChange(true);
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -115,7 +126,7 @@ export default function MetricDetailDrawer({
         <label
           htmlFor="drawer"
           className="drawer-overlay"
-          onClick={onClickOverlay}
+          onClick={() => onClose()}
         />
         <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
           <form className="" onSubmit={handleSubmit(onSubmit)}>
@@ -149,14 +160,15 @@ export default function MetricDetailDrawer({
                   </button>
                 )}
                 <button
-                  className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50"
+                  className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50 disabled:border-gray-400 disabled:bg-gray-400"
                   type="submit"
+                  disabled={!isValid}
                 >
                   SAVE
                 </button>
                 <button
                   className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
-                  onClick={onClickExit}
+                  onClick={() => onClose()}
                   type="button"
                 >
                   EXIT
@@ -166,17 +178,32 @@ export default function MetricDetailDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Metric ID</span>
+                <span className="text-md label-text px-2">
+                  Metric ID {DEFINITION_ID_RULE_DESCRIPTION}
+                </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              <input
-                type="text"
-                placeholder="Metric ID"
-                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                {...register('id', { required: true })}
+              <Controller
+                control={control}
+                name="id"
+                rules={{ required: true }}
+                render={({ field: { onChange, value } }) => (
+                  <input
+                    type="text"
+                    placeholder="Metric ID"
+                    className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    value={value ?? ''}
+                    onChange={(event) => {
+                      event.target.value = transformDefinitionId(
+                        event.target.value
+                      );
+                      onChange(event);
+                    }}
+                  />
+                )}
               />
             </div>
 
@@ -185,22 +212,23 @@ export default function MetricDetailDrawer({
                 <span className="text-md label-text px-2">
                   Metric Collector
                 </span>
-                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              <input
-                type="text"
-                placeholder="Metric Collector"
-                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                {...register('collector', { required: true })}
-              />
+              <select
+                className="select-bordered select select-sm my-2 h-12 w-full px-4 text-sm focus:outline-none"
+                {...register('collector', {
+                  required: true,
+                  validate: (value) => !!value,
+                })}
+              >
+                {METRIC_COLLECTOR_OPTIONS}
+              </select>
             </div>
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Metric Metadata</span>
+                <span className="text-md label-text px-2">
+                  Metric Metadata (YAML)
+                </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">

@@ -78,6 +78,6 @@ export function generateMetricDefinition({
     id,
     db_id,
     collector,
-    metadata,
+    metadata: metadata ?? {},
   } as MetricDefinition;
 }

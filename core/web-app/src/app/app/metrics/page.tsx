@@ -1,42 +1,76 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import MetricService from '@/services/metric';
-import { MetricDefinition } from '@/types/bindings/metric-definition';
-
 import MetricDetailDrawer from './metric-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from '../common/table';
+import { MetricDefinitionEx } from './metric-definition-ex';
+import WATable from '../common/wa-table';
+import { createColumnHelper } from '@tanstack/react-table';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import Pagination from '@/utils/pagination';
+import { decodeTime } from 'ulid';
+import dayjs from 'dayjs';
 
-async function getMetrics() {
+// Constants
+const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+
+// Utils
+async function getMetrics(): Promise<MetricDefinitionEx[]> {
   const metrics = await MetricService.getMetrics();
   return metrics;
-}
-
-interface MetricDefinitionEx extends MetricDefinition {
-  isChecked: boolean;
 }
 
 export default function MetricsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Query params
   const pageParam = searchParams.get('page');
-  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
   const sizeParam = searchParams.get('size');
-  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
+  const pageSize = sizeParam
+    ? parseInt(sizeParam, 10)
+    : SIZE_PER_PAGE_OPTIONS[0];
 
+  // States
   const [metrics, setMetrics] = useState<MetricDefinitionEx[]>([]);
-  const [metricsItem, setMetricsItem] = useState<MetricDefinitionEx>();
+  const [selectedMetric, setSelectedMetric] = useState<MetricDefinitionEx>();
+  const [forceFetch, setForceFetch] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>(new Pagination());
+  const metricsPerPage = useMemo(() => {
+    return metrics.slice(
+      (pagination.currentPage - 1) * pagination.pageSize,
+      pagination.currentPage * pagination.pageSize
+    );
+  }, [metrics, pagination.currentPage, pagination.pageSize]);
+  // Effects
+  useEffect(() => {
+    setPagination(new Pagination(pageSize, metrics?.length, currentPage));
+  }, [metrics, currentPage, pageSize]);
 
+  useEffect(() => {
+    fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (forceFetch) {
+      fetchMetrics();
+      setForceFetch(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch]);
+
+  // Handlers
   const fetchMetrics = async () => {
     try {
-      const id = metricsItem?.db_id;
+      const id = selectedMetric?.db_id;
       let metricsData = await getMetrics();
       setMetrics(metricsData);
-      setMetricsItem(
+      setSelectedMetric(
         metricsData.find((item: MetricDefinitionEx) => item.db_id === id)
       );
     } catch (error) {
@@ -45,112 +79,44 @@ export default function MetricsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchMetrics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const columnHelper = createColumnHelper<MetricDefinitionEx>();
 
-  const [selectAll, setSelectAll] = useState(false);
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setSelectAll(checked);
-    const updatedMetricsData = metrics.map((updatedMetricsDataItem) => ({
-      ...updatedMetricsDataItem,
-      isChecked: checked,
-    }));
-    setMetrics(updatedMetricsData);
-  };
-
-  const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
-
-  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPage, setTotalPage] = useState(1);
-
-  useEffect(() => {
-    setTotalPage(Math.ceil(metrics.length / sizePerPage) || 1);
-  }, [metrics, currentPage, totalPage, sizePerPage]);
-
-  const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newItemsPerPage = parseInt(event.target.value, 10);
-    setSizePerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  const handleCurrentPage = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  useEffect(() => {
-    setCurrentPage(page || 1);
-    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size]);
-
-  useEffect(() => {
-    if (currentPage > totalPage || currentPage < 1) {
-      setCurrentPage(1);
-    }
-    router.push(`/app/metrics?page=${currentPage}&size=${sizePerPage}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metrics, currentPage, totalPage, sizePerPage, searchParams]);
-
-  const [detailsModalFlag, setDetailsModalFlag] = useState(false);
-
-  const onClickDetails = (metricsItem: MetricDefinitionEx | undefined) => {
-    setMetricsItem(metricsItem);
-    setDetailsModalFlag(true);
-  };
-
-  const [fetchFlag, setFetchFlag] = useState(false);
-
-  useEffect(() => {
-    if (fetchFlag) {
-      fetchMetrics();
-      setFetchFlag(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchFlag]);
-
-  const tableFormat = [
-    {
-      label: 'checkbox',
-      type: 'checkbox',
-      content: 'isChecked',
-      weight: '1',
-      status: selectAll,
-      function: handleSelectAll,
-    },
-    {
-      label: 'Metric ID',
-      type: 'span',
-      content: 'id',
-      format: 'plain',
-      weight: '4',
-    },
-    {
-      label: 'Collector',
-      type: 'span',
-      content: 'collector',
-      format: 'plain',
-      weight: '2',
-    },
-    {
-      label: 'Metadata',
-      type: 'span',
-      content: 'metadata',
-      format: 'json',
-      weight: '10',
-    },
-    {
-      label: 'Actions',
-      type: 'button',
-      content: 'dataItem',
-      format: 'click',
-      weight: '1',
-      function: onClickDetails,
-    },
+  const columns = [
+    columnHelper.accessor('id', {
+      header: () => 'ID',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('collector', {
+      header: () => 'Collector',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('metadata', {
+      header: () => 'Metadata',
+      cell: (cell) => (
+        <span className="flex flex-col items-center break-all text-start">
+          {renderKeyValuePairsWithJson(cell.getValue(), true)}
+        </span>
+      ),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => 'Actions',
+      cell: (cell) => (
+        <button
+          className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+          onClick={() => {
+            setSelectedMetric(cell.row.original);
+            setDetailModalVisible(true);
+          }}
+        >
+          Detail
+        </button>
+      ),
+    }),
   ];
 
   return (
@@ -164,7 +130,10 @@ export default function MetricsPage() {
               <div className="flex items-center">
                 <button
                   className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
-                  onClick={() => onClickDetails(undefined)}
+                  onClick={() => {
+                    setSelectedMetric(undefined);
+                    setDetailModalVisible(true);
+                  }}
                 >
                   ADD METRIC
                 </button>
@@ -172,27 +141,37 @@ export default function MetricsPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <TableComponent
+            <WATable<MetricDefinitionEx>
+              tableOptions={{
+                data: metricsPerPage,
+                columns,
+              }}
+              pagination={pagination}
+              onChangePage={(newPage) => {
+                router.push(`/app/metrics?page=${newPage}&size=${pageSize}`);
+              }}
+              onChangePageSize={(newSize) => {
+                router.push(`/app/metrics?page=${currentPage}&size=${newSize}`);
+              }}
+            />
+            {/* <TableComponent
               tableFormat={tableFormat}
-              /*  */
               data={metrics}
-              /*  */
               sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
               sizePerPage={sizePerPage}
               handleSizePerPage={handleSizePerPage}
-              /*  */
               currentPage={currentPage}
               totalPage={totalPage}
               handleCurrentPage={handleCurrentPage}
-            />
+            /> */}
           </div>
         </div>
       </div>
-      {detailsModalFlag ? (
+      {detailModalVisible ? (
         <MetricDetailDrawer
-          metricsItem={metricsItem}
-          setDetailsModalFlag={setDetailsModalFlag}
-          setFetchFlag={setFetchFlag}
+          metric={selectedMetric}
+          onClose={() => setDetailModalVisible(false)}
+          onChange={() => setForceFetch(true)}
         />
       ) : null}
     </main>

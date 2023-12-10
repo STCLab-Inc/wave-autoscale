@@ -12,6 +12,10 @@ import ScalingPlanService from '@/services/scaling-plan';
 import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 import { ScalingPlanDefinitionEx } from './scaling-plan-definition-ex';
 import yaml from 'js-yaml';
+import {
+  DEFINITION_ID_RULE_DESCRIPTION,
+  transformDefinitionId,
+} from '@/utils/definition-id';
 
 export default function ScalingPlanDrawer({
   scalingPlan: scalingPlan,
@@ -194,7 +198,7 @@ export default function ScalingPlanDrawer({
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
                 <span className="text-md label-text px-2">
-                  Scaling Plan ID (alphanumeric, lowercase and underscore)
+                  Scaling Plan ID {DEFINITION_ID_RULE_DESCRIPTION}
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
@@ -212,9 +216,8 @@ export default function ScalingPlanDrawer({
                     autoCorrect="off"
                     onChange={(event) => {
                       // let value = event.target.value;
-                      event.target.value = event.target.value?.replace(
-                        /[^a-z0-9_]/g,
-                        ''
+                      event.target.value = transformDefinitionId(
+                        event.target.value
                       );
                       onChange(event);
                     }}
