@@ -1,168 +1,129 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import ScalingComponentService from '@/services/scaling-component';
-import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
-
-import ScalingComponentDetailDrawer from './scaling-component-drawer';
 import ContentHeader from '../common/content-header';
-import { TableComponent } from '../common/table';
+import WATable from '../common/wa-table';
+import { createColumnHelper } from '@tanstack/react-table';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import Pagination from '@/utils/pagination';
+import dayjs from 'dayjs';
+import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
+import ScalingComponentDetailDrawer from './scaling-component-drawer';
 
-async function getScalingComponents() {
+// Constants
+const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+
+// Utils
+async function getScalingComponents(): Promise<ScalingComponentDefinitionEx[]> {
   const scalingComponents =
     await ScalingComponentService.getScalingComponents();
   return scalingComponents;
-}
-
-interface ScalingComponentDefinitionEx extends ScalingComponentDefinition {
-  isChecked: boolean;
 }
 
 export default function ScalingComponentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Query params
   const pageParam = searchParams.get('page');
-  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
   const sizeParam = searchParams.get('size');
-  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
+  const pageSize = sizeParam
+    ? parseInt(sizeParam, 10)
+    : SIZE_PER_PAGE_OPTIONS[0];
 
+  // States
   const [scalingComponents, setScalingComponents] = useState<
     ScalingComponentDefinitionEx[]
   >([]);
-  const [scalingComponentsItem, setScalingComponentsItem] =
+  const [selectedScalingComponent, setSelectedScalingComponent] =
     useState<ScalingComponentDefinitionEx>();
+  const [forceFetch, setForceFetch] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>(new Pagination());
+  const metricsPerPage = useMemo(() => {
+    return scalingComponents.slice(
+      (pagination.currentPage - 1) * pagination.pageSize,
+      pagination.currentPage * pagination.pageSize
+    );
+  }, [scalingComponents, pagination.currentPage, pagination.pageSize]);
+  // Effects
+  useEffect(() => {
+    setPagination(
+      new Pagination(pageSize, scalingComponents?.length, currentPage)
+    );
+  }, [scalingComponents, currentPage, pageSize]);
 
-  const fetchScalingComponents = async () => {
+  useEffect(() => {
+    fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (forceFetch) {
+      fetchMetrics();
+      setForceFetch(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch]);
+
+  // Handlers
+  const fetchMetrics = async () => {
     try {
-      const id = scalingComponentsItem?.db_id;
+      const id = selectedScalingComponent?.db_id;
       let scalingComponentsData = await getScalingComponents();
       setScalingComponents(scalingComponentsData);
-      setScalingComponentsItem(
+      setSelectedScalingComponent(
         scalingComponentsData.find(
           (item: ScalingComponentDefinitionEx) => item.db_id === id
         )
       );
     } catch (error) {
-      console.error(error);
+      console.error({ error });
       return [];
     }
   };
 
-  useEffect(() => {
-    fetchScalingComponents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const columnHelper = createColumnHelper<ScalingComponentDefinitionEx>();
 
-  const [selectAll, setSelectAll] = useState(false);
-
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
-    setSelectAll(checked);
-    const updatedScalingComponentsData = scalingComponents.map(
-      (updatedScalingComponentsDataItem) => ({
-        ...updatedScalingComponentsDataItem,
-        isChecked: checked,
-      })
-    );
-    setScalingComponents(updatedScalingComponentsData);
-  };
-
-  const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
-
-  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPage, setTotalPage] = useState(1);
-
-  useEffect(() => {
-    setTotalPage(Math.ceil(scalingComponents.length / sizePerPage) || 1);
-  }, [scalingComponents, currentPage, totalPage, sizePerPage]);
-
-  const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newItemsPerPage = parseInt(event.target.value, 10);
-    setSizePerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  const handleCurrentPage = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  useEffect(() => {
-    setCurrentPage(page || 1);
-    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size]);
-
-  useEffect(() => {
-    if (currentPage > totalPage || currentPage < 1) {
-      setCurrentPage(1);
-    }
-    router.push(
-      `/app/scaling-components?page=${currentPage}&size=${sizePerPage}`
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scalingComponents, currentPage, totalPage, sizePerPage, searchParams]);
-
-  const [detailsModalFlag, setDetailsModalFlag] = useState(false);
-
-  const onClickDetails = (
-    scalingComponentsItem: ScalingComponentDefinitionEx | undefined
-  ) => {
-    setScalingComponentsItem(scalingComponentsItem);
-    setDetailsModalFlag(true);
-  };
-
-  const [fetchFlag, setFetchFlag] = useState(false);
-
-  useEffect(() => {
-    if (fetchFlag) {
-      fetchScalingComponents();
-      setFetchFlag(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchFlag]);
-
-  const tableFormat = [
-    {
-      label: 'checkbox',
-      type: 'checkbox',
-      content: 'isChecked',
-      weight: '1',
-      status: selectAll,
-      function: handleSelectAll,
-    },
-    {
-      label: 'Scaling Component ID',
-      type: 'span',
-      content: 'id',
-      format: 'plain',
-      weight: '8',
-    },
-    {
-      label: 'Scaling Component Kind',
-      type: 'span',
-      content: 'component_kind',
-      format: 'plain',
-      weight: '8',
-    },
-    {
-      label: 'Metadata',
-      type: 'span',
-      content: 'metadata',
-      format: 'json',
-      weight: '10',
-    },
-    {
-      label: 'Actions',
-      type: 'button',
-      content: 'dataItem',
-      format: 'click',
-      weight: '1',
-      function: onClickDetails,
-    },
+  const columns = [
+    columnHelper.accessor('id', {
+      header: () => 'ID',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('component_kind', {
+      header: () => 'Kind',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('metadata', {
+      header: () => 'Metadata',
+      cell: (cell) => (
+        <span className="flex flex-col items-center break-all text-start">
+          {renderKeyValuePairsWithJson(cell.getValue(), true)}
+        </span>
+      ),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => 'Actions',
+      cell: (cell) => (
+        <button
+          className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+          onClick={() => {
+            setSelectedScalingComponent(cell.row.original);
+            setDetailModalVisible(true);
+          }}
+        >
+          Detail
+        </button>
+      ),
+    }),
   ];
 
   return (
@@ -176,7 +137,10 @@ export default function ScalingComponentsPage() {
               <div className="flex items-center">
                 <button
                   className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
-                  onClick={() => onClickDetails(undefined)}
+                  onClick={() => {
+                    setSelectedScalingComponent(undefined);
+                    setDetailModalVisible(true);
+                  }}
                 >
                   ADD COMPONENT
                 </button>
@@ -184,27 +148,31 @@ export default function ScalingComponentsPage() {
             }
           />
           <div className="flex w-full flex-col">
-            <TableComponent
-              tableFormat={tableFormat}
-              /*  */
-              data={scalingComponents}
-              /*  */
-              sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
-              sizePerPage={sizePerPage}
-              handleSizePerPage={handleSizePerPage}
-              /*  */
-              currentPage={currentPage}
-              totalPage={totalPage}
-              handleCurrentPage={handleCurrentPage}
+            <WATable<ScalingComponentDefinitionEx>
+              tableOptions={{
+                data: metricsPerPage,
+                columns,
+              }}
+              pagination={pagination}
+              onChangePage={(newPage) => {
+                router.push(
+                  `/app/scaling-components?page=${newPage}&size=${pageSize}`
+                );
+              }}
+              onChangePageSize={(newSize) => {
+                router.push(
+                  `/app/scaling-components?page=${currentPage}&size=${newSize}`
+                );
+              }}
             />
           </div>
         </div>
       </div>
-      {detailsModalFlag ? (
+      {detailModalVisible ? (
         <ScalingComponentDetailDrawer
-          scalingComponentsItem={scalingComponentsItem}
-          setDetailsModalFlag={setDetailsModalFlag}
-          setFetchFlag={setFetchFlag}
+          scalingComponent={selectedScalingComponent}
+          onClose={() => setDetailModalVisible(false)}
+          onChange={() => setForceFetch(true)}
         />
       ) : null}
     </main>

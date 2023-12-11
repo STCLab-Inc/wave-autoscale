@@ -1,63 +1,52 @@
-'use client';
-
 import React, { useEffect } from 'react';
-
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
-import AceEditor from 'react-ace';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-noconflict/mode-javascript';
-import 'ace-builds/src-noconflict/snippets/javascript';
-import 'ace-builds/src-noconflict/theme-xcode';
-import 'ace-builds/src-noconflict/mode-yaml';
-
 import ScalingComponentService from '@/services/scaling-component';
-import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import { generateScalingComponentDefinition } from '@/utils/scaling-component-binding';
+import yaml from 'js-yaml';
+import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
+import { transformDefinitionId } from '@/utils/definition-id';
+import YAMLEditor from '../common/yaml-editor';
 
 export default function ScalingComponentDetailDrawer({
-  scalingComponentsItem,
-  setDetailsModalFlag,
-  setFetchFlag,
+  scalingComponent,
+  onClose,
+  onChange,
 }: {
-  scalingComponentsItem?: ScalingComponentDefinition;
-  setDetailsModalFlag: (detailsModalFlag: boolean) => void;
-  setFetchFlag: (fetchFlag: boolean) => void;
+  scalingComponent?: ScalingComponentDefinitionEx;
+  onClose: () => void;
+  onChange: (fetchFlag: boolean) => void;
 }) {
-  const { register, handleSubmit, control, setValue, reset } = useForm();
+  const {
+    formState: { isValid },
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    reset,
+  } = useForm();
 
-  const dbId = scalingComponentsItem?.db_id;
+  const dbId = scalingComponent?.db_id;
   const isNew = !dbId;
-
-  const yaml = require('js-yaml');
 
   useEffect(() => {
     if (isNew) {
+      reset();
       return;
     }
 
     const { kind, db_id, id, component_kind, metadata, ...rest } =
-      scalingComponentsItem;
+      scalingComponent;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('component_kind', component_kind);
-    setValue('metadata', yaml.dump(metadata));
-  }, [scalingComponentsItem]);
-
-  const onClickOverlay = () => {
-    /* TODO */
-    /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
-  };
-
-  const onClickExit = async () => {
-    /* TODO */
-    /* Possible triggers for data synchronization. */
-    /* setFetchFlag(true); */
-    setDetailsModalFlag(false);
-  };
+    let metadataYaml = '';
+    if (Object.keys(metadata).length > 0) {
+      metadataYaml = yaml.dump(metadata);
+    }
+    setValue('metadata', metadataYaml);
+  }, [scalingComponent]);
 
   const onClickInitialize = async () => {
     reset();
@@ -67,14 +56,19 @@ export default function ScalingComponentDetailDrawer({
     if (isNew) {
       return;
     }
+
+    if (!confirm('Are you sure to delete this scaling component?')) {
+      return;
+    }
+
     try {
       const response = await ScalingComponentService.deleteScalingComponent(
         dbId
       );
       console.info({ response });
 
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      onChange(true);
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -83,27 +77,26 @@ export default function ScalingComponentDetailDrawer({
   const onSubmit = async (data: any) => {
     const { kind, db_id, id, component_kind, metadata, ...rest } = data;
 
-    const scalingComponentsItem = generateScalingComponentDefinition({
+    const scalingComponent = generateScalingComponentDefinition({
       kind: 'ScalingComponent',
       id: id,
       db_id: dbId,
       component_kind: component_kind,
-      metadata: yaml.load(metadata),
+      metadata: yaml.load(metadata ?? ''),
     });
     try {
       if (isNew) {
         const response = await ScalingComponentService.createScalingComponent(
-          scalingComponentsItem
+          scalingComponent
         );
-        console.info({ response, isNew });
       } else {
         const response = await ScalingComponentService.updateScalingComponent(
-          scalingComponentsItem
+          scalingComponent
         );
         console.info({ response });
       }
-      setFetchFlag(true);
-      setDetailsModalFlag(false);
+      onChange(true);
+      onClose();
     } catch (error) {
       console.error(error);
     }
@@ -121,7 +114,7 @@ export default function ScalingComponentDetailDrawer({
         <label
           htmlFor="drawer"
           className="drawer-overlay"
-          onClick={onClickOverlay}
+          onClick={() => onClose()}
         />
         <div className="drawer-content flex h-full min-w-[48rem] max-w-[48rem] flex-col overflow-y-auto border-l border-gray-200 bg-base-100 pb-20">
           <form className="" onSubmit={handleSubmit(onSubmit)}>
@@ -155,14 +148,15 @@ export default function ScalingComponentDetailDrawer({
                   </button>
                 )}
                 <button
-                  className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50"
+                  className="ml-1 mr-1 flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-5 pr-5 text-sm text-gray-50 disabled:border-gray-400 disabled:bg-gray-400"
                   type="submit"
+                  disabled={!isValid}
                 >
                   SAVE
                 </button>
                 <button
                   className="ml-1 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600"
-                  onClick={onClickExit}
+                  onClick={() => onClose()}
                   type="button"
                 >
                   EXIT
@@ -175,16 +169,28 @@ export default function ScalingComponentDetailDrawer({
                 <span className="text-md label-text px-2">
                   Scaling Component ID
                 </span>
-                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
-              <input
-                type="text"
-                placeholder="Scaling Component ID"
-                className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                {...register('id', { required: true })}
+              <Controller
+                control={control}
+                name="id"
+                rules={{ required: true }}
+                render={({ field: { onChange, value } }) => (
+                  <input
+                    type="text"
+                    placeholder="Scaling Component ID"
+                    className="input-bordered input my-2 w-full px-4 text-sm focus:outline-none"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    value={value ?? ''}
+                    onChange={(event) => {
+                      event.target.value = transformDefinitionId(
+                        event.target.value
+                      );
+                      onChange(event);
+                    }}
+                  />
+                )}
               />
             </div>
 
@@ -193,8 +199,8 @@ export default function ScalingComponentDetailDrawer({
                 <span className="text-md label-text px-2">
                   Scaling Component Kind
                 </span>
-                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
+              {/* TODO: input => select */}
               <input
                 type="text"
                 placeholder="Scaling Component Kind"
@@ -211,36 +217,13 @@ export default function ScalingComponentDetailDrawer({
                 <span className="text-md label-text px-2">
                   Scaling Component Metadata
                 </span>
-                {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
                 <Controller
                   control={control}
                   name="metadata"
                   render={({ field: { onChange, value } }) => (
-                    <AceEditor
-                      mode="yaml"
-                      theme="xcode"
-                      onChange={onChange}
-                      value={value}
-                      editorProps={{
-                        $blockScrolling: true,
-                      }}
-                      setOptions={{
-                        showLineNumbers: false,
-                        // TODO: Autocomplete
-                        // https://github.com/ajaxorg/ace/wiki/How-to-enable-Autocomplete-in-the-Ace-editor
-                        enableBasicAutocompletion: true,
-                        enableLiveAutocompletion: true,
-                        enableSnippets: true,
-                        showGutter: false,
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '40rem',
-                      }}
-                    />
+                    <YAMLEditor value={value} onChange={onChange} />
                   )}
                 />
               </div>

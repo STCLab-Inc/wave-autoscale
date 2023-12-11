@@ -86,6 +86,6 @@ export function generateScalingComponentDefinition({
     id,
     db_id,
     component_kind,
-    metadata,
+    metadata: metadata ?? {},
   } as ScalingComponentDefinition;
 }
