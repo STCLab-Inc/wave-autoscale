@@ -42,6 +42,7 @@ export default function MetricDetailDrawer({
     setValue,
     reset,
   } = useForm();
+
   const dbId = metric?.db_id;
   const isNew = !dbId;
 

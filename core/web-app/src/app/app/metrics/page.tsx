@@ -153,16 +153,6 @@ export default function MetricsPage() {
                 router.push(`/app/metrics?page=${currentPage}&size=${newSize}`);
               }}
             />
-            {/* <TableComponent
-              tableFormat={tableFormat}
-              data={metrics}
-              sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
-              sizePerPage={sizePerPage}
-              handleSizePerPage={handleSizePerPage}
-              currentPage={currentPage}
-              totalPage={totalPage}
-              handleCurrentPage={handleCurrentPage}
-            /> */}
           </div>
         </div>
       </div>
