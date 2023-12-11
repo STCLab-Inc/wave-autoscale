@@ -10,7 +10,6 @@ import WATable from '../common/wa-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import Pagination from '@/utils/pagination';
-import { decodeTime } from 'ulid';
 import dayjs from 'dayjs';
 
 // Constants
