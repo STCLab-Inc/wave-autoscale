@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
-
 import Menu from './common/menu';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

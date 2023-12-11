@@ -39,6 +39,7 @@ function MenuItem({
         )}
         href={targetPath}
         onClick={onClick}
+        target={targetPath.includes('http') ? '_blank' : ''}
       >
         {label}
       </Link>
