@@ -5,17 +5,12 @@ import MetricService from '@/services/metric';
 import { generateMetricDefinition } from '@/utils/metric-binding';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import yaml from 'js-yaml';
-import AceEditor from 'react-ace';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-noconflict/mode-javascript';
-import 'ace-builds/src-noconflict/snippets/javascript';
-import 'ace-builds/src-noconflict/theme-xcode';
-import 'ace-builds/src-noconflict/mode-yaml';
 import {
   DEFINITION_ID_RULE_DESCRIPTION,
   transformDefinitionId,
 } from '@/utils/definition-id';
 import { METRIC_COLLECTORS } from '@/utils/metric-collector';
+import YAMLEditor from '../common/yaml-editor';
 
 const METRIC_COLLECTOR_OPTIONS = [
   {
@@ -74,6 +69,9 @@ export default function MetricDetailDrawer({
 
   const onClickRemove = async () => {
     if (isNew) {
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this metric?')) {
       return;
     }
     try {
@@ -236,29 +234,7 @@ export default function MetricDetailDrawer({
                   control={control}
                   name="metadata"
                   render={({ field: { onChange, value } }) => (
-                    <AceEditor
-                      mode="yaml"
-                      theme="xcode"
-                      onChange={onChange}
-                      value={value}
-                      editorProps={{
-                        $blockScrolling: true,
-                      }}
-                      setOptions={{
-                        showLineNumbers: false,
-                        // TODO: Autocomplete
-                        // https://github.com/ajaxorg/ace/wiki/How-to-enable-Autocomplete-in-the-Ace-editor
-                        enableBasicAutocompletion: true,
-                        enableLiveAutocompletion: true,
-                        enableSnippets: true,
-                        showGutter: false,
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '40rem',
-                      }}
-                    />
+                    <YAMLEditor value={value} onChange={onChange} />
                   )}
                 />
               </div>
