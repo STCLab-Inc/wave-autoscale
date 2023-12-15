@@ -1,4 +1,6 @@
-pub mod process;
+mod process;
+mod wa_generator;
+
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -12,12 +14,16 @@ use utils::wave_config::WaveConfig;
 
 const VECTOR_COLLECTOR: &str = "vector";
 const TELEGRAF_COLLECTOR: &str = "telegraf";
+const WA_GENERATOR_COLLECTOR: &str = "wa-generator";
 
 pub struct MetricCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
     collector_log: bool,
+    // For external collectors
     running_apps: Option<HashMap<String, std::process::Child>>,
+    // For internal collectors
+    running_tasks: Option<Vec<tokio::task::JoinHandle<()>>>,
 }
 
 impl MetricCollectorManager {
@@ -27,6 +33,7 @@ impl MetricCollectorManager {
             output_url: output_url.to_string(),
             collector_log,
             running_apps: None,
+            running_tasks: None,
         }
     }
 
@@ -409,11 +416,39 @@ impl MetricCollectorManager {
             // sleep 2 seconds
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         };
+        self.running_apps = None;
 
         if !collector_processes.is_empty() {
             // run agent process
             let running_apps = process::run_processes(&collector_processes);
             self.running_apps = Some(running_apps);
+        }
+
+        // Find the metric definitions that use WA Generator collector
+
+        // Stop the running tasks
+        if let Some(running_tasks) = &mut self.running_tasks {
+            running_tasks.iter_mut().for_each(|task| task.abort());
+            running_tasks.clear();
+            self.running_tasks = None;
+        };
+
+        let mut wa_generator_metric_definitions: Vec<&MetricDefinition> = Vec::new();
+        for metric_definition in metric_definitions {
+            if metric_definition.collector == WA_GENERATOR_COLLECTOR {
+                wa_generator_metric_definitions.push(metric_definition);
+            }
+        }
+        if !wa_generator_metric_definitions.is_empty() {
+            // Run the collector binaries
+            let mut running_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+            for metric_definition in wa_generator_metric_definitions {
+                let output_url = self.output_url.clone();
+                let handle = wa_generator::run(metric_definition.clone(), output_url);
+                if let Ok(handle) = handle {
+                    running_tasks.push(handle);
+                }
+            }
         }
     }
 }
