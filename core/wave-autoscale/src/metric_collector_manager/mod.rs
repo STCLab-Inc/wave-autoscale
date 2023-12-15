@@ -9,6 +9,10 @@ use std::io::Write;
 use tar::Archive;
 use tracing::{debug, error, info};
 use utils::wave_config::WaveConfig;
+
+const VECTOR_COLLECTOR: &str = "vector";
+const TELEGRAF_COLLECTOR: &str = "telegraf";
+
 pub struct MetricCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
@@ -328,7 +332,7 @@ impl MetricCollectorManager {
         // Find the metric definitions that use Vector collector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
-            if metric_definition.collector == "vector" {
+            if metric_definition.collector == VECTOR_COLLECTOR {
                 vector_metric_definitions.push(metric_definition);
             }
         }
@@ -358,7 +362,7 @@ impl MetricCollectorManager {
         // Find the metric definitions that use Telegraf collector
         let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
-            if metric_definition.collector == "telegraf" {
+            if metric_definition.collector == TELEGRAF_COLLECTOR {
                 telegraf_metric_definitions.push(metric_definition);
             }
         }
@@ -726,7 +730,7 @@ fn validate_vector_definition(metric_definitions: &MetricDefinition) -> bool {
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
     // 1. check definition collector is "vector"
-    if metric_definitions.collector != "vector" {
+    if metric_definitions.collector != VECTOR_COLLECTOR {
         return false;
     }
 
@@ -817,7 +821,7 @@ fn validate_telegraf_definition(metric_definitions: &MetricDefinition) -> bool {
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
     // 1. check definition collector is "telegraf"
-    if metric_definitions.collector != "telegraf" {
+    if metric_definitions.collector != TELEGRAF_COLLECTOR {
         return false;
     }
 
@@ -886,7 +890,7 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
             },
         ];
@@ -924,7 +928,7 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
             },
         ];
@@ -997,7 +1001,7 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_1,
             },
             // Telegraf
@@ -1005,7 +1009,7 @@ mod tests {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_2,
             },
         ];
@@ -1086,14 +1090,14 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap.clone(),
             },
             MetricDefinition {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap,
             },
         ];
