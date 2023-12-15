@@ -19,9 +19,10 @@ use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
     amazon_emr_ec2::EMREC2AutoScalingComponent, aws_ec2_autoscaling::EC2AutoScalingComponent,
     aws_ecs_service_scaling::ECSServiceScalingComponent,
-    aws_lambda_function::LambdaFunctionScalingComponent,
+    aws_lambda_function::LambdaFunctionScalingComponent, aws_wafv2::AWSWAFv2ScalingComponent,
     azure_functions_app::AzureFunctionsAppScalingComponent,
-    azure_vmss_autoscaling::VMSSAutoScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
+    azure_vmss_autoscaling::VMSSAutoScalingComponent,
+    cloudflare_rule::CloudflareRuleScalingComponent, gcp_mig_autoscaling::MIGAutoScalingComponent,
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent, k8s_json_patch::K8sPatchScalingComponent,
@@ -69,17 +70,19 @@ impl ScalingComponentManager {
         // Get a value of metric and clone it.
         let cloned_defintion = definition.clone();
         match cloned_defintion.component_kind.as_str() {
-            EC2AutoScalingComponent::SCALING_KIND => {
-                Ok(Box::new(EC2AutoScalingComponent::new(cloned_defintion)))
-            }
-            ECSServiceScalingComponent::SCALING_KIND => {
-                Ok(Box::new(ECSServiceScalingComponent::new(cloned_defintion)))
-            }
+            // Kubernetes
             K8sDeploymentScalingComponent::SCALING_KIND => Ok(Box::new(
                 K8sDeploymentScalingComponent::new(cloned_defintion),
             )),
             K8sPatchScalingComponent::SCALING_KIND => {
                 Ok(Box::new(K8sPatchScalingComponent::new(cloned_defintion)))
+            }
+            // AWS
+            EC2AutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(EC2AutoScalingComponent::new(cloned_defintion)))
+            }
+            ECSServiceScalingComponent::SCALING_KIND => {
+                Ok(Box::new(ECSServiceScalingComponent::new(cloned_defintion)))
             }
             LambdaFunctionScalingComponent::SCALING_KIND => Ok(Box::new(
                 LambdaFunctionScalingComponent::new(cloned_defintion),
@@ -87,23 +90,32 @@ impl ScalingComponentManager {
             DynamoDbTableScalingComponent::SCALING_KIND => Ok(Box::new(
                 DynamoDbTableScalingComponent::new(cloned_defintion),
             )),
+            EMREC2AutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(EMREC2AutoScalingComponent::new(cloned_defintion)))
+            }
+            AWSWAFv2ScalingComponent::SCALING_KIND => {
+                Ok(Box::new(AWSWAFv2ScalingComponent::new(cloned_defintion)))
+            }
+            // Google Cloud
             MIGAutoScalingComponent::SCALING_KIND => {
                 Ok(Box::new(MIGAutoScalingComponent::new(cloned_defintion)))
-            }
-            VMSSAutoScalingComponent::SCALING_KIND => {
-                Ok(Box::new(VMSSAutoScalingComponent::new(cloned_defintion)))
             }
             CloudFunctionsInstanceScalingComponent::SCALING_KIND => Ok(Box::new(
                 CloudFunctionsInstanceScalingComponent::new(cloned_defintion),
             )),
-            EMREC2AutoScalingComponent::SCALING_KIND => {
-                Ok(Box::new(EMREC2AutoScalingComponent::new(cloned_defintion)))
-            }
             CloudRunServiceScalingComponent::SCALING_KIND => Ok(Box::new(
                 CloudRunServiceScalingComponent::new(cloned_defintion),
             )),
+            // Azure
+            VMSSAutoScalingComponent::SCALING_KIND => {
+                Ok(Box::new(VMSSAutoScalingComponent::new(cloned_defintion)))
+            }
             AzureFunctionsAppScalingComponent::SCALING_KIND => Ok(Box::new(
                 AzureFunctionsAppScalingComponent::new(cloned_defintion),
+            )),
+            // Others
+            CloudflareRuleScalingComponent::SCALING_KIND => Ok(Box::new(
+                CloudflareRuleScalingComponent::new(cloned_defintion),
             )),
             NetfunnelSegmentScalingComponent::SCALING_KIND => Ok(Box::new(
                 NetfunnelSegmentScalingComponent::new(cloned_defintion),
