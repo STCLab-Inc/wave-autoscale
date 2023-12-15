@@ -13,8 +13,8 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { targetPath: '/app', label: 'Dashboard' },
-  { targetPath: '/app/autoscaling-history', label: 'Autoscaling Logs' },
-  { targetPath: '/app/inflow', label: 'Metrics Inflow' },
+  { targetPath: '/app/autoscaling-history', label: 'Plan Logs' },
+  { targetPath: '/app/inflow', label: 'Metrics Logs' },
   { spacer: true },
   { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
   { targetPath: '/app/metrics', label: 'Metrics' },
