@@ -30,6 +30,6 @@ class ScalingPlanServiceClass {
   }
 }
 
-const ScalinglanService = new ScalingPlanServiceClass();
+const ScalingPlanService = new ScalingPlanServiceClass();
 
-export default ScalinglanService;
+export default ScalingPlanService;

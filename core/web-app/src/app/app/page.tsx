@@ -1,5 +1,6 @@
 'use client';
 
+import DashboardService, { DashboardStats } from '@/services/dashboard';
 import dayjs, { Dayjs } from 'dayjs';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
@@ -22,18 +23,6 @@ const LinkIcon = () => (
 );
 
 export default function Dashboard() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  // Query Params
-  const fromParam = searchParams.get('from');
-  const toParam = searchParams.get('to');
-  const from = fromParam || formatDate(DEFAULT_FROM);
-  const to = toParam || formatDate(DEFAULT_TO);
-  const fromDayjs = useMemo(() => dayjs(from).startOf('day'), [from]);
-  const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
-
   // States
   const [topHistoryPlans, setTopHistoryPlans] = useState([
     {
@@ -46,59 +35,18 @@ export default function Dashboard() {
       title: 'EC2 Autoscaling Plan',
     },
   ]);
-
+  const [stats, setStats] = useState<DashboardStats>();
   // Effects
-  // Fetch Autoscaling History Data when the page is loaded with from and to params
   useEffect(() => {
-    // fetchAutoscalingHistory();/
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDayjs, toDayjs]);
-
-  // Handlers
-  const handleDate = (field: 'from' | 'to', value: string) => {
-    const newDate = dayjs(value);
-    const isValidDate = newDate.isValid();
-
-    if (!isValidDate) {
-      return;
-    }
-    const params = {
-      from: field === 'from' ? formatDate(newDate) : from,
-      to: field === 'to' ? formatDate(newDate) : to,
+    const fetch = async () => {
+      const stats = await DashboardService.getDashboardStats();
+      setStats(stats);
     };
-    router.push(`${pathname}?from=${params.from}&to=${params.to}`);
-  };
+    fetch();
+  });
 
   return (
     <div className="min-h-full bg-gray-100 p-10">
-      <div className="controls mb-10 flex justify-end">
-        {/* from - to */}
-        <div className="flex items-center">
-          <div className="form-control mr-2">
-            <label className="input-group-sm">
-              <input
-                type="date"
-                className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
-                max={formatDate(toDayjs)}
-                value={from}
-                onChange={(event) => handleDate('from', event.target.value)}
-              />
-            </label>
-          </div>
-          <span>-</span>
-          <div className="form-control ml-2">
-            <label className="input-group-sm">
-              <input
-                type="date"
-                className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
-                min={formatDate(fromDayjs)}
-                value={to}
-                onChange={(event) => handleDate('to', event.target.value)}
-              />
-            </label>
-          </div>
-        </div>
-      </div>
       {/* Autoscaling History Stats */}
       <div className="mb-10 flex space-x-4">
         {/* History Count */}
@@ -109,9 +57,11 @@ export default function Dashboard() {
                 <LinkIcon />
               </Link>
             </div>
-            <div className="stat-title">Autoscaling Triggered</div>
-            <div className="stat-value">50</div>
-            {/* <div className="stat-desc">21% more than last month</div> */}
+            <div className="stat-title">
+              Traffic & Autoscaling Plan Triggered
+            </div>
+            <div className="stat-value">{stats?.autoscalingHistoryCount}</div>
+            <div className="stat-desc">last 7 days</div>
           </div>
         </div>
         {/* History */}
@@ -124,6 +74,7 @@ export default function Dashboard() {
                 <div className="text-sm">{plan.title}</div>
               </div>
             ))}
+            <div className="stat-desc">last 7 days</div>
           </div>
         </div>
       </div>
@@ -138,7 +89,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="stat-title">Metric Definitions</div>
-            <div className="stat-value">50</div>
+            <div className="stat-value">{stats?.metricsCount}</div>
             {/* <div className="stat-desc">21% more than last month</div> */}
           </div>
         </div>
@@ -151,7 +102,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="stat-title">Scaling Component Definitions</div>
-            <div className="stat-value">50</div>
+            <div className="stat-value">{stats?.scalingComponentsCount}</div>
             {/* <div className="stat-desc">21% more than last month</div> */}
           </div>
         </div>
@@ -164,7 +115,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="stat-title">Plan Definitions</div>
-            <div className="stat-value">50</div>
+            <div className="stat-value">{stats?.plansCount}</div>
             {/* <div className="stat-desc">21% more than last month</div> */}
           </div>
         </div>
