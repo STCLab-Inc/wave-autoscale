@@ -13,6 +13,7 @@ pub mod google_cloud_run_service;
 pub mod k8s_deployment;
 pub mod k8s_json_patch;
 pub mod netfunnel_segment;
+pub mod wa_logger;
 
 use self::{
     amazon_dynamodb_table::DynamoDbTableScalingComponent,
@@ -24,7 +25,7 @@ use self::{
     google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent,
     google_cloud_run_service::CloudRunServiceScalingComponent,
     k8s_deployment::K8sDeploymentScalingComponent, k8s_json_patch::K8sPatchScalingComponent,
-    netfunnel_segment::NetfunnelSegmentScalingComponent,
+    netfunnel_segment::NetfunnelSegmentScalingComponent, wa_logger::WALoggerComponent,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -107,6 +108,9 @@ impl ScalingComponentManager {
             NetfunnelSegmentScalingComponent::SCALING_KIND => Ok(Box::new(
                 NetfunnelSegmentScalingComponent::new(cloned_defintion),
             )),
+            WALoggerComponent::SCALING_KIND => {
+                Ok(Box::new(WALoggerComponent::new(cloned_defintion)))
+            }
             _ => Err(anyhow::anyhow!("Unknown trigger kind")),
         }
     }
