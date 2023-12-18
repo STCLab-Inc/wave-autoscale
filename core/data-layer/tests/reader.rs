@@ -82,19 +82,19 @@ mod reader {
         if let Some(scaling_component_definition) = result.scaling_component_definitions.get(0) {
             if let Some(region) = scaling_component_definition.metadata.get("region") {
                 assert_eq!(
-                    region, "ap-northeast-3",
+                    region, "{{ yaml.user_1_region }}",
                     "Unexpected metadata value in region from yaml file"
                 );
             }
             if let Some(access_key) = scaling_component_definition.metadata.get("access_key") {
                 assert_eq!(
-                    access_key, "access_key",
+                    access_key, "{{ env.user_1_access_key }}",
                     "Unexpected metadata value in access_key from environment file"
                 );
             }
             if let Some(secret_key) = scaling_component_definition.metadata.get("secret_key") {
                 assert_eq!(
-                    secret_key, "secret_key",
+                    secret_key, "{{ json.user_1_secret_key }}",
                     "Unexpected metadata value in secret_key from json file"
                 );
             }
