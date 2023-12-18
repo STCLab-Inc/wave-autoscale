@@ -43,8 +43,8 @@ fn get_source_paths<P: AsRef<Path>>(input: P) -> (String, String, String) {
 
 // Function to extract parameters from a yaml file
 fn extract_params_from_yaml_file(file_path: &str) -> Option<serde_json::Value> {
-    let file_string = fs::read_to_string(file_path).ok()?;
-    let file_yaml: serde_yaml::Value = serde_yaml::from_str(&file_string).ok()?;
+    let definition_string = fs::read_to_string(file_path).ok()?;
+    let file_yaml: serde_yaml::Value = serde_yaml::from_str(&definition_string).ok()?;
 
     let file_map = match file_yaml.as_mapping() {
         Some(file_map) => file_map,
@@ -62,8 +62,8 @@ fn extract_params_from_yaml_file(file_path: &str) -> Option<serde_json::Value> {
 }
 // Function to extract parameters from an env file
 fn extract_params_from_env_file(file_path: &str) -> Option<serde_json::Value> {
-    let file_string = fs::read_to_string(file_path).ok()?;
-    let file_map = parse_dotenv(&file_string).ok()?;
+    let definition_string = fs::read_to_string(file_path).ok()?;
+    let file_map = parse_dotenv(&definition_string).ok()?;
 
     let mut file_hashmap = HashMap::new();
     for (key, value) in file_map.iter() {
@@ -78,8 +78,8 @@ fn remove_backslash_quotes(data: &str) -> String {
 }
 // Function to extract parameters from a json file
 fn extract_params_from_json_file(file_path: &str) -> Option<serde_json::Value> {
-    let file_string = fs::read_to_string(file_path).ok()?;
-    let file_json: serde_json::Value = serde_json::from_str(&file_string).ok()?;
+    let definition_string = fs::read_to_string(file_path).ok()?;
+    let file_json: serde_json::Value = serde_json::from_str(&definition_string).ok()?;
 
     let file_object = match file_json.as_object() {
         Some(file_object) => file_object,
@@ -178,9 +178,9 @@ where
 async fn test_get_source_paths() {
     let path = "tests/variables-examples/example.yaml";
     let (yaml_source_path, env_source_path, json_source_path) = get_source_paths(path);
-    println!("yaml_source_path: {:?}", yaml_source_path);
-    println!("env_source_path: {:?}", env_source_path);
-    println!("json_source_path: {:?}", json_source_path);
+    // println!("yaml_source_path: {:?}", yaml_source_path);
+    // println!("env_source_path: {:?}", env_source_path);
+    // println!("json_source_path: {:?}", json_source_path);
     assert_eq!(yaml_source_path, "tests/variables-examples/variables.yaml");
     assert_eq!(env_source_path, "tests/variables-examples/variables.env");
     assert_eq!(json_source_path, "tests/variables-examples/variables.json");
@@ -190,7 +190,7 @@ async fn test_get_source_paths() {
 async fn test_get_params_for_handlebars() {
     let path = "tests/variables-examples/example.yaml";
     let params_for_handlebars = get_params_for_handlebars(path);
-    println!("params_for_handlebars: {:?}", params_for_handlebars);
+    // println!("params_for_handlebars: {:?}", params_for_handlebars);
     assert_eq!(
         params_for_handlebars,
         serde_json::json!({
@@ -222,14 +222,11 @@ async fn test_render_transformation_1() {
     // Read the file of the path
     let mut file = File::open(path).unwrap();
     // Read to a string from the file
-    let mut file_string = String::new();
-    file.read_to_string(&mut file_string).unwrap();
-
-    println!("file_string: {:?}", file_string);
-
-    let result = get_config_mapper(file_string, path);
-
-    println!("result: {:?}", result);
+    let mut definition_string = String::new();
+    file.read_to_string(&mut definition_string).unwrap();
+    // println!("definition_string: {:?}", definition_string);
+    let result = get_config_mapper(definition_string, path);
+    // println!("result: {:?}", result);
     /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "", id: "dynamodb_table", component_kind: "amazon-dynamodb", metadata: {"region": String("ap-northeast-3"), "access_key": String("access_key"), "secret_key": String("secret_key"), "table_name": String("test-dynamodb-table")} }] }) */
 
     if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
@@ -253,12 +250,10 @@ async fn test_render_transformation_1() {
 async fn test_render_transformation_2() {
     let path = "tests/variables-examples/example.yaml";
 
-    let file_string = r#"---\nkind: ScalingComponent\nid: dynamodb_table\ncomponent_kind: amazon-dynamodb\nmetadata:\n  region: {{ yaml.user_1_region }}\n  access_key: {{ env.user_1_access_key }}\n  secret_key: {{ json.user_1_secret_key }}\n  table_name: test-dynamodb-table\n"#
+    let definition_string = r#"---\nkind: ScalingComponent\nid: dynamodb_table\ncomponent_kind: amazon-dynamodb\nmetadata:\n  region: {{ yaml.user_1_region }}\n  access_key: {{ env.user_1_access_key }}\n  secret_key: {{ json.user_1_secret_key }}\n  table_name: test-dynamodb-table\n"#
     .to_string().replace("\\n", "\n");
-
-    let result = get_config_mapper(file_string, path);
-
-    println!("result: {:?}", result);
+    let result = get_config_mapper(definition_string, path);
+    // println!("result: {:?}", result);
     /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "", id: "dynamodb_table", component_kind: "amazon-dynamodb", metadata: {"region": String("ap-northeast-3"), "table_name": String("test-dynamodb-table"), "access_key": String("access_key"), "secret_key": String("secret_key")} }] }) */
 
     if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
@@ -283,15 +278,13 @@ async fn test_render_transformation_3() {
     let path = "tests/variables-examples/example.yaml";
 
     let original_string = r#"[{\"kind\":\"ScalingComponent\",\"db_id\":\"02671e96-ed1d-433d-b622-5b0ee812a0ba\",\"id\":\"aws_ecs_scaling_component\",\"component_kind\":\"amazon-ecs\",\"metadata\":{\"region\":\"{{ yaml.user_1_region }}\"},\"created_at\":\"2023-12-18T13:19:24.614105+00:00\",\"updated_at\":\"2023-12-18T13:19:24.614105+00:00\"}]"#;
-    let file_string = original_string
+    let definition_string = original_string
         .to_string()
         .replace(['\\'], "")
         .replace(['[', ']'], "");
-    println!("file_string: {:?}", file_string);
-
-    let result = get_config_mapper(file_string, path);
-
-    println!("result: {:?}", result);
+    // println!("definition_string: {:?}", definition_string);
+    let result = get_config_mapper(definition_string, path);
+    // println!("result: {:?}", result);
     /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "02671e96-ed1d-433d-b622-5b0ee812a0ba", id: "aws_ecs_scaling_component", component_kind: "amazon-ecs", metadata: {"region": String("ap-northeast-3")} }] }) */
 
     if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
