@@ -1,3 +1,4 @@
+pub mod config_mapper;
 pub mod data_layer;
 pub mod reader;
 pub mod types;
