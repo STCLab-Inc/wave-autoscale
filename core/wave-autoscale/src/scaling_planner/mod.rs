@@ -338,12 +338,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
             error!("[ScalingPlan expression error] Failed to get metric_id");
             rquickjs::Error::Exception
         })?;
-    let name = args
-        .get::<String, String>("name".to_string())
-        .map_err(|_| {
-            error!("[ScalingPlan expression error] Failed to get name");
-            rquickjs::Error::Exception
-        })?;
+    let name = args.get::<String, String>("name".to_string()).ok();
     // tags, stats, period_sec is optional
     let tags = match args.get::<String, HashMap<String, String>>("tags".to_string()) {
         Ok(tags) => tags,
@@ -369,6 +364,18 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
     let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
         return Err(rquickjs::Error::Exception)
     };
+    let check_tags = |json_value_item: &Value| {
+        tags.is_empty() || {
+            json_value_item
+            .get("tags")
+            .and_then(Value::as_object)
+            .map_or(false, |value_tags| {
+                tags.iter().all(|(key, value)| {
+                    value_tags.get(key).and_then(Value::as_str) == Some(value.as_str())
+                })
+            })
+        }
+    };  
     metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
         .for_each(|(_ulid, source_metrics_value)| {
             let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
@@ -387,20 +394,11 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
             let Some(json_values_arr) = json_value_str.as_array() else {return;};
             let _filter_json_values_arr: Vec<_> = json_values_arr
                 .iter()
-                .map(|json_value_item| {
-                    let result_bool = json_value_item.get("name").and_then(Value::as_str)
-                        == Some(name.as_str())
-                        && (tags.is_empty() || {
-                            json_value_item
-                                .get("tags")
-                                .and_then(Value::as_object)
-                                .map_or(false, |value_tags| {
-                                    tags.iter().all(|(key, value)| {
-                                        value_tags.get(key).and_then(Value::as_str)
-                                            == Some(value.as_str())
-                                    })
-                                })
-                        });
+                .map(|json_value_item| {                                      
+                    let result_bool = match &name {
+                        Some(name) => json_value_item.get("name").and_then(Value::as_str) == Some(name.as_str()) && check_tags(json_value_item),
+                        None => check_tags(json_value_item),
+                    };
                     if result_bool {
                         let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
                             return;
