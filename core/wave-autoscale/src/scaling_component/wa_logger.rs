@@ -47,7 +47,7 @@ mod test {
         let scaling_definition = ScalingComponentDefinition {
             kind: data_layer::types::object_kind::ObjectKind::ScalingComponent,
             db_id: String::from("db_id"),
-            id: String::from("scaling-id"),
+            id: String::from("scaling_id"),
             component_kind: String::from("wa-logger"),
             metadata: HashMap::new(),
         };

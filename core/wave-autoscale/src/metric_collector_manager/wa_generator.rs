@@ -69,7 +69,7 @@ mod test {
         let definition = MetricDefinition {
             kind: data_layer::types::object_kind::ObjectKind::Metric,
             db_id: String::from("db_id"),
-            id: String::from("metric-id"),
+            id: String::from("metric_id"),
             collector: String::from("wa-generator"),
             metadata: HashMap::from([
                 (
