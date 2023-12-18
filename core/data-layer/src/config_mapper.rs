@@ -4,12 +4,7 @@ use handlebars::Handlebars;
 use serde::Deserialize;
 use serde_valid::Validate;
 use serde_yaml::Deserializer;
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::Read,
-    path::Path,
-};
+use std::{collections::HashMap, fs, path::Path};
 use tracing::error;
 
 #[derive(Debug, Default)]
@@ -119,22 +114,29 @@ where
     })
 }
 
-pub fn get_config_mapper<P>(path: P) -> Result<ParserResult, anyhow::Error>
+// Function to synchronize data type from a string
+fn synchronize_data_type(data: &str) -> String {
+    data.replace(['\\'], "")
+        .replace(['[', ']'], "")
+        .replace("\\n", "\n")
+}
+pub fn get_config_mapper<P>(
+    template: String,
+    variable_path: P,
+) -> Result<ParserResult, anyhow::Error>
 where
     P: AsRef<Path>,
 {
-    // Read the file of the path
-    let mut file = File::open(&path)?;
     // Get parameters for handlebars
-    let params_for_handlebars = get_params_for_handlebars(path);
-    // Read to a string from the file
-    let mut file_string = String::new();
-    file.read_to_string(&mut file_string)?;
+    let params_for_handlebars = get_params_for_handlebars(variable_path);
     // Render the file with the variables using handlebars
     let handlebars = Handlebars::new();
-    let new_file = handlebars.render_template(file_string.as_str(), &params_for_handlebars)?;
+    let template = handlebars.render_template(
+        synchronize_data_type(&template).as_str(),
+        &params_for_handlebars,
+    )?;
     // Make a cursor to read the new file
-    let file_cursor = std::io::Cursor::new(new_file.as_bytes());
+    let file_cursor = std::io::Cursor::new(template.as_bytes());
     // Make a deserializer to iterate the yaml that could have multiple documents
     let deserializer = Deserializer::from_reader(file_cursor);
     // For result
@@ -173,11 +175,63 @@ where
 }
 
 #[tokio::test]
-async fn test_render_transformation() {
+async fn test_get_source_paths() {
     let path = "tests/variables-examples/example.yaml";
-    let result = get_config_mapper(path);
+    let (yaml_source_path, env_source_path, json_source_path) = get_source_paths(path);
+    println!("yaml_source_path: {:?}", yaml_source_path);
+    println!("env_source_path: {:?}", env_source_path);
+    println!("json_source_path: {:?}", json_source_path);
+    assert_eq!(yaml_source_path, "tests/variables-examples/variables.yaml");
+    assert_eq!(env_source_path, "tests/variables-examples/variables.env");
+    assert_eq!(json_source_path, "tests/variables-examples/variables.json");
+}
+
+#[tokio::test]
+async fn test_get_params_for_handlebars() {
+    let path = "tests/variables-examples/example.yaml";
+    let params_for_handlebars = get_params_for_handlebars(path);
+    println!("params_for_handlebars: {:?}", params_for_handlebars);
+    assert_eq!(
+        params_for_handlebars,
+        serde_json::json!({
+            "yaml": {
+                "user_1_access_key": "user_1_access_key",
+                "user_1_secret_key": "user_1_secret_key",
+                "user_1_region": "ap-northeast-3",
+            },
+            "env": {
+                "user_1_access_key": "access_key",
+                "user_1_secret_key": "user_1_secret_key",
+                "user_1_region": "user_1_region",
+            },
+            "json": {
+                "user_1_access_key": "user_1_access_key",
+                "user_1_secret_key": "secret_key",
+                "user_1_region": "user_1_region",
+            },
+        })
+    );
+}
+
+#[tokio::test]
+async fn test_render_transformation_1() {
+    use std::{fs::File, io::Read};
+
+    let path = "tests/variables-examples/example.yaml";
+
+    // Read the file of the path
+    let mut file = File::open(path).unwrap();
+    // Read to a string from the file
+    let mut file_string = String::new();
+    file.read_to_string(&mut file_string).unwrap();
+
+    println!("file_string: {:?}", file_string);
+
+    let result = get_config_mapper(file_string, path);
 
     println!("result: {:?}", result);
+    /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "", id: "dynamodb_table", component_kind: "amazon-dynamodb", metadata: {"region": String("ap-northeast-3"), "access_key": String("access_key"), "secret_key": String("secret_key"), "table_name": String("test-dynamodb-table")} }] }) */
+
     if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
         let metadata = &scaling_component.metadata;
         assert_eq!(
@@ -188,6 +242,60 @@ async fn test_render_transformation() {
             metadata.get("secret_key").and_then(|v| v.as_str()),
             Some("secret_key")
         );
+        assert_eq!(
+            metadata.get("region").and_then(|v| v.as_str()),
+            Some("ap-northeast-3")
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_render_transformation_2() {
+    let path = "tests/variables-examples/example.yaml";
+
+    let file_string = r#"---\nkind: ScalingComponent\nid: dynamodb_table\ncomponent_kind: amazon-dynamodb\nmetadata:\n  region: {{ yaml.user_1_region }}\n  access_key: {{ env.user_1_access_key }}\n  secret_key: {{ json.user_1_secret_key }}\n  table_name: test-dynamodb-table\n"#
+    .to_string().replace("\\n", "\n");
+
+    let result = get_config_mapper(file_string, path);
+
+    println!("result: {:?}", result);
+    /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "", id: "dynamodb_table", component_kind: "amazon-dynamodb", metadata: {"region": String("ap-northeast-3"), "table_name": String("test-dynamodb-table"), "access_key": String("access_key"), "secret_key": String("secret_key")} }] }) */
+
+    if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
+        let metadata = &scaling_component.metadata;
+        assert_eq!(
+            metadata.get("access_key").and_then(|v| v.as_str()),
+            Some("access_key")
+        );
+        assert_eq!(
+            metadata.get("secret_key").and_then(|v| v.as_str()),
+            Some("secret_key")
+        );
+        assert_eq!(
+            metadata.get("region").and_then(|v| v.as_str()),
+            Some("ap-northeast-3")
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_render_transformation_3() {
+    let path = "tests/variables-examples/example.yaml";
+
+    let original_string = r#"[{\"kind\":\"ScalingComponent\",\"db_id\":\"02671e96-ed1d-433d-b622-5b0ee812a0ba\",\"id\":\"aws_ecs_scaling_component\",\"component_kind\":\"amazon-ecs\",\"metadata\":{\"region\":\"{{ yaml.user_1_region }}\"},\"created_at\":\"2023-12-18T13:19:24.614105+00:00\",\"updated_at\":\"2023-12-18T13:19:24.614105+00:00\"}]"#;
+    let file_string = original_string
+        .to_string()
+        .replace(['\\'], "")
+        .replace(['[', ']'], "");
+    println!("file_string: {:?}", file_string);
+
+    let result = get_config_mapper(file_string, path);
+
+    println!("result: {:?}", result);
+    /* result: Ok(ParserResult { metric_definitions: [], slo_definitions: [], scaling_plan_definitions: [], scaling_component_definitions: [ScalingComponentDefinition { kind: ScalingComponent, db_id: "02671e96-ed1d-433d-b622-5b0ee812a0ba", id: "aws_ecs_scaling_component", component_kind: "amazon-ecs", metadata: {"region": String("ap-northeast-3")} }] }) */
+
+    if let Some(scaling_component) = result.unwrap().scaling_component_definitions.first() {
+        let metadata = &scaling_component.metadata;
         assert_eq!(
             metadata.get("region").and_then(|v| v.as_str()),
             Some("ap-northeast-3")
