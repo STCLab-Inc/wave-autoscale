@@ -1,4 +1,5 @@
 use crate::{
+    config_mapper::get_config_mapper,
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
@@ -329,8 +330,23 @@ impl DataLayer {
             });
             metrics.push(metric);
         }
-
         Ok(metrics)
+    }
+    // Get all metrics json from the database with transformation
+    pub async fn get_all_metrics_json_with_transformation(&self) -> Result<Vec<serde_json::Value>> {
+        let metrics = self.get_all_metrics_json().await?;
+        let parser_result = get_config_mapper(
+            serde_json::to_string(&metrics)?,
+            /* TODO */
+            "../data-layer/tests/variables-examples/example.yaml",
+        );
+        let transformed_result: Vec<serde_json::Value> = parser_result?
+            .metric_definitions
+            .into_iter()
+            .map(|def| serde_json::to_value(def).unwrap_or_default())
+            .collect();
+
+        Ok(transformed_result)
     }
     // Get a metric from the database
     pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
@@ -479,8 +495,25 @@ impl DataLayer {
             });
             scaling_components.push(scaling_component);
         }
-
         Ok(scaling_components)
+    }
+    // Get all scaling components json from the database with transformation
+    pub async fn get_all_scaling_components_json_with_transformation(
+        &self,
+    ) -> Result<Vec<serde_json::Value>> {
+        let scaling_components = self.get_all_scaling_components_json().await?;
+        let parser_result = get_config_mapper(
+            serde_json::to_string(&scaling_components)?,
+            /* TODO */
+            "../data-layer/tests/variables-examples/example.yaml",
+        );
+        let transformed_result: Vec<serde_json::Value> = parser_result?
+            .scaling_component_definitions
+            .into_iter()
+            .map(|def| serde_json::to_value(def).unwrap_or_default())
+            .collect();
+
+        Ok(transformed_result)
     }
     // Get a scaling component from the database
     pub async fn get_scaling_component_by_id(
@@ -630,6 +663,22 @@ impl DataLayer {
             plans.push(plan);
         }
         Ok(plans)
+    }
+    // Get all plans json from the database with transformation
+    pub async fn get_all_plans_json_with_transformation(&self) -> Result<Vec<serde_json::Value>> {
+        let plans = self.get_all_plans_json().await?;
+        let parser_result = get_config_mapper(
+            serde_json::to_string(&plans)?,
+            /* TODO */
+            "../data-layer/tests/variables-examples/example.yaml",
+        );
+        let transformed_result: Vec<serde_json::Value> = parser_result?
+            .scaling_plan_definitions
+            .into_iter()
+            .map(|def| serde_json::to_value(def).unwrap_or_default())
+            .collect();
+
+        Ok(transformed_result)
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
