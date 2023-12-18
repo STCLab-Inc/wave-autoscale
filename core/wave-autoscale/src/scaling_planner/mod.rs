@@ -359,55 +359,74 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
 
-    let mut target_value_arr: Vec<f64> = Vec::new();
     // find metric_id
     let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
         return Err(rquickjs::Error::Exception)
     };
-    let check_tags = |json_value_item: &Value| {
-        tags.is_empty() || {
-            json_value_item
-            .get("tags")
-            .and_then(Value::as_object)
-            .map_or(false, |value_tags| {
-                tags.iter().all(|(key, value)| {
-                    value_tags.get(key).and_then(Value::as_str) == Some(value.as_str())
-                })
-            })
-        }
-    };  
+
+    // Filtered metric values
+    let mut target_value_arr: Vec<f64> = Vec::new();
+
+    // Find the metric values between the time range (current time - period_sec, current time)
     metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
         .for_each(|(_ulid, source_metrics_value)| {
+            // Get the json string
             let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
                 error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
                 return;
             };
-            // find name or tags
-            let Some(json_value_str) = value.get("json_value") else {return;};
-            let Some(json_value_str) = json_value_str.as_str() else {return;};
+            let Some(json_value_str) = value.get("json_value").and_then( |value| value.as_str()) else {
+                return;
+            };
+            // Transform the json string to serde value
             let json_value_str = serde_json::from_str::<Value>(json_value_str)
                 .map_err(|_| {
                     error!("[ScalingPlan expression error] Failed to convert json_value to serde value");
                     rquickjs::Error::Exception
                 })
                 .unwrap();
+
+            // Get the value array
             let Some(json_values_arr) = json_value_str.as_array() else {return;};
-            let _filter_json_values_arr: Vec<_> = json_values_arr
-                .iter()
-                .map(|json_value_item| {                                      
-                    let result_bool = match &name {
-                        Some(name) => json_value_item.get("name").and_then(Value::as_str) == Some(name.as_str()) && check_tags(json_value_item),
-                        None => check_tags(json_value_item),
-                    };
-                    if result_bool {
-                        let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
-                            return;
-                        };
-                        target_value_arr
-                            .append(&mut vec![json_vaule]);
+
+            for json_value_item in json_values_arr.iter() {
+                // Check if the name
+                let item_name = json_value_item.get("name").and_then(Value::as_str);
+                if name.is_some() && item_name.is_some() && item_name.unwrap() != name.as_ref().unwrap() {
+                    continue;
+                }
+                
+                // Check if the tags match
+                let item_tags = json_value_item.get("tags").and_then(Value::as_object);
+                if !tags.is_empty() {
+                    // If the tags are not empty but the item_tags is None, then it means that it doesn't match
+                    if item_tags.is_none() {
+                        continue;
                     }
-                })
-                .collect();
+                    let item_tags = item_tags.unwrap();
+
+                    let mut match_tags = true;
+                    for (key, value) in tags.iter() {
+                        let item_value = item_tags.get(key).and_then(Value::as_str);
+                        if item_value.is_none() || item_value.unwrap() != value {
+                            match_tags = false;
+                            break;
+                        }
+                    }
+
+                    // If the tags don't match, then skip
+                    if !match_tags {
+                        continue;
+                    }
+                }
+
+                // Put the value in the target_value_arr
+                let item_value = json_value_item.get("value").and_then(Value::as_f64);
+                if item_value.is_some() {
+                    target_value_arr.append(&mut vec![item_value.unwrap()]);
+                }
+            }
+
         });
     let metric_stats = match stats.to_lowercase() {
         ms if PlanExpressionStats::Latest.to_string() == ms => {
@@ -660,7 +679,7 @@ mod tests {
         let result_optional_period_sec =
             check_expression(expression_optional_period_sec, context.clone()).await;
         let result_optional_stats_period_sec =
-            check_expression(expression_optional_stats_period_sec, context.clone()).await;        
+            check_expression(expression_optional_stats_period_sec, context.clone()).await;
         let result_fail_metric_id =
             check_expression(expression_fail_metric_id, context.clone()).await;
 
@@ -673,7 +692,7 @@ mod tests {
         assert!(result_optional_tags.unwrap());
         assert!(result_optional_stats.unwrap());
         assert!(result_optional_period_sec.unwrap());
-        assert!(result_optional_stats_period_sec.unwrap());        
+        assert!(result_optional_stats_period_sec.unwrap());
         assert!(result_fail_metric_id.is_err());
     }
 
