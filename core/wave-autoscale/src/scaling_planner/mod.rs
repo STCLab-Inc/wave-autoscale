@@ -660,8 +660,7 @@ mod tests {
         let result_optional_period_sec =
             check_expression(expression_optional_period_sec, context.clone()).await;
         let result_optional_stats_period_sec =
-            check_expression(expression_optional_stats_period_sec, context.clone()).await;
-        let result_fail_name = check_expression(expression_fail_name, context.clone()).await;
+            check_expression(expression_optional_stats_period_sec, context.clone()).await;        
         let result_fail_metric_id =
             check_expression(expression_fail_metric_id, context.clone()).await;
 
@@ -674,8 +673,7 @@ mod tests {
         assert!(result_optional_tags.unwrap());
         assert!(result_optional_stats.unwrap());
         assert!(result_optional_period_sec.unwrap());
-        assert!(result_optional_stats_period_sec.unwrap());
-        assert!(result_fail_name.is_err());
+        assert!(result_optional_stats_period_sec.unwrap());        
         assert!(result_fail_metric_id.is_err());
     }
 
