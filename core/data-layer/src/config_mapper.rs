@@ -228,11 +228,14 @@ async fn test_get_params_for_handlebars() {
                 "user_1_access_key": "access_key",
                 "user_1_secret_key": "user_1_secret_key",
                 "user_1_region": "user_1_region",
+                "user_3_region": "ap-northeast-2",
+
             },
             "json": {
                 "user_1_access_key": "user_1_access_key",
                 "user_1_secret_key": "secret_key",
                 "user_1_region": "user_1_region",
+                "user_2_region": "user_2_region"
             },
         })
     );
