@@ -2,7 +2,7 @@ use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 use dotenv_parser::parse_dotenv;
 use handlebars::Handlebars;
 use serde::Deserialize;
-use serde_valid::Validate;
+
 use serde_yaml::Deserializer;
 use std::{collections::HashMap, fs, path::Path};
 use tracing::error;
@@ -114,12 +114,6 @@ where
     })
 }
 
-// Function to synchronize data type from a string
-fn synchronize_data_type(data: &str) -> String {
-    data.replace(['\\'], "")
-        .replace(['[', ']'], "")
-        .replace("\\n", "\n")
-}
 pub fn get_config_mapper<P>(
     template: String,
     variable_path: P,
@@ -131,46 +125,77 @@ where
     let params_for_handlebars = get_params_for_handlebars(variable_path);
     // Render the file with the variables using handlebars
     let handlebars = Handlebars::new();
-    let template = handlebars.render_template(
-        synchronize_data_type(&template).as_str(),
-        &params_for_handlebars,
-    )?;
-    // Make a cursor to read the new file
-    let file_cursor = std::io::Cursor::new(template.as_bytes());
-    // Make a deserializer to iterate the yaml that could have multiple documents
-    let deserializer = Deserializer::from_reader(file_cursor);
-    // For result
-    let mut result = ParserResult::default();
-    // Each document
-    for document in deserializer {
-        let value = serde_yaml::Value::deserialize(document)?;
-        // The "kind" tells the document type like Metric, ScalingPlan
-        if let Some(kind) = value.get("kind").and_then(serde_yaml::Value::as_str) {
-            match kind {
-                "Metric" => {
-                    let parsed = serde_yaml::from_value::<MetricDefinition>(value)?;
-                    parsed.validate()?;
-                    result.metric_definitions.push(parsed);
-                }
-                "SLO" => {
-                    let parsed = serde_yaml::from_value::<SloDefinition>(value)?;
-                    parsed.validate()?;
-                    result.slo_definitions.push(parsed);
-                }
-                "ScalingPlan" => {
-                    let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value)?;
-                    parsed.validate()?;
-                    result.scaling_plan_definitions.push(parsed);
-                }
-                "ScalingComponent" => {
-                    let parsed = serde_yaml::from_value::<ScalingComponentDefinition>(value)?;
-                    parsed.validate()?;
-                    result.scaling_component_definitions.push(parsed);
-                }
-                _ => error!("Not Found: {:?}", kind),
+
+    let json_array = match serde_json::from_str::<Vec<serde_json::Value>>(&template) {
+        Ok(array) => array,
+        Err(e) => {
+            error!("JSON parsing error: {}", e);
+            vec![] // Continue with an empty array
+        }
+    };
+
+    let mut combined_template = String::new();
+    for json_obj in json_array {
+        let json_str = match serde_json::to_string(&json_obj) {
+            Ok(str) => str,
+            Err(e) => {
+                error!("JSON serialization error: {}", e);
+                continue; // Skip this iteration
+            }
+        };
+
+        match handlebars.render_template(&json_str, &params_for_handlebars) {
+            Ok(rendered) => combined_template.push_str(&rendered),
+            Err(e) => {
+                error!("Template rendering error: {}", e);
+                continue; // Skip this iteration
             }
         }
+        combined_template.push_str("\n---\n");
     }
+
+    let file_cursor = std::io::Cursor::new(combined_template);
+    let deserializer = Deserializer::from_reader(file_cursor);
+    let mut result = ParserResult::default();
+
+    for document in deserializer {
+        match serde_yaml::Value::deserialize(document) {
+            Ok(value) => {
+                // The "kind" tells the document type like Metric, ScalingPlan
+                if let Some(kind) = value.get("kind").and_then(serde_yaml::Value::as_str) {
+                    match kind {
+                        "Metric" => {
+                            if let Ok(parsed) = serde_yaml::from_value::<MetricDefinition>(value) {
+                                result.metric_definitions.push(parsed);
+                            }
+                        }
+                        "SLO" => {
+                            if let Ok(parsed) = serde_yaml::from_value::<SloDefinition>(value) {
+                                result.slo_definitions.push(parsed);
+                            }
+                        }
+                        "ScalingPlan" => {
+                            if let Ok(parsed) =
+                                serde_yaml::from_value::<ScalingPlanDefinition>(value)
+                            {
+                                result.scaling_plan_definitions.push(parsed);
+                            }
+                        }
+                        "ScalingComponent" => {
+                            if let Ok(parsed) =
+                                serde_yaml::from_value::<ScalingComponentDefinition>(value)
+                            {
+                                result.scaling_component_definitions.push(parsed);
+                            }
+                        }
+                        _ => error!("Unknown kind: {:?}", kind),
+                    }
+                }
+            }
+            Err(e) => error!("YAML deserialization error: {}", e),
+        }
+    }
+
     Ok(result)
 }
 
