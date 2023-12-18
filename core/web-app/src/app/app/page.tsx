@@ -43,7 +43,7 @@ export default function Dashboard() {
       setStats(stats);
     };
     fetch();
-  });
+  }, []);
 
   return (
     <div className="min-h-full bg-gray-100 p-10">
