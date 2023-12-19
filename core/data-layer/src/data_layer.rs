@@ -301,11 +301,13 @@ impl DataLayer {
         let config_mapper_data = get_config_mapper();
 
         for row in result {
-            let metadata_str: Option<&str> = row.try_get("metadata").ok();
-            let metadata = if let Some(meta_str) = metadata_str {
-                execute_config_mapper(meta_str.to_string(), config_mapper_data.clone()).unwrap()
-            } else {
-                serde_json::Value::Null.to_string()
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
             };
 
             metrics.push(MetricDefinition {
@@ -461,11 +463,13 @@ impl DataLayer {
         let config_mapper_data = get_config_mapper();
 
         for row in result {
-            let metadata_str: Option<&str> = row.try_get("metadata").ok();
-            let metadata = if let Some(meta_str) = metadata_str {
-                execute_config_mapper(meta_str.to_string(), config_mapper_data.clone()).unwrap()
-            } else {
-                serde_json::Value::Null.to_string()
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
             };
 
             scaling_components.push(ScalingComponentDefinition {
@@ -619,11 +623,13 @@ impl DataLayer {
         let config_mapper_data = get_config_mapper();
 
         for row in result {
-            let metadata_str: Option<&str> = row.try_get("metadata").ok();
-            let metadata = if let Some(meta_str) = metadata_str {
-                execute_config_mapper(meta_str.to_string(), config_mapper_data.clone()).unwrap()
-            } else {
-                serde_json::Value::Null.to_string()
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
             };
 
             plans.push(ScalingPlanDefinition {
