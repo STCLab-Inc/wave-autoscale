@@ -279,6 +279,7 @@ mod test {
             id: "api_server".to_string(),
             component_kind: "aws-ec2-autoscaling".to_string(),
             metadata: scaling_component_metadata,
+            ..Default::default()
         }];
 
         // create metric adapter

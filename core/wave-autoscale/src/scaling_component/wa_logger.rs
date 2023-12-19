@@ -50,6 +50,7 @@ mod test {
             id: String::from("scaling_id"),
             component_kind: String::from("wa-logger"),
             metadata: HashMap::new(),
+            ..Default::default()
         };
 
         let params = HashMap::from([

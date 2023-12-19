@@ -221,6 +221,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         };
         let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
             CloudFunctionsInstanceScalingComponent::new(scaling_definition)
@@ -266,6 +267,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         };
         let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
             CloudFunctionsInstanceScalingComponent::new(scaling_definition)
@@ -307,6 +309,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         };
         let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
             CloudFunctionsInstanceScalingComponent::new(scaling_definition)
@@ -352,6 +355,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         };
         let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
             CloudFunctionsInstanceScalingComponent::new(scaling_definition)

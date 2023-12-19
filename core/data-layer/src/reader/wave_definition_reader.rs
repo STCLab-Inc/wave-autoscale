@@ -222,7 +222,7 @@ mod tests {
     fn test_read_definition_yaml_file() -> Result<()> {
         let path = "tests/yaml/example.yaml";
         let result = read_definition_yaml_file(path)?;
-        assert_eq!(result.metric_definitions.len(), 1);
+        assert_eq!(result.metric_definitions.len(), 2);
         assert_eq!(result.scaling_plan_definitions.len(), 1);
         assert_eq!(result.scaling_component_definitions.len(), 1);
         Ok(())

@@ -281,7 +281,7 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, collector, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (collector, metadata, updated_at) = ($7,$8,$9)";
+                "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, updated_at) = ($8,$9,$10)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -290,6 +290,7 @@ impl DataLayer {
                 .bind(metric.id.to_lowercase())
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
+                .bind(metric.enabled)
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
@@ -308,7 +309,7 @@ impl DataLayer {
     // Get all metrics from the database
     pub async fn get_all_metrics(&self) -> Result<Vec<MetricDefinition>> {
         let mut metrics: Vec<MetricDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, collector, metadata FROM metric";
+        let query_string = "SELECT db_id, id, collector, metadata, enabled FROM metric";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -321,15 +322,25 @@ impl DataLayer {
                 id: row.get("id"),
                 collector: row.get("collector"),
                 metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+                enabled: row.get("enabled"),
             });
         }
+        Ok(metrics)
+    }
+    // Get all metrics that are enabled
+    pub async fn get_enabled_metrics(&self) -> Result<Vec<MetricDefinition>> {
+        let metrics = self.get_all_metrics().await?;
+        let metrics = metrics
+            .into_iter()
+            .filter(|metric| metric.enabled)
+            .collect::<Vec<MetricDefinition>>();
         Ok(metrics)
     }
     // Get all metrics json from the database
     pub async fn get_all_metrics_json(&self) -> Result<Vec<serde_json::Value>> {
         let mut metrics: Vec<serde_json::Value> = Vec::new();
         let query_string =
-            "SELECT db_id, id, collector, metadata, created_at, updated_at FROM metric";
+            "SELECT db_id, id, collector, metadata, enabled, created_at, updated_at FROM metric";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -342,6 +353,7 @@ impl DataLayer {
                 "id": row.try_get::<String, _>("id")?,
                 "collector": row.try_get::<String, _>("collector")?,
                 "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "enabled": row.try_get::<bool, _>("enabled")?,
                 "created_at": row.try_get::<Option<String>, _>("created_at")?,
                 "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
             });
@@ -352,7 +364,8 @@ impl DataLayer {
     }
     // Get a metric from the database
     pub async fn get_metric_by_id(&self, db_id: String) -> Result<Option<MetricDefinition>> {
-        let query_string = "SELECT db_id, id, collector, metadata FROM metric WHERE db_id=$1";
+        let query_string =
+            "SELECT db_id, id, collector, metadata, enabled FROM metric WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             // Do not use fetch_one because it expects exact one result. If not, it will return an error
@@ -371,6 +384,7 @@ impl DataLayer {
             id: row.get("id"),
             collector: row.get("collector"),
             metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+            enabled: row.get("enabled"),
         });
         Ok(result)
     }
@@ -403,7 +417,7 @@ impl DataLayer {
     pub async fn update_metric(&self, metric: MetricDefinition) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
-            "UPDATE metric SET id=$1, collector=$2, metadata=$3, updated_at=$4 WHERE db_id=$5";
+            "UPDATE metric SET id=$1, collector=$2, metadata=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
@@ -411,6 +425,7 @@ impl DataLayer {
             .bind(metric.collector)
             .bind(metadata_string)
             .bind(updated_at)
+            .bind(metric.enabled)
             // WHERE
             .bind(metric.db_id)
             .execute(&self.pool)
@@ -433,7 +448,7 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = ($7,$8)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = ($8,$9)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -442,6 +457,7 @@ impl DataLayer {
                 .bind(scaling_component.id)
                 .bind(scaling_component.component_kind)
                 .bind(metadata_string.clone())
+                .bind(scaling_component.enabled)
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
@@ -459,7 +475,8 @@ impl DataLayer {
     // Get all scaling components from the database
     pub async fn get_all_scaling_components(&self) -> Result<Vec<ScalingComponentDefinition>> {
         let mut scaling_components: Vec<ScalingComponentDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, component_kind, metadata FROM scaling_component";
+        let query_string =
+            "SELECT db_id, id, component_kind, metadata, enabled FROM scaling_component";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -472,14 +489,24 @@ impl DataLayer {
                 id: row.get("id"),
                 component_kind: row.get("component_kind"),
                 metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+                enabled: row.get("enabled"),
             });
         }
+        Ok(scaling_components)
+    }
+    // Get enabled scaling components
+    pub async fn get_enabled_scaling_components(&self) -> Result<Vec<ScalingComponentDefinition>> {
+        let scaling_components = self.get_all_scaling_components().await?;
+        let scaling_components = scaling_components
+            .into_iter()
+            .filter(|scaling_component| scaling_component.enabled)
+            .collect::<Vec<ScalingComponentDefinition>>();
         Ok(scaling_components)
     }
     // Get all scaling components json from the database
     pub async fn get_all_scaling_components_json(&self) -> Result<Vec<serde_json::Value>> {
         let mut scaling_components: Vec<serde_json::Value> = Vec::new();
-        let query_string = "SELECT db_id, id, component_kind, metadata, created_at, updated_at FROM scaling_component";
+        let query_string = "SELECT db_id, id, component_kind, metadata, enabled, created_at, updated_at FROM scaling_component";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -492,6 +519,7 @@ impl DataLayer {
                 "id": row.try_get::<String, _>("id")?,
                 "component_kind": row.try_get::<String, _>("component_kind")?,
                 "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "enabled": row.try_get::<bool, _>("enabled")?,
                 "created_at": row.try_get::<Option<String>, _>("created_at")?,
                 "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
             });
@@ -506,7 +534,7 @@ impl DataLayer {
         db_id: String,
     ) -> Result<ScalingComponentDefinition> {
         let query_string =
-            "SELECT db_id, id, component_kind, metadata FROM scaling_component WHERE db_id=$1";
+            "SELECT db_id, id, component_kind, metadata, enabled FROM scaling_component WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -521,6 +549,7 @@ impl DataLayer {
             id: result.get("id"),
             component_kind: result.get("component_kind"),
             metadata: serde_json::from_str(result.get("metadata")).unwrap(),
+            enabled: result.get("enabled"),
         };
         Ok(scaling_component)
     }
@@ -556,13 +585,14 @@ impl DataLayer {
     ) -> Result<AnyQueryResult> {
         let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
         let query_string =
-            "UPDATE scaling_component SET id=$1, component_kind=$2, metadata=$3, updated_at=$4 WHERE db_id=$5";
+            "UPDATE scaling_component SET id=$1, component_kind=$2, metadata=$3, enabled=$4, updated_at=$5 WHERE db_id=$6";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
             .bind(scaling_component.id)
             .bind(scaling_component.component_kind)
             .bind(metadata_string)
+            .bind(scaling_component.enabled)
             .bind(updated_at)
             // WHERE
             .bind(scaling_component.db_id)
@@ -583,7 +613,7 @@ impl DataLayer {
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = ($7, $8)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = ($8, $9)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -592,6 +622,7 @@ impl DataLayer {
                 .bind(plan.id)
                 .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
+                .bind(plan.enabled)
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
@@ -608,7 +639,7 @@ impl DataLayer {
     // Get all plans from the database
     pub async fn get_all_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
         let mut plans: Vec<ScalingPlanDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, plans, priority, metadata FROM plan";
+        let query_string = "SELECT db_id, id, plans, priority, metadata, enabled FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -621,15 +652,25 @@ impl DataLayer {
                 id: row.get("id"),
                 metadata: serde_json::from_str(row.get("metadata")).unwrap(),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
+                enabled: row.get("enabled"),
             });
         }
+        Ok(plans)
+    }
+    // Get enabled plans
+    pub async fn get_enabled_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
+        let plans = self.get_all_plans().await?;
+        let plans = plans
+            .into_iter()
+            .filter(|plan| plan.enabled)
+            .collect::<Vec<ScalingPlanDefinition>>();
         Ok(plans)
     }
     // Get all plans json from the database
     pub async fn get_all_plans_json(&self) -> Result<Vec<serde_json::Value>> {
         let mut plans: Vec<serde_json::Value> = Vec::new();
         let query_string =
-            "SELECT db_id, id, plans, priority, metadata, created_at, updated_at FROM plan";
+            "SELECT db_id, id, plans, priority, metadata, enabled, created_at, updated_at FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -642,6 +683,7 @@ impl DataLayer {
                 "id": row.try_get::<String, _>("id")?,
                 "plans": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("plans")?.as_str())?,
                 "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
+                "enabled": row.try_get::<bool, _>("enabled")?,
                 "created_at": row.try_get::<Option<String>, _>("created_at")?,
                 "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
             });
@@ -651,7 +693,7 @@ impl DataLayer {
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
-        let query_string = "SELECT db_id, id, metadata, plans FROM plan WHERE db_id=$1";
+        let query_string = "SELECT db_id, id, metadata, plans, enabled FROM plan WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -666,6 +708,7 @@ impl DataLayer {
             id: result.get("id"),
             metadata: serde_json::from_str(result.get("metadata")).unwrap(),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
+            enabled: result.get("enabled"),
         };
         Ok(plan)
     }
@@ -699,7 +742,7 @@ impl DataLayer {
         let plans_string = serde_json::to_string(&plan.plans).unwrap();
         let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
         let query_string =
-            "UPDATE plan SET id=$1, metadata=$2, plans=$3, updated_at=$4 WHERE db_id=$5";
+            "UPDATE plan SET id=$1, metadata=$2, plans=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
         let updated_at = Utc::now();
         let result = sqlx::query(query_string)
             // SET
@@ -707,6 +750,7 @@ impl DataLayer {
             .bind(metatdata_string)
             .bind(plans_string)
             .bind(updated_at)
+            .bind(plan.enabled)
             // WHERE
             .bind(plan.db_id)
             .execute(&self.pool)

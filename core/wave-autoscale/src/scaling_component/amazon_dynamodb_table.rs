@@ -706,6 +706,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -745,6 +746,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -784,6 +786,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -831,6 +834,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -868,6 +872,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -905,6 +910,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -946,6 +952,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -982,6 +989,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)
@@ -1018,6 +1026,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         };
         let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
             DynamoDbTableScalingComponent::new(scaling_definition)

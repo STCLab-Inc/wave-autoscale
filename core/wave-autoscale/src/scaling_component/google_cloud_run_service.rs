@@ -448,6 +448,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -481,6 +482,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -527,6 +529,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -573,6 +576,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -610,6 +614,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -647,6 +652,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -694,6 +700,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -741,6 +748,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -788,6 +796,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)
@@ -838,6 +847,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         };
         let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
             CloudRunServiceScalingComponent::new(scaling_definition)

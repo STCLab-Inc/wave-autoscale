@@ -113,6 +113,7 @@ mod tests {
                     component_kind: "test1".to_string(),
                     kind: ObjectKind::ScalingComponent,
                     metadata: HashMap::new(),
+                    enabled: true,
                 },
                 data_layer::ScalingComponentDefinition {
                     id: "test2".to_string(),
@@ -120,6 +121,7 @@ mod tests {
                     component_kind: "test2".to_string(),
                     kind: ObjectKind::ScalingComponent,
                     metadata: HashMap::new(),
+                    enabled: true,
                 },
             ])
             .await;

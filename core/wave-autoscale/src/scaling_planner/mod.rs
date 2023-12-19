@@ -528,6 +528,7 @@ mod tests {
             kind: ObjectKind::Metric,
             db_id: "".to_string(),
             collector: COLLECTOR.to_string(),
+            enabled: true,
         }];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
@@ -546,6 +547,7 @@ mod tests {
             kind: ObjectKind::ScalingPlan,
             metadata: HashMap::new(),
             plans,
+            enabled: true,
         };
 
         let scaling_planner = ScalingPlanner::new(
@@ -660,7 +662,7 @@ mod tests {
             "get({ metric_id: 'metric1', stats: 'max', name: 'test'}) == 6".to_string();
         let expression_optional_stats_period_sec =
             "get({ metric_id: 'metric1', name: 'test'}) == 4".to_string();
-        let expression_fail_name =
+        let _expression_fail_name =
             "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, tags: { tag1: 'value1'}}) == 3".to_string();
         let expression_fail_metric_id =
             "get({ stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3"

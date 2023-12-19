@@ -9,6 +9,10 @@ fn default_kind() -> ObjectKind {
     ObjectKind::Metric
 }
 
+fn default_enabled() -> bool {
+    false
+}
+
 #[derive(TS)]
 #[ts(
     export,
@@ -28,4 +32,19 @@ pub struct MetricDefinition {
     pub collector: String,
     #[ts(type = "object")]
     pub metadata: HashMap<String, Value>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}
+
+impl Default for MetricDefinition {
+    fn default() -> Self {
+        Self {
+            kind: ObjectKind::Metric,
+            db_id: "".to_string(),
+            id: "".to_string(),
+            collector: "".to_string(),
+            metadata: HashMap::new(),
+            enabled: true,
+        }
+    }
 }

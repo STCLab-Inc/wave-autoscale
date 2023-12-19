@@ -131,6 +131,7 @@ mod tests {
                             "value": 1
                         })],
                     }],
+                    enabled: true,
                 },
                 data_layer::ScalingPlanDefinition {
                     id: "test2".to_string(),
@@ -149,6 +150,7 @@ mod tests {
                             "value": 2
                         })],
                     }],
+                    enabled: true,
                 },
             ])
             .await;

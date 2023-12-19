@@ -25,7 +25,7 @@ mod data_layer {
     use tracing::{debug, error};
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
-    const EXPECTED_METRICS_COUNT: usize = 1;
+    const EXPECTED_METRICS_COUNT: usize = 2;
     const EXPECTED_SCALING_COMPONENTS_COUNT: usize = 1;
     const EXPECTED_SCALING_PLANS_COUNT: usize = 1;
     const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
@@ -97,6 +97,7 @@ mod data_layer {
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             }])
             .await?;
 
@@ -109,6 +110,7 @@ mod data_layer {
                 kind: ObjectKind::Metric,
                 collector: "vector".to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             }])
             .await?;
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -124,6 +126,7 @@ mod data_layer {
                 component_kind: "test".to_string(),
                 kind: ObjectKind::ScalingComponent,
                 metadata: HashMap::new(),
+                ..Default::default()
             }])
             .await?;
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -150,6 +153,7 @@ mod data_layer {
                         "value": 1
                     })],
                 }],
+                ..Default::default()
             }])
             .await;
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -203,6 +207,29 @@ mod data_layer {
         assert_eq!(
             metrics_result[0].metadata, result.metric_definitions[0].metadata,
             "Unexpected metrics metadata"
+        );
+
+        // Check the enabled
+        let metrics_result = data_layer.get_enabled_metrics().await;
+        if metrics_result.is_err() {
+            panic!("Unexpected error: {:?}", metrics_result);
+        }
+        let metrics_result = metrics_result.unwrap();
+        let enabled_metrics_count =
+            result.metric_definitions.iter().fold(
+                0,
+                |acc, x| {
+                    if x.enabled {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                },
+            );
+        assert_eq!(
+            metrics_result.len(),
+            enabled_metrics_count,
+            "Unexpected metrics count"
         );
 
         // Add the metrics that already exist but with different metadata

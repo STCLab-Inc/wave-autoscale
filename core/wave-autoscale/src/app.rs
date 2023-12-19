@@ -60,8 +60,10 @@ impl App {
             // Scope for shared_scaling_component_manager_writer(RwLock)
 
             // Reload scaling component definitions from DataLayer
-            let scaling_component_definitions =
-                self.shared_data_layer.get_all_scaling_components().await;
+            let scaling_component_definitions = self
+                .shared_data_layer
+                .get_enabled_scaling_components()
+                .await;
 
             // If there is an error, log it and return
             if scaling_component_definitions.is_err() {
@@ -102,7 +104,7 @@ impl App {
             manager_writer.stop();
             manager_writer.remove_all();
 
-            let plan_definitions = self.shared_data_layer.get_all_plans().await;
+            let plan_definitions = self.shared_data_layer.get_enabled_plans().await;
             if plan_definitions.is_err() {
                 let error = plan_definitions.err().unwrap();
                 error!("Error getting scaling plan definitions: {}", error);

@@ -318,6 +318,7 @@ mod test {
             id: "api_server".to_string(),
             component_kind: "kubernetes-deployment".to_string(),
             metadata: scaling_component_metadata,
+            ..Default::default()
         }];
 
         // create metric adapter

@@ -82,6 +82,7 @@ mod test {
                 ),
                 ("gap_seconds".to_string(), serde_json::json!(1)),
             ]),
+            ..Default::default()
         };
         let output_url = "http://localhost:8080".to_string();
         let handle = run(definition, output_url).unwrap();

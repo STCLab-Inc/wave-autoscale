@@ -148,6 +148,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("netfunnel"),
             metadata,
+            ..Default::default()
         };
         let netfunnel_segment_scaling_component: Result<(), anyhow::Error> =
             NetfunnelSegmentScalingComponent::new(scaling_definition)

@@ -122,7 +122,7 @@ async fn main() {
     while watch_receiver.is_some() && watch_receiver.as_mut().unwrap().changed().await.is_ok() {
         // Update metric collectors
         let shared_data_layer = shared_data_layer.clone();
-        let metric_definitions = shared_data_layer.get_all_metrics().await;
+        let metric_definitions = shared_data_layer.get_enabled_metrics().await;
         if metric_definitions.is_err() {
             error!("Failed to get metric definitions");
             continue;

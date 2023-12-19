@@ -11,6 +11,9 @@ fn default_kind() -> ObjectKind {
 fn default_metadata() -> HashMap<String, Value> {
     HashMap::new()
 }
+fn default_enabled() -> bool {
+    false
+}
 
 #[derive(TS)]
 #[ts(
@@ -30,4 +33,19 @@ pub struct ScalingComponentDefinition {
     #[ts(type = "object")]
     #[serde(default = "default_metadata")]
     pub metadata: HashMap<String, Value>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}
+
+impl Default for ScalingComponentDefinition {
+    fn default() -> Self {
+        Self {
+            kind: ObjectKind::ScalingComponent,
+            db_id: "".to_string(),
+            id: "".to_string(),
+            component_kind: "".to_string(),
+            metadata: HashMap::new(),
+            enabled: true,
+        }
+    }
 }

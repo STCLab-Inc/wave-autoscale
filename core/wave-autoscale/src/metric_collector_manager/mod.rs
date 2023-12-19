@@ -927,6 +927,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: VECTOR_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             },
         ];
 
@@ -965,6 +966,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             },
         ];
 
@@ -1038,6 +1040,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_1,
+                ..Default::default()
             },
             // Telegraf
             MetricDefinition {
@@ -1046,6 +1049,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_2,
+                ..Default::default()
             },
         ];
 
@@ -1127,6 +1131,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap.clone(),
+                ..Default::default()
             },
             MetricDefinition {
                 id: "metric_id_2".to_string(),
@@ -1134,6 +1139,7 @@ mod tests {
                 kind: ObjectKind::Metric,
                 collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap,
+                ..Default::default()
             },
         ];
 

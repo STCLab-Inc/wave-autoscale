@@ -151,6 +151,7 @@ mod test {
                     serde_json::Value::String("regional".to_string()),
                 ),
             ]),
+            ..Default::default()
         };
 
         let params = HashMap::from([
@@ -195,6 +196,7 @@ mod test {
                     serde_json::Value::String("regional".to_string()),
                 ),
             ]),
+            ..Default::default()
         };
 
         let params = HashMap::from([
