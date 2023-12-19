@@ -15,10 +15,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 #[get("/api/plans")]
 async fn get_plans(app_state: web::Data<AppState>) -> impl Responder {
-    let plans = app_state
-        .data_layer
-        .get_all_plans_json_with_transformation()
-        .await;
+    let plans = app_state.data_layer.get_all_plans_json().await;
     if plans.is_err() {
         error!("Failed to get plans: {:?}", plans);
         return HttpResponse::InternalServerError().body(format!("{:?}", plans));
