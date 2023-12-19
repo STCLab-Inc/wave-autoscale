@@ -1,8 +1,18 @@
 use dotenv_parser::parse_dotenv;
 use handlebars::Handlebars;
+use std::env;
 use std::{collections::HashMap, fs};
 use tracing::debug;
 
+// Function to extract environment variables from the system
+fn extract_params_from_env() -> Option<serde_json::Value> {
+    let mut env_vars = HashMap::new();
+    for (key, value) in env::vars() {
+        env_vars.insert(key, value);
+    }
+
+    serde_json::to_value(env_vars).ok()
+}
 // Function to extract parameters from a yaml file
 fn extract_params_from_yaml_file(path: &str) -> Option<serde_json::Value> {
     let file_string = fs::read_to_string(path).ok()?;
@@ -18,18 +28,6 @@ fn extract_params_from_yaml_file(path: &str) -> Option<serde_json::Value> {
         if let (Some(key_str), Some(value_str)) = (key.as_str(), value.as_str()) {
             file_hashmap.insert(key_str.to_string(), value_str.to_string());
         }
-    }
-
-    serde_json::to_value(file_hashmap).ok()
-}
-// Function to extract parameters from an env file
-fn extract_params_from_env_file(path: &str) -> Option<serde_json::Value> {
-    let file_string = fs::read_to_string(path).ok()?;
-    let file_map = parse_dotenv(&file_string).ok()?;
-
-    let mut file_hashmap = HashMap::new();
-    for (key, value) in file_map.iter() {
-        file_hashmap.insert(key, value);
     }
 
     serde_json::to_value(file_hashmap).ok()
@@ -58,25 +56,49 @@ fn extract_params_from_json_file(path: &str) -> Option<serde_json::Value> {
 
     serde_json::to_value(file_hashmap).ok()
 }
+// Function to extract parameters from an env file
+fn extract_params_from_env_file(path: &str) -> Option<serde_json::Value> {
+    let file_string = fs::read_to_string(path).ok()?;
+    let file_map = parse_dotenv(&file_string).ok()?;
 
-// Function to get parameters for handlebars
+    let mut file_hashmap = HashMap::new();
+    for (key, value) in file_map.iter() {
+        file_hashmap.insert(key, value);
+    }
+
+    serde_json::to_value(file_hashmap).ok()
+}
+
+// Function to get config mapper
 pub fn get_config_mapper() -> serde_json::Value {
     let yaml_source_path = "./variables.yaml".to_string();
     let json_source_path = "./variables.json".to_string();
     let env_source_path = "./variables.env".to_string();
 
-    let variables_from_yaml = extract_params_from_yaml_file(&yaml_source_path);
-    let variables_from_json = extract_params_from_json_file(&json_source_path);
-    let variables_from_env = extract_params_from_env_file(&env_source_path);
+    let variables_from_yaml_file = extract_params_from_yaml_file(&yaml_source_path);
+    let variables_from_json_file = extract_params_from_json_file(&json_source_path);
+    let mut variables_from_env_file = extract_params_from_env_file(&env_source_path)
+        .unwrap_or_default()
+        .as_object()
+        .unwrap_or(&serde_json::Map::new())
+        .clone();
+    let variables_from_env = extract_params_from_env()
+        .unwrap_or_default()
+        .as_object()
+        .unwrap_or(&serde_json::Map::new())
+        .clone();
+
+    variables_from_env_file.extend(variables_from_env);
 
     serde_json::json!({
-        "yaml": serde_json::json!(variables_from_yaml),
-        "json": serde_json::json!(variables_from_json),
-        "env": serde_json::json!(variables_from_env),
+        "yaml": serde_json::json!(variables_from_yaml_file),
+        "json": serde_json::json!(variables_from_json_file),
+        "env": serde_json::json!(variables_from_env_file),
+
     })
 }
 
-// Function to render template
+// Function to execute config mapper
 pub fn execute_config_mapper(
     template: String,
     data: serde_json::Value,
@@ -96,49 +118,45 @@ pub fn execute_config_mapper(
 
 #[tokio::test]
 async fn test_get_config_mapper() {
-    use tracing::{debug, info};
-
     let result = get_config_mapper();
 
-    info!("RESULT: {:?}", result);
+    println!("RESULT: {:?}", result);
 
     result
         .get("yaml")
         .map(|value| {
-            debug!("YAML: {:?}", value);
+            println!("YAML: {:?}", value);
         })
         .unwrap_or_else(|| {
-            debug!("No YAML data found");
+            println!("No YAML data found");
         });
 
     result
         .get("json")
         .map(|value| {
-            debug!("JSON: {:?}", value);
+            println!("JSON: {:?}", value);
         })
         .unwrap_or_else(|| {
-            debug!("No JSON data found");
+            println!("No JSON data found");
         });
 
     result
         .get("env")
         .map(|value| {
-            debug!("ENV: {:?}", value);
+            println!("ENV: {:?}", value);
         })
         .unwrap_or_else(|| {
-            debug!("No ENV data found");
+            println!("No ENV data found");
         });
 }
 
 #[tokio::test]
 async fn test_execute_config_mapper() {
-    use tracing::info;
-
     let data = get_config_mapper();
-    info!("DATA: {:?}", data);
+    println!("DATA: {:?}", data);
     let result = execute_config_mapper(
         "{{yaml.user_1_access_key}} {{json.user_2_access_key}} {{env.user_3_region}}".to_string(),
         data,
     );
-    info!("RESULT: {:?}", result);
+    println!("RESULT: {:?}", result);
 }
