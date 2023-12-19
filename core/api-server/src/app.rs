@@ -42,6 +42,7 @@ pub async fn run_api_server(
             .configure(controller::init_autoscaling_history_controller)
             .configure(controller::init_metrics_receiver_controller)
             .configure(controller::init_inflow_controller)
+            .configure(controller::init_definition_controller)
     })
     .workers(1)
     .bind((host.clone(), port));

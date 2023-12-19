@@ -1,5 +1,5 @@
 use crate::{
-    reader::wave_definition_reader::read_definition_yaml_file,
+    reader::wave_definition_reader::read_definition_yaml,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
         source_metrics::SourceMetrics,
@@ -15,12 +15,18 @@ use sqlx::{
     any::{AnyKind, AnyPoolOptions, AnyQueryResult},
     AnyPool, Row,
 };
-use std::collections::{BTreeMap, LinkedList};
-use std::sync::{Arc, RwLock};
 use std::{
     collections::HashMap,
     path::Path,
     time::{Duration, SystemTime},
+};
+use std::{
+    collections::{BTreeMap, LinkedList},
+    fs::File,
+};
+use std::{
+    io::Read,
+    sync::{Arc, RwLock},
 };
 use tokio::sync::watch;
 use tracing::{debug, error, info};
@@ -121,43 +127,13 @@ impl DataLayer {
     async fn load_definition_file_into_database(&self, definition_path: &str) -> Result<()> {
         debug!("Loading the definition file into the database");
 
+        // Read the file of the path
+        let mut file = File::open(definition_path)?;
+        let mut file_string = String::new();
+        file.read_to_string(&mut file_string)?;
+
         // Parse the plan_file
-        let parser_result = read_definition_yaml_file(definition_path);
-        if parser_result.is_err() {
-            return Err(anyhow!(
-                "Failed to parse the definition file: {:?}",
-                parser_result
-            ));
-        }
-        let parser_result = parser_result.unwrap();
-
-        // Save definitions into DataLayer
-        let metric_definitions = parser_result.metric_definitions.clone();
-        let metric_definitions_result = self.add_metrics(metric_definitions).await;
-        if metric_definitions_result.is_err() {
-            return Err(anyhow!("Failed to save metric definitions into DataLayer"));
-        }
-
-        // Save definitions into DataLayer
-        let scaling_component_definitions = parser_result.scaling_component_definitions.clone();
-        let scaling_component_definitions_result = self
-            .add_scaling_components(scaling_component_definitions)
-            .await;
-        if scaling_component_definitions_result.is_err() {
-            return Err(anyhow!(
-                "Failed to save scaling component definitions into DataLayer"
-            ));
-        }
-
-        // Save definitions into DataLayer
-        let scaling_plan_definitions = parser_result.scaling_plan_definitions.clone();
-        let scaling_plan_definitions_result = self.add_plans(scaling_plan_definitions).await;
-        if scaling_plan_definitions_result.is_err() {
-            return Err(anyhow!(
-                "Failed to save scaling plan definitions into DataLayer"
-            ));
-        }
-        Ok(())
+        self.add_definitions(file_string.as_str()).await
     }
 
     async fn get_pool(sql_url: &str) -> AnyPool {
@@ -255,6 +231,48 @@ impl DataLayer {
             }
         });
         notify_receiver
+    }
+
+    pub async fn add_definitions(&self, yaml_str: &str) -> Result<()> {
+        debug!("Loading the definition string into the database");
+
+        // Parse the plan_file
+        let parser_result = read_definition_yaml(yaml_str);
+        if parser_result.is_err() {
+            return Err(anyhow!(
+                "Failed to parse the definition string: {:?}",
+                parser_result
+            ));
+        }
+        let parser_result = parser_result.unwrap();
+
+        // Save definitions into DataLayer
+        let metric_definitions = parser_result.metric_definitions.clone();
+        let metric_definitions_result = self.add_metrics(metric_definitions).await;
+        if metric_definitions_result.is_err() {
+            return Err(anyhow!("Failed to save metric definitions into DataLayer"));
+        }
+
+        // Save definitions into DataLayer
+        let scaling_component_definitions = parser_result.scaling_component_definitions.clone();
+        let scaling_component_definitions_result = self
+            .add_scaling_components(scaling_component_definitions)
+            .await;
+        if scaling_component_definitions_result.is_err() {
+            return Err(anyhow!(
+                "Failed to save scaling component definitions into DataLayer"
+            ));
+        }
+
+        // Save definitions into DataLayer
+        let scaling_plan_definitions = parser_result.scaling_plan_definitions.clone();
+        let scaling_plan_definitions_result = self.add_plans(scaling_plan_definitions).await;
+        if scaling_plan_definitions_result.is_err() {
+            return Err(anyhow!(
+                "Failed to save scaling plan definitions into DataLayer"
+            ));
+        }
+        Ok(())
     }
 
     // Add multiple metrics to the database
