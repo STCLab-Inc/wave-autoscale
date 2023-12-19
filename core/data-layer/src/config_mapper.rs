@@ -5,8 +5,8 @@ use tracing::debug;
 
 // Function to extract parameters from a yaml file
 fn extract_params_from_yaml_file(path: &str) -> Option<serde_json::Value> {
-    let definition_string = fs::read_to_string(path).ok()?;
-    let file_yaml: serde_yaml::Value = serde_yaml::from_str(&definition_string).ok()?;
+    let file_string = fs::read_to_string(path).ok()?;
+    let file_yaml: serde_yaml::Value = serde_yaml::from_str(&file_string).ok()?;
 
     let file_map = match file_yaml.as_mapping() {
         Some(file_map) => file_map,
@@ -24,8 +24,8 @@ fn extract_params_from_yaml_file(path: &str) -> Option<serde_json::Value> {
 }
 // Function to extract parameters from an env file
 fn extract_params_from_env_file(path: &str) -> Option<serde_json::Value> {
-    let definition_string = fs::read_to_string(path).ok()?;
-    let file_map = parse_dotenv(&definition_string).ok()?;
+    let file_string = fs::read_to_string(path).ok()?;
+    let file_map = parse_dotenv(&file_string).ok()?;
 
     let mut file_hashmap = HashMap::new();
     for (key, value) in file_map.iter() {
@@ -40,8 +40,8 @@ fn remove_backslash_quotes(data: &str) -> String {
 }
 // Function to extract parameters from a json file
 fn extract_params_from_json_file(path: &str) -> Option<serde_json::Value> {
-    let definition_string = fs::read_to_string(path).ok()?;
-    let file_json: serde_json::Value = serde_json::from_str(&definition_string).ok()?;
+    let file_string = fs::read_to_string(path).ok()?;
+    let file_json: serde_json::Value = serde_json::from_str(&file_string).ok()?;
 
     let file_object = match file_json.as_object() {
         Some(file_object) => file_object,
