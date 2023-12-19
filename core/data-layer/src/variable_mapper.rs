@@ -101,7 +101,7 @@ pub fn get_variable_mapper() -> serde_json::Value {
 // Function to execute config mapper
 pub fn execute_variable_mapper(
     template: String,
-    data: serde_json::Value,
+    data: &serde_json::Value,
 ) -> Result<String, anyhow::Error> {
     let handlebars = Handlebars::new();
 
@@ -156,7 +156,7 @@ async fn test_execute_variable_mapper() {
     println!("DATA: {:?}", data);
     let result = execute_variable_mapper(
         "{{yaml.user_1_access_key}} {{json.user_2_access_key}} {{env.user_3_region}}".to_string(),
-        data,
+        &data,
     );
     println!("RESULT: {:?}", result);
 }

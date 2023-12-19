@@ -303,7 +303,7 @@ impl DataLayer {
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
                         .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
@@ -465,7 +465,7 @@ impl DataLayer {
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
                         .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
@@ -625,7 +625,7 @@ impl DataLayer {
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
                         .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
