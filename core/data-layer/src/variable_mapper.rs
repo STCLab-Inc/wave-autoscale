@@ -70,7 +70,7 @@ fn extract_params_from_env_file(path: &str) -> Option<serde_json::Value> {
 }
 
 // Function to get config mapper
-pub fn get_config_mapper() -> serde_json::Value {
+pub fn get_variable_mapper() -> serde_json::Value {
     let yaml_source_path = "./variables.yaml".to_string();
     let json_source_path = "./variables.json".to_string();
     let env_source_path = "./variables.env".to_string();
@@ -99,7 +99,7 @@ pub fn get_config_mapper() -> serde_json::Value {
 }
 
 // Function to execute config mapper
-pub fn execute_config_mapper(
+pub fn execute_variable_mapper(
     template: String,
     data: serde_json::Value,
 ) -> Result<String, anyhow::Error> {
@@ -117,8 +117,8 @@ pub fn execute_config_mapper(
 }
 
 #[tokio::test]
-async fn test_get_config_mapper() {
-    let result = get_config_mapper();
+async fn test_get_variable_mapper() {
+    let result = get_variable_mapper();
 
     println!("RESULT: {:?}", result);
 
@@ -151,10 +151,10 @@ async fn test_get_config_mapper() {
 }
 
 #[tokio::test]
-async fn test_execute_config_mapper() {
-    let data = get_config_mapper();
+async fn test_execute_variable_mapper() {
+    let data = get_variable_mapper();
     println!("DATA: {:?}", data);
-    let result = execute_config_mapper(
+    let result = execute_variable_mapper(
         "{{yaml.user_1_access_key}} {{json.user_2_access_key}} {{env.user_3_region}}".to_string(),
         data,
     );

@@ -1,10 +1,10 @@
 use crate::{
-    config_mapper::{execute_config_mapper, get_config_mapper},
     reader::wave_definition_reader::read_definition_yaml_file,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
         source_metrics::SourceMetrics,
     },
+    variable_mapper::{execute_variable_mapper, get_variable_mapper},
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
 use anyhow::{anyhow, Result};
@@ -298,13 +298,13 @@ impl DataLayer {
         }
         let result = result.unwrap();
 
-        let config_mapper_data = get_config_mapper();
+        let variable_mapper_data = get_variable_mapper();
 
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
-                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
                 Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
@@ -460,13 +460,13 @@ impl DataLayer {
         }
         let result = result.unwrap();
 
-        let config_mapper_data = get_config_mapper();
+        let variable_mapper_data = get_variable_mapper();
 
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
-                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
                 Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
@@ -620,13 +620,13 @@ impl DataLayer {
         }
         let result = result.unwrap();
 
-        let config_mapper_data = get_config_mapper();
+        let variable_mapper_data = get_variable_mapper();
 
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_config_mapper(metadata_str.to_string(), config_mapper_data.clone())
-                        .map_err(|e| anyhow!("Error in execute_config_mapper: {}", e))?
+                    execute_variable_mapper(metadata_str.to_string(), variable_mapper_data.clone())
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
                 Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
