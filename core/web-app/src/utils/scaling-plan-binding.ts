@@ -6,12 +6,14 @@ export function generateScalingPlanDefinition({
   db_id,
   metadata,
   plans,
+  enabled,
 }: {
   kind: string;
   id?: string;
   db_id?: string;
   metadata?: any;
   plans?: any[];
+  enabled?: boolean;
 }) {
   return {
     kind: kind,
@@ -19,5 +21,6 @@ export function generateScalingPlanDefinition({
     db_id,
     metadata: metadata ?? {},
     plans: plans ?? [],
+    enabled,
   } as ScalingPlanDefinition;
 }

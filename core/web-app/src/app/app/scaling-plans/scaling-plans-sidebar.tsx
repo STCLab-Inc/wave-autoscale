@@ -2,6 +2,7 @@ import React from 'react';
 import classNames from 'classnames';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import { on } from 'events';
+import EnabledBadge from '../common/enabled-badge';
 
 interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
   metadata: { cool_down: number; interval: number; title: string };
@@ -38,7 +39,8 @@ export default function ScalingPlansSidebar({
                 'text-white': isSelected,
               })}
             >
-              {scalingPlan.id}
+              <EnabledBadge enabled={scalingPlan.enabled} />
+              <span className="ml-2">{scalingPlan.id}</span>
             </span>
           </button>
         );

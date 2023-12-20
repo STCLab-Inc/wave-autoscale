@@ -73,12 +73,14 @@ export function generateScalingComponentDefinition({
   id,
   db_id,
   component_kind,
+  enabled,
   metadata,
 }: {
   kind: string;
   id: string;
   db_id?: string;
   component_kind: string;
+  enabled: boolean;
   metadata: any;
 }) {
   return {
@@ -86,6 +88,7 @@ export function generateScalingComponentDefinition({
     id,
     db_id,
     component_kind,
+    enabled,
     metadata: metadata ?? {},
   } as ScalingComponentDefinition;
 }

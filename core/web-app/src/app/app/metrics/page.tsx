@@ -11,6 +11,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import Pagination from '@/utils/pagination';
 import dayjs from 'dayjs';
+import EnabledBadge from '../common/enabled-badge';
 
 // Constants
 const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
@@ -100,6 +101,14 @@ export default function MetricsPage() {
     columnHelper.accessor('updated_at', {
       header: () => 'Updated At',
       cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('enabled', {
+      header: () => 'Enabled',
+      cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
     }),
     columnHelper.display({
       id: 'actions',

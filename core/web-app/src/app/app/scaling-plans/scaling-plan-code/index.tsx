@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import dynamic from 'next/dynamic';
 import { YAMLParseError } from 'yaml';
 import ScalingPlanService from '@/services/scaling-plan';
 import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 import { ScalingPlanDefinitionEx } from '../scaling-plan-definition-ex';
 import yaml from 'js-yaml';
-
-// This is a dynamic import that will only be rendered in the client side.
-// This is because AceEditor is not compatible with SSR.
-const EditorContainerDynamic = dynamic(() => import('./code-editor'), {
-  ssr: false,
-});
+import YAMLEditor from '../../common/yaml-editor';
 
 interface ScalingPlanCodeProps {
   scalingPlanCode: string;
@@ -76,9 +70,9 @@ export default function ScalingPlanCode({
           control={control}
           name="scalingPlanCode"
           render={({ field: { onChange, value } }) => (
-            <EditorContainerDynamic
-              onChange={onChange}
+            <YAMLEditor
               value={value}
+              onChange={onChange}
               annotations={annotations}
             />
           )}

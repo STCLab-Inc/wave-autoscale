@@ -7,6 +7,7 @@ import yaml from 'js-yaml';
 import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
 import { transformDefinitionId } from '@/utils/definition-id';
 import YAMLEditor from '../common/yaml-editor';
+import { set } from 'lodash';
 
 export default function ScalingComponentDetailDrawer({
   scalingComponent,
@@ -35,12 +36,13 @@ export default function ScalingComponentDetailDrawer({
       return;
     }
 
-    const { kind, db_id, id, component_kind, metadata, ...rest } =
+    const { kind, db_id, id, component_kind, metadata, enabled, ...rest } =
       scalingComponent;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('component_kind', component_kind);
+    setValue('enabled', enabled);
     let metadataYaml = '';
     if (Object.keys(metadata).length > 0) {
       metadataYaml = yaml.dump(metadata);
@@ -75,13 +77,15 @@ export default function ScalingComponentDetailDrawer({
   };
 
   const onSubmit = async (data: any) => {
-    const { kind, db_id, id, component_kind, metadata, ...rest } = data;
+    const { kind, db_id, id, component_kind, metadata, enabled, ...rest } =
+      data;
 
     const scalingComponent = generateScalingComponentDefinition({
       kind: 'ScalingComponent',
       id: id,
       db_id: dbId,
       component_kind: component_kind,
+      enabled: enabled,
       metadata: yaml.load(metadata ?? ''),
     });
     try {
@@ -166,9 +170,7 @@ export default function ScalingComponentDetailDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
-                  Scaling Component ID
-                </span>
+                <span className="text-md label-text">Scaling Component ID</span>
               </label>
               <Controller
                 control={control}
@@ -196,7 +198,7 @@ export default function ScalingComponentDetailDrawer({
 
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
+                <span className="text-md label-text">
                   Scaling Component Kind
                 </span>
               </label>
@@ -211,10 +213,20 @@ export default function ScalingComponentDetailDrawer({
                 {...register('component_kind', { required: true })}
               />
             </div>
-
+            {/* Enabled */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
+                <span className="text-md label-text">Enabled</span>
+              </label>
+              <input
+                type="checkbox"
+                className="checkbox"
+                {...register('enabled', {})}
+              />
+            </div>
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text">
                   Scaling Component Metadata
                 </span>
               </label>

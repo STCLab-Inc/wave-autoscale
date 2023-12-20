@@ -11,6 +11,7 @@ import Pagination from '@/utils/pagination';
 import dayjs from 'dayjs';
 import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
 import ScalingComponentDetailDrawer from './scaling-component-drawer';
+import EnabledBadge from '../common/enabled-badge';
 
 // Constants
 const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
@@ -108,6 +109,10 @@ export default function ScalingComponentsPage() {
     columnHelper.accessor('updated_at', {
       header: () => 'Updated At',
       cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('enabled', {
+      header: () => 'Enabled',
+      cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
     }),
     columnHelper.display({
       id: 'actions',

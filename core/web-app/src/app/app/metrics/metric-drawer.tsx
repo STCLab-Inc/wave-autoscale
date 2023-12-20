@@ -11,6 +11,7 @@ import {
 } from '@/utils/definition-id';
 import { METRIC_COLLECTORS } from '@/utils/metric-collector';
 import YAMLEditor from '../common/yaml-editor';
+import { set } from 'lodash';
 
 const METRIC_COLLECTOR_OPTIONS = [
   {
@@ -52,10 +53,11 @@ export default function MetricDetailDrawer({
       return;
     }
 
-    const { kind, db_id, id, collector, metadata, ...rest } = metric;
+    const { kind, db_id, id, collector, metadata, enabled, ...rest } = metric;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
+    setValue('enabled', enabled);
     setValue('collector', collector);
     let metadataYaml = '';
     if (Object.keys(metadata).length > 0) {
@@ -87,7 +89,7 @@ export default function MetricDetailDrawer({
   };
 
   const onSubmit = async (data: any) => {
-    const { kind, db_id, id, collector, metadata, ...rest } = data;
+    const { kind, db_id, id, collector, metadata, enabled, ...rest } = data;
 
     if (!isValid) {
       alert('Please check the form again.');
@@ -98,6 +100,7 @@ export default function MetricDetailDrawer({
       id: id,
       db_id: dbId,
       collector: collector,
+      enabled,
       metadata: yaml.load(metadata ?? ''),
     });
     try {
@@ -174,10 +177,10 @@ export default function MetricDetailDrawer({
                 </button>
               </div>
             </div>
-
+            {/* Metric ID */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
+                <span className="text-md label-text">
                   Metric ID {DEFINITION_ID_RULE_DESCRIPTION}
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
@@ -205,12 +208,10 @@ export default function MetricDetailDrawer({
                 )}
               />
             </div>
-
+            {/* Metric Collector */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
-                  Metric Collector
-                </span>
+                <span className="text-md label-text">Metric Collector</span>
               </label>
               <select
                 className="select-bordered select select-sm my-2 h-12 w-full px-4 text-sm focus:outline-none"
@@ -222,10 +223,21 @@ export default function MetricDetailDrawer({
                 {METRIC_COLLECTOR_OPTIONS}
               </select>
             </div>
-
+            {/* Enabled */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
+                <span className="text-md label-text">Enabled</span>
+              </label>
+              <input
+                type="checkbox"
+                className="checkbox"
+                {...register('enabled', {})}
+              />
+            </div>
+            {/* Metadata */}
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text">
                   Metric Metadata (YAML)
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}

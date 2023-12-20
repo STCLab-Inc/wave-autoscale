@@ -2,12 +2,6 @@ import React, { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import Image from 'next/image';
 import { produce } from 'immer';
-import AceEditor from 'react-ace';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-noconflict/mode-javascript';
-import 'ace-builds/src-noconflict/snippets/javascript';
-import 'ace-builds/src-noconflict/theme-xcode';
-import 'ace-builds/src-noconflict/mode-yaml';
 import ScalingPlanService from '@/services/scaling-plan';
 import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 import { ScalingPlanDefinitionEx } from './scaling-plan-definition-ex';
@@ -16,6 +10,7 @@ import {
   DEFINITION_ID_RULE_DESCRIPTION,
   transformDefinitionId,
 } from '@/utils/definition-id';
+import YAMLEditor from '../common/yaml-editor';
 
 export default function ScalingPlanDrawer({
   scalingPlan: scalingPlan,
@@ -40,17 +35,20 @@ export default function ScalingPlanDrawer({
       return;
     }
 
-    const { kind, db_id, id, metadata, plans, ...rest } = scalingPlan;
+    const { kind, db_id, id, metadata, plans, enabled, ...rest } = scalingPlan;
     setValue('kind', kind);
     setValue('db_id', db_id);
     setValue('id', id);
     setValue('metadata', yaml.dump(metadata));
+    setValue('enabled', enabled);
+
     const newScalingPlanDefinition: ScalingPlanDefinitionEx = {
       kind,
       db_id,
       id,
       metadata,
       plans,
+      enabled,
     };
     const scalingPlanForDiagram = produce(
       newScalingPlanDefinition,
@@ -194,10 +192,10 @@ export default function ScalingPlanDrawer({
                 </button>
               </div>
             </div>
-
+            {/* Scaling Plan ID */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">
+                <span className="text-md label-text">
                   Scaling Plan ID {DEFINITION_ID_RULE_DESCRIPTION}
                 </span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
@@ -225,10 +223,22 @@ export default function ScalingPlanDrawer({
                 )}
               />
             </div>
-
+            {/* Enabled */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Metadata (YAML)</span>
+                <span className="text-md label-text">Enabled</span>
+                {/* <span className="label-text-alt">label-text-alt</span> */}
+              </label>
+              <input
+                type="checkbox"
+                className="checkbox"
+                {...register('enabled')}
+              />
+            </div>
+            {/* Metadata */}
+            <div className="form-control w-full px-4 py-2">
+              <label className="label px-0 py-2">
+                <span className="text-md label-text">Metadata (YAML)</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
@@ -236,37 +246,15 @@ export default function ScalingPlanDrawer({
                   control={control}
                   name="metadata"
                   render={({ field: { onChange, value } }) => (
-                    <AceEditor
-                      mode="yaml"
-                      theme="xcode"
-                      onChange={onChange}
-                      value={value}
-                      editorProps={{
-                        $blockScrolling: true,
-                      }}
-                      setOptions={{
-                        showLineNumbers: false,
-                        // TODO: Autocomplete
-                        // https://github.com/ajaxorg/ace/wiki/How-to-enable-Autocomplete-in-the-Ace-editor
-                        enableBasicAutocompletion: true,
-                        enableLiveAutocompletion: true,
-                        enableSnippets: true,
-                        showGutter: false,
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '8rem',
-                      }}
-                    />
+                    <YAMLEditor onChange={onChange} value={value} />
                   )}
                 />
               </div>
             </div>
-
+            {/* Plans */}
             <div className="form-control w-full px-4 py-2">
               <label className="label px-0 py-2">
-                <span className="text-md label-text px-2">Plans (YAML)</span>
+                <span className="text-md label-text">Plans (YAML)</span>
                 {/* <span className="label-text-alt">label-text-alt</span> */}
               </label>
               <div className="textarea-bordered textarea textarea-sm my-2 w-full px-4 py-4 focus:outline-none">
@@ -274,29 +262,7 @@ export default function ScalingPlanDrawer({
                   control={control}
                   name="plans"
                   render={({ field: { onChange, value } }) => (
-                    <AceEditor
-                      mode="yaml"
-                      theme="xcode"
-                      onChange={onChange}
-                      value={value}
-                      editorProps={{
-                        $blockScrolling: true,
-                      }}
-                      setOptions={{
-                        showLineNumbers: false,
-                        // TODO: Autocomplete
-                        // https://github.com/ajaxorg/ace/wiki/How-to-enable-Autocomplete-in-the-Ace-editor
-                        enableBasicAutocompletion: true,
-                        enableLiveAutocompletion: true,
-                        enableSnippets: true,
-                        showGutter: false,
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '40rem',
-                      }}
-                    />
+                    <YAMLEditor onChange={onChange} value={value} />
                   )}
                 />
               </div>

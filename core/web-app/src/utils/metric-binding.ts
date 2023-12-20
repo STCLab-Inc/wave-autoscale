@@ -65,12 +65,14 @@ export function generateMetricDefinition({
   id,
   db_id,
   collector,
+  enabled,
   metadata,
 }: {
   kind: string;
   id: string;
   db_id?: string;
   collector: string;
+  enabled: boolean;
   metadata: any;
 }) {
   return {
@@ -78,6 +80,7 @@ export function generateMetricDefinition({
     id,
     db_id,
     collector,
+    enabled,
     metadata: metadata ?? {},
   } as MetricDefinition;
 }
