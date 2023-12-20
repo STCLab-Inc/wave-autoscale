@@ -1,6 +1,7 @@
-kind: ScalingComponent
+export const DEPLOYMENT_REPLICAS_CODE = `kind: ScalingComponent
 id: k8s_deployment
 component_kind: kubernetes-deployment
+enabled: false
 metadata:
   api_server_endpoint: http://localhost:8080
   namespace: deployment-namespace
@@ -10,6 +11,7 @@ metadata:
 kind: Metric
 id: wa_metrics_generator
 collector: wa-generator
+enabled: false
 metadata:
   pattern: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
   gap_seconds: 10
@@ -20,6 +22,7 @@ metadata:
   title: "Scaling Plan for K8S Deployment Scaling - deployment replicas"
   cool_down: 60 # seconds
   interval: 10000 # milliseconds
+enabled: false
 plans:
   - id: plan-scale-out
     description: "Scale out if the metrics count is greater than 100 for 5 seconds"
@@ -52,4 +55,4 @@ plans:
     priority: 1
     scaling_components:
       - component_id: k8s_deployment
-        replicas: 1
+        replicas: 1`;

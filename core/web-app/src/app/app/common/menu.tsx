@@ -9,6 +9,7 @@ interface MenuItem {
   targetPath?: string;
   label?: string;
   spacer?: boolean;
+  isButton?: boolean;
 }
 
 const MENU_ITEMS: MenuItem[] = [
@@ -16,6 +17,7 @@ const MENU_ITEMS: MenuItem[] = [
   { targetPath: '/app/autoscaling-history', label: 'Plan Logs' },
   { targetPath: '/app/inflow', label: 'Metrics Logs' },
   { spacer: true },
+  { targetPath: '/app/add-plan', label: 'Add Plan', isButton: true },
   { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
   { targetPath: '/app/metrics', label: 'Metrics' },
   { targetPath: '/app/scaling-components', label: 'Scaling Components' },
@@ -32,12 +34,60 @@ interface MenuButtonProps {
   onClick?: () => void;
 }
 
-function MenuButton({ menuItem, isActive, onClick }: MenuButtonProps) {
+function MenuItem({ menuItem, isActive, onClick }: MenuButtonProps) {
   if (menuItem.spacer) {
-    return <li className="mx-6 h-4 w-[1px] bg-gray-200" />;
+    return <MenuItemSpacer />;
   }
+  if (menuItem.isButton) {
+    return (
+      <MenuItemButton
+        menuItem={menuItem}
+        isActive={isActive}
+        onClick={onClick}
+      />
+    );
+  }
+  return (
+    <MenuItemDefault
+      menuItem={menuItem}
+      isActive={isActive}
+      onClick={onClick}
+    />
+  );
+}
+
+function MenuItemButton({ menuItem, isActive, onClick }: MenuButtonProps) {
   const targetPath = menuItem.targetPath || '';
   const label = menuItem.label || '';
+
+  return (
+    <li
+      className={classNames(
+        'flex-column mr-4 flex h-full items-center lg:flex-row',
+      )}
+    >
+      <Link
+        className={classNames(
+          'whitespace-nowrap tracking-tight btn btn-sm btn-primary',
+        )}
+        href={targetPath}
+        onClick={onClick}
+        target={targetPath.includes('http') ? '_blank' : ''}
+      >
+        {label}
+      </Link>
+    </li>
+  );
+}
+
+function MenuItemSpacer() {
+  return <li className="mx-6 h-4 w-[1px] bg-gray-200" />;
+}
+
+function MenuItemDefault({ menuItem, isActive, onClick }: MenuButtonProps) {
+  const targetPath = menuItem.targetPath || '';
+  const label = menuItem.label || '';
+
   return (
     <li
       className={classNames(
@@ -70,7 +120,7 @@ export default function Menu() {
   return (
     <ul className="flex h-full w-full flex-row items-center pt-1 lg:flex-row">
       {MENU_ITEMS.map((menuItem, index) => (
-        <MenuButton
+        <MenuItem
           key={index}
           menuItem={menuItem}
           isActive={pathname === menuItem.targetPath}

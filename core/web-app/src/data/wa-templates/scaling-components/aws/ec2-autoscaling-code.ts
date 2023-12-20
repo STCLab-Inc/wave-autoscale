@@ -1,25 +1,25 @@
+export const EC2_AUTOSCALING_CODE = `
 kind: ScalingComponent
-id: k8s_deployment
-component_kind: kubernetes-deployment
+id: ec2_autoscaling
+component_kind: aws-ec2-autoscaling
 metadata:
-  api_server_endpoint: http://localhost:8080
-  namespace: deployment-namespace
-  name: deployment-name
+  region: ap-northeast-1
+  asg_name: ec2-asg-name-custom
 ---
 # Metrics for the example above
 kind: Metric
 id: wa_metrics_generator
 collector: wa-generator
+enabled: false
 metadata:
   pattern: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
   gap_seconds: 10
 ---
 kind: ScalingPlan
-id: scaling_plan_k8s_deployment_scaling
-metadata:
-  title: "Scaling Plan for K8S Deployment Scaling - deployment replicas"
-  cool_down: 60 # seconds
-  interval: 10000 # milliseconds
+id: aws_ec2_autoscaling_capacity
+title: scaling plan for aws ec2 autoscaling capacity
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
 plans:
   - id: plan-scale-out
     description: "Scale out if the metrics count is greater than 100 for 5 seconds"
@@ -32,14 +32,8 @@ plans:
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
-      - component_id: k8s_deployment
-        # Available variables in the replicas expression:
-        # - $replicas: current number of replicas
-        # - $unavailable_replicas: current number of unavailable replicas
-        # - $available_replicas: current number of available replicas
-        # - $ready_replicas: current number of ready replicas
-        # - $updated_replicas: current number of updated replicas
-        replicas: $replicas + 3
+      - component_id: ec2_autoscaling
+        desired: 10
   - id: plan-scale-in
     description: "Scale in if the metrics count is less than 50 for 5 seconds"
     # JavaScript expression that returns a boolean value.
@@ -51,5 +45,5 @@ plans:
       }) < 50
     priority: 1
     scaling_components:
-      - component_id: k8s_deployment
-        replicas: 1
+      - component_id: ec2_autoscaling
+        desired: 1`;

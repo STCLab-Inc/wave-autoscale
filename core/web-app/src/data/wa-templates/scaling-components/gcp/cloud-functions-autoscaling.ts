@@ -1,0 +1,208 @@
+export const CLOUD_FUNCTIONS_AUTOSCALING_CODE = `kind: ScalingComponent
+id: scaling_component_google_cloud_functions_version_1_instance
+component_kind: google-cloud-functions
+metadata:
+  function_version: v1
+  project_name: "{{ project_name }}"
+  location_name: "{{ location_name }}"
+  function_name: "{{ function_name }}"
+---
+kind: ScalingComponent
+id: scaling_component_google_cloud_functions_version_2_instance
+component_kind: google-cloud-functions
+metadata:
+  function_version: v2
+  project_name: "{{ project_name }}"
+  location_name: "{{ location_name }}"
+  function_name: "{{ function_name }}"
+---
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-cloudfunctions
+
+kind: Metric
+id: telegraf_stackdriver_google_cloud_functions_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: "{{ project }}"
+        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/active_instances] # Monitoring this metric allows you to know the number of currently active function instances. A sudden increase in this number may indicate that scaling out is necessary. Conversely, a low number could suggest that scaling in should be considered to save resources.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          resource_labels:
+            - key: function_name
+              value: "{{ function_name }}"
+      - project: "{{ project }}"
+        metric_type_prefix_include: [cloudfunctions.googleapis.com/function/execution_times] # If execution times are lengthening, scaling out may need to be considered. On the other hand, if the execution times are generally short, the current setup can be considered efficient.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          resource_labels:
+            - key: function_name
+              value: "{{ function_name }}"
+  outputs:
+    wave-autoscale: {}
+---
+kind: ScalingPlan
+id: scaling_plan_google_cloud_functions_version_2_instance
+title: scaling plan for google cloud functions version 2 instance
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
+plans:
+  # When the number of function active instances is low (less than 10 or up to 20), the instance configuration values decreases (scaling in), which reflects the low usage.
+  # When the number of function active instances is high (exceeding 20 or surpassing 40), the instance configuration values increases (scaling out) to meet the high demand.
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_in_1
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_active_instances',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) < 10
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 5
+        max_instance_count: 10
+        max_request_per_instance: 1
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_in_2
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_active_instances',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) < 20
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 10
+        max_instance_count: 20
+        max_request_per_instance: 1
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_out_1
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_active_instances',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) > 20
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 20
+        max_instance_count: 40
+        max_request_per_instance: 2
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_out_2
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_active_instances',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) > 40
+    # Higher priority values will be checked first.
+    priority: 4
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 40
+        max_instance_count: 80
+        max_request_per_instance: 4
+  # When the execution time is short (less than 0.25 seconds or up to 0.5 seconds), the system deems fewer resources as sufficient and reduces instance.
+  # When the execution time is long (exceeding 1 second or surpassing 2 seconds), the system determines that more resources are needed and increases instance to prevent performance degradation.
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_in_3
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_execution_times_count',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) < 0.25
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 5
+        max_instance_count: 10
+        max_request_per_instance: 1
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_in_4
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_execution_times_count',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) < 0.5
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 10
+        max_instance_count: 20
+        max_request_per_instance: 1
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_out_3
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_execution_times_count',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) > 1
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 20
+        max_instance_count: 40
+        max_request_per_instance: 2
+  - id: scaling_plan_google_cloud_functions_version_2_instance_scale_out_4
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_functions_metrics',
+        name: 'cloudfunctions.googleapis.com/function_execution_times_count',
+        tags: {
+          'function_name': '{{ function_name }}'
+        },
+        period_sec: 60
+      }) > 2
+    # Higher priority values will be checked first.
+    priority: 4
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_functions_version_2_instance        
+        min_instance_count: 40
+        max_instance_count: 80
+        max_request_per_instance: 4
+        `;
