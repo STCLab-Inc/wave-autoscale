@@ -4,6 +4,7 @@ use crate::{
         autoscaling_history_definition::AutoscalingHistoryDefinition, object_kind::ObjectKind,
         source_metrics::SourceMetrics,
     },
+    variable_mapper::{execute_variable_mapper, get_variable_mapper},
     MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition,
 };
 use anyhow::{anyhow, Result};
@@ -296,13 +297,25 @@ impl DataLayer {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
+
+        let variable_mapper_data = get_variable_mapper();
+
         for row in result {
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
+            };
+
             metrics.push(MetricDefinition {
                 kind: ObjectKind::Metric,
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 collector: row.get("collector"),
-                metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+                metadata: serde_json::from_str(metadata.as_str()).unwrap(),
             });
         }
         Ok(metrics)
@@ -329,7 +342,6 @@ impl DataLayer {
             });
             metrics.push(metric);
         }
-
         Ok(metrics)
     }
     // Get a metric from the database
@@ -447,13 +459,25 @@ impl DataLayer {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
+
+        let variable_mapper_data = get_variable_mapper();
+
         for row in result {
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
+            };
+
             scaling_components.push(ScalingComponentDefinition {
                 kind: ObjectKind::ScalingComponent,
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 component_kind: row.get("component_kind"),
-                metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+                metadata: serde_json::from_str(metadata.as_str()).unwrap(),
             });
         }
         Ok(scaling_components)
@@ -479,7 +503,6 @@ impl DataLayer {
             });
             scaling_components.push(scaling_component);
         }
-
         Ok(scaling_components)
     }
     // Get a scaling component from the database
@@ -596,12 +619,24 @@ impl DataLayer {
             return Err(anyhow!(result.err().unwrap().to_string()));
         }
         let result = result.unwrap();
+
+        let variable_mapper_data = get_variable_mapper();
+
         for row in result {
+            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
+                Ok(Some(metadata_str)) => {
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
+                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
+                }
+                Ok(None) => serde_json::Value::Null.to_string(),
+                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
+            };
+
             plans.push(ScalingPlanDefinition {
                 kind: ObjectKind::ScalingPlan,
                 db_id: row.get("db_id"),
                 id: row.get("id"),
-                metadata: serde_json::from_str(row.get("metadata")).unwrap(),
+                metadata: serde_json::from_str(metadata.as_str()).unwrap(),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
             });
         }
