@@ -16,7 +16,7 @@ const VECTOR_COLLECTOR: &str = "vector";
 const TELEGRAF_COLLECTOR: &str = "telegraf";
 const WA_GENERATOR_COLLECTOR: &str = "wa-generator";
 
-pub struct MetricCollectorManager {
+pub struct MetricsCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
     collector_log: bool,
@@ -26,7 +26,7 @@ pub struct MetricCollectorManager {
     running_tasks: Option<Vec<tokio::task::JoinHandle<()>>>,
 }
 
-impl MetricCollectorManager {
+impl MetricsCollectorManager {
     pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
         Self {
             wave_config,
@@ -886,12 +886,12 @@ mod tests {
     use std::collections::HashMap;
     use tracing_test::traced_test;
 
-    fn get_metric_collector_manager() -> MetricCollectorManager {
+    fn get_metric_collector_manager() -> MetricsCollectorManager {
         // Remove wave.db
         let _ = std::fs::remove_file("./wave.db");
 
         let wave_config = WaveConfig::new("./tests/config/wave-config.yaml");
-        MetricCollectorManager::new(
+        MetricsCollectorManager::new(
             wave_config,
             "http://localhost:3024/api/metrics-receiver",
             true,

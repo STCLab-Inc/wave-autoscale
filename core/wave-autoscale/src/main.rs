@@ -14,7 +14,7 @@ use api_server::app::run_api_server;
 use args::Args;
 use clap::Parser;
 use data_layer::data_layer::DataLayer;
-use metric_collector_manager::MetricCollectorManager;
+use metric_collector_manager::MetricsCollectorManager;
 use std::sync::Arc;
 use tokio::sync::watch;
 use tracing::error;
@@ -48,7 +48,7 @@ async fn main() {
     let wave_config = WaveConfig::new(args.config.as_str());
 
     //
-    // Initialize the application (DataLayer, MetricCollectorManager, API Server, Web App, and App)
+    // Initialize the application (DataLayer, MetricsCollectorManager, API Server, Web App, and App)
     //
 
     // DataLayer
@@ -60,12 +60,12 @@ async fn main() {
     // Do not need RwLock or Mutex because the DataLayer is read-only.
     let shared_data_layer = Arc::new(data_layer);
 
-    // MetricCollectorManager
+    // MetricsCollectorManager
     let output_url = format!(
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let mut metric_collector_manager = MetricCollectorManager::new(
+    let mut metric_collector_manager = MetricsCollectorManager::new(
         wave_config.clone(),
         &output_url,
         !args.quiet && args.verbose,
