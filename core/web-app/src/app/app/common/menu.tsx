@@ -14,8 +14,8 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { targetPath: '/app', label: 'Dashboard' },
-  { targetPath: '/app/autoscaling-history', label: 'Plan Logs' },
-  { targetPath: '/app/inflow', label: 'Metrics Logs' },
+  { targetPath: '/app/autoscaling-history', label: 'History' },
+  { targetPath: '/app/inflow', label: 'Metrics Collector Logs' },
   { spacer: true },
   { targetPath: '/app/add-plan', label: 'Add Plan', isButton: true },
   { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
