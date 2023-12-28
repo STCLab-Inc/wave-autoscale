@@ -135,8 +135,8 @@ export default function DiagramFlow({
   const nodes = useMemo(() => {
     if (renderingScalingPlansItem) {
       // Use renderingPlansItem instead of plansItem for rendering
-      const POSITION_X_OFFSET = 400;
-      const POSITION_Y_OFFSET = 200;
+      const POSITION_X_OFFSET = 300;
+      const POSITION_Y_OFFSET = 150;
       const metrics = unionBy(
         flatten(
           renderingScalingPlansItem.plans?.map((plan) => plan?.ui?.metrics)
@@ -159,10 +159,7 @@ export default function DiagramFlow({
           type: 'metric',
           position: {
             x: 0,
-            y:
-              (POSITION_Y_OFFSET * renderingScalingPlansItem.plans?.length) /
-                2 -
-              POSITION_Y_OFFSET / 2,
+            y: index * POSITION_Y_OFFSET,
           },
           data: {
             label: metric?.id,
@@ -202,10 +199,7 @@ export default function DiagramFlow({
             type: 'scalingComponent',
             position: {
               x: 4 * POSITION_X_OFFSET,
-              y:
-                (POSITION_Y_OFFSET * renderingScalingPlansItem.plans?.length) /
-                  2 -
-                POSITION_Y_OFFSET / 2,
+              y: index * POSITION_Y_OFFSET,
             },
             data: {
               label: scalingComponent?.id,
