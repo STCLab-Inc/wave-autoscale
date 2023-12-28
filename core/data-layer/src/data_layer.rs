@@ -64,6 +64,7 @@ pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
     source_metrics_data: SharedSourceMetricsData,
+    action_sender: tokio::sync::broadcast::Sender<serde_json::Value>,
 }
 
 impl DataLayer {
@@ -88,10 +89,12 @@ impl DataLayer {
             source_metrics_data.metric_buffer_size_byte = metric_buffer_size_byte;
             source_metrics_data.enable_metrics_log = enable_metrics_log;
         }
+        let (action_sender, _) = tokio::sync::broadcast::channel::<serde_json::Value>(16);
 
         DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
             source_metrics_data: SOURCE_METRICS_DATA.clone(),
+            action_sender,
         }
     }
 
@@ -1257,6 +1260,30 @@ impl DataLayer {
         }
 
         Ok(inflow)
+    }
+
+    // Send an action to the action queue
+    pub fn send_action(&self, action: serde_json::Value) -> Result<()> {
+        let result: &std::prelude::v1::Result<
+            usize,
+            tokio::sync::broadcast::error::SendError<serde_json::Value>,
+        > = &self.action_sender.send(action);
+        if result.is_err() {
+            let error_message = result.as_ref().err().unwrap().to_string();
+            return Err(anyhow!(error_message));
+        }
+        Ok(())
+    }
+    pub fn send_plan_action(&self, plan_id: String, plan_item_id: String) -> Result<()> {
+        let action = json!({
+            "plan_id": plan_id,
+            "plan_item_id": plan_item_id,
+        });
+        self.send_action(action)
+    }
+    // Get an receiver of the action
+    pub fn subscribe_action(&self) -> tokio::sync::broadcast::Receiver<serde_json::Value> {
+        self.action_sender.subscribe()
     }
 }
 

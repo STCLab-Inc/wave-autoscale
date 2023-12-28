@@ -45,6 +45,35 @@ impl std::fmt::Display for PlanExpressionStats {
     }
 }
 
+
+/**
+ * Parse action from DataLayer
+ */
+fn parse_action(action: serde_json::Value) -> Result<(String, String)> {
+    let action = action.as_object();
+    if action.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse action"));
+    }
+    let action = action.unwrap();
+
+    let plan_id = action.get("plan_id").and_then(serde_json::Value::as_str);
+    if plan_id.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse plan_id"));
+    }
+    let plan_id = plan_id.unwrap();
+
+    let plan_item_id = action
+        .get("plan_item_id")
+        .and_then(serde_json::Value::as_str);
+    if plan_item_id.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse plan_item_id"));
+    }
+    let plan_item_id = plan_item_id.unwrap();
+
+    Ok((plan_id.to_string(), plan_item_id.to_string()))
+}
+
+
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
     shared_scaling_component_manager: &SharedScalingComponentManager,
@@ -75,10 +104,14 @@ pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
-    last_plan_id: Arc<RwLock<String>>,
+    last_plan_item_id: Arc<RwLock<String>>,
     last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
+    // For instant action
+    action_task: Option<JoinHandle<()>>,
+    last_plan_item_id_by_action: Arc<RwLock<String>>,
+    last_plan_timestamp_by_action: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 impl<'a> ScalingPlanner {
@@ -92,10 +125,13 @@ impl<'a> ScalingPlanner {
             definition,
             metric_updater,
             scaling_component_manager,
-            last_plan_id: Arc::new(RwLock::new(String::new())),
+            last_plan_item_id: Arc::new(RwLock::new(String::new())),
             last_plan_timestamp: Arc::new(RwLock::new(None)),
             data_layer,
             task: None,
+            action_task: None,
+            last_plan_item_id_by_action: Arc::new(RwLock::new(String::new())),
+            last_plan_timestamp_by_action: Arc::new(RwLock::new(None)),
         }
     }
     fn sort_plan_by_priority(&self) -> Vec<PlanItemDefinition> {
@@ -111,7 +147,7 @@ impl<'a> ScalingPlanner {
     pub fn run(&mut self) {
         let _shared_metric_updater = self.metric_updater.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
-        let shared_last_run = self.last_plan_id.clone();
+        let shared_last_run = self.last_plan_item_id.clone();
         let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer: Arc<DataLayer> = self.data_layer.clone();
@@ -252,20 +288,8 @@ impl<'a> ScalingPlanner {
                             }
                         }
 
-                        // TODO: Stabilization window(time)
-                        // Check if the plan has already been executed
-                        let scaling_plan_id = &plan.id;
-
-                        // Apply the scaling components
-                        let scaling_components_metadata = &plan.scaling_components;
-                        let results = apply_scaling_components(
-                            scaling_components_metadata,
-                            &shared_scaling_component_manager,
-                        )
-                        .await;
-
-                        debug!("results - {:?}", results);
-
+                        let results = run_plan_item(plan, &shared_scaling_component_manager).await;
+                        
                         // update last plan timestamp
                         if !results.is_empty() {
                             let mut shared_last_plan_timestamp =
@@ -276,9 +300,10 @@ impl<'a> ScalingPlanner {
                         // Update the last run
                         {
                             let mut shared_last_run = shared_last_run.write().await;
+                            let scaling_plan_id = &plan.id;
                             *shared_last_run = scaling_plan_id.clone();
+                            debug!("[ScalingPlanner] Applied scaling plan: {}", scaling_plan_id);
                         }
-                        debug!("Applied scaling plan: {}", scaling_plan_id);
 
                         // Add the result of the scaling plan to the history
                         for (index, result) in results.iter().enumerate() {
@@ -286,6 +311,7 @@ impl<'a> ScalingPlanner {
                                 Ok(_) => None,
                                 Err(error) => Some(error.to_string()),
                             };
+                            let scaling_components_metadata = &plan.scaling_components;
                             let autoscaling_history: AutoscalingHistoryDefinition =
                                 AutoscalingHistoryDefinition::new(
                                     scaling_plan_definition.db_id.clone(),
@@ -295,7 +321,7 @@ impl<'a> ScalingPlanner {
                                     json!(scaling_components_metadata[index].clone()).to_string(),
                                     fail_message,
                                 );
-                            debug!("autoscaling_history - {:?}", autoscaling_history);
+                            debug!("[ScalingPlanner] autoscaling_history - {:?}", autoscaling_history);
                             let _ = data_layer
                                 .add_autoscaling_history(autoscaling_history)
                                 .await;
@@ -316,19 +342,96 @@ impl<'a> ScalingPlanner {
             }
         });
         self.task = Some(task);
+
+        // Run the action receiver
+        self.run_action_receiver();
+    }
+    fn run_action_receiver(&mut self) {
+        let mut receiver = self.data_layer.subscribe_action();
+        let definition = self.definition.clone();
+        let scaling_component_manager = self.scaling_component_manager.clone();
+        let last_plan_id_by_action = self.last_plan_item_id_by_action.clone();
+        let last_plan_timestamp_by_action = self.last_plan_timestamp_by_action.clone();
+        let action_task = tokio::spawn(async move {
+            while let action = receiver.recv().await {
+                if action.is_err() {
+                    continue;
+                }
+                let action = action.unwrap();
+
+                let (plan_id, plan_item_id) = match parse_action(action) {
+                    Ok((plan_id, plan_item_id)) => (plan_id, plan_item_id),
+                    Err(error) => {
+                        error!("Failed to parse action: {}", error);
+                        continue;
+                    }
+                };
+                if plan_id != definition.id {
+                    continue;
+                }
+                let plan_item = definition
+                    .plans
+                    .iter()
+                    .find(|plan| plan.id == plan_item_id);
+
+                if plan_item.is_none() {
+                    error!("Failed to find plan_item: {}", plan_item_id);
+                    continue;
+                }
+
+                let plan_item = plan_item.unwrap();
+                let _results = run_plan_item(plan_item, &scaling_component_manager).await;
+
+                // Update the last run
+                {
+                    let mut shared_last_run = last_plan_id_by_action.write().await;
+                    *shared_last_run = plan_item_id.clone();
+                    debug!("[ScalingPlanner] Applied scaling plan: {}", plan_item_id);
+
+                    let mut shared_last_plan_timestamp_by_action =
+                        last_plan_timestamp_by_action.write().await;
+                    *shared_last_plan_timestamp_by_action = Some(Utc::now());
+                }
+            }
+        });
+        self.action_task = Some(action_task);
     }
     pub fn stop(&mut self) {
         if let Some(task) = &self.task {
             task.abort();
             self.task = None;
         }
+        if let Some(task) = &self.action_task {
+            task.abort();
+            self.action_task = None;
+        }
     }
-    pub fn get_last_plan_id(&self) -> Arc<RwLock<String>> {
-        self.last_plan_id.clone()
+    pub fn get_last_plan_item_id(&self) -> Arc<RwLock<String>> {
+        self.last_plan_item_id.clone()
     }
     pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
         self.last_plan_timestamp.clone()
     }
+    pub fn get_last_plan_item_id_by_action(&self) -> Arc<RwLock<String>> {
+        self.last_plan_item_id_by_action.clone()
+    }
+    pub fn get_last_plan_timestamp_by_action(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
+        self.last_plan_timestamp_by_action.clone()
+    }
+}
+
+async fn run_plan_item(plan: &PlanItemDefinition, shared_scaling_component_manager: &Arc<RwLock<crate::scaling_component::ScalingComponentManager>>) -> Vec<Result<()>>{
+    // Apply the scaling components
+    let scaling_components_metadata = &plan.scaling_components;
+    let results = apply_scaling_components(
+        scaling_components_metadata,
+        shared_scaling_component_manager,
+    )
+    .await;
+
+    debug!("[ScalingPlanner] results - {:?}", results);
+
+    results
 }
 
 fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
@@ -772,7 +875,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -796,7 +899,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -838,7 +941,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -880,7 +983,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
         }
@@ -922,7 +1025,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
         }
@@ -946,9 +1049,37 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_action_receiver() {
+        let plan_item_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_item_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: None,
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        let plan_id = scaling_planner.definition.id.clone();
+        let _ = data_layer.send_plan_action(plan_id, plan_item_id.clone());
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        {
+            let last_plan_item_id = scaling_planner.get_last_plan_item_id_by_action();
+            let shared_last_plan_item_id = last_plan_item_id.read().await;
+            assert_eq!(*shared_last_plan_item_id, plan_item_id);
         }
     }
 }
