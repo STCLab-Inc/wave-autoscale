@@ -110,6 +110,7 @@ async fn main() {
     shared_data_layer.sync(args.definition.as_str()).await;
 
     // Watch the definition file
+    // TODO: When it supports GitOps, it should be changed to watch the Git repository.
     let watch_duration = wave_config.watch_definition_duration;
     let mut watch_receiver: Option<watch::Receiver<String>> = if watch_duration != 0 {
         Some(shared_data_layer.watch_definitions_in_db(watch_duration))
@@ -121,6 +122,7 @@ async fn main() {
     // If watch_duration is 0, run the main application(controller) only once
     while watch_receiver.is_some() && watch_receiver.as_mut().unwrap().changed().await.is_ok() {
         // Update metric collectors
+        // TODO: MetricCollectorManager could be moved into the app(controller)
         let shared_data_layer = shared_data_layer.clone();
         let metric_definitions = shared_data_layer.get_enabled_metrics().await;
         if metric_definitions.is_err() {
