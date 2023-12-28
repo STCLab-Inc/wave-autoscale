@@ -159,7 +159,7 @@ impl App {
             let result = data_layer.remove_old_autoscaling_history(to_date).await;
             if result.is_err() {
                 let error = result.err().unwrap();
-                error!("Error removing old autoscaling history: {}", error);
+                debug!("Error removing old autoscaling history: {}", error);
             }
 
             sleep(std::time::Duration::from_secs(60)).await;
