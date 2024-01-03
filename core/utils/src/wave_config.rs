@@ -2,7 +2,9 @@ use serde::Deserialize;
 use std::fs::File;
 use tracing::{debug, error, info};
 
-const DEFAULT_CONFIG_PATH: &str = "./wave-config.yaml";
+use crate::config_path::find_file_in_wa;
+
+const CONFIG_FILE_NAME: &str = "wave-config.yaml";
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
 const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 const DEFAULT_ENABLE_METRICS_LOG: bool = false;
@@ -131,23 +133,27 @@ impl Default for WaveConfig {
 }
 
 impl WaveConfig {
-    pub fn new(config_path: &str) -> Self {
-        let config_path = if config_path.is_empty() {
-            DEFAULT_CONFIG_PATH
-        } else {
-            config_path
+    pub fn new() -> Self {
+        let Ok(config_path) = find_file_in_wa(CONFIG_FILE_NAME) else {
+            error!("Error finding config file. It returns default config.");
+            return WaveConfig::default();
         };
-
         // Read the file of the path
-        let file = File::open(config_path);
+        let file = File::open(config_path.clone());
         if file.is_err() {
-            error!("Error reading config file: {}", file.err().unwrap());
+            error!(
+                "Error reading config file: {}. It returns default config.",
+                file.err().unwrap()
+            );
             return WaveConfig::default();
         }
         let file = file.unwrap();
         let wave_config: Result<WaveConfig, serde_yaml::Error> = serde_yaml::from_reader(file);
         if wave_config.is_err() {
-            error!("Error parsing config file: {}", wave_config.err().unwrap());
+            error!(
+                "Error parsing config file: {}. It returns default config.",
+                wave_config.err().unwrap()
+            );
             return WaveConfig::default();
         }
         let wave_config = wave_config.unwrap();
@@ -179,7 +185,7 @@ mod tests {
     use super::*;
 
     fn get_wave_config() -> WaveConfig {
-        WaveConfig::new("./tests/yaml/wave-config.yaml")
+        WaveConfig::new()
     }
 
     #[test]
