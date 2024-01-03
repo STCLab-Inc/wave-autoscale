@@ -19,7 +19,9 @@ use std::sync::Arc;
 use tokio::sync::watch;
 use tracing::error;
 use util::log::LogLevel;
-use utils::wave_config::WaveConfig;
+use utils::{config_path::find_file_in_wa, wave_config::WaveConfig};
+
+const LOCAL_DEFINITION_FILE_NAME: &str = "wave-definition.yaml";
 
 #[tokio::main]
 async fn main() {
@@ -45,7 +47,7 @@ async fn main() {
     }
 
     // Configuration
-    let wave_config = WaveConfig::new(args.config.as_str());
+    let wave_config = WaveConfig::new();
 
     //
     // Initialize the application (DataLayer, MetricsCollectorManager, API Server, Web App, and App)
@@ -106,9 +108,18 @@ async fn main() {
         let _ = shared_data_layer.delete_all_scaling_components().await;
         let _ = shared_data_layer.delete_all_plans().await;
     }
-    // Sync the definition file
-    shared_data_layer.sync(args.definition.as_str()).await;
 
+    // Sync the definition file if it exists
+    match find_file_in_wa(LOCAL_DEFINITION_FILE_NAME) {
+        Ok(file_path) => {
+            let _ = shared_data_layer.sync(file_path.as_str()).await;
+        }
+        Err(error_message) => {
+            error!("{}", error_message);
+        }
+    }
+
+    // TODO: replace watching the local definition to watching Git repository for GitOps
     // Watch the definition file
     // TODO: When it supports GitOps, it should be changed to watch the Git repository.
     let watch_duration = wave_config.watch_definition_duration;

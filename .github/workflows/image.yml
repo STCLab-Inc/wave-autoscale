@@ -58,7 +58,7 @@ jobs:
         run: |
           mkdir -p ./bin && cd ./bin
           id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64)
-          docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
+          docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/basic-example/* ./
@@ -111,7 +111,7 @@ jobs:
         run: |
           mkdir -p ./bin && cd ./bin
           id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64)
-          docker cp $id:/usr/local/bin/wave-autoscale - > ./wave-autoscale
+          docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/basic-example/* ./
