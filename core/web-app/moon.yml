@@ -28,7 +28,7 @@ tasks:
       - 'install'
       - 'lint'
   run:
-    command: 'next dev --port 3025'
+    command: 'next dev'
     inputs:
       - '@globs(sources)'
       - 'tsconfig.json'
@@ -37,6 +37,8 @@ tasks:
       - 'package.json'
     deps:
       - 'test'
+    env:
+      PORT: '3025'
   build-standalone:
     command: 'next build'
     inputs:
