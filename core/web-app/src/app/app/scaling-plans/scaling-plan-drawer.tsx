@@ -10,7 +10,11 @@ import {
   DEFINITION_ID_RULE_DESCRIPTION,
   transformDefinitionId,
 } from '@/utils/definition-id';
-import YAMLEditor from '../common/yaml-editor';
+import dynamic from 'next/dynamic';
+
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
 export default function ScalingPlanDrawer({
   scalingPlan: scalingPlan,

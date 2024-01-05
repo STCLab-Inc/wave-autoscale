@@ -6,9 +6,13 @@ import TEMPLATES, {
   Template,
   TemplateSection,
 } from '../../../data/wa-templates';
-import YAMLEditor from '../common/yaml-editor';
 import DefinitionService from '@/services/definition';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
 const ALL_TEMPLATES = [...TEMPLATES.SCALING_COMPONENTS, ...TEMPLATES.METRICS];
 

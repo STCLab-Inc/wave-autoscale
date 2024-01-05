@@ -10,8 +10,11 @@ import {
   transformDefinitionId,
 } from '@/utils/definition-id';
 import { METRIC_COLLECTORS } from '@/utils/metric-collector';
-import YAMLEditor from '../common/yaml-editor';
-import { set } from 'lodash';
+import dynamic from 'next/dynamic';
+
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
 const METRIC_COLLECTOR_OPTIONS = [
   {

@@ -5,7 +5,11 @@ import ScalingPlanService from '@/services/scaling-plan';
 import { generateScalingPlanDefinition } from '@/utils/scaling-plan-binding';
 import { ScalingPlanDefinitionEx } from '../scaling-plan-definition-ex';
 import yaml from 'js-yaml';
-import YAMLEditor from '../../common/yaml-editor';
+import dynamic from 'next/dynamic';
+
+const YAMLEditor = dynamic(() => import('../../common/yaml-editor'), {
+  ssr: false,
+});
 
 interface ScalingPlanCodeProps {
   scalingPlanCode: string;

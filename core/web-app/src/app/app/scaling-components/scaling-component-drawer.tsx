@@ -6,8 +6,11 @@ import { generateScalingComponentDefinition } from '@/utils/scaling-component-bi
 import yaml from 'js-yaml';
 import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
 import { transformDefinitionId } from '@/utils/definition-id';
-import YAMLEditor from '../common/yaml-editor';
-import { set } from 'lodash';
+import dynamic from 'next/dynamic';
+
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
 export default function ScalingComponentDetailDrawer({
   scalingComponent,
