@@ -31,6 +31,10 @@ vector*/
 !examples/metrics/telegraf/
 !examples/metrics/vector/
 core/wave-autoscale/wave-autoscale-ui/
+wave-config.yaml
+wave-definition.yaml
+!docs/config/wave-config.yaml
+!docs/config/wave-definition.yaml
 
 # VSCode
 .vscode/

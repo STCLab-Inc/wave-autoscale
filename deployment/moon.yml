@@ -2,7 +2,7 @@ language: "bash"
 
 tasks:
   prepare-yaml:
-    command: "cp core/wave-autoscale/tests/config/wave-config.yaml docs/basic-example/ && cp core/wave-autoscale/tests/config/definition.yaml docs/basic-example/"
+    command: "cp core/wave-autoscale/tests/config/wave-config.yaml docs/config/ && cp core/wave-autoscale/tests/config/wave-definition.yaml docs/config/"
     options:
       runFromWorkspaceRoot: true
   build-docker-compose:
