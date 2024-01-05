@@ -94,7 +94,7 @@ pub struct WaveConfig {
     pub port: u16,
 
     //
-    // Web Console
+    // Wave Autoscale UI
     //
     #[serde(default = "default_web_ui")]
     pub web_ui: bool,

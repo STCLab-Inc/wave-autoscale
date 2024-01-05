@@ -83,8 +83,8 @@ async fn main() {
 
     // Run Web App
     if wave_config.web_ui {
-        let host = wave_config.host.clone();
-        let port = wave_config.port;
+        let host = wave_config.web_ui_host.clone();
+        let port = wave_config.web_ui_port;
         let _web_app_handle = tokio::spawn(async move {
             let _ = web_app_runner::run_web_app(host.as_str(), port);
         });
