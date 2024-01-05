@@ -30,6 +30,7 @@ telegraf*/
 vector*/
 !examples/metrics/telegraf/
 !examples/metrics/vector/
+core/wave-autoscale/wave-autoscale-ui/
 
 # VSCode
 .vscode/

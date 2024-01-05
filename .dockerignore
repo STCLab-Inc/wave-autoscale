@@ -1,0 +1,14 @@
+target/
+archive/
+.vscode/
+.moon/
+.github/
+.cargo/
+deployment/
+docs/
+examples/
+
+# web-app
+core/web-app/.next
+core/web-app/.vscode
+core/web-app/node_modules
