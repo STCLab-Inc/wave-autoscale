@@ -8,6 +8,9 @@ dependsOn:
   - "api-server"
   - "utils"
 tasks:
+  #
+  # Test
+  #
   test:
     command: "cargo nextest run -p wave-autoscale --test-threads=1"
     deps:
@@ -70,18 +73,26 @@ tasks:
     options:
       runFromWorkspaceRoot: true
       cache: false
+  #
+  # Depedencies
+  #
+  copy-web-app:
+    command: "cp -R ../web-app/.next/standalone ./wave-autoscale-ui"
+    deps:
+      - "web-app:build"
+    inputs:
+      - "/core/web-app/.next/standalone"
+    outputs:
+      - "wave-autoscale-ui"
+  #
   # Run
+  #
   run:
     command:
       - "cargo"
       - "run"
       - "-p"
       - "wave-autoscale"
-      - "--"
-      - "--config"
-      - "tests/config/wave-config.yaml"
-      # - "--definition"
-      # - "./core/wave-autoscale/tests/yaml/plan_cloudwatch_ecs_ec2.yaml"
       # - "--quiet"
       # - "--verbose"
     env:
@@ -98,53 +109,3 @@ tasks:
       - "--help"
     env:
       RUST_LOG: wave_autoscale=debug
-  # Build for Debug
-  debug-aarch64-apple-darwin:
-    command: "cargo build --target aarch64-apple-darwin"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-    outputs:
-      - "/target/aarch64-apple-darwin/debug/wave-autoscale"
-  # Build for Production
-  # Linux
-  build-aarch64-unknown-linux-gnu:
-    command: "cargo build --release --target aarch64-unknown-linux-gnu"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-  build-aarch64-unknown-linux-musl:
-    command: "cargo build --release --target aarch64-unknown-linux-musl"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-  build-x86_64-unknown-linux-gnu:
-    command: "cargo build --release --target x86_64-unknown-linux-gnu"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-  build-x86_64-unknown-linux-musl:
-    command: "cargo build --release --target x86_64-unknown-linux-musl"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-  # Mac
-  build-x86_64-apple-darwin:
-    command: "cargo build --release --target x86_64-apple-darwin"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-  build-aarch64-apple-darwin:
-    command: "cargo build --release --target aarch64-apple-darwin"
-    deps:
-      - "test"
-    inputs:
-      - "@globs(sources)"
-    outputs:
-      - "/target/aarch64-apple-darwin/release/wave-autoscale"

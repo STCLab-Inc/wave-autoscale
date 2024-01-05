@@ -12,24 +12,3 @@ tasks:
     command: "echo archiver"
   clean-cargo-cache:
     command: "cargo cache --autoclean"
-  archive-aarch64-apple-darwin:
-    command: "./archive-script.sh"
-    platform: "system"
-    inputs:
-      - "**/*"
-      - "./archive-script.sh"
-    deps:
-      - "controller:build-aarch64-apple-darwin"
-      # - "web-app:build"
-    env:
-      PLATFORM: "aarch64-apple-darwin"
-  build-x86_64-unknown-linux-gnu:
-    command: "./archive-script.sh"
-    platform: "system"
-    inputs:
-      - "**/*"
-    deps:
-      - "controller:build-x86_64-unknown-linux-gnu"
-      # - "web-app:build"
-    env:
-      PLATFORM: "x86_64-unknown-linux-gnu"

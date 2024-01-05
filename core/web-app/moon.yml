@@ -1,5 +1,5 @@
 language: 'typescript'
-type: 'application'
+type: 'library'
 owners:
   defaultOwner: '@wave-autoscale-team'
 
@@ -8,7 +8,7 @@ env:
 
 tasks:
   install:
-    command: 'npm install'
+    command: 'npm ci'
     inputs:
       - './package.json'
       - './package-lock.json'
@@ -37,16 +37,32 @@ tasks:
       - 'package.json'
     deps:
       - 'test'
-  build:
+  build-standalone:
     command: 'next build'
     inputs:
       - '@globs(sources)'
       - 'tsconfig.json'
       - 'next.config.js'
     outputs:
-      - '.next/standalone/*'
-  start-standalone:
-    command: 'node .next/standalone/server.js'
+      - '.next/standalone/server.js'
+      # - '.next/standalone/.next/*'
+  build-copy-static:
+    command: 'cp -R .next/static .next/standalone/.next/static'
     inputs:
-      - '@globs(sources)'
-      - 'tsconfig.json'
+      - '.next/static'
+    outputs:
+      - '.next/standalone/.next/static'
+  build-copy-public:
+    command: 'cp -R public .next/standalone/public'
+    inputs:
+      - 'public'
+    outputs:
+      - '.next/standalone/public'
+  build:
+    command: 'echo "Wave Autoscale UI"'
+    deps:
+      - 'build-standalone'
+      - 'build-copy-static'
+      - 'build-copy-public'
+    options:
+      runDepsInParallel: false
