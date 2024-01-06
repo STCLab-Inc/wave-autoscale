@@ -18,7 +18,7 @@ use std::ops::Bound::Included;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use ulid::Ulid;
 
 const PLAN_EXPRESSION_PERIOD_SEC: u64 = 5 * 60;
@@ -186,28 +186,26 @@ impl<'a> ScalingPlanner {
             // Initialize the runtime and context to evaluate the scaling plan expressions
             // TODO: Support Python and other languages
             let Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-                error!("Error creating runtime");
+                error!("[ScalingPlanner] Error creating runtime");
                 return;
             };
             let Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-                error!("Error creating context");
+                error!("[ScalingPlanner] Error creating context");
                 return;
             };
 
             // Run the loop every interval
             loop {
                 if let Some(cool_down) = plan_metadata.get("cool_down") {
-                    debug!("Cool down is set to {:?}", cool_down);
-
                     // apply cool down
                     if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
                         let now = Utc::now();
-
                         if let Some(cool_down_seconds) = cool_down.as_u64() {
                             let cool_down_duration =
                                 chrono::Duration::seconds(cool_down_seconds as i64);
-                            if now - last_plan_timestamp < cool_down_duration {
-                                debug!("Cool down is not over yet");
+                            let time_left = last_plan_timestamp + cool_down_duration - now;
+                            if time_left.num_milliseconds() > 0 {
+                                debug!("[ScalingPlanner] Cooling down. Skip the plan. {} seconds left.", time_left.num_seconds());
                                 interval.tick().await;
                                 continue;
                             }
@@ -227,15 +225,16 @@ impl<'a> ScalingPlanner {
                     // Find the plan that matches the expression
                     for plan in plans.iter() {
                         if plan.cron_expression.is_none() && plan.expression.is_none() {
-                            error!("Both cron_expression and expression are empty");
+                            error!("[ScalingPlanner] Both cron_expression and expression are empty");
                             continue;
                         }
                         // 1. Cron Expression
                         if let Some(cron_expression) = plan.cron_expression.as_ref() {
+                            debug!("[ScalingPlanner] cron_expression - {}", cron_expression);
                             if !cron_expression.is_empty() {
                                 let schedule = cron::Schedule::from_str(cron_expression.as_str());
                                 if schedule.is_err() {
-                                    error!("Error parsing cron expression: {}", cron_expression);
+                                    error!("[ScalingPlanner] Error parsing cron expression: {}", cron_expression);
                                     continue;
                                 }
                                 let schedule = schedule.unwrap();
@@ -243,7 +242,7 @@ impl<'a> ScalingPlanner {
                                 let datetime = schedule.upcoming(chrono::Utc).take(1).next();
                                 if datetime.is_none() {
                                     error!(
-                                        "Error getting next datetime for cron expression: {}",
+                                        "[ScalingPlanner] Error getting next datetime for cron expression: {}",
                                         cron_expression
                                     );
                                     continue;
@@ -253,7 +252,7 @@ impl<'a> ScalingPlanner {
                                 let duration = duration.num_milliseconds();
                                 if duration < 0 || duration > DEFAULT_PLAN_INTERVAL as i64 {
                                     error!(
-                                        "The datetime is not yet reached for cron expression: {}",
+                                        "[ScalingPlanner] The datetime is not yet reached for cron expression: {}",
                                         cron_expression
                                     );
                                     continue;
@@ -267,15 +266,20 @@ impl<'a> ScalingPlanner {
                             Vec::new();
                         if let Some(expression) = plan.expression.as_ref() {
                             if !expression.is_empty() {
+                                debug!("[ScalingPlanner] expression\n{}", expression);
                                 // Evaluate the expression
                                 let result = async_with!(context => |ctx| {
-                                    let Ok(result) = ctx.eval::<bool, _>(expression.clone()) else {
+                                    let result = ctx.eval::<bool, _>(expression.clone());
+                                    if result.is_err() {
+                                        let message = result.err().unwrap().to_string();
+                                        error!("[ScalingPlanner] Failed to evaluate expression\n{}\n\n{}", expression, message);
                                         return false;
-                                    };
-                                    result
+                                    }
+                                    true
                                 })
                                 .await;
-
+                                
+                                debug!("[ScalingPlanner] expression result - {:?}", result);
                                 // expression get value (for history)
                                 let expression_map =
                                     expression_get_value(expression.clone(), context.clone()).await;
@@ -302,7 +306,7 @@ impl<'a> ScalingPlanner {
                             let mut shared_last_run = shared_last_run.write().await;
                             let scaling_plan_id = &plan.id;
                             *shared_last_run = scaling_plan_id.clone();
-                            debug!("[ScalingPlanner] Applied scaling plan: {}", scaling_plan_id);
+                            info!("[ScalingPlanner] Applied scaling plan: {}", scaling_plan_id);
                         }
 
                         // Add the result of the scaling plan to the history
@@ -333,10 +337,9 @@ impl<'a> ScalingPlanner {
 
                     // If no plan was executed
                     if !excuted {
-                        debug!("No scaling plan was executed");
+                        debug!("[ScalingPlanner] No scaling plan was executed");
                     }
                 }
-                debug!("------------Next--------------");
                 // Wait for the next interval.
                 interval.tick().await;
             }
@@ -439,7 +442,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         .get::<String, String>("metric_id".to_string())
         .map_err(|_| {
             error!("[ScalingPlan expression error] Failed to get metric_id");
-            rquickjs::Error::Exception
+            rquickjs::Error::new_loading("Failed to get metric_id")
         })?;
     let name = args.get::<String, String>("name".to_string()).ok();
     // tags, stats, period_sec is optional
@@ -456,15 +459,17 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
 
     let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
         error!("[get_in_js] Failed to get source_metrics_data");
-        return Err(rquickjs::Error::Exception)
+        return Err(rquickjs::Error::new_loading("Failed to get the metrics data"))
     };
     let ulid = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
 
+    debug!("[get_in_js] - metric_id: {}, name: {:?}, tags: {:?}, stats: {}, period_sec: {}", metric_id, name, tags, stats, period_sec);
+
     // find metric_id
     let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
-        return Err(rquickjs::Error::Exception)
+        return Err(rquickjs::Error::new_loading("Failed to get metric_id from the metrics data"))
     };
 
     // Filtered metric values
@@ -534,7 +539,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
     let metric_stats = match stats.to_lowercase() {
         ms if PlanExpressionStats::Latest.to_string() == ms => {
             let Some(latest_value) = target_value_arr.iter().last() else {
-                return Err(rquickjs::Error::Exception);
+                return Err(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             };
             Ok(latest_value.to_owned())
         }
@@ -552,27 +557,28 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
             let min_value = target_value_arr
                 .into_iter()
                 .reduce(f64::min)
-                .ok_or(rquickjs::Error::Exception);
+                .ok_or(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             match min_value {
                 Ok(min_value) => Ok(min_value),
-                Err(_) => Err(rquickjs::Error::Exception),
+                Err(_) => Err(rquickjs::Error::new_loading("Failed to get the value with the stats")),
             }
         }
         ms if PlanExpressionStats::Maximum.to_string() == ms => {
             let max_value = target_value_arr
                 .into_iter()
                 .reduce(f64::max)
-                .ok_or(rquickjs::Error::Exception);
+                .ok_or(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             match max_value {
                 Ok(max_value) => Ok(max_value),
-                Err(_) => Err(rquickjs::Error::Exception),
+                Err(_) => Err(rquickjs::Error::new_loading("Failed to get the value with the stats")),
             }
         }
         _ => {
-            error!("[ScalingPlan expression error] stats is not defined");
-            Err(rquickjs::Error::Exception)
+            error!("[get_in_js] stats is valid: {}", stats);
+            Err(rquickjs::Error::new_loading("Failed to get the value with the stats"))
         }
     };
+    debug!("[get_in_js] metric_stats: {:?}", metric_stats);
     metric_stats
 }
 

@@ -13,7 +13,7 @@ tasks:
   clean-cargo-cache:
     command: "cargo cache --autoclean"
   test-docker-build:
-    command: "docker build -t wave-autoscale ."
+    command: "docker build -t wave-autoscale-test ."
     options:
       runFromWorkspaceRoot: true
       cache: false

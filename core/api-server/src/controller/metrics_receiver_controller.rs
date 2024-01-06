@@ -181,13 +181,13 @@ async fn post_metrics_receiver(
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
     debug!(
-        "Saved metric into the data-layer: collector - {:?}, metric_id - {:?}, json_value - {:?}",
+        "[api-server] Saved metrics into the data-layer: collector - {:?}, metric_id - {:?}, json_value - {:?}",
         collector.as_str(),
         metric_id.as_str(),
         json_value.as_str()
     );
     info!(
-        "[api-server] Saved metric into the data-layer: {:?}, {:?}, size: {:?}",
+        "[api-server] Saved metrics into the data-layer: collector - {:?}, metric_id - {:?}, size: {:?}",
         collector.as_str(),
         metric_id.as_str(),
         json_value.len()
