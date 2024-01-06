@@ -49,7 +49,7 @@ RUN npm run build
 FROM node-base AS runtime
 RUN apt-get update
 RUN apt-get install -y openssl ca-certificates
-WORKDIR /usr/local/bin
+WORKDIR /app
 # Copy the binary from the rust build stage
 COPY --from=builder /usr/src/wave-autoscale/target/release/wave-autoscale .
 # Copy the built web-app from the node build stage

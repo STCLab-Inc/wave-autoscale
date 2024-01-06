@@ -1,15 +1,32 @@
-# https://vector.dev/docs/reference/configuration/sources/host_metrics/
----
 kind: Metric
-id: vector_host_metrics
-collector: vector
+id: wa_metric_example
+collector: wa-generator
+enabled: true
 metadata:
-  sources:
-    my_source_id_1:
-      type: host_metrics
-      namespace: host
-      scrape_interval_secs: 5
-  sinks:
-    my_sinks_id:
-      type: wave-autoscale
-      inputs: ["my_source_id_1"]
+  pattern: [50, 60, 70, 80, 90, 100]
+  gap_seconds: 5
+---
+kind: ScalingComponent
+id: wa_scaling_component_example
+component_kind: wa-logger
+enabled: true
+metadata:
+---
+kind: ScalingPlan
+id: wa_scaling_plan_example
+enabled: true
+metadata:
+  title: "Scaling Plan for K8S Deployment Scaling - deployment replicas"
+  cool_down: 60 # seconds
+  interval: 5000 # milliseconds
+plans:
+  - id: plan-1
+    description: "Plan Example 1"
+    expression: >
+      get({
+        metric_id: 'wa_metric_example',
+        period_sec: 5
+      }) >= 70
+    priority: 1
+    scaling_components:
+      - component_id: "wa_scaling_component_example"

@@ -7,6 +7,7 @@ archive/
 deployment/
 docs/
 examples/
+Dockerfile
 
 # web-app
 core/web-app/.next

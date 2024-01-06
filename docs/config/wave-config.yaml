@@ -9,7 +9,7 @@ metric_buffer_size_kb: 500000
 enable_metrics_log: false
 
 # API Server
-host: localhost
+host: 0.0.0.0
 port: 3024
 
 # Web Console
