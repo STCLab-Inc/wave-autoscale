@@ -46,20 +46,21 @@ tasks:
       - 'tsconfig.json'
       - 'next.config.js'
     outputs:
-      - '.next/standalone/server.js'
-      # - '.next/standalone/.next/*'
+      - '.next/standalone/**/*'
   build-copy-static:
     command: 'cp -R .next/static .next/standalone/.next/static'
     inputs:
+      - '@globs(sources)'
       - '.next/static'
     outputs:
-      - '.next/standalone/.next/static'
+      - '.next/standalone/.next/static/**/*'
   build-copy-public:
     command: 'cp -R public .next/standalone/public'
     inputs:
+      - '.next/standalone/**/*'
       - 'public'
     outputs:
-      - '.next/standalone/public'
+      - '.next/standalone/public/**/*'
   build:
     command: 'echo "Wave Autoscale UI"'
     deps:
