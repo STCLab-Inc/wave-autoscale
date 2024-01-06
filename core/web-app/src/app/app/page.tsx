@@ -3,8 +3,7 @@
 import DashboardService, { DashboardStats } from '@/services/dashboard';
 import dayjs, { Dayjs } from 'dayjs';
 import Link from 'next/link';
-import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Default Values
 const DEFAULT_FROM = dayjs().subtract(7, 'days');
