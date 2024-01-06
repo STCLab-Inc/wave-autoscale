@@ -106,10 +106,13 @@ impl MetricsCollectorManager {
 
     // Download the collector binary if it doesn't exist
     pub async fn prepare_collector_binaries(&self, metric_definitions: &Vec<MetricDefinition>) {
+        // TODO: refactor
         // Get the collector in MetricDefinition uniquely
         let mut collector_names: Vec<String> = Vec::new();
         for metric_definition in metric_definitions {
-            if !collector_names.contains(&metric_definition.collector) {
+            if !collector_names.contains(&metric_definition.collector)
+                && metric_definition.collector != WA_GENERATOR_COLLECTOR
+            {
                 collector_names.push(metric_definition.collector.clone());
             }
         }
@@ -336,7 +339,7 @@ impl MetricsCollectorManager {
 
         let mut collector_processes: Vec<process::AppInfo> = Vec::new();
 
-        // Find the metric definitions that use Vector collector
+        // collector: vector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
             if metric_definition.collector == VECTOR_COLLECTOR {
@@ -366,7 +369,7 @@ impl MetricsCollectorManager {
             }
         }
 
-        // Find the metric definitions that use Telegraf collector
+        // collector: telegraf
         let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
             if metric_definition.collector == TELEGRAF_COLLECTOR {
@@ -433,6 +436,7 @@ impl MetricsCollectorManager {
             self.running_tasks = None;
         };
 
+        // collector: wa-generator
         let mut wa_generator_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
             if metric_definition.collector == WA_GENERATOR_COLLECTOR {
