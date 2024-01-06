@@ -7,6 +7,8 @@ tasks:
   # Test - Integration + Unit
   test:
     command: "cargo nextest run -p utils --test-threads 1"
+    deps:
+      - "copy-config"
     env:
       RUST_LOG: utils=debug
   copy-config:
