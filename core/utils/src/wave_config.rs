@@ -157,8 +157,8 @@ impl WaveConfig {
             return WaveConfig::default();
         }
         let wave_config = wave_config.unwrap();
-        info!("[config] Config file parsed: {}", config_path);
-        debug!("Config file parsed: {:?}", wave_config);
+        info!("[WaveConfig] Config file parsed: {}", config_path);
+        debug!("[WaveConfig] Config file parsed: {:?}", wave_config);
         wave_config
     }
     pub fn get_download_url(&self, name: &str) -> &str {
