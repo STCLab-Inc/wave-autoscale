@@ -12,7 +12,7 @@ const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
 const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "1d";
 const DEFAULT_API_HOST: &str = "0.0.0.0";
 const DEFAULT_API_PORT: u16 = 3024;
-const DEFAULT_WEB_UI: bool = false;
+const DEFAULT_WEB_UI: bool = true;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
 const DEFAULT_RESET_DEFINITIONS_ON_STARTUP: bool = false;
@@ -202,9 +202,9 @@ mod tests {
             DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
-        assert_eq!(wave_config.port, DEFAULT_API_PORT + 1);
+        assert_eq!(wave_config.port, DEFAULT_API_PORT);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
         assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
-        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT + 1);
+        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
     }
 }
