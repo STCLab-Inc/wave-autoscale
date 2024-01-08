@@ -7,7 +7,7 @@ import _ from 'lodash';
 
 export interface DashboardStats {
   autoscalingHistoryCount: number;
-  autoscalingHistoryMostTriggered: [[string, number]];
+  autoscalingHistoryMostTriggered: [string, number][];
   metricsCount: number;
   scalingComponentsCount: number;
   plansCount: number;
@@ -18,31 +18,26 @@ class DashboardServiceClass {
     const to = dayjs();
     const from = to.subtract(7, 'day');
 
-    const getAutoscalingHistory = async () => {
+    const getAutoscalingHistoryStats = async () => {
       const autoscalingHistory = await DataLayer.get(
         `/api/autoscaling-history?from=${
           from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
         }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
       );
-      return autoscalingHistory;
-    };
-
-    const getAutoscalingHistoryCount = async () => {
-      const autoscalingHistory = await getAutoscalingHistory();
-      const autoscalingHistoryCount = autoscalingHistory.data?.length;
-      return autoscalingHistoryCount;
-    };
-    const getAutoscalingHistoryMostTriggered = async () => {
-      const autoscalingHistory = await getAutoscalingHistory();
       const { data } = autoscalingHistory;
+      const count = data?.length;
       const ordered = _.chain(data)
         .groupBy('plan_id')
         .mapValues((value) => value.length)
         .toPairs()
         .orderBy(1, 'desc')
-        .slice(0,10)
+        .slice(0, 10)
         .value();
-      return ordered;
+
+      return {
+        count,
+        ordered,
+      };
     };
 
     const getMetricsCount = async () => {
@@ -65,22 +60,20 @@ class DashboardServiceClass {
     };
 
     const [
-      autoscalingHistoryCount,
-      autoscalingHistoryMostTriggered,
+      autoscalingHistoryStats,
       metricsCount,
       scalingComponentsCount,
       plansCount,
     ] = await Promise.all([
-      getAutoscalingHistoryCount(),
-      getAutoscalingHistoryMostTriggered(),
+      getAutoscalingHistoryStats(),
       getMetricsCount(),
       getScalingComponentsCount(),
       getPlansCount(),
     ]);
 
     return {
-      autoscalingHistoryCount,
-      autoscalingHistoryMostTriggered,
+      autoscalingHistoryCount: autoscalingHistoryStats.count,
+      autoscalingHistoryMostTriggered: autoscalingHistoryStats.ordered,
       metricsCount,
       scalingComponentsCount,
       plansCount,
