@@ -1,3 +1,7 @@
+# Wave Autoscale
+debug: false
+quiet: false
+
 # Data Layer
 db_url: sqlite://./wave.db
 watch_definition_duration: 5000

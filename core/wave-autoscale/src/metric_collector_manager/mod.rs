@@ -27,7 +27,8 @@ pub struct MetricsCollectorManager {
 }
 
 impl MetricsCollectorManager {
-    pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
+    pub fn new(wave_config: WaveConfig, output_url: &str) -> Self {
+        let collector_log = wave_config.debug && !wave_config.quiet;
         Self {
             wave_config,
             output_url: output_url.to_string(),

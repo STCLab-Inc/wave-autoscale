@@ -2,7 +2,6 @@
  * Wave Autoscale
  */
 mod app;
-mod args;
 mod metric_collector_manager;
 mod metric_updater;
 mod scaling_component;
@@ -11,13 +10,11 @@ mod util;
 mod web_app_runner;
 
 use api_server::app::run_api_server;
-use args::Args;
-use clap::Parser;
 use data_layer::data_layer::DataLayer;
 use metric_collector_manager::MetricsCollectorManager;
 use std::sync::Arc;
 use tokio::sync::watch;
-use tracing::error;
+use tracing::{debug, error};
 use util::log::LogLevel;
 use utils::{config_path::find_file_in_wa, wave_config::WaveConfig};
 
@@ -34,20 +31,19 @@ async fn main() {
         std::process::exit(0);
     });
 
-    // Parse command line arguments
-    let args = Args::parse();
+    // Configuration
+    let wave_config = WaveConfig::new();
 
     // Initialize logger
-    if args.quiet {
+    if wave_config.quiet {
         util::log::init(LogLevel::Quiet);
-    } else if args.verbose {
+    } else if wave_config.debug {
         util::log::init(LogLevel::Verbose);
     } else {
         util::log::init(LogLevel::Info);
     }
 
-    // Configuration
-    let wave_config = WaveConfig::new();
+    debug!("[WaveConfig] Config file parsed: {:?}", wave_config);
 
     //
     // Initialize the application (DataLayer, MetricsCollectorManager, API Server, Web App, and App)
@@ -67,11 +63,8 @@ async fn main() {
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let mut metric_collector_manager = MetricsCollectorManager::new(
-        wave_config.clone(),
-        &output_url,
-        !args.quiet && args.verbose,
-    );
+    let mut metric_collector_manager =
+        MetricsCollectorManager::new(wave_config.clone(), &output_url);
 
     // Run API Server
     let shared_data_layer_for_api_server = shared_data_layer.clone();
