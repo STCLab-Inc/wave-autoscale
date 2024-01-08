@@ -22,18 +22,6 @@ const LinkIcon = () => (
 );
 
 export default function Dashboard() {
-  // States
-  const [topHistoryPlans, setTopHistoryPlans] = useState([
-    {
-      title: 'EC2 Autoscaling Plan',
-    },
-    {
-      title: 'EC2 Autoscaling Plan',
-    },
-    {
-      title: 'EC2 Autoscaling Plan',
-    },
-  ]);
   const [stats, setStats] = useState<DashboardStats>();
   // Effects
   useEffect(() => {
@@ -56,9 +44,7 @@ export default function Dashboard() {
                 <LinkIcon />
               </Link>
             </div>
-            <div className="stat-title">
-              Traffic & Autoscaling Plan Triggered
-            </div>
+            <div className="stat-title">Triggered Plans</div>
             <div className="stat-value">{stats?.autoscalingHistoryCount}</div>
             <div className="stat-desc">last 7 days</div>
           </div>
@@ -66,11 +52,11 @@ export default function Dashboard() {
         {/* History */}
         <div className="stats w-96 shadow">
           <div className="stat">
-            <div className="stat-title mb-4">Top Plans</div>
-            {topHistoryPlans.map((plan, index) => (
+            <div className="stat-title mb-4">Most Triggered Plan IDs</div>
+            {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
               <div key={index} className="mb-2 flex items-center">
                 <div className="badge-primary badge badge-xs mr-4" />
-                <div className="text-sm">{plan.title}</div>
+                <div className="text-sm">{item[0]}</div>
               </div>
             ))}
             <div className="stat-desc">last 7 days</div>
@@ -124,12 +110,12 @@ export default function Dashboard() {
         <div className="stats flex-1 shadow">
           <div className="stat">
             <div className="stat-title mb-4">Recent Metrics Inflow</div>
-            {topHistoryPlans.map((plan, index) => (
+            {/* {topHistoryPlans.map((plan, index) => (
               <div key={index} className="mb-2 flex items-center">
                 <div className="badge-primary badge badge-xs mr-4" />
                 <div className="text-sm">{plan.title}</div>
               </div>
-            ))}
+            ))} */}
           </div>
         </div>
       </div>
