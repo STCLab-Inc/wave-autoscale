@@ -409,15 +409,23 @@ impl<'a> ScalingPlanner {
             self.action_task = None;
         }
     }
+    // For testing
+    #[allow(dead_code)]
     pub fn get_last_plan_item_id(&self) -> Arc<RwLock<String>> {
         self.last_plan_item_id.clone()
     }
+    // For testing
+    #[allow(dead_code)]
     pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
         self.last_plan_timestamp.clone()
     }
+    // For testing
+    #[allow(dead_code)]
     pub fn get_last_plan_item_id_by_action(&self) -> Arc<RwLock<String>> {
         self.last_plan_item_id_by_action.clone()
     }
+    // For testing
+    #[allow(dead_code)]
     pub fn get_last_plan_timestamp_by_action(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
         self.last_plan_timestamp_by_action.clone()
     }
@@ -461,9 +469,10 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         error!("[get_in_js] Failed to get source_metrics_data");
         return Err(rquickjs::Error::new_loading("Failed to get the metrics data"))
     };
-    let ulid = Ulid::from_datetime(
+    let start_time = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
+    let end_time = Ulid::new();
 
     debug!("[get_in_js] - metric_id: {}, name: {:?}, tags: {:?}, stats: {}, period_sec: {}", metric_id, name, tags, stats, period_sec);
 
@@ -474,9 +483,21 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
 
     // Filtered metric values
     let mut target_value_arr: Vec<f64> = Vec::new();
+    
+    // Validate whether the start_time is before the last item in the metric_values. 
+    // If the start_time is after the last item, then BTreeMap will panic.
+    let last_item = metric_values.iter().last();
+    if last_item.is_none() {
+        return Err(rquickjs::Error::new_loading("Failed to get the last item in the metric_values"));
+    }
+    let last_item = last_item.unwrap();
+    let last_item_time = Ulid::from_str(last_item.0.as_str()).unwrap();
+    if last_item_time < start_time {
+        return Err(rquickjs::Error::new_loading("The start_time is before the last item in the metric_values"));
+    }
 
     // Find the metric values between the time range (current time - period_sec, current time)
-    metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
+    metric_values.range((Included(start_time.to_string()), Included(end_time.to_string())))
         .for_each(|(_ulid, source_metrics_value)| {
             // Get the json string
             let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
