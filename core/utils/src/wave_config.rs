@@ -82,6 +82,7 @@ pub struct WaveConfig {
     //
     #[serde(default = "default_metric_buffer_size_kb")]
     pub metric_buffer_size_kb: u64,
+    // Store metrics in the database
     #[serde(default = "default_enable_metrics_log")]
     pub enable_metrics_log: bool,
 
