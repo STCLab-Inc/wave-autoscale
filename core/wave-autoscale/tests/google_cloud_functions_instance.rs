@@ -34,6 +34,7 @@ mod google_cloud_functions_instance_test {
             id: String::from("scaling_component_cloud_functions_instance"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();
@@ -89,6 +90,7 @@ mod google_cloud_functions_instance_test {
             id: String::from("scaling_component_cloud_functions_instance"),
             component_kind: String::from("google-cloud-functions"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();

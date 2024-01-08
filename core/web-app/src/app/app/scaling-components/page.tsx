@@ -1,155 +1,185 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-
-import ContentHeader from '../content-header';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ScalingComponentService from '@/services/scaling-component';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
-import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import ContentHeader from '../common/content-header';
+import WATable from '../common/wa-table';
+import { createColumnHelper } from '@tanstack/react-table';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import Pagination from '@/utils/pagination';
+import dayjs from 'dayjs';
+import { ScalingComponentDefinitionEx } from './scaling-component-definition-ex';
+import ScalingComponentDetailDrawer from './scaling-component-drawer';
+import EnabledBadge from '../common/enabled-badge';
 
-async function getScalingComponents() {
-  const components = await ScalingComponentService.getScalingComponents();
-  return components;
-}
+// Constants
+const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-interface ScalingComponentDefinitionEx extends ScalingComponentDefinition {
-  isChecked: boolean;
+// Utils
+async function getScalingComponents(): Promise<ScalingComponentDefinitionEx[]> {
+  const scalingComponents =
+    await ScalingComponentService.getScalingComponents();
+  return scalingComponents;
 }
 
 export default function ScalingComponentsPage() {
-  const [components, setComponents] = useState<ScalingComponentDefinitionEx[]>(
-    []
-  );
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Query params
+  const pageParam = searchParams.get('page');
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const sizeParam = searchParams.get('size');
+  const pageSize = sizeParam
+    ? parseInt(sizeParam, 10)
+    : SIZE_PER_PAGE_OPTIONS[0];
+
+  // States
+  const [scalingComponents, setScalingComponents] = useState<
+    ScalingComponentDefinitionEx[]
+  >([]);
+  const [selectedScalingComponent, setSelectedScalingComponent] =
+    useState<ScalingComponentDefinitionEx>();
+  const [forceFetch, setForceFetch] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>(new Pagination());
+  const metricsPerPage = useMemo(() => {
+    return scalingComponents.slice(
+      (pagination.currentPage - 1) * pagination.pageSize,
+      pagination.currentPage * pagination.pageSize
+    );
+  }, [scalingComponents, pagination.currentPage, pagination.pageSize]);
+  // Effects
+  useEffect(() => {
+    setPagination(
+      new Pagination(pageSize, scalingComponents?.length, currentPage)
+    );
+  }, [scalingComponents, currentPage, pageSize]);
 
   useEffect(() => {
-    const fetchComponents = async () => {
-      try {
-        const components = await getScalingComponents();
-        setComponents(components);
-      } catch (error) {
-        console.error({ error });
-      }
-    };
-    fetchComponents();
+    fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCheckChange = (isChecked: boolean) => {
-    setCheckAllFlag(isChecked);
-    const updatedComponents = components.map((item) => ({
-      ...item,
-      isChecked,
-    }));
-    setComponents(updatedComponents);
+  useEffect(() => {
+    if (forceFetch) {
+      fetchMetrics();
+      setForceFetch(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch]);
+
+  // Handlers
+  const fetchMetrics = async () => {
+    try {
+      const id = selectedScalingComponent?.db_id;
+      let scalingComponentsData = await getScalingComponents();
+      setScalingComponents(scalingComponentsData);
+      setSelectedScalingComponent(
+        scalingComponentsData.find(
+          (item: ScalingComponentDefinitionEx) => item.db_id === id
+        )
+      );
+    } catch (error) {
+      console.error({ error });
+      return [];
+    }
   };
 
+  const columnHelper = createColumnHelper<ScalingComponentDefinitionEx>();
+
+  const columns = [
+    columnHelper.accessor('id', {
+      header: () => 'ID',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('component_kind', {
+      header: () => 'Kind',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('metadata', {
+      header: () => 'Metadata',
+      cell: (cell) => (
+        <span className="flex flex-col items-center break-all text-start">
+          {renderKeyValuePairsWithJson(cell.getValue(), true)}
+        </span>
+      ),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('enabled', {
+      header: () => 'Enabled',
+      cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => 'Actions',
+      cell: (cell) => (
+        <button
+          className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+          onClick={() => {
+            setSelectedScalingComponent(cell.row.original);
+            setDetailModalVisible(true);
+          }}
+        >
+          Detail
+        </button>
+      ),
+    }),
+  ];
+
   return (
-    <main className="flex h-full w-full flex-col">
-      <div>
-        <ContentHeader
-          title="Scaling Components"
-          right={
-            <div className="flex items-center">
-              <Link href="/app/scaling-components/new">
-                <button className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50">
+    <main className="flex h-full w-full flex-row">
+      <div className="flex h-full w-full flex-col">
+        <div className="flex h-full w-full flex-col">
+          <ContentHeader
+            type="OUTER"
+            title="Scaling Components"
+            right={
+              <div className="flex items-center">
+                <button
+                  className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                  onClick={() => {
+                    setSelectedScalingComponent(undefined);
+                    setDetailModalVisible(true);
+                  }}
+                >
                   ADD COMPONENT
                 </button>
-              </Link>
-            </div>
-          }
-        />
-        <div className="flex w-full flex-col">
-          <table className="flex w-full flex-col">
-            <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-              <tr className="flex h-full w-full px-8">
-                <th className="mr-4 flex h-full flex-1 items-center">
-                  <label className="flex h-full items-center">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={checkAllFlag}
-                      onChange={(event) =>
-                        handleCheckChange(event.target.checked)
-                      }
-                    />
-                  </label>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Scaling Component Kind
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Scaling Component ID
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Metadata Values
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-2 items-center">
-                  <span className="flex items-center break-words">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
-              {components.map(
-                (componentsItem: ScalingComponentDefinitionEx) => (
-                  <tr
-                    key={componentsItem.db_id}
-                    className="flex w-full border-b px-8 py-4"
-                  >
-                    <td className="mr-4 flex h-full flex-1 items-start">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          checked={componentsItem.isChecked}
-                          onChange={(event) =>
-                            handleCheckChange(event.target.checked)
-                          }
-                        />
-                      </label>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex items-center break-all">
-                        {componentsItem.component_kind}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex items-center break-all">
-                        {componentsItem.id}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex flex-col items-center">
-                        {renderKeyValuePairsWithJson(
-                          JSON.stringify(componentsItem.metadata),
-                          false
-                        )}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-2 items-start">
-                      <div className="flex items-center">
-                        <Link
-                          href={`/app/scaling-components/${componentsItem.db_id}`}
-                        >
-                          <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                            Details
-                          </button>
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
+              </div>
+            }
+          />
+          <div className="flex w-full flex-col">
+            <WATable<ScalingComponentDefinitionEx>
+              tableOptions={{
+                data: metricsPerPage,
+                columns,
+              }}
+              pagination={pagination}
+              onChangePage={(newPage) => {
+                router.push(
+                  `/app/scaling-components?page=${newPage}&size=${pageSize}`
+                );
+              }}
+              onChangePageSize={(newSize) => {
+                router.push(
+                  `/app/scaling-components?page=${currentPage}&size=${newSize}`
+                );
+              }}
+            />
+          </div>
         </div>
       </div>
+      {detailModalVisible ? (
+        <ScalingComponentDetailDrawer
+          scalingComponent={selectedScalingComponent}
+          onClose={() => setDetailModalVisible(false)}
+          onChange={() => setForceFetch(true)}
+        />
+      ) : null}
     </main>
   );
 }

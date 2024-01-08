@@ -192,6 +192,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("azure-functions"),
             metadata,
+            ..Default::default()
         };
         let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
             AzureFunctionsAppScalingComponent::new(scaling_definition)
@@ -235,6 +236,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("azure-functions"),
             metadata,
+            ..Default::default()
         };
         let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
             AzureFunctionsAppScalingComponent::new(scaling_definition)
@@ -278,6 +280,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("azure-functions"),
             metadata,
+            ..Default::default()
         };
         let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
             AzureFunctionsAppScalingComponent::new(scaling_definition)

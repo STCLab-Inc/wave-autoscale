@@ -5,6 +5,7 @@ CREATE TABLE
     priority INTEGER,
     metadata TEXT,
     plans TEXT,
+    enabled BOOLEAN,
     created_at timestamptz,
     updated_at timestamptz
   );

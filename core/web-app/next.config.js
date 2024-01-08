@@ -3,7 +3,6 @@ const nextConfig = {
   swcMinify: true,
   output: 'standalone',
   experimental: {
-    appDir: true,
     esmExternals: 'loose',
   },
   headers:
@@ -15,6 +14,15 @@ const nextConfig = {
           },
         ]
       : undefined,
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/app',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

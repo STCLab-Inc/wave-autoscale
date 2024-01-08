@@ -109,6 +109,7 @@ mod test {
                     serde_json::Value::String("".to_string())
                 )
             ]),
+            ..Default::default()
         };
 
         let params = HashMap::from([
@@ -157,6 +158,7 @@ mod test {
                     serde_json::Value::String("".to_string())
                 )
             ]),
+            ..Default::default()
         };
 
         let params = HashMap::from([
@@ -205,6 +207,7 @@ mod test {
                     serde_json::Value::String("".to_string())
                 )
             ]),
+            ..Default::default()
         };
 
         let params = HashMap::from([

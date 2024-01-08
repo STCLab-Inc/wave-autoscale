@@ -61,21 +61,26 @@ export function getMetricKeyTypes(): MetricKeyType[] {
 }
 
 export function generateMetricDefinition({
+  kind,
   id,
   db_id,
-  metric_kind,
+  collector,
+  enabled,
   metadata,
 }: {
+  kind: string;
   id: string;
   db_id?: string;
-  metric_kind: string;
+  collector: string;
+  enabled: boolean;
   metadata: any;
 }) {
   return {
-    kind: 'Metric',
+    kind: kind,
     id,
     db_id,
-    metric_kind: metric_kind,
-    metadata,
+    collector,
+    enabled,
+    metadata: metadata ?? {},
   } as MetricDefinition;
 }

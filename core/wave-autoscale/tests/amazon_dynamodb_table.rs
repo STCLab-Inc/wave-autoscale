@@ -25,6 +25,7 @@ mod amazon_dynamodb_table_test {
             id: String::from("scaling_component_dynamodb_table"),
             component_kind: String::from("amazon-dynamodb"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();

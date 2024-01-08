@@ -213,6 +213,7 @@ mod test {
             id: "id".to_string(),
             component_kind: "kubernetes-json-patch".to_string(),
             metadata: HashMap::new(),
+            ..Default::default()
         })
     }
 

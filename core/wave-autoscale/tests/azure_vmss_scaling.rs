@@ -51,6 +51,7 @@ mod test_azure_vmss_scaling {
             id: "azure_vmss_autoscaling_api_server".to_string(),
             component_kind: "azure-virtual-machine-scale-sets".to_string(),
             metadata: scaling_component_metadata,
+            ..Default::default()
         }];
 
         // create metric adapter

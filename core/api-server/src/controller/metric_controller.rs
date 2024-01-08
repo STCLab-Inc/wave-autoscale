@@ -132,6 +132,7 @@ mod tests {
                     id: "metric_id_1".to_string(),
                     collector: "vector".to_string(),
                     metadata: HashMap::new(),
+                    enabled: true,
                 },
                 data_layer::MetricDefinition {
                     db_id: "".to_string(),
@@ -139,6 +140,7 @@ mod tests {
                     id: "metric_id_2".to_string(),
                     collector: "vector".to_string(),
                     metadata: HashMap::new(),
+                    enabled: true,
                 },
             ])
             .await;

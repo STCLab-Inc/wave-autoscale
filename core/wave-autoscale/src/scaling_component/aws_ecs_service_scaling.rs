@@ -99,6 +99,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("amazon-ecs"),
             metadata: HashMap::new(),
+            ..Default::default()
         };
 
         let params = HashMap::new();

@@ -9,6 +9,9 @@ pub const DEFAULT_PLAN_INTERVAL: u16 = 1000;
 fn default_kind() -> ObjectKind {
     ObjectKind::ScalingPlan
 }
+fn default_enabled() -> bool {
+    false
+}
 
 #[derive(TS)]
 #[ts(
@@ -28,4 +31,19 @@ pub struct ScalingPlanDefinition {
     pub metadata: HashMap<String, serde_json::Value>,
     // #[ts(type = "Array<object>")]
     pub plans: Vec<PlanItemDefinition>,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}
+
+impl Default for ScalingPlanDefinition {
+    fn default() -> Self {
+        Self {
+            kind: ObjectKind::ScalingPlan,
+            db_id: "".to_string(),
+            id: "".to_string(),
+            metadata: HashMap::new(),
+            plans: vec![],
+            enabled: true,
+        }
+    }
 }

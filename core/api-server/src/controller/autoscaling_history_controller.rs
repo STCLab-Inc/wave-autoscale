@@ -1,11 +1,13 @@
 use crate::app_state::AppState;
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use serde_json::json;
 use tracing::{debug, error};
 
 pub fn init(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_autoscaling_history_by_date);
+    cfg.service(get_autoscaling_history_by_date)
+        .service(generate_autoscaling_history_samples);
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,4 +47,23 @@ async fn get_autoscaling_history_by_date(
     let autoscaling_history = autoscaling_history.unwrap();
     debug!("Got autoscaling history: {:?}", autoscaling_history);
     HttpResponse::Ok().json(autoscaling_history)
+}
+
+#[post("/api/autoscaling-history/generate-samples")]
+async fn generate_autoscaling_history_samples(app_state: web::Data<AppState>) -> impl Responder {
+    debug!("Generating autoscaling history samples");
+    let autoscaling_history = app_state
+        .data_layer
+        .generate_autoscaling_history_samples(5)
+        .await;
+    if autoscaling_history.is_err() {
+        error!(
+            "Failed to generate autoscaling history samples: {:?}",
+            autoscaling_history
+        );
+        return HttpResponse::InternalServerError().body(format!("{:?}", autoscaling_history));
+    }
+    HttpResponse::Ok().json(json!({
+        "message": "Autoscaling history samples generated"
+    }))
 }

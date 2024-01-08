@@ -1,0 +1,216 @@
+export const CLOUD_RUN_AUTOSCALING_CODE = `kind: ScalingComponent
+id: scaling_component_google_cloud_run_version_1_service
+component_kind: google-cloud-run
+metadata:
+  api_version: v1
+  project_name: "{{ project_name }}"
+  location_name: "{{ location_name }}"
+  service_name: "{{ service_name }}"  
+---
+# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-run
+
+kind: Metric
+id: telegraf_stackdriver_google_cloud_run_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/cpu/utilizations] # If CPU utilization is high, resources may be insufficient, and you should consider scaling out. Conversely, if CPU utilization is low, you can consider scaling in to conserve resources.
+        interval: 60s # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+      - project: "{{ project }}"
+        metric_type_prefix_include: [run.googleapis.com/container/memory/utilizations] # If memory utilization is high, you should consider scaling out; if low, consider scaling in.
+        interval: 60s # Sampled every 60 seconds. After sampling, data is not visible for up to 60 seconds.
+        filter:
+          resource_labels:
+            - key: configuration_name
+              value: "{{ configuration_name }}"
+  outputs:
+    wave-autoscale: {}
+---
+kind: ScalingComponent
+id: scaling_component_google_cloud_run_version_2_service
+component_kind: google-cloud-run
+metadata:
+  api_version: v2
+  project_name: "{{ project_name }}"
+  location_name: "{{ location_name }}"
+  service_name: "{{ service_name }}"
+---
+kind: ScalingPlan
+id: scaling_plan_google_cloud_run_version_1_service
+title: scaling plan for google cloud run version 1 service
+  cool_down: 0 # seconds
+  interval: 60000 # milliseconds
+plans:
+  # When the value of container memory utilization is low (less than 5 or up to 10), the instance configuration values decreases (scaling in), which reflects the low usage.
+  # When the value of container memory utilization is high (exceeding 60 or surpassing 80), the instance configuration values increases (scaling out) to meet the high demand.  
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_in_1
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_memory_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) < 5
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 5
+        max_instance_count: 10
+        max_request_per_instance: 1
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_in_2
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_memory_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) < 10
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 10
+        max_instance_count: 20
+        max_request_per_instance: 1
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_out_1
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_memory_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) > 60
+    # Higher priority values will be checked first.
+    priority: 3
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 20
+        max_instance_count: 40
+        max_request_per_instance: 2
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_out_2
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_memory_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) > 80
+    # Higher priority values will be checked first.
+    priority: 4
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 40
+        max_instance_count: 80
+        max_request_per_instance: 4
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  # When the value of container cpu utilization is low (less than 10 or up to 20), the instance configuration values decreases (scaling in), which reflects the low usage.
+  # When the value of container cpu utilization is high (exceeding 70 or surpassing 90), the instance configuration values increases (scaling out) to meet the high demand.  
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_in_3
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_cpu_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) < 10
+    # Higher priority values will be checked first.
+    priority: 6
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 5
+        max_instance_count: 10
+        max_request_per_instance: 1
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_in_4
+    description: scale-in instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_cpu_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) < 20
+    # Higher priority values will be checked first.
+    priority: 5
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 10
+        max_instance_count: 20
+        max_request_per_instance: 1
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_out_3
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_cpu_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) > 70
+    # Higher priority values will be checked first.
+    priority: 7
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 20
+        max_instance_count: 40
+        max_request_per_instance: 2
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+  - id: scaling_plan_google_cloud_run_version_1_instance_scale_out_4
+    description: scale-out instance
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      (get({
+        metric_id: 'telegraf_stackdriver_google_cloud_run_metrics',
+        name: 'run.googleapis.com/container_cpu_utilizations',        
+        tags: {
+          'configuration_name': '{{ configuration_name }}'
+        },
+        period_sec: 60
+      }) > 90
+    # Higher priority values will be checked first.
+    priority: 8
+    scaling_components:
+      - component_id: scaling_plan_google_cloud_run_version_1_instance        
+        min_instance_count: 40
+        max_instance_count: 80
+        max_request_per_instance: 4
+        execution_environment: EXECUTION_ENVIRONMENT_GEN1
+`;

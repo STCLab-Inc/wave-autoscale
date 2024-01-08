@@ -138,6 +138,7 @@ mod test {
             id: String::from("scaling-id"),
             component_kind: String::from("aws-lambda"),
             metadata: HashMap::new(),
+            ..Default::default()
         };
 
         let params = HashMap::new();

@@ -98,6 +98,7 @@ mod test_amazon_emr_ec2 {
             id: "amazon_emr_ec2_server".to_string(),
             component_kind: "amazon-emr-ec2".to_string(),
             metadata: get_test_instance_group_map(),
+            ..Default::default()
         }];
 
         // create metric adapter
@@ -142,6 +143,7 @@ mod test_amazon_emr_ec2 {
             id: "amazon_emr_ec2_server".to_string(),
             component_kind: "amazon-emr-ec2".to_string(),
             metadata: get_test_instance_fleet_map(),
+            ..Default::default()
         }];
 
         // create metric adapter

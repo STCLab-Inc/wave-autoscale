@@ -9,7 +9,7 @@ mod reader {
     use data_layer::reader::wave_definition_reader::{read_definition_yaml_file, ParserResult};
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
-    const EXPECTED_METRICS_COUNT: usize = 1;
+    const EXPECTED_METRICS_COUNT: usize = 2;
     const EXPECTED_SLOS_COUNT: usize = 1;
 
     fn read_example_yaml_file() -> Result<ParserResult> {

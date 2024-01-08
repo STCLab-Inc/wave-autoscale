@@ -2,7 +2,6 @@
  * Wave Autoscale
  */
 mod app;
-mod args;
 mod metric_collector_manager;
 mod metric_updater;
 mod scaling_component;
@@ -11,13 +10,11 @@ mod util;
 mod web_app_runner;
 
 use api_server::app::run_api_server;
-use args::Args;
-use clap::Parser;
 use data_layer::data_layer::DataLayer;
-use metric_collector_manager::MetricCollectorManager;
+use metric_collector_manager::MetricsCollectorManager;
 use std::sync::Arc;
 use tokio::sync::watch;
-use tracing::error;
+use tracing::{debug, error};
 use util::log::LogLevel;
 use utils::{config_path::find_file_in_wa, wave_config::WaveConfig};
 
@@ -34,23 +31,22 @@ async fn main() {
         std::process::exit(0);
     });
 
-    // Parse command line arguments
-    let args = Args::parse();
+    // Configuration
+    let wave_config = WaveConfig::new();
 
     // Initialize logger
-    if args.quiet {
+    if wave_config.quiet {
         util::log::init(LogLevel::Quiet);
-    } else if args.verbose {
+    } else if wave_config.debug {
         util::log::init(LogLevel::Verbose);
     } else {
         util::log::init(LogLevel::Info);
     }
 
-    // Configuration
-    let wave_config = WaveConfig::new();
+    debug!("[WaveConfig] Config file parsed: {:?}", wave_config);
 
     //
-    // Initialize the application (DataLayer, MetricCollectorManager, API Server, Web App, and App)
+    // Initialize the application (DataLayer, MetricsCollectorManager, API Server, Web App, and App)
     //
 
     // DataLayer
@@ -62,16 +58,13 @@ async fn main() {
     // Do not need RwLock or Mutex because the DataLayer is read-only.
     let shared_data_layer = Arc::new(data_layer);
 
-    // MetricCollectorManager
+    // MetricsCollectorManager
     let output_url = format!(
         "http://{}:{}/api/metrics-receiver",
         wave_config.host, wave_config.port
     );
-    let mut metric_collector_manager = MetricCollectorManager::new(
-        wave_config.clone(),
-        &output_url,
-        !args.quiet && args.verbose,
-    );
+    let mut metric_collector_manager =
+        MetricsCollectorManager::new(wave_config.clone(), &output_url);
 
     // Run API Server
     let shared_data_layer_for_api_server = shared_data_layer.clone();
@@ -83,8 +76,8 @@ async fn main() {
 
     // Run Web App
     if wave_config.web_ui {
-        let host = wave_config.host.clone();
-        let port = wave_config.port;
+        let host = wave_config.web_ui_host.clone();
+        let port = wave_config.web_ui_port;
         let _web_app_handle = tokio::spawn(async move {
             let _ = web_app_runner::run_web_app(host.as_str(), port);
         });
@@ -121,6 +114,7 @@ async fn main() {
 
     // TODO: replace watching the local definition to watching Git repository for GitOps
     // Watch the definition file
+    // TODO: When it supports GitOps, it should be changed to watch the Git repository.
     let watch_duration = wave_config.watch_definition_duration;
     let mut watch_receiver: Option<watch::Receiver<String>> = if watch_duration != 0 {
         Some(shared_data_layer.watch_definitions_in_db(watch_duration))
@@ -132,8 +126,9 @@ async fn main() {
     // If watch_duration is 0, run the main application(controller) only once
     while watch_receiver.is_some() && watch_receiver.as_mut().unwrap().changed().await.is_ok() {
         // Update metric collectors
+        // TODO: MetricCollectorManager could be moved into the app(controller)
         let shared_data_layer = shared_data_layer.clone();
-        let metric_definitions = shared_data_layer.get_all_metrics().await;
+        let metric_definitions = shared_data_layer.get_enabled_metrics().await;
         if metric_definitions.is_err() {
             error!("Failed to get metric definitions");
             continue;

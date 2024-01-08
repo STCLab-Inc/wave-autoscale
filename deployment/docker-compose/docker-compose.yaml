@@ -9,7 +9,7 @@ services:
       - "3025:3025"
     volumes:
       - ".:/usr/src/wave-autoscale"
-    command: "./wave-autoscale --config /usr/src/wave-autoscale/wave-config.yaml --definition /usr/src/wave-autoscale/definition.yaml"
+    command: "./wave-autoscale"
   postgres:
     image: "postgres:latest"
     environment:

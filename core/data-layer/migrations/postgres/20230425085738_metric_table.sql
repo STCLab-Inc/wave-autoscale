@@ -3,6 +3,7 @@ CREATE TABLE metric (
   id TEXT UNIQUE,
   collector TEXT,
   metadata TEXT,
+  enabled BOOLEAN,
   created_at timestamptz,
   updated_at timestamptz
 );

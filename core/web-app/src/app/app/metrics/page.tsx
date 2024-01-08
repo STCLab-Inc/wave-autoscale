@@ -1,158 +1,177 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-
-import ContentHeader from '../content-header';
-import { MetricDefinition } from '@/types/bindings/metric-definition';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import MetricService from '@/services/metric';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import MetricDetailDrawer from './metric-drawer';
+import ContentHeader from '../common/content-header';
+import { MetricDefinitionEx } from './metric-definition-ex';
+import WATable from '../common/wa-table';
+import { createColumnHelper } from '@tanstack/react-table';
+import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
+import Pagination from '@/utils/pagination';
+import dayjs from 'dayjs';
+import EnabledBadge from '../common/enabled-badge';
 
-async function fetchMetrics() {
-  try {
-    const metrics = await MetricService.getMetrics();
-    return metrics;
-  } catch (error) {
-    console.error({ error });
-    return [];
-  }
-}
+// Constants
+const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-interface MetricDefinitionEx extends MetricDefinition {
-  isChecked: boolean;
+// Utils
+async function getMetrics(): Promise<MetricDefinitionEx[]> {
+  const metrics = await MetricService.getMetrics();
+  return metrics;
 }
 
 export default function MetricsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Query params
+  const pageParam = searchParams.get('page');
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const sizeParam = searchParams.get('size');
+  const pageSize = sizeParam
+    ? parseInt(sizeParam, 10)
+    : SIZE_PER_PAGE_OPTIONS[0];
+
+  // States
   const [metrics, setMetrics] = useState<MetricDefinitionEx[]>([]);
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<MetricDefinitionEx>();
+  const [forceFetch, setForceFetch] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>(new Pagination());
+  const metricsPerPage = useMemo(() => {
+    return metrics.slice(
+      (pagination.currentPage - 1) * pagination.pageSize,
+      pagination.currentPage * pagination.pageSize
+    );
+  }, [metrics, pagination.currentPage, pagination.pageSize]);
+  // Effects
+  useEffect(() => {
+    setPagination(new Pagination(pageSize, metrics?.length, currentPage));
+  }, [metrics, currentPage, pageSize]);
 
   useEffect(() => {
-    async function fetchData() {
-      const metricsData = await fetchMetrics();
-      setMetrics(metricsData);
-    }
-    fetchData();
+    fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCheckAllChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setCheckAllFlag(checked);
-    const updatedMetrics = metrics.map((metricsItem) => ({
-      ...metricsItem,
-      isChecked: checked,
-    }));
-    setMetrics(updatedMetrics);
+  useEffect(() => {
+    if (forceFetch) {
+      fetchMetrics();
+      setForceFetch(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch]);
+
+  // Handlers
+  const fetchMetrics = async () => {
+    try {
+      const id = selectedMetric?.db_id;
+      let metricsData = await getMetrics();
+      setMetrics(metricsData);
+      setSelectedMetric(
+        metricsData.find((item: MetricDefinitionEx) => item.db_id === id)
+      );
+    } catch (error) {
+      console.error({ error });
+      return [];
+    }
   };
 
+  const columnHelper = createColumnHelper<MetricDefinitionEx>();
+
+  const columns = [
+    columnHelper.accessor('id', {
+      header: () => 'ID',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('collector', {
+      header: () => 'Collector',
+      cell: (cell) => cell.getValue(),
+    }),
+    columnHelper.accessor('metadata', {
+      header: () => 'Metadata',
+      cell: (cell) => (
+        <span className="flex flex-col items-center break-all text-start">
+          {renderKeyValuePairsWithJson(cell.getValue(), true)}
+        </span>
+      ),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('updated_at', {
+      header: () => 'Updated At',
+      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    }),
+    columnHelper.accessor('enabled', {
+      header: () => 'Enabled',
+      cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => 'Actions',
+      cell: (cell) => (
+        <button
+          className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+          onClick={() => {
+            setSelectedMetric(cell.row.original);
+            setDetailModalVisible(true);
+          }}
+        >
+          Detail
+        </button>
+      ),
+    }),
+  ];
+
   return (
-    <main className="flex h-full w-full flex-col">
-      <div>
-        <ContentHeader
-          title="Metrics"
-          right={
-            <div className="flex items-center">
-              <Link href="/app/metrics/new">
-                <button className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50">
+    <main className="flex h-full w-full flex-row">
+      <div className="flex h-full w-full flex-col">
+        <div className="flex h-full w-full flex-col">
+          <ContentHeader
+            type="OUTER"
+            title="Metrics"
+            right={
+              <div className="flex items-center">
+                <button
+                  className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                  onClick={() => {
+                    setSelectedMetric(undefined);
+                    setDetailModalVisible(true);
+                  }}
+                >
                   ADD METRIC
                 </button>
-              </Link>
-            </div>
-          }
-        />
-        <div className="flex w-full flex-col">
-          <table className="flex w-full flex-col">
-            <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-              <tr className="flex h-full w-full px-8">
-                <th className="mr-4 flex h-full flex-1 items-center">
-                  <label className="flex h-full items-center">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={checkAllFlag}
-                      onChange={handleCheckAllChange}
-                    />
-                  </label>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Metric Kind
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Metric ID
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-8 items-center">
-                  <span className="flex items-center break-words">
-                    Metadata Values
-                  </span>
-                </th>
-                <th className="mx-4 flex h-full w-full flex-2 items-center">
-                  <span className="flex items-center break-words">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
-              {metrics.map((metricsItem: MetricDefinitionEx) => {
-                return (
-                  <tr
-                    key={metricsItem.db_id}
-                    className="flex w-full border-b px-8 py-4"
-                  >
-                    <td className="mr-4 flex h-full flex-1 items-start">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          checked={metricsItem.isChecked}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            const updatedMetrics = metrics.map((item) =>
-                              item.id === metricsItem.id
-                                ? { ...item, isChecked: checked }
-                                : item
-                            );
-                            setMetrics(updatedMetrics);
-                          }}
-                        />
-                      </label>
-                    </td>
-
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex items-center break-all">
-                        {metricsItem.kind}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex items-center break-all">
-                        {metricsItem.id}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-8 items-start">
-                      <div className="flex flex-col items-center">
-                        {renderKeyValuePairsWithJson(
-                          JSON.stringify(metricsItem.metadata),
-                          false
-                        )}
-                      </div>
-                    </td>
-                    <td className="mx-4 flex h-full w-full flex-2 items-start">
-                      <div className="flex items-center">
-                        <Link href={`/app/metrics/${metricsItem.db_id}`}>
-                          <button className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                            Details
-                          </button>
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              </div>
+            }
+          />
+          <div className="flex w-full flex-col">
+            <WATable<MetricDefinitionEx>
+              tableOptions={{
+                data: metricsPerPage,
+                columns,
+              }}
+              pagination={pagination}
+              onChangePage={(newPage) => {
+                router.push(`/app/metrics?page=${newPage}&size=${pageSize}`);
+              }}
+              onChangePageSize={(newSize) => {
+                router.push(`/app/metrics?page=${currentPage}&size=${newSize}`);
+              }}
+            />
+          </div>
         </div>
       </div>
+      {detailModalVisible ? (
+        <MetricDetailDrawer
+          metric={selectedMetric}
+          onClose={() => setDetailModalVisible(false)}
+          onChange={() => setForceFetch(true)}
+        />
+      ) : null}
     </main>
   );
 }

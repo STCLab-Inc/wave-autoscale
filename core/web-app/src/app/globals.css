@@ -6,12 +6,9 @@
   height: calc(100% - 4rem);
 }
 
-.plan-drawer {
+.scaling-plans-drawer {
   height: 100%;
 }
-/* .drawer-content {
-  height: calc(100% - 4rem);
-} */
 
 .tab.tab-active:not(.tab-disabled):not([disabled]) {
   border-color: hsl(var(--p) / var(--tw-text-opacity)) !important;

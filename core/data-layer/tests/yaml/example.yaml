@@ -5,6 +5,15 @@ kind: Metric
 id: metric_id
 metadata:
   user_key: user_value
+enabled: false
+---
+kind: Metric
+# id should be unique. And alphanumeric characters and underscores are allowed.
+# for example, "metric_id" is valid but "metric-id" is not.
+id: metric_id2
+metadata:
+  user_key: user_value
+enabled: true
 ---
 kind: SLO
 id: slo_id

@@ -10,7 +10,8 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(get_plan_by_id)
         .service(post_plans)
         .service(put_plan_by_id)
-        .service(delete_plan_by_id);
+        .service(delete_plan_by_id)
+        .service(run_plan);
 }
 
 #[get("/api/plans")]
@@ -96,6 +97,29 @@ async fn delete_plan_by_id(
     HttpResponse::Ok().body("ok")
 }
 
+#[derive(Deserialize, Debug)]
+struct RunPlanRequest {
+    plan_id: String,
+    plan_item_id: String,
+}
+#[post("/api/run-plan")]
+async fn run_plan(
+    request: web::Json<RunPlanRequest>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    debug!("Running plan: {:?}", request);
+    let result = app_state
+        .data_layer
+        .send_plan_action(request.plan_id.clone(), request.plan_item_id.clone());
+
+    if result.is_err() {
+        error!("Failed to run plan: {:?}", result);
+        return HttpResponse::InternalServerError().body(format!("{:?}", result));
+    }
+    debug!("Ran plan");
+    HttpResponse::Ok().body("ok")
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utils::test_utils::get_app_state_for_test;
@@ -131,6 +155,7 @@ mod tests {
                             "value": 1
                         })],
                     }],
+                    enabled: true,
                 },
                 data_layer::ScalingPlanDefinition {
                     id: "test2".to_string(),
@@ -149,6 +174,7 @@ mod tests {
                             "value": 2
                         })],
                     }],
+                    enabled: true,
                 },
             ])
             .await;
@@ -178,5 +204,31 @@ mod tests {
                 panic!("updated_at field is missing or not a string");
             }
         }
+    }
+
+    // [GET] /api/run-plan
+    #[actix_web::test]
+    #[tracing_test::traced_test]
+    async fn test_run_plan() {
+        let app_state = get_app_state_for_test().await;
+        let mut receiver = app_state.data_layer.subscribe_action();
+        // add_plans_for_test(&app_state.data_layer).await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/run-plan")
+            .set_json(json!({
+                "plan_id": "plan_id_1",
+                "plan_item_id": "plan_item_id_1"
+            }))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+
+        let receiver_result = receiver.recv().await;
+        assert!(receiver_result.is_ok());
+
+        let value = receiver_result.unwrap();
+        assert_eq!(value.get("plan_id").unwrap(), "plan_id_1");
+        assert_eq!(value.get("plan_item_id").unwrap(), "plan_item_id_1");
     }
 }

@@ -18,7 +18,7 @@ use std::ops::Bound::Included;
 use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use ulid::Ulid;
 
 const PLAN_EXPRESSION_PERIOD_SEC: u64 = 5 * 60;
@@ -44,6 +44,35 @@ impl std::fmt::Display for PlanExpressionStats {
         }
     }
 }
+
+
+/**
+ * Parse action from DataLayer
+ */
+fn parse_action(action: serde_json::Value) -> Result<(String, String)> {
+    let action = action.as_object();
+    if action.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse action"));
+    }
+    let action = action.unwrap();
+
+    let plan_id = action.get("plan_id").and_then(serde_json::Value::as_str);
+    if plan_id.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse plan_id"));
+    }
+    let plan_id = plan_id.unwrap();
+
+    let plan_item_id = action
+        .get("plan_item_id")
+        .and_then(serde_json::Value::as_str);
+    if plan_item_id.is_none() {
+        return Err(anyhow::anyhow!("Failed to parse plan_item_id"));
+    }
+    let plan_item_id = plan_item_id.unwrap();
+
+    Ok((plan_id.to_string(), plan_item_id.to_string()))
+}
+
 
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
@@ -75,10 +104,14 @@ pub struct ScalingPlanner {
     definition: ScalingPlanDefinition,
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
-    last_plan_id: Arc<RwLock<String>>,
+    last_plan_item_id: Arc<RwLock<String>>,
     last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
+    // For instant action
+    action_task: Option<JoinHandle<()>>,
+    last_plan_item_id_by_action: Arc<RwLock<String>>,
+    last_plan_timestamp_by_action: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 impl<'a> ScalingPlanner {
@@ -92,10 +125,13 @@ impl<'a> ScalingPlanner {
             definition,
             metric_updater,
             scaling_component_manager,
-            last_plan_id: Arc::new(RwLock::new(String::new())),
+            last_plan_item_id: Arc::new(RwLock::new(String::new())),
             last_plan_timestamp: Arc::new(RwLock::new(None)),
             data_layer,
             task: None,
+            action_task: None,
+            last_plan_item_id_by_action: Arc::new(RwLock::new(String::new())),
+            last_plan_timestamp_by_action: Arc::new(RwLock::new(None)),
         }
     }
     fn sort_plan_by_priority(&self) -> Vec<PlanItemDefinition> {
@@ -111,7 +147,7 @@ impl<'a> ScalingPlanner {
     pub fn run(&mut self) {
         let _shared_metric_updater = self.metric_updater.clone();
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
-        let shared_last_run = self.last_plan_id.clone();
+        let shared_last_run = self.last_plan_item_id.clone();
         let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
         let scaling_plan_definition = self.definition.clone();
         let data_layer: Arc<DataLayer> = self.data_layer.clone();
@@ -150,28 +186,26 @@ impl<'a> ScalingPlanner {
             // Initialize the runtime and context to evaluate the scaling plan expressions
             // TODO: Support Python and other languages
             let Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-                error!("Error creating runtime");
+                error!("[ScalingPlanner] Error creating runtime");
                 return;
             };
             let Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-                error!("Error creating context");
+                error!("[ScalingPlanner] Error creating context");
                 return;
             };
 
             // Run the loop every interval
             loop {
                 if let Some(cool_down) = plan_metadata.get("cool_down") {
-                    debug!("Cool down is set to {:?}", cool_down);
-
                     // apply cool down
                     if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
                         let now = Utc::now();
-
                         if let Some(cool_down_seconds) = cool_down.as_u64() {
                             let cool_down_duration =
                                 chrono::Duration::seconds(cool_down_seconds as i64);
-                            if now - last_plan_timestamp < cool_down_duration {
-                                debug!("Cool down is not over yet");
+                            let time_left = last_plan_timestamp + cool_down_duration - now;
+                            if time_left.num_milliseconds() > 0 {
+                                debug!("[ScalingPlanner] Cooling down. Skip the plan. {} seconds left.", time_left.num_seconds());
                                 interval.tick().await;
                                 continue;
                             }
@@ -191,15 +225,16 @@ impl<'a> ScalingPlanner {
                     // Find the plan that matches the expression
                     for plan in plans.iter() {
                         if plan.cron_expression.is_none() && plan.expression.is_none() {
-                            error!("Both cron_expression and expression are empty");
+                            error!("[ScalingPlanner] Both cron_expression and expression are empty");
                             continue;
                         }
                         // 1. Cron Expression
                         if let Some(cron_expression) = plan.cron_expression.as_ref() {
+                            debug!("[ScalingPlanner] cron_expression - {}", cron_expression);
                             if !cron_expression.is_empty() {
                                 let schedule = cron::Schedule::from_str(cron_expression.as_str());
                                 if schedule.is_err() {
-                                    error!("Error parsing cron expression: {}", cron_expression);
+                                    error!("[ScalingPlanner] Error parsing cron expression: {}", cron_expression);
                                     continue;
                                 }
                                 let schedule = schedule.unwrap();
@@ -207,7 +242,7 @@ impl<'a> ScalingPlanner {
                                 let datetime = schedule.upcoming(chrono::Utc).take(1).next();
                                 if datetime.is_none() {
                                     error!(
-                                        "Error getting next datetime for cron expression: {}",
+                                        "[ScalingPlanner] Error getting next datetime for cron expression: {}",
                                         cron_expression
                                     );
                                     continue;
@@ -217,7 +252,7 @@ impl<'a> ScalingPlanner {
                                 let duration = duration.num_milliseconds();
                                 if duration < 0 || duration > DEFAULT_PLAN_INTERVAL as i64 {
                                     error!(
-                                        "The datetime is not yet reached for cron expression: {}",
+                                        "[ScalingPlanner] The datetime is not yet reached for cron expression: {}",
                                         cron_expression
                                     );
                                     continue;
@@ -231,15 +266,20 @@ impl<'a> ScalingPlanner {
                             Vec::new();
                         if let Some(expression) = plan.expression.as_ref() {
                             if !expression.is_empty() {
+                                debug!("[ScalingPlanner] expression\n{}", expression);
                                 // Evaluate the expression
                                 let result = async_with!(context => |ctx| {
-                                    let Ok(result) = ctx.eval::<bool, _>(expression.clone()) else {
+                                    let result = ctx.eval::<bool, _>(expression.clone());
+                                    if result.is_err() {
+                                        let message = result.err().unwrap().to_string();
+                                        error!("[ScalingPlanner] Failed to evaluate expression\n{}\n\n{}", expression, message);
                                         return false;
-                                    };
-                                    result
+                                    }
+                                    true
                                 })
                                 .await;
-
+                                
+                                debug!("[ScalingPlanner] expression result - {:?}", result);
                                 // expression get value (for history)
                                 let expression_map =
                                     expression_get_value(expression.clone(), context.clone()).await;
@@ -252,20 +292,8 @@ impl<'a> ScalingPlanner {
                             }
                         }
 
-                        // TODO: Stabilization window(time)
-                        // Check if the plan has already been executed
-                        let scaling_plan_id = &plan.id;
-
-                        // Apply the scaling components
-                        let scaling_components_metadata = &plan.scaling_components;
-                        let results = apply_scaling_components(
-                            scaling_components_metadata,
-                            &shared_scaling_component_manager,
-                        )
-                        .await;
-
-                        debug!("results - {:?}", results);
-
+                        let results = run_plan_item(plan, &shared_scaling_component_manager).await;
+                        
                         // update last plan timestamp
                         if !results.is_empty() {
                             let mut shared_last_plan_timestamp =
@@ -276,9 +304,10 @@ impl<'a> ScalingPlanner {
                         // Update the last run
                         {
                             let mut shared_last_run = shared_last_run.write().await;
+                            let scaling_plan_id = &plan.id;
                             *shared_last_run = scaling_plan_id.clone();
+                            info!("[ScalingPlanner] Applied scaling plan: {}", scaling_plan_id);
                         }
-                        debug!("Applied scaling plan: {}", scaling_plan_id);
 
                         // Add the result of the scaling plan to the history
                         for (index, result) in results.iter().enumerate() {
@@ -286,6 +315,7 @@ impl<'a> ScalingPlanner {
                                 Ok(_) => None,
                                 Err(error) => Some(error.to_string()),
                             };
+                            let scaling_components_metadata = &plan.scaling_components;
                             let autoscaling_history: AutoscalingHistoryDefinition =
                                 AutoscalingHistoryDefinition::new(
                                     scaling_plan_definition.db_id.clone(),
@@ -295,7 +325,7 @@ impl<'a> ScalingPlanner {
                                     json!(scaling_components_metadata[index].clone()).to_string(),
                                     fail_message,
                                 );
-                            debug!("autoscaling_history - {:?}", autoscaling_history);
+                            debug!("[ScalingPlanner] autoscaling_history - {:?}", autoscaling_history);
                             let _ = data_layer
                                 .add_autoscaling_history(autoscaling_history)
                                 .await;
@@ -307,28 +337,112 @@ impl<'a> ScalingPlanner {
 
                     // If no plan was executed
                     if !excuted {
-                        debug!("No scaling plan was executed");
+                        debug!("[ScalingPlanner] No scaling plan was executed");
                     }
                 }
-                debug!("------------Next--------------");
                 // Wait for the next interval.
                 interval.tick().await;
             }
         });
         self.task = Some(task);
+
+        // Run the action receiver
+        self.run_action_receiver();
+    }
+    fn run_action_receiver(&mut self) {
+        let mut receiver = self.data_layer.subscribe_action();
+        let definition = self.definition.clone();
+        let scaling_component_manager = self.scaling_component_manager.clone();
+        let last_plan_id_by_action = self.last_plan_item_id_by_action.clone();
+        let last_plan_timestamp_by_action = self.last_plan_timestamp_by_action.clone();
+        let action_task = tokio::spawn(async move {
+            while let action = receiver.recv().await {
+                if action.is_err() {
+                    continue;
+                }
+                let action = action.unwrap();
+
+                let (plan_id, plan_item_id) = match parse_action(action) {
+                    Ok((plan_id, plan_item_id)) => (plan_id, plan_item_id),
+                    Err(error) => {
+                        error!("Failed to parse action: {}", error);
+                        continue;
+                    }
+                };
+                if plan_id != definition.id {
+                    continue;
+                }
+                let plan_item = definition
+                    .plans
+                    .iter()
+                    .find(|plan| plan.id == plan_item_id);
+
+                if plan_item.is_none() {
+                    error!("Failed to find plan_item: {}", plan_item_id);
+                    continue;
+                }
+
+                let plan_item = plan_item.unwrap();
+                let _results = run_plan_item(plan_item, &scaling_component_manager).await;
+
+                // Update the last run
+                {
+                    let mut shared_last_run = last_plan_id_by_action.write().await;
+                    *shared_last_run = plan_item_id.clone();
+                    debug!("[ScalingPlanner] Applied scaling plan: {}", plan_item_id);
+
+                    let mut shared_last_plan_timestamp_by_action =
+                        last_plan_timestamp_by_action.write().await;
+                    *shared_last_plan_timestamp_by_action = Some(Utc::now());
+                }
+            }
+        });
+        self.action_task = Some(action_task);
     }
     pub fn stop(&mut self) {
         if let Some(task) = &self.task {
             task.abort();
             self.task = None;
         }
+        if let Some(task) = &self.action_task {
+            task.abort();
+            self.action_task = None;
+        }
     }
-    pub fn get_last_plan_id(&self) -> Arc<RwLock<String>> {
-        self.last_plan_id.clone()
+    // For testing
+    #[allow(dead_code)]
+    pub fn get_last_plan_item_id(&self) -> Arc<RwLock<String>> {
+        self.last_plan_item_id.clone()
     }
+    // For testing
+    #[allow(dead_code)]
     pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
         self.last_plan_timestamp.clone()
     }
+    // For testing
+    #[allow(dead_code)]
+    pub fn get_last_plan_item_id_by_action(&self) -> Arc<RwLock<String>> {
+        self.last_plan_item_id_by_action.clone()
+    }
+    // For testing
+    #[allow(dead_code)]
+    pub fn get_last_plan_timestamp_by_action(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
+        self.last_plan_timestamp_by_action.clone()
+    }
+}
+
+async fn run_plan_item(plan: &PlanItemDefinition, shared_scaling_component_manager: &Arc<RwLock<crate::scaling_component::ScalingComponentManager>>) -> Vec<Result<()>>{
+    // Apply the scaling components
+    let scaling_components_metadata = &plan.scaling_components;
+    let results = apply_scaling_components(
+        scaling_components_metadata,
+        shared_scaling_component_manager,
+    )
+    .await;
+
+    debug!("[ScalingPlanner] results - {:?}", results);
+
+    results
 }
 
 fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
@@ -336,14 +450,9 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         .get::<String, String>("metric_id".to_string())
         .map_err(|_| {
             error!("[ScalingPlan expression error] Failed to get metric_id");
-            rquickjs::Error::Exception
+            rquickjs::Error::new_loading("Failed to get metric_id")
         })?;
-    let name = args
-        .get::<String, String>("name".to_string())
-        .map_err(|_| {
-            error!("[ScalingPlan expression error] Failed to get name");
-            rquickjs::Error::Exception
-        })?;
+    let name = args.get::<String, String>("name".to_string()).ok();
     // tags, stats, period_sec is optional
     let tags = match args.get::<String, HashMap<String, String>>("tags".to_string()) {
         Ok(tags) => tags,
@@ -358,63 +467,100 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
 
     let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
         error!("[get_in_js] Failed to get source_metrics_data");
-        return Err(rquickjs::Error::Exception)
+        return Err(rquickjs::Error::new_loading("Failed to get the metrics data"))
     };
-    let ulid = Ulid::from_datetime(
+    let start_time = Ulid::from_datetime(
         std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
     );
+    let end_time = Ulid::new();
 
-    let mut target_value_arr: Vec<f64> = Vec::new();
+    debug!("[get_in_js] - metric_id: {}, name: {:?}, tags: {:?}, stats: {}, period_sec: {}", metric_id, name, tags, stats, period_sec);
+
     // find metric_id
     let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
-        return Err(rquickjs::Error::Exception)
+        return Err(rquickjs::Error::new_loading("Failed to get metric_id from the metrics data"))
     };
-    metric_values.range((Included(ulid.to_string()), Included(Ulid::new().to_string())))
+
+    // Filtered metric values
+    let mut target_value_arr: Vec<f64> = Vec::new();
+    
+    // Validate whether the start_time is before the last item in the metric_values. 
+    // If the start_time is after the last item, then BTreeMap will panic.
+    let last_item = metric_values.iter().last();
+    if last_item.is_none() {
+        return Err(rquickjs::Error::new_loading("Failed to get the last item in the metric_values"));
+    }
+    let last_item = last_item.unwrap();
+    let last_item_time = Ulid::from_str(last_item.0.as_str()).unwrap();
+    if last_item_time < start_time {
+        return Err(rquickjs::Error::new_loading("The start_time is before the last item in the metric_values"));
+    }
+
+    // Find the metric values between the time range (current time - period_sec, current time)
+    metric_values.range((Included(start_time.to_string()), Included(end_time.to_string())))
         .for_each(|(_ulid, source_metrics_value)| {
+            // Get the json string
             let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
                 error!("[ScalingPlan expression error] Failed to convert source_metric_data to serde value");
                 return;
             };
-            // find name or tags
-            let Some(json_value_str) = value.get("json_value") else {return;};
-            let Some(json_value_str) = json_value_str.as_str() else {return;};
+            let Some(json_value_str) = value.get("json_value").and_then( |value| value.as_str()) else {
+                return;
+            };
+            // Transform the json string to serde value
             let json_value_str = serde_json::from_str::<Value>(json_value_str)
                 .map_err(|_| {
                     error!("[ScalingPlan expression error] Failed to convert json_value to serde value");
                     rquickjs::Error::Exception
                 })
                 .unwrap();
+
+            // Get the value array
             let Some(json_values_arr) = json_value_str.as_array() else {return;};
-            let _filter_json_values_arr: Vec<_> = json_values_arr
-                .iter()
-                .map(|json_value_item| {
-                    let result_bool = json_value_item.get("name").and_then(Value::as_str)
-                        == Some(name.as_str())
-                        && (tags.is_empty() || {
-                            json_value_item
-                                .get("tags")
-                                .and_then(Value::as_object)
-                                .map_or(false, |value_tags| {
-                                    tags.iter().all(|(key, value)| {
-                                        value_tags.get(key).and_then(Value::as_str)
-                                            == Some(value.as_str())
-                                    })
-                                })
-                        });
-                    if result_bool {
-                        let Some(json_vaule) = json_value_item.get("value").and_then(Value::as_f64) else {
-                            return;
-                        };
-                        target_value_arr
-                            .append(&mut vec![json_vaule]);
+
+            for json_value_item in json_values_arr.iter() {
+                // Check if the name
+                let item_name = json_value_item.get("name").and_then(Value::as_str);
+                if name.is_some() && item_name.is_some() && item_name.unwrap() != name.as_ref().unwrap() {
+                    continue;
+                }
+                
+                // Check if the tags match
+                let item_tags = json_value_item.get("tags").and_then(Value::as_object);
+                if !tags.is_empty() {
+                    // If the tags are not empty but the item_tags is None, then it means that it doesn't match
+                    if item_tags.is_none() {
+                        continue;
                     }
-                })
-                .collect();
+                    let item_tags = item_tags.unwrap();
+
+                    let mut match_tags = true;
+                    for (key, value) in tags.iter() {
+                        let item_value = item_tags.get(key).and_then(Value::as_str);
+                        if item_value.is_none() || item_value.unwrap() != value {
+                            match_tags = false;
+                            break;
+                        }
+                    }
+
+                    // If the tags don't match, then skip
+                    if !match_tags {
+                        continue;
+                    }
+                }
+
+                // Put the value in the target_value_arr
+                let item_value = json_value_item.get("value").and_then(Value::as_f64);
+                if item_value.is_some() {
+                    target_value_arr.append(&mut vec![item_value.unwrap()]);
+                }
+            }
+
         });
     let metric_stats = match stats.to_lowercase() {
         ms if PlanExpressionStats::Latest.to_string() == ms => {
             let Some(latest_value) = target_value_arr.iter().last() else {
-                return Err(rquickjs::Error::Exception);
+                return Err(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             };
             Ok(latest_value.to_owned())
         }
@@ -432,27 +578,28 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
             let min_value = target_value_arr
                 .into_iter()
                 .reduce(f64::min)
-                .ok_or(rquickjs::Error::Exception);
+                .ok_or(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             match min_value {
                 Ok(min_value) => Ok(min_value),
-                Err(_) => Err(rquickjs::Error::Exception),
+                Err(_) => Err(rquickjs::Error::new_loading("Failed to get the value with the stats")),
             }
         }
         ms if PlanExpressionStats::Maximum.to_string() == ms => {
             let max_value = target_value_arr
                 .into_iter()
                 .reduce(f64::max)
-                .ok_or(rquickjs::Error::Exception);
+                .ok_or(rquickjs::Error::new_loading("Failed to get the value with the stats"));
             match max_value {
                 Ok(max_value) => Ok(max_value),
-                Err(_) => Err(rquickjs::Error::Exception),
+                Err(_) => Err(rquickjs::Error::new_loading("Failed to get the value with the stats")),
             }
         }
         _ => {
-            error!("[ScalingPlan expression error] stats is not defined");
-            Err(rquickjs::Error::Exception)
+            error!("[get_in_js] stats is valid: {}", stats);
+            Err(rquickjs::Error::new_loading("Failed to get the value with the stats"))
         }
     };
+    debug!("[get_in_js] metric_stats: {:?}", metric_stats);
     metric_stats
 }
 
@@ -511,6 +658,7 @@ mod tests {
             kind: ObjectKind::Metric,
             db_id: "".to_string(),
             collector: COLLECTOR.to_string(),
+            enabled: true,
         }];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
@@ -529,6 +677,7 @@ mod tests {
             kind: ObjectKind::ScalingPlan,
             metadata: HashMap::new(),
             plans,
+            enabled: true,
         };
 
         let scaling_planner = ScalingPlanner::new(
@@ -643,7 +792,7 @@ mod tests {
             "get({ metric_id: 'metric1', stats: 'max', name: 'test'}) == 6".to_string();
         let expression_optional_stats_period_sec =
             "get({ metric_id: 'metric1', name: 'test'}) == 4".to_string();
-        let expression_fail_name =
+        let _expression_fail_name =
             "get({ metric_id: 'metric1', stats: 'avg', period_sec: 1, tags: { tag1: 'value1'}}) == 3".to_string();
         let expression_fail_metric_id =
             "get({ stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3"
@@ -663,7 +812,6 @@ mod tests {
             check_expression(expression_optional_period_sec, context.clone()).await;
         let result_optional_stats_period_sec =
             check_expression(expression_optional_stats_period_sec, context.clone()).await;
-        let result_fail_name = check_expression(expression_fail_name, context.clone()).await;
         let result_fail_metric_id =
             check_expression(expression_fail_metric_id, context.clone()).await;
 
@@ -677,7 +825,6 @@ mod tests {
         assert!(result_optional_stats.unwrap());
         assert!(result_optional_period_sec.unwrap());
         assert!(result_optional_stats_period_sec.unwrap());
-        assert!(result_fail_name.is_err());
         assert!(result_fail_metric_id.is_err());
     }
 
@@ -755,7 +902,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -779,7 +926,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -821,7 +968,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, plan_id);
         }
@@ -863,7 +1010,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
         }
@@ -905,7 +1052,7 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
         }
@@ -929,9 +1076,37 @@ mod tests {
         // Wait for the scaling planner to execute the plan
         tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
         {
-            let last_plan_id = scaling_planner.get_last_plan_id();
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
             let shared_last_plan_id = last_plan_id.read().await;
             assert_eq!(*shared_last_plan_id, "");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_action_receiver() {
+        let plan_item_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
+            id: plan_item_id.clone(),
+            description: None,
+            expression: None,
+            cron_expression: None,
+            priority: 1,
+            scaling_components: vec![],
+            ui: None,
+        }])
+        .await;
+        scaling_planner.run();
+
+        let plan_id = scaling_planner.definition.id.clone();
+        let _ = data_layer.send_plan_action(plan_id, plan_item_id.clone());
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        {
+            let last_plan_item_id = scaling_planner.get_last_plan_item_id_by_action();
+            let shared_last_plan_item_id = last_plan_item_id.read().await;
+            assert_eq!(*shared_last_plan_item_id, plan_item_id);
         }
     }
 }

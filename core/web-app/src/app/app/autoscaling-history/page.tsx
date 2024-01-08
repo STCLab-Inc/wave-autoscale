@@ -1,251 +1,310 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import dayjs, { Dayjs } from 'dayjs';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
 import { decodeTime } from 'ulid';
-
-import ContentHeader from '../content-header';
 import AutoscalingHistoryService from '@/services/autoscaling-history';
 import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
-import HistoryHeatmap from './history-heatmap';
-import { renderKeyValuePairsWithJson } from '../keyvalue-renderer';
+import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
+import AutoscalingHistoryDetailDrawer from './autoscaling-history-drawer';
+import ContentHeader from '../common/content-header';
+import { TableComponent } from '../common/table';
+import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
 
-const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
-
-async function getHistory(from: Dayjs, to: Dayjs) {
-  const history = await AutoscalingHistoryService.getHistoryByFromTo(from, to);
-  return history;
-}
-
+// Default Values
 const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
+const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
-interface AutoscalingHistoryDefinitionEx extends AutoscalingHistoryDefinition {
-  created_at: number;
-  isChecked: boolean;
+// Utils
+const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
+
+async function getAutoscalingHistory(from: Dayjs, to: Dayjs) {
+  const autoscalingHistory =
+    await AutoscalingHistoryService.getAutoscalingHistoryByFromTo(from, to);
+  return autoscalingHistory;
 }
 
 export default function AutoscalingHistoryPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Query Params
   const fromParam = searchParams.get('from');
   const toParam = searchParams.get('to');
   const from = fromParam || formatDate(DEFAULT_FROM);
   const to = toParam || formatDate(DEFAULT_TO);
-  const fromDayjs = useMemo(() => dayjs(from), [from]);
+  const fromDayjs = useMemo(() => dayjs(from).startOf('day'), [from]);
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
-  const [history, setHistory] = useState<AutoscalingHistoryDefinitionEx[]>([]);
-  const router = useRouter();
+  const pageParam = searchParams.get('page');
+  const page = pageParam ? parseInt(pageParam, 10) : 1;
+  const sizeParam = searchParams.get('size');
+  const size = sizeParam ? parseInt(sizeParam, 10) : 10;
 
+  // UI State
+  const [selectAll, setSelectAll] = useState(false);
+  const [sizePerPage, setSizePerPage] = useState(SIZE_PER_PAGE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
+  const [forceFetch, setForceFetch] = useState(false);
+
+  // Data
+  const [autoscalingHistory, setAutoscalingHistory] = useState<
+    AutoscalingHistoryDefinitionEx[]
+  >([]);
+  const [selectedAutoscalingHistory, setSelectedAutoscalingHistory] =
+    useState<AutoscalingHistoryDefinitionEx>();
+
+  //
+  // Effects
+  //
+
+  // Fetch Autoscaling History Data when the page is loaded with from and to params
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        let history = await getHistory(fromDayjs, toDayjs);
-        history = history.map((historyItem: AutoscalingHistoryDefinition) => ({
-          ...historyItem,
-          created_at: decodeTime(historyItem.id),
-        }));
-        setHistory(history);
-      } catch (error) {
-        console.error({ error });
-      }
-    };
-    fetchHistory();
+    fetchAutoscalingHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDayjs, toDayjs]);
 
-  const handleDateChange = (field: 'from' | 'to', value: string) => {
+  // Update total page when autoscaling history data is updated
+  useEffect(() => {
+    setTotalPage(Math.ceil(autoscalingHistory.length / sizePerPage) || 1);
+  }, [autoscalingHistory, from, to, currentPage, totalPage, sizePerPage]);
+
+  // Update current page and size per page when page and size params are updated
+  useEffect(() => {
+    setCurrentPage(page || 1);
+    setSizePerPage(size || SIZE_PER_PAGE_OPTIONS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, size]);
+
+  // Update URL when current page is updated
+  useEffect(() => {
+    if (currentPage > totalPage || currentPage < 1) {
+      setCurrentPage(1);
+    }
+    router.push(
+      `${pathname}?from=${from}&to=${to}&page=${currentPage}&size=${sizePerPage}`
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoscalingHistory,
+    from,
+    to,
+    currentPage,
+    totalPage,
+    sizePerPage,
+    searchParams,
+  ]);
+
+  // ?????
+  useEffect(() => {
+    if (forceFetch) {
+      fetchAutoscalingHistory();
+      setForceFetch(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceFetch]);
+
+  // Fetch Autoscaling History Data
+  const fetchAutoscalingHistory = async () => {
+    try {
+      const id = selectedAutoscalingHistory?.id;
+      let autoscalingHistoryData = await getAutoscalingHistory(
+        fromDayjs,
+        toDayjs
+      );
+      autoscalingHistoryData = autoscalingHistoryData.map(
+        (autoscalingHistoryDataItem: AutoscalingHistoryDefinition) =>
+          ({
+            ...autoscalingHistoryDataItem,
+            created_at: decodeTime(autoscalingHistoryDataItem.id),
+            is_checked: false,
+          } as AutoscalingHistoryDefinitionEx)
+      );
+      setAutoscalingHistory(autoscalingHistoryData);
+      setSelectedAutoscalingHistory(
+        autoscalingHistoryData.find(
+          (item: AutoscalingHistoryDefinition) => item.id === id
+        )
+      );
+    } catch (error) {
+      console.error({ error });
+    }
+  };
+
+  // Date Picker Handler
+  const handleDate = (field: 'from' | 'to', value: string) => {
     const newDate = dayjs(value);
     const isValidDate = newDate.isValid();
 
-    if (isValidDate) {
-      const params = {
-        from: field === 'from' ? formatDate(newDate) : from,
-        to: field === 'to' ? formatDate(newDate) : to,
-      };
-      router.push(
-        `/app/autoscaling-history?from=${params.from}&to=${params.to}`
-      );
+    if (!isValidDate) {
+      return;
     }
+    const params = {
+      from: field === 'from' ? formatDate(newDate) : from,
+      to: field === 'to' ? formatDate(newDate) : to,
+    };
+    router.push(
+      `${pathname}?from=${params.from}&to=${params.to}&page=1&view=${sizePerPage}`
+    );
   };
-  const [checkAllFlag, setCheckAllFlag] = useState(false);
 
-  const handleCheckAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Select All Handler
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
-    setCheckAllFlag(checked);
-    const updatedHistory = history.map((historyItem) => ({
-      ...historyItem,
-      isChecked: checked,
-    }));
-    setHistory(updatedHistory);
+    setSelectAll(checked);
+    const updatedAutoscalingHistoryData = autoscalingHistory.map(
+      (updatedAutoscalingHistoryDataItem) => ({
+        ...updatedAutoscalingHistoryDataItem,
+        is_checked: checked,
+      })
+    );
+    setAutoscalingHistory(updatedAutoscalingHistoryData);
   };
+
+  const handleSizePerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newItemsPerPage = parseInt(event.target.value, 10);
+    setSizePerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const handleCurrentPage = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const onClickDetails = (
+    autoscalingHistoryItem: AutoscalingHistoryDefinitionEx | undefined
+  ) => {
+    setSelectedAutoscalingHistory(autoscalingHistoryItem);
+  };
+
+  const tableFormat = [
+    {
+      label: 'checkbox',
+      type: 'checkbox',
+      content: 'is_checked',
+      weight: '1',
+      status: selectAll,
+      function: handleSelectAll,
+    },
+    {
+      label: 'Scaling Plan ID',
+      type: 'span',
+      content: 'plan_id',
+      format: 'plain',
+      weight: '4',
+    },
+    {
+      label: 'Metric Values',
+      type: 'span',
+      content: 'metric_values_json',
+      format: 'json',
+      weight: '10',
+    },
+    {
+      label: 'Metadata Values',
+      type: 'span',
+      content: 'metadata_values_json',
+      format: 'json',
+      weight: '5',
+    },
+    {
+      label: 'Fail Message',
+      type: 'span',
+      content: 'fail_message',
+      weight: '3',
+    },
+    {
+      label: 'Status',
+      type: 'button',
+      content: 'fail_message',
+      format: 'alternate',
+      weight: '1',
+      function: onClickDetails,
+    },
+    {
+      label: 'Date',
+      type: 'span',
+      content: 'created_at',
+      format: 'unix',
+      weight: '2',
+    },
+    {
+      label: 'Action',
+      type: 'button',
+      content: 'dataItem',
+      format: 'click',
+      weight: '1',
+      function: onClickDetails,
+    },
+  ];
 
   return (
-    <main className="flex h-full w-full flex-col">
-      <ContentHeader
-        title="Autoscaling History"
-        right={
-          <div className="flex items-center">
-            <div className="form-control mr-1">
-              <label className="input-group-sm">
-                <input
-                  type="date"
-                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
-                  max={formatDate(toDayjs)}
-                  value={from}
-                  onChange={(event) =>
-                    handleDateChange('from', event.target.value)
-                  }
-                />
-              </label>
-            </div>
-            <span>-</span>
-            <div className="form-control ml-1">
-              <label className="input-group-sm">
-                <input
-                  type="date"
-                  className="input-bordered input input-sm max-w-[130px] cursor-text focus:outline-none"
-                  min={formatDate(fromDayjs)}
-                  value={to}
-                  onChange={(event) =>
-                    handleDateChange('to', event.target.value)
-                  }
-                />
-              </label>
-            </div>
-          </div>
-        }
-      />
-      <div className="flex w-full flex-col">
-        <HistoryHeatmap history={history} from={fromDayjs} to={toDayjs} />
-        <table className="flex w-full flex-col">
-          <thead className="text-md flex h-12 w-full items-center justify-between border-b border-t bg-gray-75 py-0 font-bold text-gray-800">
-            <tr className="flex h-full w-full px-8">
-              <th className="mr-4 flex h-full flex-1 items-center">
-                <label className="flex h-full items-center">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={checkAllFlag}
-                    onChange={handleCheckAllChange}
-                  />
-                </label>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-3 items-center">
-                <span className="flex items-center break-words">Plan ID</span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-10 items-center">
-                <span className="flex items-center break-words">Plan Item</span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <span className="flex items-center break-words">
-                  Metric Values
-                </span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <span className="flex items-center break-words">
-                  Metadata Values
-                </span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-8 items-center">
-                <span className="flex items-center break-words">
-                  Fail Message
-                </span>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-2 items-center">
-                <div className="items-centerbreak-words flex">Status</div>
-              </th>
-              <th className="mx-4 flex h-full w-full flex-5 items-center">
-                <div className="items-centerbreak-words flex">Date</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="text-md min-h-12 flex w-full flex-col items-center justify-between border-b py-0 text-gray-800">
-            {history.map((historyItem: AutoscalingHistoryDefinitionEx) => (
-              <tr
-                key={historyItem.id}
-                className="flex w-full border-b px-8 py-4"
-              >
-                <td className="mr-4 flex h-full flex-1 items-start">
-                  <label className="flex items-center">
+    <main className="flex h-full w-full flex-row">
+      <div className="flex h-full w-full flex-col">
+        <div className="flex h-full w-full flex-col">
+          <ContentHeader
+            type="OUTER"
+            title="Autoscaling History"
+            right={
+              <div className="flex items-center">
+                <div className="form-control mr-2">
+                  <label className="input-group-sm">
                     <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={historyItem.isChecked}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        const updatedHistory = history.map((item) =>
-                          item.id === historyItem.id
-                            ? { ...item, isChecked: checked }
-                            : item
-                        );
-                        setHistory(updatedHistory);
-                      }}
+                      type="date"
+                      className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
+                      max={formatDate(toDayjs)}
+                      value={from}
+                      onChange={(event) =>
+                        handleDate('from', event.target.value)
+                      }
                     />
                   </label>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-3 items-start">
-                  <div className="flex items-center break-all">
-                    {historyItem.plan_id}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-10 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
-                      historyItem.plan_item_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
-                      historyItem.metric_values_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="flex flex-col items-center">
-                    {renderKeyValuePairsWithJson(
-                      historyItem.metadata_values_json,
-                      false
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-8 items-start">
-                  <div className="flex flex-col items-center">
-                    {historyItem.fail_message &&
-                      renderKeyValuePairsWithJson(
-                        historyItem.fail_message,
-                        false
-                      )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-2 items-start">
-                  <div className="flex items-center">
-                    {historyItem.fail_message ? (
-                      <div className="badge-error badge bg-[#E0242E] px-2 py-3 text-white">
-                        Failed
-                      </div>
-                    ) : (
-                      <div className="badge-success badge bg-[#074EAB] px-2 py-3 text-white">
-                        Success
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="mx-4 flex h-full w-full flex-5 items-start">
-                  <div className="flex items-center break-all">
-                    {dayjs
-                      .unix(historyItem.created_at / 1000)
-                      .format('YYYY/MM/DD HH:mm:ss')}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+                <span>-</span>
+                <div className="form-control ml-2">
+                  <label className="input-group-sm">
+                    <input
+                      type="date"
+                      className="input-bordered input input-sm max-w-[130px] cursor-text px-2 text-center focus:outline-none"
+                      min={formatDate(fromDayjs)}
+                      value={to}
+                      onChange={(event) => handleDate('to', event.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+            }
+          />
+          <div className="flex w-full flex-col">
+            <AutoscalingHistoryHeatmap
+              autoscalingHistory={autoscalingHistory}
+              from={fromDayjs}
+              to={toDayjs}
+            />
+            <TableComponent
+              tableFormat={tableFormat}
+              /*  */
+              data={autoscalingHistory}
+              /*  */
+              sizePerPageOptions={SIZE_PER_PAGE_OPTIONS}
+              sizePerPage={sizePerPage}
+              handleSizePerPage={handleSizePerPage}
+              /*  */
+              currentPage={currentPage}
+              totalPage={totalPage}
+              handleCurrentPage={handleCurrentPage}
+            />
+          </div>
+        </div>
+        {selectedAutoscalingHistory ? (
+          <AutoscalingHistoryDetailDrawer
+            autoscalingHistoryItem={selectedAutoscalingHistory}
+            onClose={() => setSelectedAutoscalingHistory(undefined)}
+          />
+        ) : null}
       </div>
     </main>
   );

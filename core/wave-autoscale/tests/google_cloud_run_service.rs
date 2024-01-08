@@ -31,6 +31,7 @@ mod google_cloud_run_service_test {
             id: String::from("scaling_component_cloud_run_service"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();
@@ -91,6 +92,7 @@ mod google_cloud_run_service_test {
             id: String::from("scaling_component_cloud_run_service"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();
@@ -151,6 +153,7 @@ mod google_cloud_run_service_test {
             id: String::from("scaling_component_cloud_run_service"),
             component_kind: String::from("google-cloud-run"),
             metadata,
+            ..Default::default()
         }];
 
         let mut scaling_component_manager = ScalingComponentManager::new();

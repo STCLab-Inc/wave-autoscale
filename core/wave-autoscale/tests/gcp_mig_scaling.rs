@@ -35,6 +35,7 @@ mod test_gcp_mig_scaling {
             id: "gcp_mig_region_autoscaling_api_server".to_string(),
             component_kind: "gcp-compute-engine-mig".to_string(),
             metadata: scaling_component_metadata,
+            ..Default::default()
         }];
 
         // create metric adapter

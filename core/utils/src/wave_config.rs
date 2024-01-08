@@ -1,10 +1,12 @@
+use crate::config_path::find_file_in_wa;
 use serde::Deserialize;
 use std::fs::File;
-use tracing::{debug, error, info};
-
-use crate::config_path::find_file_in_wa;
+use tracing::{debug, error};
 
 const CONFIG_FILE_NAME: &str = "wave-config.yaml";
+// Default values
+const DEFAULT_DEBUG: bool = false;
+const DEFAULT_QUIET: bool = false;
 const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
 const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 const DEFAULT_ENABLE_METRICS_LOG: bool = false;
@@ -12,11 +14,17 @@ const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
 const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "1d";
 const DEFAULT_API_HOST: &str = "0.0.0.0";
 const DEFAULT_API_PORT: u16 = 3024;
-const DEFAULT_WEB_UI: bool = false;
+const DEFAULT_WEB_UI: bool = true;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
 const DEFAULT_RESET_DEFINITIONS_ON_STARTUP: bool = false;
 
+fn default_debug() -> bool {
+    DEFAULT_DEBUG
+}
+fn default_quiet() -> bool {
+    DEFAULT_QUIET
+}
 fn default_db_url() -> String {
     DEFAULT_DB_URL.to_string()
 }
@@ -62,6 +70,14 @@ struct DownloadUrlDefinition {
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct WaveConfig {
+    // Wave Autoscale
+    // Verbose mode, Overridden by 'quiet'
+    #[serde(default = "default_debug")]
+    pub debug: bool,
+    // Quiet mode, Overrides 'debug'
+    #[serde(default = "default_quiet")]
+    pub quiet: bool,
+
     //
     // Data Layer
     //
@@ -82,6 +98,7 @@ pub struct WaveConfig {
     //
     #[serde(default = "default_metric_buffer_size_kb")]
     pub metric_buffer_size_kb: u64,
+    // Store metrics in the database
     #[serde(default = "default_enable_metrics_log")]
     pub enable_metrics_log: bool,
 
@@ -94,7 +111,7 @@ pub struct WaveConfig {
     pub port: u16,
 
     //
-    // Web Console
+    // Wave Autoscale UI
     //
     #[serde(default = "default_web_ui")]
     pub web_ui: bool,
@@ -115,6 +132,8 @@ pub struct WaveConfig {
 impl Default for WaveConfig {
     fn default() -> Self {
         WaveConfig {
+            debug: DEFAULT_DEBUG,
+            quiet: DEFAULT_QUIET,
             db_url: DEFAULT_DB_URL.to_string(),
             metric_buffer_size_kb: DEFAULT_METRIC_BUFFER_SIZE_KB,
             enable_metrics_log: DEFAULT_ENABLE_METRICS_LOG,
@@ -139,7 +158,7 @@ impl WaveConfig {
             return WaveConfig::default();
         };
         // Read the file of the path
-        let file = File::open(config_path.clone());
+        let file = File::open(&config_path);
         if file.is_err() {
             error!(
                 "Error reading config file: {}. It returns default config.",
@@ -156,9 +175,11 @@ impl WaveConfig {
             );
             return WaveConfig::default();
         }
+
         let wave_config = wave_config.unwrap();
-        info!("[config] Config file parsed: {}", config_path);
-        debug!("Config file parsed: {:?}", wave_config);
+        if wave_config.debug && !wave_config.quiet {
+            debug!("[wave-config] config_path: {:?}", &config_path);
+        }
         wave_config
     }
     pub fn get_download_url(&self, name: &str) -> &str {
@@ -202,9 +223,9 @@ mod tests {
             DEFAULT_AUTOSCALING_HISTORY_RETENTION
         );
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
-        assert_eq!(wave_config.port, DEFAULT_API_PORT + 1);
+        assert_eq!(wave_config.port, DEFAULT_API_PORT);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
         assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
-        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT + 1);
+        assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
     }
 }

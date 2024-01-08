@@ -3,6 +3,7 @@ CREATE TABLE scaling_component (
   id TEXT UNIQUE,
   component_kind TEXT NOT NULL,
   metadata TEXT,
+  enabled BOOLEAN,
   created_at TEXT,
   updated_at TEXT
 );

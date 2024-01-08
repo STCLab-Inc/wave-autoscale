@@ -1,4 +1,6 @@
-pub mod process;
+mod process;
+mod wa_generator;
+
 use data_layer::MetricDefinition;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -9,20 +11,30 @@ use std::io::Write;
 use tar::Archive;
 use tracing::{debug, error, info};
 use utils::wave_config::WaveConfig;
-pub struct MetricCollectorManager {
+
+const VECTOR_COLLECTOR: &str = "vector";
+const TELEGRAF_COLLECTOR: &str = "telegraf";
+const WA_GENERATOR_COLLECTOR: &str = "wa-generator";
+
+pub struct MetricsCollectorManager {
     wave_config: WaveConfig,
     output_url: String,
     collector_log: bool,
+    // For external collectors
     running_apps: Option<HashMap<String, std::process::Child>>,
+    // For internal collectors
+    running_tasks: Option<Vec<tokio::task::JoinHandle<()>>>,
 }
 
-impl MetricCollectorManager {
-    pub fn new(wave_config: WaveConfig, output_url: &str, collector_log: bool) -> Self {
+impl MetricsCollectorManager {
+    pub fn new(wave_config: WaveConfig, output_url: &str) -> Self {
+        let collector_log = wave_config.debug && !wave_config.quiet;
         Self {
             wave_config,
             output_url: output_url.to_string(),
             collector_log,
             running_apps: None,
+            running_tasks: None,
         }
     }
 
@@ -95,10 +107,13 @@ impl MetricCollectorManager {
 
     // Download the collector binary if it doesn't exist
     pub async fn prepare_collector_binaries(&self, metric_definitions: &Vec<MetricDefinition>) {
+        // TODO: refactor
         // Get the collector in MetricDefinition uniquely
         let mut collector_names: Vec<String> = Vec::new();
         for metric_definition in metric_definitions {
-            if !collector_names.contains(&metric_definition.collector) {
+            if !collector_names.contains(&metric_definition.collector)
+                && metric_definition.collector != WA_GENERATOR_COLLECTOR
+            {
                 collector_names.push(metric_definition.collector.clone());
             }
         }
@@ -325,10 +340,10 @@ impl MetricCollectorManager {
 
         let mut collector_processes: Vec<process::AppInfo> = Vec::new();
 
-        // Find the metric definitions that use Vector collector
+        // collector: vector
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
-            if metric_definition.collector == "vector" {
+            if metric_definition.collector == VECTOR_COLLECTOR {
                 vector_metric_definitions.push(metric_definition);
             }
         }
@@ -355,10 +370,10 @@ impl MetricCollectorManager {
             }
         }
 
-        // Find the metric definitions that use Telegraf collector
+        // collector: telegraf
         let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
-            if metric_definition.collector == "telegraf" {
+            if metric_definition.collector == TELEGRAF_COLLECTOR {
                 telegraf_metric_definitions.push(metric_definition);
             }
         }
@@ -405,11 +420,40 @@ impl MetricCollectorManager {
             // sleep 2 seconds
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         };
+        self.running_apps = None;
 
         if !collector_processes.is_empty() {
             // run agent process
             let running_apps = process::run_processes(&collector_processes);
             self.running_apps = Some(running_apps);
+        }
+
+        // Find the metric definitions that use WA Generator collector
+
+        // Stop the running tasks
+        if let Some(running_tasks) = &mut self.running_tasks {
+            running_tasks.iter_mut().for_each(|task| task.abort());
+            running_tasks.clear();
+            self.running_tasks = None;
+        };
+
+        // collector: wa-generator
+        let mut wa_generator_metric_definitions: Vec<&MetricDefinition> = Vec::new();
+        for metric_definition in metric_definitions {
+            if metric_definition.collector == WA_GENERATOR_COLLECTOR {
+                wa_generator_metric_definitions.push(metric_definition);
+            }
+        }
+        if !wa_generator_metric_definitions.is_empty() {
+            // Run the collector binaries
+            let mut running_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+            for metric_definition in wa_generator_metric_definitions {
+                let output_url = self.output_url.clone();
+                let handle = wa_generator::run(metric_definition.clone(), output_url);
+                if let Ok(handle) = handle {
+                    running_tasks.push(handle);
+                }
+            }
         }
     }
 }
@@ -726,7 +770,7 @@ fn validate_vector_definition(metric_definitions: &MetricDefinition) -> bool {
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
     // 1. check definition collector is "vector"
-    if metric_definitions.collector != "vector" {
+    if metric_definitions.collector != VECTOR_COLLECTOR {
         return false;
     }
 
@@ -817,7 +861,7 @@ fn validate_telegraf_definition(metric_definitions: &MetricDefinition) -> bool {
         serde_json::to_value::<&MetricDefinition>(metric_definitions).unwrap();
 
     // 1. check definition collector is "telegraf"
-    if metric_definitions.collector != "telegraf" {
+    if metric_definitions.collector != TELEGRAF_COLLECTOR {
         return false;
     }
 
@@ -847,16 +891,12 @@ mod tests {
     use std::collections::HashMap;
     use tracing_test::traced_test;
 
-    fn get_metric_collector_manager() -> MetricCollectorManager {
+    fn get_metric_collector_manager() -> MetricsCollectorManager {
         // Remove wave.db
         let _ = std::fs::remove_file("./wave.db");
 
         let wave_config = WaveConfig::new();
-        MetricCollectorManager::new(
-            wave_config,
-            "http://localhost:3024/api/metrics-receiver",
-            true,
-        )
+        MetricsCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
     }
 
     // Test whether it fetchs the os and arch correctly
@@ -886,8 +926,9 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             },
         ];
 
@@ -924,8 +965,9 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: HashMap::new(),
+                ..Default::default()
             },
         ];
 
@@ -997,16 +1039,18 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_1,
+                ..Default::default()
             },
             // Telegraf
             MetricDefinition {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "vector".to_string(),
+                collector: VECTOR_COLLECTOR.to_string(),
                 metadata: vector_metadata_hashmap_2,
+                ..Default::default()
             },
         ];
 
@@ -1086,15 +1130,17 @@ mod tests {
                 id: "metric_id_1".to_string(),
                 db_id: "db_id_1".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap.clone(),
+                ..Default::default()
             },
             MetricDefinition {
                 id: "metric_id_2".to_string(),
                 db_id: "db_id_2".to_string(),
                 kind: ObjectKind::Metric,
-                collector: "telegraf".to_string(),
+                collector: TELEGRAF_COLLECTOR.to_string(),
                 metadata: telegraf_metadata_hashmap,
+                ..Default::default()
             },
         ];
 

@@ -1,29 +1,18 @@
-kind: Metric
-id: prometheus_nginx_connections_waiting
-collector: vector
-metadata:
-  sources:
-    my_source_id_1:
-      type: prometheus_scrape
-      endpoints:
-        - "http://localhost:9090/federate"
-      scrape_interval_secs: 30
-      query:
-        "match[]":
-          - "nginx3_connections_waiting"
-  sinks:
-    my_sinks_id:
-      type: wave-autoscale
-      inputs: ["my_source_id_1"]
----
 kind: ScalingComponent
 id: k8s_deployment
 component_kind: kubernetes-deployment
 metadata:
-  api_server_endpoint: ""
-  namespace: wave-autoscale
-  name: order-server-dp
-  ca_cert: ""
+  api_server_endpoint: http://localhost:8080
+  namespace: deployment-namespace
+  name: deployment-name
+---
+# Metrics for the example above
+kind: Metric
+id: wa_metrics_generator
+collector: wa-generator
+metadata:
+  pattern: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+  gap_seconds: 10
 ---
 kind: ScalingPlan
 id: scaling_plan_k8s_deployment_scaling
@@ -33,33 +22,34 @@ metadata:
   interval: 10000 # milliseconds
 plans:
   - id: plan-scale-out
-    description: "Scale out if request count is greater than 1000"
-    # JavaScript expression that returns a boolean value.
+    description: "Scale out if the metrics count is greater than 100 for 5 seconds"
     expression: >
       get({
-        metric_id: 'prometheus_nginx_connections_waiting',
-        name: 'nginx3_connections_waiting',
+        metric_id: 'wa_metrics_generator',
         stats: 'max',
-        period_sec: 15
-      }) >= 1800
+        period_sec: 5
+      }) >= 100
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
       - component_id: k8s_deployment
+        # Available variables in the replicas expression:
+        # - $replicas: current number of replicas
+        # - $unavailable_replicas: current number of unavailable replicas
+        # - $available_replicas: current number of available replicas
+        # - $ready_replicas: current number of ready replicas
+        # - $updated_replicas: current number of updated replicas
         replicas: $replicas + 3
   - id: plan-scale-in
-    description: "Scale in if request count is less 500"
+    description: "Scale in if the metrics count is less than 50 for 5 seconds"
     # JavaScript expression that returns a boolean value.
     expression: >
       get({
-        metric_id: 'prometheus_nginx_connections_waiting',
-        name: 'nginx3_connections_waiting',
+        metric_id: 'wa_metrics_generator',
         stats: 'max',
-        period_sec: 15
-      }) < 500
-    # Higher priority values will be checked first.
+        period_sec: 5
+      }) < 50
     priority: 1
     scaling_components:
       - component_id: k8s_deployment
-        # replicas must string type
-        replicas: "2"
+        replicas: 1

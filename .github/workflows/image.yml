@@ -61,7 +61,7 @@ jobs:
           docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
           docker rm -v $id
           chmod +x ./wave-autoscale
-          cp ../docs/basic-example/* ./
+          cp ../docs/config/* ./
           tar -czvf wave-autoscale-linux-amd64.tar.gz *
       - name: Upload the binary to S3
         uses: reggionick/s3-deploy@v4
@@ -114,7 +114,7 @@ jobs:
           docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
           docker rm -v $id
           chmod +x ./wave-autoscale
-          cp ../docs/basic-example/* ./
+          cp ../docs/config/* ./
           tar -czvf wave-autoscale-linux-arm64.tar.gz *
       - name: Upload the binary to S3
         uses: reggionick/s3-deploy@v4

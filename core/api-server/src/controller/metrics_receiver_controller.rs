@@ -132,6 +132,30 @@ async fn post_metrics_receiver(
                 }));
             }
         }
+    } else if collector == "wagenerator" {
+        for metric in metrics {
+            let metric = metric.as_object();
+            if metric.is_none() {
+                error!(
+                    "Invalid JSON body. Failed to parse 'metrics' as object: {:?}",
+                    metric
+                );
+                return HttpResponse::BadRequest()
+                    .body("Invalid JSON body. Failed to parse 'metrics' as object");
+            }
+            let metric = metric.unwrap();
+            let Some(metric_value) = metric.get("value").and_then(serde_json::Value::as_f64) else {
+                error!("Invalid JSON body. Missing 'value' in metric: {:?}", metric);
+                continue;
+            };
+            let timestamp = metric.get("timestamp");
+
+            json_value.push(json!(
+            {
+                "value": metric_value,
+                "timestamp": timestamp,
+            }));
+        }
     } else {
         error!("Invalid collector. Only 'vector' and 'telegraf' are supported");
         return HttpResponse::BadRequest()
@@ -157,13 +181,13 @@ async fn post_metrics_receiver(
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
     debug!(
-        "Saved metric into the data-layer: collector - {:?}, metric_id - {:?}, json_value - {:?}",
+        "[api-server] Saved metrics into the data-layer: collector - {:?}, metric_id - {:?}, json_value - {:?}",
         collector.as_str(),
         metric_id.as_str(),
         json_value.as_str()
     );
     info!(
-        "[api-server] Saved metric into the data-layer: {:?}, {:?}, size: {:?}",
+        "[api-server] Saved metrics into the data-layer: collector - {:?}, metric_id - {:?}, size: {:?}",
         collector.as_str(),
         metric_id.as_str(),
         json_value.len()

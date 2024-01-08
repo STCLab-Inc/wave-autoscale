@@ -5,7 +5,7 @@ use std::{
 };
 use tracing::{debug, error};
 
-const WAVE_WEB_APP: &str = "wave-web-app";
+const WAVE_WEB_APP: &str = "wave-autoscale-ui";
 const MINIMUM_NODE_VERSION: u32 = 14;
 
 struct App {
@@ -35,7 +35,7 @@ fn is_node_installed() -> bool {
             let Ok(output) = String::from_utf8(output.stdout) else {
                 return false;
             };
-            debug!("Node version: {}", output);
+            debug!("[web-app-runner] Node version: {}", output);
             let Ok(regex) = Regex::new(r"v(\d+)\.\d+\.\d+") else {
                 return false;
             };
@@ -45,7 +45,10 @@ fn is_node_installed() -> bool {
             let Some(major_version) = captured.get(1) else {
                 return false;
             };
-            debug!("Node major version: {}", major_version.as_str());
+            debug!(
+                "[web-app-runner] Node major version: {}",
+                major_version.as_str()
+            );
             let Ok(major_version) = major_version.as_str().parse::<u32>() else {
                 return false;
             };
@@ -65,7 +68,7 @@ pub fn run_web_app(host: &str, port: u16) -> anyhow::Result<()> {
     let web_app_path = format!("./{}", WAVE_WEB_APP);
     let web_app_file = std::path::Path::new(web_app_path.as_str());
     if !web_app_file.exists() {
-        error!("{} does not exist", WAVE_WEB_APP);
+        error!("[web-app-runner] {} does not exist", WAVE_WEB_APP);
         return Err(anyhow::anyhow!("{} does not exist", WAVE_WEB_APP));
     }
     if !is_node_installed() {
