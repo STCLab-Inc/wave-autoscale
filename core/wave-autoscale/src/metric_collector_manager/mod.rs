@@ -896,11 +896,7 @@ mod tests {
         let _ = std::fs::remove_file("./wave.db");
 
         let wave_config = WaveConfig::new();
-        MetricsCollectorManager::new(
-            wave_config,
-            "http://localhost:3024/api/metrics-receiver",
-            true,
-        )
+        MetricsCollectorManager::new(wave_config, "http://localhost:3024/api/metrics-receiver")
     }
 
     // Test whether it fetchs the os and arch correctly
