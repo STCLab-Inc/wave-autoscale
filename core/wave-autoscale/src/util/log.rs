@@ -11,7 +11,11 @@ pub fn init(log_level: LogLevel) {
     // tracing_subscriber::fmt::;/
     match log_level {
         LogLevel::Verbose => {
-            tracing_subscriber::fmt().with_env_filter("DEBUG").init();
+            tracing_subscriber::fmt()
+                .with_env_filter(
+                    "wave_autoscale=debug,api_server=debug,utils=debug,data_layer=debug",
+                )
+                .init();
         }
         LogLevel::Quiet => {
             // Do not initialize logger
