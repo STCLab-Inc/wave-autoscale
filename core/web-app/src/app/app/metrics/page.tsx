@@ -1,177 +1,184 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import MetricService from '@/services/metric';
-import MetricDetailDrawer from './metric-drawer';
 import ContentHeader from '../common/content-header';
-import { MetricDefinitionEx } from './metric-definition-ex';
-import WATable from '../common/wa-table';
+import dynamic from 'next/dynamic';
+import MetricService from '@/services/metric';
+import { useEffect, useState } from 'react';
+import {
+  deserializeMetricDefinitions,
+  serializeMetricDefinitions,
+} from '@/utils/metric-binding';
+import { MetricDefinition } from '@/types/bindings/metric-definition';
+import { debounce, set } from 'lodash';
 import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
-import Pagination from '@/utils/pagination';
-import dayjs from 'dayjs';
 import EnabledBadge from '../common/enabled-badge';
+import WASimpleTable from '../common/wa-simple-table';
 
-// Constants
-const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
+// Dynamic imports (because of 'window' object)
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
-// Utils
-async function getMetrics(): Promise<MetricDefinitionEx[]> {
+// Table columns
+const columnHelper = createColumnHelper<MetricDefinition>();
+const columns = [
+  columnHelper.accessor('id', {
+    header: () => 'ID',
+    cell: (cell) => cell.getValue(),
+  }),
+  columnHelper.accessor('collector', {
+    header: () => 'Collector',
+    cell: (cell) => cell.getValue(),
+  }),
+  columnHelper.accessor('metadata', {
+    header: () => 'Metadata',
+    cell: (cell) => (
+      <span className="flex flex-col items-center break-all text-start">
+        {renderKeyValuePairsWithJson(cell.getValue(), true)}
+      </span>
+    ),
+  }),
+  columnHelper.accessor('enabled', {
+    header: () => 'Enabled',
+    cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
+  }),
+];
+
+// Service
+async function getMetrics(): Promise<MetricDefinition[]> {
   const metrics = await MetricService.getMetrics();
   return metrics;
 }
 
+// Page
 export default function MetricsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const [yaml, setYaml] = useState<string>('');
+  const [previewData, setPreviewData] = useState<MetricDefinition[]>([]);
 
-  // Query params
-  const pageParam = searchParams.get('page');
-  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
-  const sizeParam = searchParams.get('size');
-  const pageSize = sizeParam
-    ? parseInt(sizeParam, 10)
-    : SIZE_PER_PAGE_OPTIONS[0];
-
-  // States
-  const [metrics, setMetrics] = useState<MetricDefinitionEx[]>([]);
-  const [selectedMetric, setSelectedMetric] = useState<MetricDefinitionEx>();
-  const [forceFetch, setForceFetch] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [pagination, setPagination] = useState<Pagination>(new Pagination());
-  const metricsPerPage = useMemo(() => {
-    return metrics.slice(
-      (pagination.currentPage - 1) * pagination.pageSize,
-      pagination.currentPage * pagination.pageSize
-    );
-  }, [metrics, pagination.currentPage, pagination.pageSize]);
   // Effects
   useEffect(() => {
-    setPagination(new Pagination(pageSize, metrics?.length, currentPage));
-  }, [metrics, currentPage, pageSize]);
-
-  useEffect(() => {
-    fetchMetrics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadFromService();
   }, []);
 
-  useEffect(() => {
-    if (forceFetch) {
-      fetchMetrics();
-      setForceFetch(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [forceFetch]);
-
   // Handlers
-  const fetchMetrics = async () => {
+  const loadFromService = async () => {
+    const metrics = await getMetrics();
+    // YAML
     try {
-      const id = selectedMetric?.db_id;
-      let metricsData = await getMetrics();
-      setMetrics(metricsData);
-      setSelectedMetric(
-        metricsData.find((item: MetricDefinitionEx) => item.db_id === id)
-      );
-    } catch (error) {
-      console.error({ error });
-      return [];
+      const newYaml = serializeMetricDefinitions(metrics);
+      setYaml(newYaml);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+      return;
     }
+
+    // Preview
+    setPreviewData(metrics);
   };
 
-  const columnHelper = createColumnHelper<MetricDefinitionEx>();
+  const handleYamlChange = debounce((value: string) => {
+    setYaml(value);
 
-  const columns = [
-    columnHelper.accessor('id', {
-      header: () => 'ID',
-      cell: (cell) => cell.getValue(),
-    }),
-    columnHelper.accessor('collector', {
-      header: () => 'Collector',
-      cell: (cell) => cell.getValue(),
-    }),
-    columnHelper.accessor('metadata', {
-      header: () => 'Metadata',
-      cell: (cell) => (
-        <span className="flex flex-col items-center break-all text-start">
-          {renderKeyValuePairsWithJson(cell.getValue(), true)}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('updated_at', {
-      header: () => 'Updated At',
-      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
-    }),
-    columnHelper.accessor('updated_at', {
-      header: () => 'Updated At',
-      cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
-    }),
-    columnHelper.accessor('enabled', {
-      header: () => 'Enabled',
-      cell: (cell) => <EnabledBadge enabled={cell.getValue()} />,
-    }),
-    columnHelper.display({
-      id: 'actions',
-      header: () => 'Actions',
-      cell: (cell) => (
-        <button
-          className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
-          onClick={() => {
-            setSelectedMetric(cell.row.original);
-            setDetailModalVisible(true);
-          }}
-        >
-          Detail
-        </button>
-      ),
-    }),
-  ];
+    let newPreviewData;
+    try {
+      newPreviewData = deserializeMetricDefinitions(value);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+      // TODO: Set annotations
+      return;
+    }
+
+    try {
+      setPreviewData(newPreviewData);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+  }, 1000);
+
+  const handleReset = () => {
+    handleYamlChange.cancel();
+    loadFromService();
+  };
+
+  const handleSave = async () => {
+    try {
+      const metricDefinitions = deserializeMetricDefinitions(yaml);
+      const promises = metricDefinitions.map((metricDefinition) => {
+        return MetricService.createMetric(metricDefinition);
+      });
+      await Promise.all(promises);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+    loadFromService();
+    alert('Saved');
+  };
 
   return (
-    <main className="flex h-full w-full flex-row">
-      <div className="flex h-full w-full flex-col">
-        <div className="flex h-full w-full flex-col">
-          <ContentHeader
-            type="OUTER"
-            title="Metrics"
-            right={
-              <div className="flex items-center">
-                <button
-                  className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
-                  onClick={() => {
-                    setSelectedMetric(undefined);
-                    setDetailModalVisible(true);
-                  }}
-                >
-                  ADD METRIC
-                </button>
-              </div>
-            }
+    <main className="flex h-full w-full flex-col">
+      {/* Header */}
+      <div className="w-full">
+        <ContentHeader
+          type="OUTER"
+          title="Metrics"
+          right={
+            <div className="flex items-center space-x-4">
+              <button
+                className="flex h-8 items-center justify-center rounded-md border border-blue-400  pl-5 pr-5 text-sm text-blue-400"
+                onClick={handleReset}
+              >
+                Reset
+              </button>
+              <button
+                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                onClick={handleSave}
+              >
+                Save
+              </button>
+            </div>
+          }
+        />
+      </div>
+      {/* Sections */}
+      <div className="min-height-0 flex w-full flex-1 space-x-8 p-8">
+        {/* Preview */}
+        <div className="flex h-full flex-1 flex-col overflow-y-auto">
+          {/* Preview Title */}
+          <SectionTitle title="Preview" />
+          {/* Table */}
+          <WASimpleTable<MetricDefinition>
+            tableOptions={{
+              data: previewData,
+              columns,
+            }}
           />
-          <div className="flex w-full flex-col">
-            <WATable<MetricDefinitionEx>
-              tableOptions={{
-                data: metricsPerPage,
-                columns,
-              }}
-              pagination={pagination}
-              onChangePage={(newPage) => {
-                router.push(`/app/metrics?page=${newPage}&size=${pageSize}`);
-              }}
-              onChangePageSize={(newSize) => {
-                router.push(`/app/metrics?page=${currentPage}&size=${newSize}`);
-              }}
-            />
-          </div>
+        </div>
+        {/* Code */}
+        <div className="flex h-full flex-1 flex-col">
+          {/* Code Title */}
+          <SectionTitle title="Code" />
+          {/* Code Editor */}
+          <YAMLEditor value={yaml} onChange={handleYamlChange} />
         </div>
       </div>
-      {detailModalVisible ? (
-        <MetricDetailDrawer
-          metric={selectedMetric}
-          onClose={() => setDetailModalVisible(false)}
-          onChange={() => setForceFetch(true)}
-        />
-      ) : null}
     </main>
+  );
+}
+
+//
+// Components
+//
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div className="mb-4 flex h-10 w-full items-center justify-start">
+      <div className="text-lg font-bold">{title}</div>
+    </div>
   );
 }

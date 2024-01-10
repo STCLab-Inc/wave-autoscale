@@ -7,7 +7,7 @@ import { Ace } from 'ace-builds';
 export default function YAMLEditor({
   value,
   readonly,
-  showLineNumbers,
+  showLineNumbers = true,
   annotations,
   onChange,
 }: {
