@@ -1,0 +1,103 @@
+export const TELEGRAF_GCP_MONITORING_CODE = `# References - Telegraf Stackdriver Google Cloud Monitoring Input Plugin
+# https://github.com/influxdata/telegraf/blob/release-1.27/plugins/inputs/stackdriver/README.md
+# https://cloud.google.com/monitoring/api/metrics_gcp#gcp-compute
+
+kind: Metric
+id: telegraf_stackdriver_gcp_mig_metrics
+collector: telegraf
+metadata:
+  inputs:
+    stackdriver:
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/firewall/dropped_bytes_count] # If there are many dropped bytes, consider scaling out due to network performance issues.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/firewall/dropped_packets_count] # If there are many dropped packets, consider scaling out due to network performance issues.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/guest_visible_vcpus] # This metric represents the number of vCPUs visible within the guest. If a high number of vCPUs are being used, consider scaling out. On the other hand, if the number is low, consider scaling in to save resources.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/reserved_cores] # This indicates the number of vCPUs reserved on the host. Similar to guest_visible_vcpus, you can make scaling decisions based on this.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/scheduler_wait_time] # Represents the wait time of the CPU scheduler. High wait times may indicate a lack of CPU resources, thus consider scaling out.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/usage_time] # Represents the CPU usage time. High usage time can be a sign to consider scaling out, while low usage time may indicate that scaling in is appropriate.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/cpu/utilization] # Indicates CPU utilization. Closer to 1.0, consider scaling out; closer to 0, consider scaling in.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/memory/balloon/ram_size] # You can make scaling decisions based on available memory. If the memory in use is close to the total, consider scaling out; otherwise, consider scaling in.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance/memory/balloon/ram_used] # You can make scaling decisions based on current memory usage. If the memory in use is close to the total, consider scaling out; otherwise, consider scaling in.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: instance_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance_group/predicted_capacity] # Based on the predicted capacity, you can pre-emptively scale resources up or down. You can prepare for a surge in traffic by scaling out in advance, and in the opposite case, consider scaling in.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance_group/predicted_size] # Based on the predicted number of VMs, you can expand or reduce the required number of instances in advance.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance_group/predicted_utilization] # Through predicted utilization, you can adjust scaling in/out to ensure resources are not excessively used.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          metric_labels:
+            - key: metric_type
+              value: starts_with("cpu")
+      - project: "{{ project }}"
+        metric_type_prefix_include: [compute.googleapis.com/instance_group/size] # Based on the current number of VMs, you can make decisions on scaling in or out. This metric is fundamentally very important.
+        interval: 240s # Sampled every 60 seconds. After sampling, data is not visible for up to 240 seconds.
+        filter:
+          resource_labels:
+            - key: instance_group_name
+              value: starts_with(""{{ managed_instance_group_name }}"")
+  outputs:
+    wave-autoscale: {}`;
