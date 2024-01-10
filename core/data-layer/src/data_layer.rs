@@ -285,7 +285,7 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, updated_at) = ($8,$9,$10)";
+                "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, enabled, updated_at) = ($8,$9,$10,$11)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -300,6 +300,7 @@ impl DataLayer {
                 // Values for update
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
+                .bind(metric.enabled)
                 .bind(updated_at)
                 // Run
                 .execute(&self.pool)
