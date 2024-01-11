@@ -641,7 +641,7 @@ impl DataLayer {
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = ($8, $9)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, plans, enabled, updated_at) = ($8, $9, $10, $11)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -654,7 +654,9 @@ impl DataLayer {
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
+                .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
+                .bind(plan.enabled)
                 .bind(updated_at)
                 .execute(&self.pool)
                 .await;
