@@ -464,7 +464,7 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = ($8,$9)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, enabled, updated_at) = ($8,$9,$10)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -478,6 +478,7 @@ impl DataLayer {
                 .bind(updated_at)
                 // Values for update
                 .bind(metadata_string.clone())
+                .bind(scaling_component.enabled)
                 .bind(updated_at)
                 // Run
                 .execute(&self.pool)
