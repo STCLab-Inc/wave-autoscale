@@ -4,6 +4,7 @@ import { EC2AutoscalingPlanMetadata } from '@/types/bindings/ec2-autoscaling-pla
 import { K8sDeploymentMetadata } from '@/types/bindings/k8s-deployment';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import { K8sDeploymentPlanMetadata } from '../types/bindings/k8s-deployment-plan';
+import JSYaml from 'js-yaml';
 
 export type ScalingComponentKeyType = {
   componentName: string;
@@ -91,4 +92,41 @@ export function generateScalingComponentDefinition({
     enabled,
     metadata: metadata ?? {},
   } as ScalingComponentDefinition;
+}
+
+export function serializeScalingComponentDefinition(
+  componentDefinition: ScalingComponentDefinition
+): string {
+  const { kind, id, component_kind, enabled, metadata } = componentDefinition;
+  const serialized = JSYaml.dump({
+    kind,
+    id,
+    component_kind,
+    enabled,
+    metadata,
+  });
+  return serialized;
+}
+
+export function serializeScalingComponentDefinitions(
+  componentDefinitions: ScalingComponentDefinition[]
+): string {
+  const serialized = componentDefinitions.map((componentDefinition) =>
+    serializeScalingComponentDefinition(componentDefinition)
+  );
+  const result = serialized.join('\n---\n');
+  return result;
+}
+
+export function deserializeScalingComponentDefinitions(
+  serialized: string
+): ScalingComponentDefinition[] {
+  let deserialized: ScalingComponentDefinition[] = JSYaml.loadAll(
+    serialized
+  ) as ScalingComponentDefinition[];
+  // Filter out invalid component definitions
+  deserialized = deserialized.filter(
+    (definition) => definition !== null
+  );
+  return deserialized;
 }

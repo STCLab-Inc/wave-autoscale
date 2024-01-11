@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 
-export default async function ScalingComponentsLayout({
+export default async function MetricsLayout({
   children,
 }: {
   children: React.ReactNode;
