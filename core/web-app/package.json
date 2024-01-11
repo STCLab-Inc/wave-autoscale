@@ -34,7 +34,7 @@
     "react-ace": "^10.1.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.43.9",
-    "reactflow": "^11.7.0",
+    "reactflow": "^11.10.1",
     "typescript": "5.0.4",
     "ulid": "^2.3.0",
     "yaml": "^2.2.2",
