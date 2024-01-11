@@ -9,7 +9,7 @@ import {
   serializeMetricDefinitions,
 } from '@/utils/metric-binding';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
-import { debounce, set } from 'lodash';
+import { debounce } from 'lodash';
 import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
