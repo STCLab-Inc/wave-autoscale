@@ -14,6 +14,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
 import WASimpleTable from '../common/wa-simple-table';
+import { SectionTitle } from '../common/section-title';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -169,16 +170,5 @@ export default function MetricsPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-//
-// Components
-//
-function SectionTitle({ title }: { title: string }) {
-  return (
-    <div className="mb-4 flex h-10 w-full items-center justify-start">
-      <div className="text-lg font-bold">{title}</div>
-    </div>
   );
 }

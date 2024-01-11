@@ -3,13 +3,13 @@
 import React from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import PlanningDiagramFlow from './diagram-flow';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import 'reactflow/dist/style.css';
-import { ScalingPlanDefinitionEx } from '../scaling-plan-definition-ex';
 
 export default function ScalingPlanDiagram({
   scalingPlan,
 }: {
-  scalingPlan: ScalingPlanDefinitionEx;
+  scalingPlan: ScalingPlanDefinition | undefined;
 }) {
   return (
     <div className="h-full w-full">

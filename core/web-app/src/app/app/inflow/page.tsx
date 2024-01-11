@@ -2,12 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import dayjs, { Dayjs } from 'dayjs';
-
 import InflowService from '@/services/inflow';
 import { InflowDefinition } from '@/types/bindings/inflow-definition';
-
 import InflowDetailDrawer from './inflow-drawer';
 import ContentHeader from '../common/content-header';
 import { TableComponent } from '../common/table';
@@ -202,7 +199,7 @@ export default function InflowPage() {
         <div className="flex h-full w-full flex-col">
           <ContentHeader
             type="OUTER"
-            title="Metrics Inflow"
+            title="Metrics Collector Logs"
             right={
               <div className="flex items-center">
                 <div className="mx-4 flex h-8 items-center">

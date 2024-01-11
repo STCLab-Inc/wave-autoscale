@@ -63,13 +63,7 @@ export default function ScalingPlanCode({
       onSubmit={handleSubmit(onSubmit)}
       className="flex h-full w-full flex-col"
     >
-      <div className="flex border-b px-4 py-4">
-        <button className="left-4 top-4 flex h-8 items-center justify-center rounded-md border border-gray-600 pl-5 pr-5 text-sm text-gray-600">
-          UPDATE
-        </button>
-      </div>
-
-      <div className="textarea-bordered textarea textarea-md h-full w-full rounded-none border-none p-4">
+      <div className="textarea-bordered textarea textarea-md h-full w-full rounded-none border-none p-0">
         <Controller
           control={control}
           name="scalingPlanCode"

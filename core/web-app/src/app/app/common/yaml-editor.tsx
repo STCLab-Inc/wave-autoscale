@@ -26,6 +26,7 @@ export default function YAMLEditor({
       readOnly={readonly}
       tabSize={2}
       annotations={annotations}
+      wrapEnabled={true}
       editorProps={{
         $blockScrolling: true,
       }}

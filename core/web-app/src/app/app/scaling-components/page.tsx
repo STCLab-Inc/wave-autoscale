@@ -14,6 +14,7 @@ import {
   deserializeScalingComponentDefinitions,
   serializeScalingComponentDefinitions,
 } from '@/utils/scaling-component-binding';
+import { SectionTitle } from '../common/section-title';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -174,16 +175,5 @@ export default function ScalingComponentsPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-//
-// Components
-//
-function SectionTitle({ title }: { title: string }) {
-  return (
-    <div className="mb-4 flex h-10 w-full items-center justify-start">
-      <div className="text-lg font-bold">{title}</div>
-    </div>
   );
 }

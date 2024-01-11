@@ -19,7 +19,7 @@ import ScalingComponentService from '@/services/scaling-component';
 import DiagramNodePlan from './diagram-node-plan';
 import DiagramNodeMetric from './diagram-node-metric';
 import DiagramNodeComponent from './diagram-node-component';
-import { ScalingPlanDefinitionEx } from '../scaling-plan-definition-ex';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 
 const nodeTypes = {
   scalingPlan: DiagramNodePlan,
@@ -39,12 +39,12 @@ export interface ScalingComponentUI {
 export default function DiagramFlow({
   scalingPlan,
 }: {
-  scalingPlan?: ScalingPlanDefinitionEx | undefined;
+  scalingPlan?: ScalingPlanDefinition | undefined;
 }) {
   const [metricMap, setMetricMap] = useState<any>({});
   const [scalingComponentMap, setScalingComponentMap] = useState<any>({});
   const [renderingScalingPlansItem, setRenderingScalingPlansItem] = useState<
-    ScalingPlanDefinitionEx | undefined
+    ScalingPlanDefinition | undefined
   >(undefined);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function DiagramFlow({
       setScalingComponentMap(keyBy(results[1], 'id'));
       if (scalingPlan) {
         const newRenderingPlansItem = produce(scalingPlan, (draft) => {
-          draft.plans.forEach((plan) => {
+          draft?.plans?.forEach((plan) => {
             const expression = plan.expression;
             const metricIdsInScalingPlan = new Set<string>();
             const scalingComponentIdsInScalingPlan = new Set<string>();
@@ -171,7 +171,7 @@ export default function DiagramFlow({
         };
       });
 
-      const scalingPlanNodes = renderingScalingPlansItem.plans.map(
+      const scalingPlanNodes = renderingScalingPlansItem.plans?.map(
         (plan, index) => {
           return {
             // Default properties
@@ -189,7 +189,7 @@ export default function DiagramFlow({
             targetPosition: Position.Left,
           };
         }
-      );
+      ) ?? [];
 
       const scalingComponentNodes = scalingComponents.map(
         (scalingComponent: ScalingComponentUI, index) => {
@@ -223,7 +223,7 @@ export default function DiagramFlow({
       // Use renderingPlansItem instead of plansItem for rendering
       const edgesForScalingPlanAndMetric: Edge[] = [];
       const edgesForScalingPlanAndScalingComponent: Edge[] = [];
-      renderingScalingPlansItem.plans.forEach((plan) => {
+      renderingScalingPlansItem.plans?.forEach((plan) => {
         const metrics = plan?.ui?.metrics;
         if (metrics?.length) {
           metrics?.forEach((metric: MetricUI) => {

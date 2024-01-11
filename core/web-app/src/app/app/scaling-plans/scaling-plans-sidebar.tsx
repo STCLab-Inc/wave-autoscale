@@ -1,33 +1,28 @@
 import React from 'react';
 import classNames from 'classnames';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
-import { on } from 'events';
 import EnabledBadge from '../common/enabled-badge';
-
-interface ScalingPlanDefinitionEx extends ScalingPlanDefinition {
-  metadata: { cool_down: number; interval: number; title: string };
-}
 
 export default function ScalingPlansSidebar({
   scalingPlans,
-  selectedScalingPlanDbId,
+  selectedIndex,
   onChange,
 }: {
-  scalingPlans: ScalingPlanDefinitionEx[];
-  selectedScalingPlanDbId: string | undefined;
-  onChange: (scalingPlanDbId: string | undefined) => void;
+  scalingPlans: ScalingPlanDefinition[];
+  selectedIndex: number | undefined;
+  onChange: (index: number | undefined) => void;
 }) {
   return (
     <div className="flex flex-col">
-      {scalingPlans.map((scalingPlan: ScalingPlanDefinitionEx) => {
-        const isSelected = scalingPlan.db_id === selectedScalingPlanDbId;
+      {scalingPlans.map((scalingPlan: ScalingPlanDefinition, index) => {
+        const isSelected = index === selectedIndex;
         return (
           <button
-            key={scalingPlan.db_id}
+            key={index}
             // If the scaling plan is already selected, then we want to unselect it.
-            onClick={() => onChange(isSelected ? undefined : scalingPlan.db_id)}
+            onClick={() => onChange(isSelected ? undefined : index)}
             className={classNames(
-              'flex h-12 w-full cursor-pointer items-center border-b px-8',
+              'mb-2 flex h-8 w-full cursor-pointer items-center rounded-xl px-1',
               {
                 'hover:bg-blue-100 hover:text-blue-600': !isSelected,
                 'bg-primary': isSelected,
@@ -35,12 +30,12 @@ export default function ScalingPlansSidebar({
             )}
           >
             <span
-              className={classNames('truncate', {
+              className={classNames('flex items-center truncate', {
                 'text-white': isSelected,
               })}
             >
               <EnabledBadge enabled={scalingPlan.enabled} />
-              <span className="ml-2">{scalingPlan.id}</span>
+              <span className="ml-2 text-sm">{scalingPlan.id}</span>
             </span>
           </button>
         );
