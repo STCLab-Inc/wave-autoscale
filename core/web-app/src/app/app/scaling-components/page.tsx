@@ -132,7 +132,7 @@ export default function ScalingComponentsPage() {
       <div className="w-full">
         <ContentHeader
           type="OUTER"
-          title="Metrics"
+          title="Scaling Components"
           right={
             <div className="flex items-center space-x-4">
               <button
