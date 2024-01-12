@@ -2,7 +2,6 @@
 
 import ContentHeader from '../common/content-header';
 import dynamic from 'next/dynamic';
-import MetricService from '@/services/metric';
 import { useEffect, useState } from 'react';
 import {
   deserializeMetricDefinitions,
@@ -15,6 +14,7 @@ import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
 import WASimpleTable from '../common/wa-simple-table';
 import { SectionTitle } from '../common/section-title';
+import MetricService from '@/services/metric';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
