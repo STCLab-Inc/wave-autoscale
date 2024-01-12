@@ -15,7 +15,6 @@ use metric_collector_manager::MetricsCollectorManager;
 use std::sync::Arc;
 use tokio::sync::watch;
 use tracing::{debug, error};
-use util::log::LogLevel;
 use utils::{config_path::find_file_in_wa, wave_config::WaveConfig};
 
 const LOCAL_DEFINITION_FILE_NAME: &str = "wave-definition.yaml";
@@ -31,16 +30,19 @@ async fn main() {
         std::process::exit(0);
     });
 
+    // WALog
+    let wa_log = util::log::WALog::new();
+
     // Configuration
     let wave_config = WaveConfig::new();
 
     // Initialize logger
     if wave_config.quiet {
-        util::log::init(LogLevel::Quiet);
+        wa_log.set_quiet();
     } else if wave_config.debug {
-        util::log::init(LogLevel::Verbose);
+        wa_log.set_debug();
     } else {
-        util::log::init(LogLevel::Info);
+        wa_log.set_info();
     }
 
     debug!("[WaveConfig] Config file parsed: {:?}", wave_config);
