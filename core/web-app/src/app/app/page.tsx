@@ -7,6 +7,7 @@ import PageHeader from './common/page-header';
 import { ResponsiveBarCanvas } from '@nivo/bar';
 import SCALING_COMPONENT_TEMPLATES from '@/data/wa-templates/scaling-components';
 import { TemplateItem } from './common/template-item';
+import classNames from 'classnames';
 
 const QUICK_START_ITEMS = [
   // K8s deployment
@@ -63,8 +64,11 @@ export default function DashboardPage() {
           <div className="stat">
             <div className="stat-title">Quick Start</div>
             <div className="stat-value grid grid-cols-4 gap-4 divide-x pt-2">
-              {QUICK_START_ITEMS.map((template) => (
-                <div key={template.title} className="px-4">
+              {QUICK_START_ITEMS.map((template, index) => (
+                <div
+                  key={template.title}
+                  className={classNames({ 'pl-4': index !== 0 })}
+                >
                   <TemplateItem
                     key={template.title}
                     template={template}
