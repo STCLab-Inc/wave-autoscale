@@ -4,10 +4,13 @@ import MetricService from '../metric';
 import ScalingComponentService from '../scaling-component';
 import ScalingPlanService from '../scaling-plan';
 import _ from 'lodash';
+import { decodeTime } from 'ulid';
 
 export interface DashboardStats {
   autoscalingHistoryCount: number;
   autoscalingHistoryMostTriggered: [string, number][];
+  dailyAutoscalingHistory: { x: string; y: number }[];
+  dailyAutoscalingHistoryKeys: string[];
   metricsCount: number;
   scalingComponentsCount: number;
   plansCount: number;
@@ -16,7 +19,7 @@ export interface DashboardStats {
 class DashboardServiceClass {
   async getDashboardStats(): Promise<DashboardStats> {
     const to = dayjs();
-    const from = to.subtract(7, 'day');
+    const from = to.subtract(14, 'day');
 
     const getAutoscalingHistoryStats = async () => {
       const autoscalingHistory = await DataLayer.get(
@@ -34,9 +37,28 @@ class DashboardServiceClass {
         .slice(0, 10)
         .value();
 
+      const dailyDates = [];
+      for (let i = from; !i.isAfter(to); i = i.add(1, 'day')) {
+        dailyDates.push(i.format('YYYY-MM-DD'));
+      }
+
+      const parsedForDaily = _.chain(data)
+        .groupBy((value) => dayjs(decodeTime(value.id)).format('YYYY-MM-DD'))
+        .mapValues((value) => value.length)
+        .value();
+
+      const daily = _.map(dailyDates, (date) => {
+        return {
+          date,
+          value: parsedForDaily[date] || 0,
+        };
+      });
+
       return {
         count,
         ordered,
+        daily,
+        dailyKeys: dailyDates,
       };
     };
 
@@ -74,6 +96,8 @@ class DashboardServiceClass {
     return {
       autoscalingHistoryCount: autoscalingHistoryStats.count,
       autoscalingHistoryMostTriggered: autoscalingHistoryStats.ordered,
+      dailyAutoscalingHistory: autoscalingHistoryStats.daily,
+      dailyAutoscalingHistoryKeys: autoscalingHistoryStats.dailyKeys,
       metricsCount,
       scalingComponentsCount,
       plansCount,

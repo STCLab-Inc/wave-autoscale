@@ -17,7 +17,7 @@ const MENU_ITEMS: MenuItem[] = [
   { targetPath: '/app/autoscaling-history', label: 'History' },
   { targetPath: '/app/inflow', label: 'Metrics Collector Logs' },
   { spacer: true },
-  { targetPath: '/app/add-plan', label: 'Add Plan', isButton: true },
+  { targetPath: '/app/templates', label: 'Add Plan', isButton: true },
   { targetPath: '/app/scaling-plans', label: 'Scaling Plans' },
   { targetPath: '/app/metrics', label: 'Metrics' },
   { targetPath: '/app/scaling-components', label: 'Scaling Components' },

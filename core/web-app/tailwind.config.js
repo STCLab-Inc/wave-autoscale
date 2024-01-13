@@ -34,6 +34,8 @@ module.exports = {
         'blue-600': '#2d3f9a',
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
+
+        'wa-gray-50': '#FAFAFB'
       },
       textColor: {
         'red-50': '#fef2f2',
@@ -62,6 +64,9 @@ module.exports = {
         'blue-600': '#2d3f9a',
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
+
+        'wa-gray-600': '#7F8083',
+        'wa-gray-700': '#656669',
       },
       borderColor: {
         'red-50': '#fef2f2',
@@ -90,6 +95,8 @@ module.exports = {
         'blue-600': '#2d3f9a',
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
+
+        'wa-gray-600': '#7F8083',
       },
       minWidth: {
         'screen-sm': '640px',
