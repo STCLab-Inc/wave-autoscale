@@ -103,11 +103,11 @@ export default function DashboardPage() {
             <div className="stat-value h-[300px]">
               <ResponsiveBarCanvas
                 data={stats?.dailyAutoscalingHistory ?? []}
-                keys={['value']}
                 margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
                 pixelRatio={2}
-                enableLabel={false}
+                enableLabel={true}
                 indexBy="date" // minValue="auto"
+                keys={stats?.dailyAutoscalingHistoryPlanIds ?? []}
                 // maxValue="auto"
                 axisBottom={{
                   tickSize: 5,
@@ -115,10 +115,17 @@ export default function DashboardPage() {
                   tickRotation: 0,
                   truncateTickAt: 0,
                 }}
+                tooltip={({ indexValue, value, id }) => (
+                  <div className="rounded-md border border-wa-gray-600 bg-wa-gray-50 p-2 text-sm font-normal">
+                    <div className="">{indexValue}</div>
+                    <div className="">{id}</div>
+                    <div className="">{value} times</div>
+                  </div>
+                )}
                 axisLeft={{
                   tickValues: 5,
                 }}
-                colors={(item) => '#3182CE'}
+                colors={{ scheme: 'green_blue' }}
                 gridYValues={5}
               />
             </div>
@@ -126,26 +133,29 @@ export default function DashboardPage() {
         </div>
         {/* History */}
         <div className="stats w-96">
-          <div className="stat">
+          <div className="stat flex flex-col justify-start">
             <div className="stat-title mb-4">Most Triggered Plan IDs</div>
             {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
               <div key={index} className="mb-2 flex items-center">
                 <div className="badge-primary badge badge-xs mr-4" />
-                <div className="text-sm">{item[0]}</div>
+                <div className="text-sm font-semibold">
+                  {item[0]} - {item[1]}
+                </div>
               </div>
             ))}
-            <div className="stat-desc">last 7 days</div>
+            <div className="stat-desc">
+              last {stats?.dailyAutoscalingHistoryKeys?.length} days
+            </div>
           </div>
         </div>
       </div>
       {/* Autoscaling History Stats */}
-      <div className="mb-10 flex space-x-4">
-        {/* History Count */}
+      {/* <div className="mb-10 flex space-x-4">
         <div className="stats flex-1">
           <div className="stat">
             <div className="stat-figure">
               <Link href="/app/autoscaling-history">
-                <LinkIcon />
+                <LinkIcon fill="" />
               </Link>
             </div>
             <div className="stat-title">Triggered Plans</div>
@@ -153,7 +163,6 @@ export default function DashboardPage() {
             <div className="stat-desc">last 7 days</div>
           </div>
         </div>
-        {/* History */}
         <div className="stats w-96">
           <div className="stat">
             <div className="stat-title mb-4">Most Triggered Plan IDs</div>
@@ -166,49 +175,7 @@ export default function DashboardPage() {
             <div className="stat-desc">last 7 days</div>
           </div>
         </div>
-      </div>
-      {/* Definition Stats */}
-      <div className="grid-4 mb-10 grid grid-cols-3 gap-4">
-        {/* Metric Definitions */}
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-figure">
-              <Link href="/app/metrics">
-                <LinkIcon />
-              </Link>
-            </div>
-            <div className="stat-title">Metric Definitions</div>
-            <div className="stat-value">{stats?.metricsCount}</div>
-            {/* <div className="stat-desc">21% more than last month</div> */}
-          </div>
-        </div>
-        {/* Scaling Component Definitions */}
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-figure">
-              <Link href="/app/scaling-components">
-                <LinkIcon />
-              </Link>
-            </div>
-            <div className="stat-title">Scaling Component Definitions</div>
-            <div className="stat-value">{stats?.scalingComponentsCount}</div>
-            {/* <div className="stat-desc">21% more than last month</div> */}
-          </div>
-        </div>
-        {/* Plan Definitions */}
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-figure">
-              <Link href="/app/scaling-plans">
-                <LinkIcon />
-              </Link>
-            </div>
-            <div className="stat-title">Plan Definitions</div>
-            <div className="stat-value">{stats?.plansCount}</div>
-            {/* <div className="stat-desc">21% more than last month</div> */}
-          </div>
-        </div>
-      </div>
+      </div> */}
       {/* Recent Inflow */}
       <div className="flex">
         <div className="stats flex-1">

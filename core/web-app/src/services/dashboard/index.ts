@@ -9,8 +9,9 @@ import { decodeTime } from 'ulid';
 export interface DashboardStats {
   autoscalingHistoryCount: number;
   autoscalingHistoryMostTriggered: [string, number][];
-  dailyAutoscalingHistory: { x: string; y: number }[];
+  dailyAutoscalingHistory: { [key: string]: any }[];
   dailyAutoscalingHistoryKeys: string[];
+  dailyAutoscalingHistoryPlanIds: string[];
   metricsCount: number;
   scalingComponentsCount: number;
   plansCount: number;
@@ -19,7 +20,7 @@ export interface DashboardStats {
 class DashboardServiceClass {
   async getDashboardStats(): Promise<DashboardStats> {
     const to = dayjs();
-    const from = to.subtract(14, 'day');
+    const from = to.subtract(13, 'day');
 
     const getAutoscalingHistoryStats = async () => {
       const autoscalingHistory = await DataLayer.get(
@@ -39,18 +40,33 @@ class DashboardServiceClass {
 
       const dailyDates = [];
       for (let i = from; !i.isAfter(to); i = i.add(1, 'day')) {
-        dailyDates.push(i.format('YYYY-MM-DD'));
+        dailyDates.push(i.format('MM-DD'));
       }
 
+      const dailyPlanIds = _.chain(data).map('plan_id').uniq().value();
       const parsedForDaily = _.chain(data)
-        .groupBy((value) => dayjs(decodeTime(value.id)).format('YYYY-MM-DD'))
-        .mapValues((value) => value.length)
+        .groupBy((value) => dayjs(decodeTime(value.id)).format('MM-DD'))
+        .mapValues((valueItems) => {
+          return _.chain(valueItems)
+            .groupBy('plan_id')
+            .mapValues((value) => value.length)
+            .value();
+        })
+        .map((value, key) => {
+          return {
+            date: key,
+            ...value,
+          };
+        })
         .value();
 
       const daily = _.map(dailyDates, (date) => {
+        const found = _.find(parsedForDaily, { date });
+        if (found) {
+          return found;
+        }
         return {
           date,
-          value: parsedForDaily[date] || 0,
         };
       });
 
@@ -59,6 +75,7 @@ class DashboardServiceClass {
         ordered,
         daily,
         dailyKeys: dailyDates,
+        dailyPlanIds,
       };
     };
 
@@ -98,6 +115,7 @@ class DashboardServiceClass {
       autoscalingHistoryMostTriggered: autoscalingHistoryStats.ordered,
       dailyAutoscalingHistory: autoscalingHistoryStats.daily,
       dailyAutoscalingHistoryKeys: autoscalingHistoryStats.dailyKeys,
+      dailyAutoscalingHistoryPlanIds: autoscalingHistoryStats.dailyPlanIds,
       metricsCount,
       scalingComponentsCount,
       plansCount,
