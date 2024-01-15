@@ -16,14 +16,20 @@ const columnHelper = createColumnHelper<InflowLogItem>();
 const columns = [
   columnHelper.accessor('name', {
     header: () => 'Name',
-    cell: (cell) => cell.getValue(),
+    cell: (cell) => {
+      const name = cell.getValue();
+      if (!name) {
+        return '(empty)';
+      }
+      return name;
+    },
   }),
   columnHelper.accessor('tags', {
     header: () => 'Tags',
     cell: (cell) => {
       const tags = cell.getValue();
       if (!tags) {
-        return null;
+        return '(empty)';
       }
       return (
         <span className="flex flex-col items-center break-all text-start">

@@ -39,10 +39,10 @@ export default function WASimpleTable<TData extends RowData>({
       </thead>
       <tbody className="min-h-12 flex w-full flex-col items-center justify-between py-0 text-sm text-wa-gray-700">
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="flex w-full border-b py-2">
+          <tr key={row.id} className="flex w-full border-b px-6 py-2">
             {row.getVisibleCells().map((cell) => (
               <td
-                className={`flex h-full w-full flex-1 items-start px-2`}
+                className={`flex h-full w-full flex-1 items-start`}
                 key={cell.id}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
