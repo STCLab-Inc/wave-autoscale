@@ -1,22 +1,24 @@
 import { DataLayer } from '@/infra/data-layer';
-import { Dayjs } from 'dayjs';
+import { InflowLogItem } from '@/types/inflow-log';
 
 class InflowServiceClass {
-  async getInflowMetricId() {
+  async getInflowMetricIds() {
     const response = await DataLayer.get(`/api/inflow/metric_id`);
     return response.data;
   }
-  async getInflowWithMetricIdByDate(
-    metric_id: String,
-    from: Dayjs,
-    to: Dayjs
-  ) {
-    const response = await DataLayer.get(
-      `/api/inflow?metric_id=${metric_id}&from=${
-        from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
-      }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
+  async getInflowMetricLogs(
+    metricId: String,
+    count: number
+  ): Promise<InflowLogItem[]> {
+    const { data } = await DataLayer.get(
+      `/api/inflow?metric_id=${metricId}&count=${count}`
     );
-    return response.data;
+    const logs: InflowLogItem[] = [];
+    data.map((log: { json_value: string }, index: number) => {
+      const data: InflowLogItem[] = JSON.parse(log.json_value);
+      logs.push(...data);
+    });
+    return logs;
   }
 }
 

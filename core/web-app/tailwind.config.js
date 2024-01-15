@@ -35,7 +35,8 @@ module.exports = {
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
 
-        'wa-gray-50': '#FAFAFB'
+        'wa-gray-50': '#FAFAFB',
+        'wa-gray-200': '#E5E6E9'
       },
       textColor: {
         'red-50': '#fef2f2',
@@ -67,6 +68,7 @@ module.exports = {
 
         'wa-gray-600': '#7F8083',
         'wa-gray-700': '#656669',
+        'wa-gray-900': '#2F3033'
       },
       borderColor: {
         'red-50': '#fef2f2',

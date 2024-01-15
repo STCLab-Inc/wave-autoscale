@@ -2,7 +2,7 @@
 
 let API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!API_BASE_URL) {
-  API_BASE_URL = 'http://localhost:3024';
+  API_BASE_URL = 'http://127.0.0.1:3024';
 }
 
 export async function fetchFromWA(path: string, options?: any) {

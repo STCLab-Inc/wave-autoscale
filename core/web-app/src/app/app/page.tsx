@@ -54,103 +54,105 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-full px-6">
+    <div className="min-h-full">
       {/* Page Header */}
       <PageHeader title="Dashboard" />
-      {/* Quick Start */}
-      <div className="mb-10 flex space-x-4">
-        {/* Graph */}
-        <div className="stats flex-1">
-          <div className="stat">
-            <div className="stat-title">Quick Start</div>
-            <div className="stat-value grid grid-cols-4 gap-4 divide-x pt-2">
-              {QUICK_START_ITEMS.map((template, index) => (
-                <div
-                  key={template.title}
-                  className={classNames({ 'pl-4': index !== 0 })}
-                >
-                  <TemplateItem
+      {/* Contents */}
+      <div className="px-6 py-6">
+        {/* Quick Start */}
+        <div className="mb-10 flex space-x-4">
+          {/* Graph */}
+          <div className="stats flex-1">
+            <div className="stat">
+              <div className="stat-title">Quick Start</div>
+              <div className="stat-value grid grid-cols-4 gap-4 divide-x pt-2">
+                {QUICK_START_ITEMS.map((template, index) => (
+                  <div
                     key={template.title}
-                    template={template}
-                    isCard={false}
-                  />
+                    className={classNames({ 'pl-4': index !== 0 })}
+                  >
+                    <TemplateItem
+                      key={template.title}
+                      template={template}
+                      isCard={false}
+                    />
+                  </div>
+                ))}
+                {/* See more templates */}
+                <div className="flex items-center justify-center p-6 text-base text-wa-gray-700">
+                  <Link
+                    href="/app/templates"
+                    className="flex items-center justify-center"
+                  >
+                    <span className="text-wrap mr-2">See More Templates</span>
+                    <LinkIcon fill="#656669" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* History */}
+          <div className="stats w-96">
+            <div className="stat"></div>
+          </div>
+        </div>
+        {/* Autoscaling History Graph */}
+        <div className="mb-10 flex space-x-4">
+          {/* Graph */}
+          <div className="stats flex-1">
+            <div className="stat">
+              <div className="stat-title">Triggered Plans</div>
+              <div className="stat-value h-[300px]">
+                <ResponsiveBarCanvas
+                  data={stats?.dailyAutoscalingHistory ?? []}
+                  margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
+                  pixelRatio={2}
+                  enableLabel={true}
+                  indexBy="date" // minValue="auto"
+                  keys={stats?.dailyAutoscalingHistoryPlanIds ?? []}
+                  // maxValue="auto"
+                  axisBottom={{
+                    tickSize: 5,
+                    tickPadding: 5,
+                    tickRotation: 0,
+                    truncateTickAt: 0,
+                  }}
+                  tooltip={({ indexValue, value, id }) => (
+                    <div className="rounded-md border border-wa-gray-600 bg-wa-gray-50 p-2 text-sm font-normal">
+                      <div className="">{indexValue}</div>
+                      <div className="">{id}</div>
+                      <div className="">{value} times</div>
+                    </div>
+                  )}
+                  axisLeft={{
+                    tickValues: 5,
+                  }}
+                  colors={{ scheme: 'green_blue' }}
+                  gridYValues={5}
+                />
+              </div>
+            </div>
+          </div>
+          {/* History */}
+          <div className="stats w-96">
+            <div className="stat flex flex-col justify-start">
+              <div className="stat-title mb-4">Most Triggered Plan IDs</div>
+              {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
+                <div key={index} className="mb-2 flex items-center">
+                  <div className="badge-primary badge badge-xs mr-4" />
+                  <div className="text-sm font-semibold">
+                    {item[0]} - {item[1]}
+                  </div>
                 </div>
               ))}
-              {/* See more templates */}
-              <div className="flex items-center justify-center text-base text-wa-gray-700">
-                <Link
-                  href="/app/templates"
-                  className="flex items-center justify-center"
-                >
-                  <span className="mr-2">See More Templates</span>
-                  <LinkIcon fill="#656669" />
-                </Link>
+              <div className="stat-desc">
+                last {stats?.dailyAutoscalingHistoryKeys?.length} days
               </div>
             </div>
           </div>
         </div>
-        {/* History */}
-        <div className="stats w-96">
-          <div className="stat"></div>
-        </div>
-      </div>
-      {/* Autoscaling History Graph */}
-      <div className="mb-10 flex space-x-4">
-        {/* Graph */}
-        <div className="stats flex-1">
-          <div className="stat">
-            <div className="stat-title">Triggered Plans</div>
-            <div className="stat-value h-[300px]">
-              <ResponsiveBarCanvas
-                data={stats?.dailyAutoscalingHistory ?? []}
-                margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
-                pixelRatio={2}
-                enableLabel={true}
-                indexBy="date" // minValue="auto"
-                keys={stats?.dailyAutoscalingHistoryPlanIds ?? []}
-                // maxValue="auto"
-                axisBottom={{
-                  tickSize: 5,
-                  tickPadding: 5,
-                  tickRotation: 0,
-                  truncateTickAt: 0,
-                }}
-                tooltip={({ indexValue, value, id }) => (
-                  <div className="rounded-md border border-wa-gray-600 bg-wa-gray-50 p-2 text-sm font-normal">
-                    <div className="">{indexValue}</div>
-                    <div className="">{id}</div>
-                    <div className="">{value} times</div>
-                  </div>
-                )}
-                axisLeft={{
-                  tickValues: 5,
-                }}
-                colors={{ scheme: 'green_blue' }}
-                gridYValues={5}
-              />
-            </div>
-          </div>
-        </div>
-        {/* History */}
-        <div className="stats w-96">
-          <div className="stat flex flex-col justify-start">
-            <div className="stat-title mb-4">Most Triggered Plan IDs</div>
-            {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
-              <div key={index} className="mb-2 flex items-center">
-                <div className="badge-primary badge badge-xs mr-4" />
-                <div className="text-sm font-semibold">
-                  {item[0]} - {item[1]}
-                </div>
-              </div>
-            ))}
-            <div className="stat-desc">
-              last {stats?.dailyAutoscalingHistoryKeys?.length} days
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Autoscaling History Stats */}
-      {/* <div className="mb-10 flex space-x-4">
+        {/* Autoscaling History Stats */}
+        {/* <div className="mb-10 flex space-x-4">
         <div className="stats flex-1">
           <div className="stat">
             <div className="stat-figure">
@@ -176,17 +178,18 @@ export default function DashboardPage() {
           </div>
         </div>
       </div> */}
-      {/* Recent Inflow */}
-      <div className="flex">
-        <div className="stats flex-1">
-          <div className="stat">
-            <div className="stat-title mb-4">Recent Metrics Inflow</div>
-            {/* {topHistoryPlans.map((plan, index) => (
+        {/* Recent Inflow */}
+        <div className="flex">
+          <div className="stats flex-1">
+            <div className="stat">
+              <div className="stat-title mb-4">Recent Metrics Inflow</div>
+              {/* {topHistoryPlans.map((plan, index) => (
               <div key={index} className="mb-2 flex items-center">
                 <div className="badge-primary badge badge-xs mr-4" />
                 <div className="text-sm">{plan.title}</div>
               </div>
             ))} */}
+            </div>
           </div>
         </div>
       </div>
