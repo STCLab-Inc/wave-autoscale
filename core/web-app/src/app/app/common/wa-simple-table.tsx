@@ -17,14 +17,17 @@ export default function WASimpleTable<TData extends RowData>({
   });
 
   return (
-    <table className="flex w-full flex-col">
-      <thead className="flex h-12 w-full items-center justify-between border-b border-t bg-wa-gray-200 py-0 text-sm font-bold text-wa-gray-900">
+    <table className="table-compact table w-full">
+      <thead className="bg-wa-gray-200 text-sm font-bold text-wa-gray-900">
         {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id} className="flex h-full w-full px-6">
+          <tr key={headerGroup.id} className="px-6">
             {headerGroup.headers.map((header) => (
               <th
                 key={header.id}
-                className={`flex h-full w-full flex-1 items-center`}
+                className={'h-12 border-b bg-wa-gray-100 first:pl-8'}
+                style={{
+                  width: header.getSize(),
+                }}
               >
                 {header.isPlaceholder
                   ? null
@@ -37,14 +40,11 @@ export default function WASimpleTable<TData extends RowData>({
           </tr>
         ))}
       </thead>
-      <tbody className="min-h-12 flex w-full flex-col items-center justify-between py-0 text-sm text-wa-gray-700">
+      <tbody className="text-sm text-wa-gray-700">
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="flex w-full border-b px-6 py-2">
+          <tr key={row.id} className="">
             {row.getVisibleCells().map((cell) => (
-              <td
-                className={`flex h-full w-full flex-1 items-start`}
-                key={cell.id}
-              >
+              <td className={'first:pl-8'} key={cell.id}>
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </td>
             ))}

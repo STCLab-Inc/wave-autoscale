@@ -3,6 +3,10 @@ import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
 import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
+import { addAlpha } from '@/utils/color';
+
+const MAX_ERROR_COUNT = 10;
+const MAX_SUCCESS_COUNT = 10;
 
 // Interfaces
 interface AutoscalingHistoryHeatmapProps {
@@ -62,12 +66,11 @@ function AutoscalingHistoryHeatmap({
               return {
                 x: hour,
                 y: autoscalingHistoryItems.length,
-                z: autoscalingHistoryItems.some(
+                // Additional information
+                z: autoscalingHistoryItems.filter(
                   (autoscalingHistoryItem) =>
                     autoscalingHistoryItem.fail_message !== undefined
-                )
-                  ? 'Failed'
-                  : 'Success',
+                ).length,
               };
             }),
         };
@@ -105,26 +108,40 @@ function AutoscalingHistoryHeatmap({
           tickRotation: 0,
           format: (value) => value.replace(/-/g, '/'),
         }}
-        colors={{
-          type: 'diverging',
-          divergeAt: 0.3,
-          scheme: 'turbo',
-          minValue: 0,
-          maxValue,
+        colors={(cell) => {
+          console.log({ cell });
+          const { data } = cell;
+          // Error
+          if (data.z > 0) {
+            return addAlpha('#E0242E', data.z / MAX_ERROR_COUNT);
+          }
+          if (data.y > 0) {
+            return addAlpha('#09AB6E', data.y / MAX_SUCCESS_COUNT);
+          }
+          return '#EDEEF1';
         }}
+        xInnerPadding={0.2}
+        yInnerPadding={0.2}
         emptyColor="#EBEBEB"
         borderWidth={0}
         borderColor="#000000"
         enableLabels={true}
-        labelTextColor={{
-          from: 'color',
-          modifiers: [['brighter', 3]],
+        labelTextColor={(cell) => {
+          const { data } = cell;
+          // Error
+          if (data.z > 0) {
+            return '#FFFFFF';
+          }
+          if (data.y > 0) {
+            return '#FFFFFF';
+          }
+          return '#00000000';
         }}
         annotations={[]}
         tooltip={({ cell }) => (
           <div
             className={`p-2 text-white shadow-md ${
-              cell.data.z === 'Failed' ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
+              cell.data.z > 0 ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
             }`}
           >
             <div className="text-xs">
@@ -133,9 +150,9 @@ function AutoscalingHistoryHeatmap({
             <div className="text-xs">
               Time: {cell.data.x}:00~{cell.data.x}:59
             </div>
-            <div className="text-xs">Activity: {cell.data.y}</div>
-            {cell.data.z === 'Failed' ? (
-              <div className="text-xs">Status: {cell.data.z}</div>
+            <div className="text-xs">Count: {cell.data.y}</div>
+            {cell.data.z > 0 ? (
+              <div className="text-xs">Fail: {cell.data.z}</div>
             ) : null}
           </div>
         )}
