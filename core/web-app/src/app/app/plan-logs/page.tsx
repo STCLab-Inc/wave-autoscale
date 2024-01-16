@@ -17,7 +17,6 @@ import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 // Default Values
 const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
-const SIZE_PER_PAGE_OPTIONS = [10, 50, 100, 200, 500];
 
 // Table columns
 const columnHelper = createColumnHelper<AutoscalingHistoryDefinitionEx>();
