@@ -102,7 +102,7 @@ export default function DashboardPage() {
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title">Triggered Plans</div>
-              <div className="stat-value h-[300px]">
+              <div className="stat-value h-[300px] overflow-hidden">
                 <ResponsiveBarCanvas
                   data={stats?.dailyAutoscalingHistory ?? []}
                   margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
@@ -111,8 +111,9 @@ export default function DashboardPage() {
                   indexBy="date" // minValue="auto"
                   keys={stats?.dailyAutoscalingHistoryPlanIds ?? []}
                   // maxValue="auto"
+                  labelSkipHeight={16}
                   axisBottom={{
-                    tickSize: 5,
+                    tickSize: 0,
                     tickPadding: 5,
                     tickRotation: 0,
                     truncateTickAt: 0,
@@ -126,6 +127,7 @@ export default function DashboardPage() {
                   )}
                   axisLeft={{
                     tickValues: 5,
+                    tickSize: 0,
                   }}
                   colors={{ scheme: 'green_blue' }}
                   gridYValues={5}
@@ -141,7 +143,7 @@ export default function DashboardPage() {
                 <div key={index} className="mb-2 flex items-center">
                   <div className="badge-primary badge badge-xs mr-4" />
                   <div className="text-sm font-semibold">
-                    {item[0]} - {item[1]}
+                    {item[0]} ({item[1]} times)
                   </div>
                 </div>
               ))}
