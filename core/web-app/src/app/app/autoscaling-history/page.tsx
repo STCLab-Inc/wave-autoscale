@@ -102,6 +102,9 @@ export default function AutoscalingHistoryPage() {
   const fromDayjs = useMemo(() => dayjs(from).startOf('day'), [from]);
   const toDayjs = useMemo(() => dayjs(to).endOf('day'), [to]);
 
+  // UI
+  const [isFetching, setIsFetching] = useState(false);
+
   // Data
   const [autoscalingHistory, setAutoscalingHistory] = useState<
     AutoscalingHistoryDefinitionEx[]
@@ -119,6 +122,7 @@ export default function AutoscalingHistoryPage() {
 
   // Fetch Autoscaling History Data
   const fetchAutoscalingHistory = async () => {
+    setIsFetching(true);
     try {
       let autoscalingHistoryData = await getAutoscalingHistory(
         fromDayjs,
@@ -135,6 +139,7 @@ export default function AutoscalingHistoryPage() {
     } catch (error) {
       console.error({ error });
     }
+    setIsFetching(false);
   };
   // Date Picker Handler
   const handleDate = (field: 'from' | 'to', value: string) => {
@@ -185,6 +190,14 @@ export default function AutoscalingHistoryPage() {
               </label>
             </div>
           </div>
+          {/* Refresh Button */}
+          <button
+            className="btn-primary btn-sm btn w-32"
+            onClick={fetchAutoscalingHistory}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Fetching...' : 'Refresh'}
+          </button>
         </div>
         {/* Heatmap */}
         <div className="p-6">
