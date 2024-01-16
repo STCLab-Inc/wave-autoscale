@@ -49,11 +49,14 @@ const columns = [
   }),
 ];
 
-export default function InflowPage() {
+export default function CollectorLogsPage() {
   const [metricIds, setMetricIds] = useState<string[]>([]);
   const [selectedMetricId, setSelectedMetricId] = useState<string>('');
   const [count, setCount] = useState<number>(COUNT_OPTIONS[0]);
   const [metricLogs, setMetricLogs] = useState<any[]>([]);
+
+  // UI
+  const [isFetching, setIsFetching] = useState(false);
 
   // Effects
   useEffect(() => {
@@ -66,24 +69,37 @@ export default function InflowPage() {
 
   // Handlers
   const fetchMetricIds = async () => {
-    const data = await InflowService.getInflowMetricIds();
-    setMetricIds(data);
+    setIsFetching(true);
 
-    if (!selectedMetricId) {
-      setSelectedMetricId(data[0]);
+    try {
+      const data = await InflowService.getInflowMetricIds();
+      setMetricIds(data);
+
+      if (!selectedMetricId) {
+        setSelectedMetricId(data[0]);
+      }
+    } catch (error) {
+      console.error(error);
     }
+    setIsFetching(false);
   };
 
   const fetchMetricLogs = async () => {
     if (!selectedMetricId) {
       return;
     }
-    const data = await InflowService.getInflowMetricLogs(
-      selectedMetricId,
-      count
-    );
-    console.log(data);
-    setMetricLogs(data);
+    setIsFetching(true);
+    try {
+      const data = await InflowService.getInflowMetricLogs(
+        selectedMetricId,
+        count
+      );
+      console.log(data);
+      setMetricLogs(data);
+    } catch (error) {
+      console.error(error);
+    }
+    setIsFetching(false);
   };
 
   const handleMetricIdChange = (
@@ -94,6 +110,11 @@ export default function InflowPage() {
 
   const handleCountChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setCount(parseInt(event.target.value));
+  };
+
+  const handleRefresh = async () => {
+    await fetchMetricIds();
+    await fetchMetricLogs();
   };
 
   return (
@@ -127,16 +148,25 @@ export default function InflowPage() {
               </option>
             ))}
           </select>
+          {/* Refresh Button */}
+          <button
+            className="btn-primary btn-sm btn w-32"
+            onClick={() => handleRefresh()}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Fetching...' : 'Refresh'}
+          </button>
         </div>
         {/* Table */}
-        <div className="py-6">
-          {/* Table */}
-          <WASimpleTable<InflowLogItem>
-            tableOptions={{
-              data: metricLogs,
-              columns,
-            }}
-          />
+        <div className="p-6">
+          <div className="wa-card">
+            <WASimpleTable<InflowLogItem>
+              tableOptions={{
+                data: metricLogs,
+                columns,
+              }}
+            />
+          </div>
         </div>
       </div>
     </main>
