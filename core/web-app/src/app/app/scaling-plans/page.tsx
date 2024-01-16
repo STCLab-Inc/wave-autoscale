@@ -4,8 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ScalingPlanService from '@/services/scaling-plan';
 import ScalingPlansSidebar from './scaling-plans-sidebar';
 import ScalingPlanDiagram from './scaling-plan-diagram';
-import ContentHeader from '../common/content-header';
-import { SectionTitle } from '../common/section-title';
+import { PageSectionTitle } from '../common/page-section-title';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import {
   deserializeScalingPlanDefinition,
@@ -13,6 +12,7 @@ import {
 } from '@/utils/scaling-plan-binding';
 import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
+import PageHeader from '../common/page-header';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -29,6 +29,7 @@ export default function ScalingPlansPage() {
   const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinition[]>([]);
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>();
   const [selectedPlanYaml, setSelectedPlanYaml] = useState<string>('');
+  // Show preview from YAML automatically
   const selectedPlanPreview = useMemo<ScalingPlanDefinition | undefined>(() => {
     if (selectedPlanIndex === undefined) {
       return;
@@ -39,20 +40,26 @@ export default function ScalingPlansPage() {
       return deserializedPlan;
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      // alert(error.message);
     }
     return undefined;
-  }, [selectedPlanYaml]);
+  }, [selectedPlanYaml, selectedPlanIndex]);
   // const [selectedPlanPreview, setSelectedPlanPreview] =
   //   useState<ScalingPlanDefinition>();
 
   // Effects
   useEffect(() => {
-    loadFromService();
+    fetch();
   }, []);
 
+  useEffect(() => {
+    if (scalingPlans.length > 0 && selectedPlanIndex === undefined) {
+      handleSelectedPlan(0);
+    }
+  }, [scalingPlans, selectedPlanIndex]);
+
   // Handlers
-  const loadFromService = async () => {
+  const fetch = async () => {
     const newScalingPlans = await getScalingPlans();
     setScalingPlans(newScalingPlans);
   };
@@ -79,14 +86,13 @@ export default function ScalingPlansPage() {
       setSelectedPlanYaml('');
       return;
     }
-
     const yaml = serializeScalingPlanDefinition(scalingPlans[index]);
     setSelectedPlanYaml(yaml);
   };
 
   const handleYamlChange = debounce((value: string) => {
     setSelectedPlanYaml(value);
-  }, 1000);
+  }, 500);
 
   const handleReset = () => {
     if (selectedPlanIndex === undefined) {
@@ -103,7 +109,8 @@ export default function ScalingPlansPage() {
       const scalingPlan = deserializeScalingPlanDefinition(selectedPlanYaml);
       const result = await ScalingPlanService.createScalingPlan(scalingPlan);
       console.info({ result });
-      loadFromService();
+      fetch();
+      alert('Saved!');
     } catch (error: any) {
       console.error(error);
       alert(error.message);
@@ -114,24 +121,19 @@ export default function ScalingPlansPage() {
   return (
     <main className="flex h-full w-full flex-col">
       {/* Header */}
-      <div className="w-full">
-        <ContentHeader
-          type="OUTER"
-          title="Scaling Plans"
-          right={<div className="flex items-center space-x-4"></div>}
-        />
-      </div>
+      <PageHeader title="Scaling Plans" />
       {/* Sections */}
       <div className="min-height-0 flex w-full flex-1 ">
-        <div className="flex h-full w-[400px] flex-col overflow-y-auto border-r px-4 py-2">
-          <div className="mb-4 flex items-center">
-            <SectionTitle title="Plans" />
+        {/* Plans */}
+        <div className="flex h-full w-72 flex-col overflow-y-auto border-r bg-wa-gray-50">
+          {/* Plans Header */}
+          <div className="flex h-14 items-center border-b border-wa-gray-200 pl-6">
+            <PageSectionTitle title="Plans" />
             <button
-              className="flex h-8 w-[120px] items-center justify-center rounded-md border border-blue-400 bg-blue-400 pl-2 pr-2 text-sm text-gray-50"
+              className="btn-image btn flex h-8"
               onClick={handleAddScalingPlan}
-              type="button"
             >
-              ADD PLAN
+              <img src="/assets/scaling-plans/add.svg" alt="plus" />
             </button>
           </div>
           <ScalingPlansSidebar
@@ -140,22 +142,29 @@ export default function ScalingPlansPage() {
             onChange={handleSelectedPlan}
           />
         </div>
-        <div className="flex h-full flex-1 flex-col overflow-y-auto px-4 py-2">
-          <SectionTitle title="Diagram" />
+        {/* Diagram */}
+        <div className="relative flex h-full flex-1 flex-col overflow-y-auto">
+          <div className="fixed z-10 flex h-14 items-center px-6">
+            <PageSectionTitle title="Diagram" />
+          </div>
           <ScalingPlanDiagram scalingPlan={selectedPlanPreview} />
         </div>
-        <div className="flex h-full flex-1 flex-col px-4 py-2">
-          <div className="mb-4 flex items-center">
-            <SectionTitle title="Code" />
+        {/* Code */}
+        <div className="flex h-full flex-1 flex-col bg-wa-gray-50 shadow-[-4px_0px_8px_rgba(23,25,28,0.08)]">
+          {/* Code Title */}
+          <div className="border-wa-gray-700 flex h-14 items-center border-b px-6">
+            <div className="flex-1">
+              <PageSectionTitle title="Code" />
+            </div>
             <div className="flex items-center space-x-4">
               <button
-                className="flex h-8 items-center justify-center rounded-md border border-blue-400  pl-5 pr-5 text-sm text-blue-400"
+                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
-                Reset
+                Reset Code
               </button>
               <button
-                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
               >
                 Save

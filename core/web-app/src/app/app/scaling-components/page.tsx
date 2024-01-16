@@ -14,7 +14,8 @@ import {
   deserializeScalingComponentDefinitions,
   serializeScalingComponentDefinitions,
 } from '@/utils/scaling-component-binding';
-import { SectionTitle } from '../common/section-title';
+import { PageSectionTitle } from '../common/page-section-title';
+import PageHeader from '../common/page-header';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -102,7 +103,7 @@ export default function ScalingComponentsPage() {
       alert(error.message);
       return;
     }
-  }, 1000);
+  }, 500);
 
   const handleReset = () => {
     handleYamlChange.cancel();
@@ -130,47 +131,48 @@ export default function ScalingComponentsPage() {
   return (
     <main className="flex h-full w-full flex-col">
       {/* Header */}
-      <div className="w-full">
-        <ContentHeader
-          type="OUTER"
-          title="Scaling Components"
-          right={
+      <PageHeader title="Scaling Component Definitions" />
+
+      {/* Sections */}
+      <div className="min-height-0 flex w-full flex-1 space-x-8">
+        {/* Preview */}
+        <div className="flex h-full flex-1 flex-col overflow-y-auto">
+          {/* Preview Title */}
+          <div className="flex h-14 items-center px-6">
+            <PageSectionTitle title="Preview" />
+          </div>
+          {/* Table */}
+          <div className="px-6 pb-6">
+            <WASimpleTable<ScalingComponentDefinition>
+              tableOptions={{
+                data: previewData,
+                columns,
+              }}
+            />
+          </div>
+        </div>
+        {/* Code */}
+        <div className="flex h-full flex-1 flex-col bg-wa-gray-50 shadow-[-4px_0px_8px_rgba(23,25,28,0.08)]">
+          {/* Code Title */}
+          <div className="border-wa-gray-700 flex h-14 items-center border-b px-6">
+            <div className="flex-1">
+              <PageSectionTitle title="Code" />
+            </div>
             <div className="flex items-center space-x-4">
               <button
-                className="flex h-8 items-center justify-center rounded-md border border-blue-400  pl-5 pr-5 text-sm text-blue-400"
+                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
-                Reset
+                Reset Code
               </button>
               <button
-                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
+                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
               >
                 Save
               </button>
             </div>
-          }
-        />
-      </div>
-      {/* Sections */}
-      <div className="min-height-0 flex w-full flex-1 space-x-8 p-8">
-        {/* Preview */}
-        <div className="flex h-full flex-1 flex-col overflow-y-auto">
-          {/* Preview Title */}
-          <SectionTitle title="Preview" />
-          {/* Table */}
-          <WASimpleTable<ScalingComponentDefinition>
-            tableOptions={{
-              data: previewData,
-              columns,
-            }}
-          />
-        </div>
-        {/* Code */}
-        <div className="flex h-full flex-1 flex-col">
-          {/* Code Title */}
-          <SectionTitle title="Code" />
-          {/* Code Editor */}
+          </div>
           <YAMLEditor value={yaml} onChange={handleYamlChange} />
         </div>
       </div>

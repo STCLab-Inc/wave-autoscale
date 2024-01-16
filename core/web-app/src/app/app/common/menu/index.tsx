@@ -57,11 +57,11 @@ export default function Menu() {
   const pathname = usePathname();
 
   return (
-    <ul className="flex h-full w-full flex-col items-center">
+    <ul className="flex h-full w-full flex-col items-center bg-wa-gray-50">
       {/* Quick Start */}
       <li className="flex h-14 w-full flex-row items-center justify-start px-6 text-xs text-wa-gray-900">
         <Link
-          className="btn-primary btn flex !h-10 !min-h-0 !w-52 items-center justify-center bg-wa-blue-400"
+          className="btn-primary btn flex !h-10 !min-h-0 !w-52 items-center justify-center"
           href="/app/templates"
         >
           Quick Start

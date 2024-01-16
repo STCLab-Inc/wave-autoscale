@@ -32,12 +32,12 @@ function TemplateContent({ template }: { template: Template }) {
       <h2 className="card-title mb-2 text-sm font-medium text-wa-gray-700">
         {template.title}
       </h2>
-      <p className="text-wrap mb-6 h-16 text-sm font-normal text-wa-gray-700">
+      <p className="text-wrap mb-6 line-clamp-3 h-16 text-sm font-normal text-wa-gray-700">
         {template.description}
       </p>
       <div className="card-actions justify-start">
         <label
-          className="btn-ghost btn flex !h-10 !min-h-[2.5rem] !w-[138px] items-center justify-center !rounded-lg border !border-wa-gray-600 !text-sm !font-medium !normal-case !text-wa-gray-600"
+          className="btn-gray btn flex !h-10 !min-h-[2.5rem] !w-[138px] items-center justify-center !rounded-lg !text-sm !font-medium !normal-case"
           htmlFor={template.title}
         >
           <img
@@ -100,12 +100,12 @@ export function TemplateItem({
           <div className="modal-action">
             <label
               htmlFor={template.title}
-              className="btn-primary btn"
+              className="btn-primary btn-sm btn"
               onClick={() => handleAddPlan(template.code)}
             >
               Add Definitions
             </label>
-            <label htmlFor={template.title} className="btn">
+            <label htmlFor={template.title} className="btn-sm btn">
               Close
             </label>
           </div>

@@ -22,20 +22,17 @@ export default function ScalingPlansSidebar({
             // If the scaling plan is already selected, then we want to unselect it.
             onClick={() => onChange(isSelected ? undefined : index)}
             className={classNames(
-              'mb-2 flex h-8 w-full cursor-pointer items-center rounded-xl px-1',
+              'mb-2 flex h-12 w-full cursor-pointer items-center justify-start px-6 text-wa-gray-900',
               {
-                'hover:bg-blue-100 hover:text-blue-600': !isSelected,
-                'bg-primary': isSelected,
+                'hover:bg-wa-blue-50 hover:text-blue-600': !isSelected,
+                'bg-wa-blue-50': isSelected,
+                '!text-wa-gray-700': !scalingPlan.enabled,
               }
             )}
           >
-            <span
-              className={classNames('flex items-center truncate', {
-                'text-white': isSelected,
-              })}
-            >
-              <EnabledBadge enabled={scalingPlan.enabled} />
-              <span className="ml-2 text-sm">{scalingPlan.id}</span>
+            <EnabledBadge enabled={scalingPlan.enabled} />
+            <span className="ml-2 flex-1 truncate text-left text-sm">
+              {scalingPlan.id}
             </span>
           </button>
         );

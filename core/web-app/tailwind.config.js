@@ -38,6 +38,11 @@ module.exports = {
         'wa-gray-50': '#FAFAFB',
         'wa-gray-100': '#EDEEF1',
         'wa-gray-200': '#E5E6E9',
+        'wa-gray-300': '#D4D5D8',
+
+        'wa-blue-50': '#EAEDFD',
+        'wa-blue-300': '#8497FE',
+        'wa-blue-400': '#3354FF',
       },
       textColor: {
         'red-50': '#fef2f2',
@@ -67,6 +72,7 @@ module.exports = {
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
 
+        'wa-gray-50': '#FAFAFB',
         'wa-gray-600': '#7F8083',
         'wa-gray-700': '#656669',
         'wa-gray-900': '#2F3033',
@@ -99,6 +105,8 @@ module.exports = {
         'blue-800': '#1d2963',
         'blue-1000': '#151d4b',
 
+        'wa-gray-200': '#E5E6E9',
+        'wa-gray-500': '#B0B1B4',
         'wa-gray-600': '#7F8083',
       },
       minWidth: {

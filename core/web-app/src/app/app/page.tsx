@@ -65,7 +65,7 @@ export default function DashboardPage() {
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title">Quick Start</div>
-              <div className="stat-value grid grid-cols-4 gap-4 divide-x pt-2">
+              <div className="stat-value grid grid-cols-2 gap-4 pt-2 xl:grid-cols-2 2xl:grid-cols-4">
                 {QUICK_START_ITEMS.map((template, index) => (
                   <div
                     key={template.title}
