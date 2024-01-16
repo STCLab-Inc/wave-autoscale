@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
+*:not(.ace_editor, .ace_editor *) {
   font-family: 'Pretendard Variable', Pretendard, -apple-system,
     BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI',
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji',
@@ -40,7 +40,8 @@ body {
 }
 
 /* Overrides */
-.stats, .wa-card {
+.stats,
+.wa-card {
   background: #fafafb;
   border: 1px solid #d4d5d8;
   /* Drop shadow/Container */
@@ -48,7 +49,8 @@ body {
   border-radius: 8px;
 }
 
-.stat, .wa-card-body {
+.stat,
+.wa-card-body {
   padding-top: 1rem !important;
   padding-bottom: 1.5rem !important;
   padding-left: 1.5rem !important;
