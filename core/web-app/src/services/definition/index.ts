@@ -11,6 +11,10 @@ class DefinitionServiceClass {
     const response = await DataLayer.post('/api/definitions', {
       yaml,
     });
+    if (response.status !== 200) {
+      const errorMessage = response.data;
+      throw new Error(errorMessage);
+    }
     return response.data;
   }
 }
