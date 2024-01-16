@@ -30,6 +30,20 @@ const LinkIcon = ({ fill }: { fill: string }) => (
   </svg>
 );
 
+function RecommendedActionItem({
+  title,
+  href,
+}: {
+  title: string;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="mb-2 flex items-center">
+      <LinkIcon fill="#656669" />
+      <div className="ml-2 text-sm font-semibold">{title}</div>
+    </Link>
+  );
+}
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>();
   const graphData = useMemo(() => {
@@ -59,9 +73,9 @@ export default function DashboardPage() {
       <PageHeader title="Dashboard" />
       {/* Contents */}
       <div className="px-6 py-6">
-        {/* Quick Start */}
+        {/* First Row */}
         <div className="mb-10 flex space-x-4">
-          {/* Graph */}
+          {/* Quick Start */}
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title">Quick Start</div>
@@ -91,14 +105,29 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          {/* History */}
+          {/* Recommendations */}
           <div className="stats w-96">
-            <div className="stat"></div>
+            <div className="stat flex flex-col justify-start">
+              <div className="stat-title mb-4">Recommendation Actions</div>
+              <RecommendedActionItem
+                title="Create A Scaling Component"
+                href="/app/scaling-components"
+              />
+              <RecommendedActionItem
+                title="Create A Metric Definition"
+                href="/app/metrics"
+              />
+
+              <RecommendedActionItem
+                title="Create A Scaling Plan"
+                href="/app/scaling-plans"
+              />
+            </div>
           </div>
         </div>
-        {/* Autoscaling History Graph */}
+        {/* Second Row */}
         <div className="mb-10 flex space-x-4">
-          {/* Graph */}
+          {/* Autoscaling History Graph */}
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title">Triggered Plans</div>
@@ -129,7 +158,7 @@ export default function DashboardPage() {
                     tickValues: 5,
                     tickSize: 0,
                   }}
-                  colors={{ scheme: 'green_blue' }}
+                  colors={{ scheme: 'paired' }}
                   gridYValues={5}
                 />
               </div>
@@ -153,47 +182,15 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        {/* Autoscaling History Stats */}
-        {/* <div className="mb-10 flex space-x-4">
-        <div className="stats flex-1">
-          <div className="stat">
-            <div className="stat-figure">
-              <Link href="/app/autoscaling-history">
-                <LinkIcon fill="" />
-              </Link>
-            </div>
-            <div className="stat-title">Triggered Plans</div>
-            <div className="stat-value">{stats?.autoscalingHistoryCount}</div>
-            <div className="stat-desc">last 7 days</div>
-          </div>
-        </div>
-        <div className="stats w-96">
-          <div className="stat">
-            <div className="stat-title mb-4">Most Triggered Plan IDs</div>
-            {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
-              <div key={index} className="mb-2 flex items-center">
-                <div className="badge-primary badge badge-xs mr-4" />
-                <div className="text-sm">{item[0]}</div>
-              </div>
-            ))}
-            <div className="stat-desc">last 7 days</div>
-          </div>
-        </div>
-      </div> */}
+
         {/* Recent Inflow */}
-        <div className="flex">
+        {/* <div className="flex">
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title mb-4">Recent Metrics Inflow</div>
-              {/* {topHistoryPlans.map((plan, index) => (
-              <div key={index} className="mb-2 flex items-center">
-                <div className="badge-primary badge badge-xs mr-4" />
-                <div className="text-sm">{plan.title}</div>
-              </div>
-            ))} */}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
