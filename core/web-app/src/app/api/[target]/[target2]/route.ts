@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   });
 }
 
-export async function UPDATE(request: Request, { params }: Params) {
+export async function PUT(request: Request, { params }: Params) {
   const response = await fetchFromWA(
     `/api/${params.target}/${params.target2}`,
     {
