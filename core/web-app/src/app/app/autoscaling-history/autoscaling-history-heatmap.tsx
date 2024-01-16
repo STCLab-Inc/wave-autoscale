@@ -63,14 +63,16 @@ function AutoscalingHistoryHeatmap({
           data: Object.entries(groupedByHour)
             .sort(([hourA], [hourB]) => (hourA < hourB ? -1 : 1))
             .map(([hour, autoscalingHistoryItems]) => {
+              const totalCount = autoscalingHistoryItems.length;
+              const errorCount = autoscalingHistoryItems.filter(
+                (autoscalingHistoryItem) => autoscalingHistoryItem.fail_message
+              ).length;
               return {
                 x: hour,
-                y: autoscalingHistoryItems.length,
+                y: totalCount,
                 // Additional information
-                z: autoscalingHistoryItems.filter(
-                  (autoscalingHistoryItem) =>
-                    autoscalingHistoryItem.fail_message !== undefined
-                ).length,
+                successCount: totalCount - errorCount,
+                errorCount,
               };
             }),
         };
@@ -112,8 +114,8 @@ function AutoscalingHistoryHeatmap({
           console.log({ cell });
           const { data } = cell;
           // Error
-          if (data.z > 0) {
-            return addAlpha('#E0242E', data.z / MAX_ERROR_COUNT);
+          if (data.errorCount > 0) {
+            return addAlpha('#E0242E', data.errorCount / MAX_ERROR_COUNT);
           }
           if (data.y > 0) {
             return addAlpha('#09AB6E', data.y / MAX_SUCCESS_COUNT);
@@ -129,7 +131,7 @@ function AutoscalingHistoryHeatmap({
         labelTextColor={(cell) => {
           const { data } = cell;
           // Error
-          if (data.z > 0) {
+          if (data.errorCount > 0) {
             return '#FFFFFF';
           }
           if (data.y > 0) {
@@ -141,7 +143,7 @@ function AutoscalingHistoryHeatmap({
         tooltip={({ cell }) => (
           <div
             className={`p-2 text-white shadow-md ${
-              cell.data.z > 0 ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
+              cell.data.errorCount > 0 ? 'bg-[#E0242E]' : 'bg-[#074EAB]'
             }`}
           >
             <div className="text-xs">
@@ -150,9 +152,12 @@ function AutoscalingHistoryHeatmap({
             <div className="text-xs">
               Time: {cell.data.x}:00~{cell.data.x}:59
             </div>
-            <div className="text-xs">Count: {cell.data.y}</div>
-            {cell.data.z > 0 ? (
-              <div className="text-xs">Fail: {cell.data.z}</div>
+            <div className="text-xs">Total: {cell.data.y}</div>
+            {cell.data.successCount > 0 ? (
+              <div className="text-xs">Success: {cell.data.successCount}</div>
+            ) : null}
+            {cell.data.errorCount > 0 ? (
+              <div className="text-xs">Fail: {cell.data.errorCount}</div>
             ) : null}
           </div>
         )}
