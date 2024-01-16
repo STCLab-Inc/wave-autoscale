@@ -3,10 +3,15 @@ import dayjs from 'dayjs';
 import MetricService from '../metric';
 import ScalingComponentService from '../scaling-component';
 import ScalingPlanService from '../scaling-plan';
-import InflowService from '../inflow';
+import _ from 'lodash';
+import { decodeTime } from 'ulid';
 
 export interface DashboardStats {
   autoscalingHistoryCount: number;
+  autoscalingHistoryMostTriggered: [string, number][];
+  dailyAutoscalingHistory: { [key: string]: any }[];
+  dailyAutoscalingHistoryKeys: string[];
+  dailyAutoscalingHistoryPlanIds: string[];
   metricsCount: number;
   scalingComponentsCount: number;
   plansCount: number;
@@ -15,16 +20,63 @@ export interface DashboardStats {
 class DashboardServiceClass {
   async getDashboardStats(): Promise<DashboardStats> {
     const to = dayjs();
-    const from = to.subtract(7, 'day');
+    const from = to.subtract(13, 'day');
 
-    const getAutoscalingHistoryCount = async () => {
+    const getAutoscalingHistoryStats = async () => {
       const autoscalingHistory = await DataLayer.get(
         `/api/autoscaling-history?from=${
           from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
         }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
       );
-      const autoscalingHistoryCount = autoscalingHistory.data.length;
-      return autoscalingHistoryCount;
+      const { data } = autoscalingHistory;
+      const count = data?.length;
+      const ordered = _.chain(data)
+        .groupBy('plan_id')
+        .mapValues((value) => value.length)
+        .toPairs()
+        .orderBy(1, 'desc')
+        .slice(0, 10)
+        .value();
+
+      const dailyDates = [];
+      for (let i = from; !i.isAfter(to); i = i.add(1, 'day')) {
+        dailyDates.push(i.format('MM-DD'));
+      }
+
+      const dailyPlanIds = _.chain(data).map('plan_id').uniq().value();
+      const parsedForDaily = _.chain(data)
+        .groupBy((value) => dayjs(decodeTime(value.id)).format('MM-DD'))
+        .mapValues((valueItems) => {
+          return _.chain(valueItems)
+            .groupBy('plan_id')
+            .mapValues((value) => value.length)
+            .value();
+        })
+        .map((value, key) => {
+          return {
+            date: key,
+            ...value,
+          };
+        })
+        .value();
+
+      const daily = _.map(dailyDates, (date) => {
+        const found = _.find(parsedForDaily, { date });
+        if (found) {
+          return found;
+        }
+        return {
+          date,
+        };
+      });
+
+      return {
+        count,
+        ordered,
+        daily,
+        dailyKeys: dailyDates,
+        dailyPlanIds,
+      };
     };
 
     const getMetricsCount = async () => {
@@ -47,19 +99,23 @@ class DashboardServiceClass {
     };
 
     const [
-      autoscalingHistoryCount,
+      autoscalingHistoryStats,
       metricsCount,
       scalingComponentsCount,
       plansCount,
     ] = await Promise.all([
-      getAutoscalingHistoryCount(),
+      getAutoscalingHistoryStats(),
       getMetricsCount(),
       getScalingComponentsCount(),
       getPlansCount(),
     ]);
 
     return {
-      autoscalingHistoryCount,
+      autoscalingHistoryCount: autoscalingHistoryStats.count,
+      autoscalingHistoryMostTriggered: autoscalingHistoryStats.ordered,
+      dailyAutoscalingHistory: autoscalingHistoryStats.daily,
+      dailyAutoscalingHistoryKeys: autoscalingHistoryStats.dailyKeys,
+      dailyAutoscalingHistoryPlanIds: autoscalingHistoryStats.dailyPlanIds,
       metricsCount,
       scalingComponentsCount,
       plansCount,

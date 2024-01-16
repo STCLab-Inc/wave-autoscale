@@ -1,29 +1,43 @@
-use tracing_subscriber;
+use tracing_subscriber::{filter, fmt, prelude::*, reload, Registry};
 
-pub enum LogLevel {
-    Verbose,
-    Quiet,
-    Info,
+const INFO_FILTER: &str = "wave_autoscale=info,api_server=info,utils=info,data_layer=info";
+const DEBUG_FILTER: &str = "wave_autoscale=debug,api_server=debug,utils=debug,data_layer=debug";
+const QUIET_FILTER: &str = "none";
+
+pub struct WALog {
+    reload_handle: reload::Handle<filter::EnvFilter, Registry>,
 }
 
-pub fn init(log_level: LogLevel) {
-    // install global collector configured based on RUST_LOG env var.
-    // tracing_subscriber::fmt::;/
-    match log_level {
-        LogLevel::Verbose => {
-            tracing_subscriber::fmt()
-                .with_env_filter(
-                    "wave_autoscale=debug,api_server=debug,utils=debug,data_layer=debug",
-                )
-                .init();
-        }
-        LogLevel::Quiet => {
-            // Do not initialize logger
-        }
-        LogLevel::Info => {
-            tracing_subscriber::fmt()
-                .with_env_filter("wave_autoscale=info,api_server=info,utils=info,data_layer=info")
-                .init();
-        }
+impl WALog {
+    pub fn new() -> Self {
+        let (filter, reload_handle) =
+            reload::Layer::new(tracing_subscriber::EnvFilter::new(INFO_FILTER));
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(fmt::Layer::default())
+            .init();
+        WALog { reload_handle }
+    }
+    pub fn set_info(&self) {
+        let _ = self
+            .reload_handle
+            .reload(filter::EnvFilter::new(INFO_FILTER));
+    }
+    pub fn set_debug(&self) {
+        let _ = self
+            .reload_handle
+            .reload(filter::EnvFilter::new(DEBUG_FILTER));
+    }
+    pub fn set_quiet(&self) {
+        // Turn off the logger including Error
+        let _ = self
+            .reload_handle
+            .reload(filter::EnvFilter::new(QUIET_FILTER));
+    }
+}
+
+impl Default for WALog {
+    fn default() -> Self {
+        Self::new()
     }
 }

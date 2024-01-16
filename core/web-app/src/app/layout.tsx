@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Wave Autoscale',
+  title: 'Wave Autoscale UI',
   description:
     'Beyond CPU Utilization Scaling, Handle Traffic Surges and Scale with Confidence',
 };

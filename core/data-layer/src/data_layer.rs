@@ -285,7 +285,7 @@ impl DataLayer {
         for metric in metrics {
             let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
             let query_string =
-                "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, updated_at) = ($8,$9,$10)";
+                "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, enabled, updated_at) = ($8,$9,$10,$11)";
             let db_id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -300,6 +300,7 @@ impl DataLayer {
                 // Values for update
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
+                .bind(metric.enabled)
                 .bind(updated_at)
                 // Run
                 .execute(&self.pool)
@@ -463,7 +464,7 @@ impl DataLayer {
         for scaling_component in scaling_components {
             let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
             let query_string =
-                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, updated_at) = ($8,$9)";
+                "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, enabled, updated_at) = ($8,$9,$10)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -477,6 +478,7 @@ impl DataLayer {
                 .bind(updated_at)
                 // Values for update
                 .bind(metadata_string.clone())
+                .bind(scaling_component.enabled)
                 .bind(updated_at)
                 // Run
                 .execute(&self.pool)
@@ -639,7 +641,7 @@ impl DataLayer {
         for plan in plans {
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (plans, updated_at) = ($8, $9)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, plans, enabled, updated_at) = ($8, $9, $10, $11)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now();
             let result = sqlx::query(query_string)
@@ -652,7 +654,9 @@ impl DataLayer {
                 .bind(updated_at)
                 .bind(updated_at)
                 // Values for update
+                .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
+                .bind(plan.enabled)
                 .bind(updated_at)
                 .execute(&self.pool)
                 .await;
@@ -1147,7 +1151,7 @@ impl DataLayer {
     }
 
     // Get inflow metric id
-    pub async fn get_inflow_metric_id(&self) -> Result<Vec<String>> {
+    pub async fn get_inflow_metric_ids(&self) -> Result<Vec<String>> {
         let mut metric_ids: Vec<String> = Vec::new();
 
         // Acquire read lock on source metrics data
@@ -1169,18 +1173,13 @@ impl DataLayer {
 
         Ok(metric_ids)
     }
-    // Get inflow with metric id by from and to date
-    pub async fn get_inflow_with_metric_id_by_date(
+    // Get the most recent inflow of specific metric_id with some count
+    pub async fn get_inflow_with_metric_id_and_count(
         &self,
         metric_id: String,
-        from_date: DateTime<Utc>,
-        to_date: DateTime<Utc>,
+        count: usize,
     ) -> Result<Vec<SourceMetrics>> {
         let mut inflow: Vec<SourceMetrics> = Vec::new();
-        let from = from_date.timestamp_millis();
-        let to = (to_date + chrono::Duration::milliseconds(1)).timestamp_millis();
-
-        let mut source_metrics: Vec<SourceMetrics> = Vec::new();
 
         // Acquire read lock on source metrics data
         let source_metrics_data = match SOURCE_METRICS_DATA.read() {
@@ -1196,69 +1195,14 @@ impl DataLayer {
 
         // Extract source metrics data with metric id
         if let Some(source_metrics_item) = source_metrics_data.source_metrics.get(&metric_id) {
-            // Extract json_value from the source_metrics_item
-            for (_key, value) in source_metrics_item.iter() {
-                source_metrics.push(SourceMetrics {
+            let recent = source_metrics_item.iter().rev().take(count);
+            for (_key, value) in recent {
+                inflow.push(SourceMetrics {
                     json_value: value.json_value.clone(),
                 });
             }
         }
-
-        // Iterate over source metrics data and filter based on timestamp
-        for source_metrics_item in source_metrics.iter() {
-            // Parse json_value from the entry
-            let json_value: serde_json::Value =
-                match serde_json::from_str(&source_metrics_item.json_value) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        eprintln!("Failed to parse JSON: {}", err);
-                        continue;
-                    }
-                };
-
-            // Check if json value is an array
-            if let Some(json_values) = json_value.as_array() {
-                // Iterate over each object in the array
-                for json_values_item in json_values {
-                    // Check if the json values item has a timestamp field
-                    if let Some(json_values_item_timestamp) = json_values_item
-                        .get("timestamp")
-                        .and_then(|timestamp| timestamp.as_str())
-                    {
-                        if let Ok(parse_json_values_item_timestamp) =
-                            DateTime::parse_from_str(json_values_item_timestamp, "%+")
-                                .map(|datetime| datetime.with_timezone(&Utc))
-                        {
-                            // Check if the timestamp is within the specified range
-                            if parse_json_values_item_timestamp.timestamp_millis() >= from
-                                && parse_json_values_item_timestamp.timestamp_millis() <= to
-                            {
-                                // Add to the result vector
-                                inflow.push(SourceMetrics {
-                                    json_value: json_values_item.to_string(),
-                                });
-                                // Break out of the loop if at least one valid entry is found
-                                break;
-                            }
-                        } else {
-                            eprintln!(
-                                "Failed to parse timestamp from string: {}",
-                                json_values_item_timestamp
-                            );
-                        }
-                    } else {
-                        // Print a message indicating that the timestamp field is not found
-                        eprintln!(
-                            "Timestamp field is not found in array element: {:?}",
-                            json_values_item
-                        );
-                    }
-                }
-            } else {
-                eprintln!("Failed to read from array: {:?}", json_value);
-            }
-        }
-
+        debug!("inflow: {:?}", inflow);
         Ok(inflow)
     }
 

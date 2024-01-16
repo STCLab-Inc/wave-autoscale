@@ -1,6 +1,6 @@
 <img src="https://wave-autoscale-marketplace-resources.s3.amazonaws.com/wa-marketplace-logo.png" alt="drawing" style="width:400px;"/>
 
-Wave Autoscale is an unified traffic & autoscaling management tool for clouds and Kubernetes. Customize traffic control and autoscaling of clouds to meet your availability and cost-efficiency needs.
+Wave Autoscale is an unified autoscaling & traffic management tool for clouds and Kubernetes. Customize autoscaling and traffic control of clouds to meet your availability and cost-efficiency needs.
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/STCLab-Inc/wave-autoscale)
 ![GitHub](https://img.shields.io/github/license/STCLab-Inc/wave-autoscale)
@@ -34,7 +34,7 @@ Wave Autoscale is designed to overcome these challenges, providing a more tailor
 <img src="https://wave-autoscale-marketplace-resources.s3.amazonaws.com/app-icons/kubernetes.svg" alt="drawing" style="width:50px;"/>
 
 **Kubernetes**
-- **Scaling Replicas**: Scaling a number of replicas of a deployment with metrics
+- **Scaling Replicas**: Scaling a number of replicas of a deployment with metrics (not by HPA)
 - **CoreDNS Autoscaling**: Scaling CoreDNS pods based on metrics
 - **Pod Right Sizing**: Dynamically right-sizing pods based on metrics
 - **Istio Traffic Delay**: When a service or a database is heavyly loaded, delay can be used to protect it from overload

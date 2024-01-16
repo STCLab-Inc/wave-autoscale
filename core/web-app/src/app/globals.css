@@ -1,11 +1,23 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.wa-main {
-  height: calc(100% - 4rem);
+*:not(.ace_editor, .ace_editor *) {
+  font-family: 'Pretendard Variable', Pretendard, -apple-system,
+    BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI',
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
 }
 
+.text-wrap {
+  text-wrap: wrap;
+}
+
+html,
+body {
+  background-color: #f5f5f7;
+}
 .scaling-plans-drawer {
   height: 100%;
 }
@@ -20,4 +32,117 @@
 
 .input-group-label-fixed {
   width: 7rem;
+}
+
+/* Overrides */
+.btn {
+  border-color: rgb(51, 84, 255);
+  background-color: transparent;
+  color: rgb(51, 84, 255);
+  text-transform: none;
+  text-decoration: none;
+  font-weight: normal;
+}
+.btn:hover {
+  border-color: rgba(51, 84, 255, 0.7);
+  background-color: transparent;
+  color: rgba(51, 84, 255, 0.7);
+  text-transform: none;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.btn.btn-ghost {
+  border: none;
+  background-color: transparent;
+  color: rgb(127, 128, 131);
+}
+.btn.btn-ghost:hover {
+  border: none;
+  background-color: transparent;
+}
+
+.btn.btn-primary {
+  background-color: rgb(51, 84, 255);
+  border-color: rgb(51, 84, 255);
+  color: #fafafb;
+  text-transform: none;
+}
+.btn.btn-primary:hover {
+  background-color: rgba(51, 84, 255, 0.9);
+  border-color: rgba(51, 84, 255, 0.9);
+}
+
+.btn.btn-gray {
+  border-color: rgb(127, 128, 131);
+  background-color: transparent;
+  color: rgb(127, 128, 131);
+  text-transform: none;
+  text-decoration: none;
+  font-weight: normal;
+}
+.btn.btn-gray:hover {
+  border-color: rgb(127, 128, 131, 0.7);
+  background-color: transparent;
+  color: rgb(127, 128, 131, 0.7);
+  text-transform: none;
+  text-decoration: none;
+  font-weight: normal;
+}
+.btn.btn-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  background-color: transparent;
+}
+.btn.btn-image:hover {
+  border: none;
+  background-color: transparent;
+}
+
+.badge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.badge.badge-success {
+  border: none;
+  background-color: #1fad5c;
+  color: #fafafb;
+}
+
+.badge.badge-disabled {
+  border: none;
+  background-color: #e5e6e9;
+  color: #c5c6c9;
+}
+
+.stats,
+.wa-card {
+  background: #fafafb;
+  border: 1px solid #d4d5d8;
+  /* Drop shadow/Container */
+  box-shadow: 0px 2px 6px rgba(23, 25, 28, 0.04);
+  border-radius: 8px;
+}
+
+.stat,
+.wa-card-body {
+  padding-top: 1rem !important;
+  padding-bottom: 1.5rem !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+.stat-title {
+  font-size: 0.825rem !important;
+  font-weight: 600 !important;
+  color: #656669 !important;
+}
+
+/* ACE Editor */
+.ace-xcode .ace_gutter {
+  background-color: #fafafb;
 }

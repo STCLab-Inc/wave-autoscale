@@ -1,140 +1,179 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ScalingPlanService from '@/services/scaling-plan';
 import ScalingPlansSidebar from './scaling-plans-sidebar';
-import ScalingPlansTabs from './scaling-plans-tabs';
 import ScalingPlanDiagram from './scaling-plan-diagram';
-import ScalingPlanCode from './scaling-plan-code';
-import ScalingPlanDrawer from './scaling-plan-drawer';
-import ContentHeader from '../common/content-header';
-import { ScalingPlanDefinitionEx } from './scaling-plan-definition-ex';
+import { PageSectionTitle } from '../common/page-section-title';
+import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
+import {
+  deserializeScalingPlanDefinition,
+  serializeScalingPlanDefinition,
+} from '@/utils/scaling-plan-binding';
+import { debounce } from 'lodash';
+import dynamic from 'next/dynamic';
+import PageHeader from '../common/page-header';
 
-enum ViewMode {
-  DIAGRAM = 'diagram',
-  CODE = 'code',
-}
+// Dynamic imports (because of 'window' object)
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
-const TAB_ITEMS: { viewMode: ViewMode; label: string }[] = [
-  { viewMode: ViewMode.DIAGRAM, label: 'Diagram' },
-  { viewMode: ViewMode.CODE, label: 'Code' },
-];
-
-// Utils
-async function getScalingPlans(): Promise<ScalingPlanDefinitionEx[]> {
+// Service
+async function getScalingPlans(): Promise<ScalingPlanDefinition[]> {
   const scalingPlans = await ScalingPlanService.getScalingPlans();
   return scalingPlans;
 }
 
 export default function ScalingPlansPage() {
-  const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinitionEx[]>(
-    []
-  );
-  const [selectedScalingPlanDbId, setSelectedScalingPlanDbId] =
-    useState<string>();
-  const [drawerVisible, setDrawerVisible] = useState<boolean>(false);
-
-  // UI states
-  const [detailsModalFlag, setDetailsModalFlag] = useState(false);
-  const [forceFetch, setForceFetch] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.DIAGRAM);
+  const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinition[]>([]);
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>();
+  const [selectedPlanYaml, setSelectedPlanYaml] = useState<string>('');
+  // Show preview from YAML automatically
+  const selectedPlanPreview = useMemo<ScalingPlanDefinition | undefined>(() => {
+    if (selectedPlanIndex === undefined) {
+      return;
+    }
+    try {
+      const deserializedPlan =
+        deserializeScalingPlanDefinition(selectedPlanYaml);
+      return deserializedPlan;
+    } catch (error: any) {
+      console.error(error);
+      // alert(error.message);
+    }
+    return undefined;
+  }, [selectedPlanYaml, selectedPlanIndex]);
+  // const [selectedPlanPreview, setSelectedPlanPreview] =
+  //   useState<ScalingPlanDefinition>();
 
   // Effects
   useEffect(() => {
-    fetchScalingPlans();
+    fetch();
   }, []);
 
   useEffect(() => {
-    if (forceFetch) {
-      setForceFetch(false);
-      fetchScalingPlans();
+    if (scalingPlans.length > 0 && selectedPlanIndex === undefined) {
+      handleSelectedPlan(0);
     }
-  }, [forceFetch]);
+  }, [scalingPlans, selectedPlanIndex]);
 
   // Handlers
-  const fetchScalingPlans = async () => {
+  const fetch = async () => {
+    const newScalingPlans = await getScalingPlans();
+    setScalingPlans(newScalingPlans);
+  };
+
+  const handleAddScalingPlan = async () => {
+    // Generate new ID that is not used
+    let newId = 'new_plan_';
+    let numbering = 1;
+    while (scalingPlans.find((p) => p.id === `${newId}${numbering}`)) {
+      numbering++;
+    }
+    newId = `${newId}${numbering}`;
+    const newScalingPlan = {
+      id: newId,
+    } as ScalingPlanDefinition;
+
+    // Add new scaling plan
+    setScalingPlans([...scalingPlans, newScalingPlan]);
+  };
+
+  const handleSelectedPlan = (index: number | undefined) => {
+    setSelectedPlanIndex(index);
+    if (index === undefined) {
+      setSelectedPlanYaml('');
+      return;
+    }
+    const yaml = serializeScalingPlanDefinition(scalingPlans[index]);
+    setSelectedPlanYaml(yaml);
+  };
+
+  const handleYamlChange = debounce((value: string) => {
+    setSelectedPlanYaml(value);
+  }, 500);
+
+  const handleReset = () => {
+    if (selectedPlanIndex === undefined) {
+      return;
+    }
+    const originalYaml = serializeScalingPlanDefinition(
+      scalingPlans[selectedPlanIndex]
+    );
+    setSelectedPlanYaml(originalYaml);
+  };
+
+  const handleSave = async () => {
     try {
-      let scalingPlans = await getScalingPlans();
-      setScalingPlans(scalingPlans);
-      // Unselect scaling plan if it is not in the list
-      let selectedScalingPlan = scalingPlans.find(
-        (scalingPlan) => scalingPlan.db_id === selectedScalingPlanDbId
-      );
-      if (!selectedScalingPlan) {
-        setSelectedScalingPlanDbId(undefined);
-      }
-    } catch (error) {
+      const scalingPlan = deserializeScalingPlanDefinition(selectedPlanYaml);
+      const result = await ScalingPlanService.createScalingPlan(scalingPlan);
+      console.info({ result });
+      fetch();
+      alert('Saved!');
+    } catch (error: any) {
       console.error(error);
+      alert(error.message);
+      return;
     }
   };
 
-  const handleAddScalingPlan = () => {
-    setSelectedScalingPlanDbId(undefined);
-    setDetailsModalFlag(true);
-  };
-
-  // Set selected scaling plan
-  const selectedScalingPlan = scalingPlans.find(
-    (scalingPlan) => scalingPlan.db_id === selectedScalingPlanDbId
-  );
-
   return (
-    <main className="flex h-full w-full flex-row">
-      <div className="flex h-full">
-        <aside className="flex h-full w-96 flex-col border-r border-gray-200">
-          <div className="flex h-14 min-h-14 w-full min-w-full flex-row items-center justify-between border-b border-t border-gray-200 bg-gray-75 px-8">
-            <span className="font-Pretendard whitespace-nowrap text-lg font-semibold text-gray-1000">
-              Scaling Plans ({scalingPlans.length})
-            </span>
-            <div className="flex items-center">
-              <button
-                className="flex h-8 items-center justify-center rounded-md border border-blue-400 bg-blue-400  pl-5 pr-5 text-sm text-gray-50"
-                onClick={() => {
-                  setSelectedScalingPlanDbId(undefined);
-                  setDrawerVisible(true);
-                }}
-                type="button"
-              >
-                ADD PLAN
-              </button>
-            </div>
+    <main className="flex h-full w-full flex-col">
+      {/* Header */}
+      <PageHeader title="Scaling Plans" />
+      {/* Sections */}
+      <div className="min-height-0 flex w-full flex-1 ">
+        {/* Plans */}
+        <div className="flex h-full w-72 flex-col overflow-y-auto border-r bg-wa-gray-50">
+          {/* Plans Header */}
+          <div className="flex h-14 items-center border-b border-wa-gray-200 pl-6">
+            <PageSectionTitle title="Plans" />
+            <button
+              className="btn-image btn flex h-8"
+              onClick={handleAddScalingPlan}
+            >
+              <img src="/assets/scaling-plans/add.svg" alt="plus" />
+            </button>
           </div>
           <ScalingPlansSidebar
             scalingPlans={scalingPlans}
-            selectedScalingPlanDbId={selectedScalingPlanDbId}
-            onChange={setSelectedScalingPlanDbId}
+            selectedIndex={selectedPlanIndex}
+            onChange={handleSelectedPlan}
           />
-        </aside>
-      </div>
-      <div className="flex h-full w-full flex-col">
-        {selectedScalingPlan ? (
-          <div className="flex h-full w-full flex-col">
-            <ContentHeader type="INNER" title={selectedScalingPlan.id} />
-            <ScalingPlansTabs<ViewMode>
-              tabItems={TAB_ITEMS}
-              selected={viewMode}
-              onChange={(viewMode) => setViewMode(viewMode)}
-            />
-            {viewMode === ViewMode.DIAGRAM ? (
-              <ScalingPlanDiagram scalingPlan={selectedScalingPlan} />
-            ) : viewMode === ViewMode.CODE ? (
-              <ScalingPlanCode
-                scalingPlan={selectedScalingPlan}
-                onChange={() => setForceFetch(true)}
-              />
-            ) : null}
+        </div>
+        {/* Diagram */}
+        <div className="relative flex h-full flex-1 flex-col overflow-y-auto">
+          <div className="fixed z-10 flex h-14 items-center px-6">
+            <PageSectionTitle title="Diagram" />
           </div>
-        ) : (
-          <div className="flex h-full w-full flex-col border-t "></div>
-        )}
+          <ScalingPlanDiagram scalingPlan={selectedPlanPreview} />
+        </div>
+        {/* Code */}
+        <div className="flex h-full flex-1 flex-col bg-wa-gray-50 shadow-[-4px_0px_8px_rgba(23,25,28,0.08)]">
+          {/* Code Title */}
+          <div className="border-wa-gray-700 flex h-14 items-center border-b px-6">
+            <div className="flex-1">
+              <PageSectionTitle title="Code" />
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                onClick={handleReset}
+              >
+                Reset Code
+              </button>
+              <button
+                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                onClick={handleSave}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+          <YAMLEditor value={selectedPlanYaml} onChange={handleYamlChange} />
+        </div>
       </div>
-      {drawerVisible ? (
-        <ScalingPlanDrawer
-          scalingPlan={selectedScalingPlan}
-          onChange={() => setForceFetch(true)}
-          onClose={() => setDrawerVisible(false)}
-        />
-      ) : null}
     </main>
   );
 }

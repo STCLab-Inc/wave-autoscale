@@ -3,9 +3,7 @@ import { MetricDefinition } from '@/types/bindings/metric-definition';
 
 class MetricServiceClass {
   async getMetrics() {
-    const response = await DataLayer.get('/api/metrics', {
-      
-    });
+    const response = await DataLayer.get('/api/metrics');
     return response.data;
   }
   async getMetric(db_id: string) {

@@ -1,0 +1,18 @@
+export const VECTOR_PROMETHEUS_CODE = `# https://vector.dev/docs/reference/configuration/sources/prometheus_scrape/#query
+kind: Metric
+id: vector_prometheus_metrics
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: prometheus_scrape
+      endpoints: ["http://localhost:9090/metrics"]
+      scrape_interval_secs: 15
+      query:
+        "match[]":
+          - '{job="somejob"}'
+          - '{__name__=~"job:.*"}'
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: ["my_source_id_1"] # last transform id or source id`;

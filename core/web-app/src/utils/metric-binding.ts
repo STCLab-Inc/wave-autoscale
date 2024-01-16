@@ -3,6 +3,7 @@ import { CloudwatchStatisticsMetricMetadata } from '@/types/bindings/cloudwatch-
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { PrometheusMetricMetadata } from '@/types/bindings/prometheus-metric';
 import { getInterfaceKeyTypes, MetadataKeyType } from './metadata-key-type';
+import JSYaml from 'js-yaml';
 
 export type MetricKeyType = { metricName: string; keyTypes: MetadataKeyType[] };
 
@@ -83,4 +84,41 @@ export function generateMetricDefinition({
     enabled,
     metadata: metadata ?? {},
   } as MetricDefinition;
+}
+
+export function serializeMetricDefinition(
+  metricDefinition: MetricDefinition
+): string {
+  const { kind, id, collector, enabled, metadata } = metricDefinition;
+  const serialized = JSYaml.dump({
+    kind,
+    id,
+    collector,
+    enabled,
+    metadata,
+  });
+  return serialized;
+}
+
+export function serializeMetricDefinitions(
+  metricDefinitions: MetricDefinition[]
+): string {
+  const serialized = metricDefinitions.map((metricDefinition) =>
+    serializeMetricDefinition(metricDefinition)
+  );
+  const result = serialized.join('\n---\n');
+  return result;
+}
+
+export function deserializeMetricDefinitions(
+  serialized: string
+): MetricDefinition[] {
+  let deserialized: MetricDefinition[] = JSYaml.loadAll(
+    serialized
+  ) as MetricDefinition[];
+  // Filter out invalid component definitions
+  deserialized = deserialized.filter(
+    (definition) => definition !== null
+  );
+  return deserialized;
 }

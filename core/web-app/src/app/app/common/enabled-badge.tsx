@@ -1,6 +1,14 @@
 export default function EnabledBadge({ enabled }: { enabled: boolean }) {
   if (enabled) {
-    return <div className="badge-success badge p-3">Enabled</div>;
+    return (
+      <div className="badge-success badge h-6 w-16 rounded-md text-xs">
+        Enabled
+      </div>
+    );
   }
-  return <div className="badge-error badge p-3">Disabled</div>;
+  return (
+    <div className="badge-disabled badge h-6 w-16 rounded-md text-xs">
+      Disabled
+    </div>
+  );
 }

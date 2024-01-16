@@ -17,7 +17,7 @@ export function renderKeyValuePairs(
 
   return (
     <div
-      className={classNames('w-full', {
+      className={classNames('key-value w-full', {
         'pl-4':
           indentFlag &&
           depth > 0 &&
@@ -29,7 +29,6 @@ export function renderKeyValuePairs(
         .sort()
         .flatMap((key, index) => {
           const value = keyValuePairs[key];
-
           if (value != null && typeof value === 'object') {
             return Array.isArray(keyValuePairs) ? (
               renderKeyValuePairs(value, indentFlag, depth + 1, true)

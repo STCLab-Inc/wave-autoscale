@@ -7,7 +7,7 @@ import { Ace } from 'ace-builds';
 export default function YAMLEditor({
   value,
   readonly,
-  showLineNumbers,
+  showLineNumbers = true,
   annotations,
   onChange,
 }: {
@@ -26,6 +26,7 @@ export default function YAMLEditor({
       readOnly={readonly}
       tabSize={2}
       annotations={annotations}
+      wrapEnabled={true}
       editorProps={{
         $blockScrolling: true,
       }}
@@ -42,7 +43,7 @@ export default function YAMLEditor({
       style={{
         width: '100%',
         height: '100%',
-        minHeight: '40rem',
+        // minHeight: '40rem',
       }}
     />
   );
