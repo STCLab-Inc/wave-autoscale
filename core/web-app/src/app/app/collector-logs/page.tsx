@@ -10,8 +10,6 @@ import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import dayjs from 'dayjs';
 import { parseDateToDayjs } from '@/utils/date';
 
-const dateParser = require('any-date-parser');
-
 const COUNT_OPTIONS = [10, 20, 50, 100];
 
 // Table columns
