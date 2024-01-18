@@ -1,6 +1,5 @@
 'use client';
 
-import ContentHeader from '../common/content-header';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { debounce } from 'lodash';
@@ -113,11 +112,29 @@ export default function ScalingComponentsPage() {
   const handleSave = async () => {
     try {
       const scalingComponents = deserializeScalingComponentDefinitions(yaml);
+      const originalScalingComponents = await getScalingComponents();
+      // Upsert
       const promises = scalingComponents.map((scalingComponentDefinition) => {
         return ScalingComponentService.createScalingComponent(
           scalingComponentDefinition
         );
       });
+      // Delete
+      const deletedScalingComponents = originalScalingComponents.filter(
+        (originalScalingComponent) => {
+          return !scalingComponents.some((scalingComponent) => {
+            return scalingComponent.id === originalScalingComponent.id;
+          });
+        }
+      );
+      const deletePromises = deletedScalingComponents.map(
+        (deletedScalingComponent) => {
+          return ScalingComponentService.deleteScalingComponent(
+            deletedScalingComponent.db_id
+          );
+        }
+      );
+      promises.push(...deletePromises);
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);
