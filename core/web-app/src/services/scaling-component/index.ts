@@ -1,5 +1,6 @@
 import { DataLayer } from '@/infra/data-layer';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
+import StatsService from '../stats';
 
 class ScalingComponentServiceClass {
   async getScalingComponents() {
@@ -14,6 +15,7 @@ class ScalingComponentServiceClass {
     const response = await DataLayer.post('/api/scaling-components', {
       scaling_components: [component],
     });
+    await StatsService.invalidateStats();
     return response.data;
   }
   async updateScalingComponent(component: ScalingComponentDefinition) {
@@ -29,6 +31,7 @@ class ScalingComponentServiceClass {
   }
   async deleteScalingComponent(db_id: string) {
     const response = await DataLayer.delete(`/api/scaling-components/${db_id}`);
+    await StatsService.invalidateStats();
     return response.data;
   }
 }

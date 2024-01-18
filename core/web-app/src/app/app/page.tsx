@@ -1,6 +1,6 @@
 'use client';
 
-import DashboardService, { DashboardStats } from '@/services/dashboard';
+import StatsService, { DashboardStats } from '@/services/stats';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from './common/page-header';
@@ -61,7 +61,7 @@ export default function DashboardPage() {
   // Effects
   useEffect(() => {
     const fetch = async () => {
-      const stats = await DashboardService.getDashboardStats();
+      const stats = await StatsService.getDashboardStats();
       setStats(stats);
     };
     fetch();

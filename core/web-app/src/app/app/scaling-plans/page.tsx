@@ -13,6 +13,7 @@ import {
 import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
 import PageHeader from '../common/page-header';
+import DefinitionCountBadge from '../common/definition-count-badge';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -94,6 +95,23 @@ export default function ScalingPlansPage() {
     setSelectedPlanYaml(value);
   }, 500);
 
+  const handleDelete = async () => {
+    // Confirm
+    const confirmed = confirm('Are you sure to delete this plan?');
+    if (!confirmed) {
+      return;
+    }
+    // Delete
+    if (selectedPlanIndex === undefined) {
+      return;
+    }
+    const plan = scalingPlans[selectedPlanIndex];
+    await ScalingPlanService.deleteScalingPlan(plan.db_id);
+    setSelectedPlanIndex(undefined);
+    fetch();
+    alert('Deleted!');
+  };
+
   const handleReset = () => {
     if (selectedPlanIndex === undefined) {
       return;
@@ -129,6 +147,7 @@ export default function ScalingPlansPage() {
           {/* Plans Header */}
           <div className="flex h-14 items-center border-b border-wa-gray-200 pl-6">
             <PageSectionTitle title="Plans" />
+            <DefinitionCountBadge count={scalingPlans.length} />
             <button
               className="btn-image btn flex h-8"
               onClick={handleAddScalingPlan}
@@ -156,12 +175,22 @@ export default function ScalingPlansPage() {
             <div className="flex-1">
               <PageSectionTitle title="Code" />
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Code Controls */}
+            <div className="flex items-center">
+              {/* Delete button */}
               <button
-                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-image btn mx-0 flex h-8 px-0"
+                onClick={handleDelete}
+              >
+                <img src="/assets/scaling-plans/delete.svg" alt="delete" />
+              </button>
+              {/* divider */}
+              <div className="mx-5 h-6 w-[1px] bg-wa-gray-400" />
+              <button
+                className="btn-ghost btn-sm btn mr-5 flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
-                Reset Code
+                Reset
               </button>
               <button
                 className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"

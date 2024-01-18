@@ -39,6 +39,8 @@ module.exports = {
         'wa-gray-100': '#EDEEF1',
         'wa-gray-200': '#E5E6E9',
         'wa-gray-300': '#D4D5D8',
+        'wa-gray-400': '#C5C6C9',
+        'wa-gray-500': '#B0B1B4',
 
         'wa-blue-50': '#EAEDFD',
         'wa-blue-300': '#8497FE',
