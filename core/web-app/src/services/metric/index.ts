@@ -1,5 +1,6 @@
 import { DataLayer } from '@/infra/data-layer';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
+import StatsService from '../stats';
 
 class MetricServiceClass {
   async getMetrics() {
@@ -14,6 +15,7 @@ class MetricServiceClass {
     const response = await DataLayer.post('/api/metrics', {
       metrics: [metric],
     });
+    await StatsService.invalidateStats();
     return response.data;
   }
   async updateMetric(metric: MetricDefinition) {
@@ -29,6 +31,7 @@ class MetricServiceClass {
   }
   async deleteMetric(db_id: string) {
     const response = await DataLayer.delete(`/api/metrics/${db_id}`);
+    await StatsService.invalidateStats();
     return response.data;
   }
 }

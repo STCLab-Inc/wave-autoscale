@@ -5,6 +5,8 @@ import ScalingComponentService from '../scaling-component';
 import ScalingPlanService from '../scaling-plan';
 import _ from 'lodash';
 import { decodeTime } from 'ulid';
+import { invalidateQuery } from '@/infra/query-client';
+import { useQuery } from '@tanstack/react-query';
 
 export interface DashboardStats {
   autoscalingHistoryCount: number;
@@ -12,12 +14,15 @@ export interface DashboardStats {
   dailyAutoscalingHistory: { [key: string]: any }[];
   dailyAutoscalingHistoryKeys: string[];
   dailyAutoscalingHistoryPlanIds: string[];
-  metricsCount: number;
-  scalingComponentsCount: number;
-  plansCount: number;
 }
 
-class DashboardServiceClass {
+export interface MenuStats {
+  metricsCount: number;
+  scalingComponentsCount: number;
+  scalingPlansCount: number;
+}
+
+class StatsServiceClass {
   async getDashboardStats(): Promise<DashboardStats> {
     const to = dayjs();
     const from = to.subtract(13, 'day');
@@ -79,35 +84,8 @@ class DashboardServiceClass {
       };
     };
 
-    const getMetricsCount = async () => {
-      const metrics = await MetricService.getMetrics();
-      const metricsCount = metrics.length;
-      return metricsCount;
-    };
-
-    const getScalingComponentsCount = async () => {
-      const scalingComponents =
-        await ScalingComponentService.getScalingComponents();
-      const scalingComponentsCount = scalingComponents.length;
-      return scalingComponentsCount;
-    };
-
-    const getPlansCount = async () => {
-      const plans = await ScalingPlanService.getScalingPlans();
-      const plansCount = plans.length;
-      return plansCount;
-    };
-
-    const [
-      autoscalingHistoryStats,
-      metricsCount,
-      scalingComponentsCount,
-      plansCount,
-    ] = await Promise.all([
+    const [autoscalingHistoryStats] = await Promise.all([
       getAutoscalingHistoryStats(),
-      getMetricsCount(),
-      getScalingComponentsCount(),
-      getPlansCount(),
     ]);
 
     return {
@@ -116,13 +94,34 @@ class DashboardServiceClass {
       dailyAutoscalingHistory: autoscalingHistoryStats.daily,
       dailyAutoscalingHistoryKeys: autoscalingHistoryStats.dailyKeys,
       dailyAutoscalingHistoryPlanIds: autoscalingHistoryStats.dailyPlanIds,
-      metricsCount,
-      scalingComponentsCount,
-      plansCount,
     };
+  }
+  async getMenuStats(): Promise<MenuStats> {
+    const [metrics, scalingComponents, scalingPlans] = await Promise.all([
+      MetricService.getMetrics(),
+      ScalingComponentService.getScalingComponents(),
+      ScalingPlanService.getScalingPlans(),
+    ]);
+    return {
+      metricsCount: metrics.length,
+      scalingComponentsCount: scalingComponents.length,
+      scalingPlansCount: scalingPlans.length,
+    };
+  }
+  async invalidateStats() {
+    return invalidateQuery(['stats']);
   }
 }
 
-const DashboardService = new DashboardServiceClass();
+const StatsService = new StatsServiceClass();
 
-export default DashboardService;
+function useMenuStats() {
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: StatsService.getMenuStats,
+  });
+}
+
+export default StatsService;
+
+export { useMenuStats };

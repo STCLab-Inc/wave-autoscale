@@ -1,15 +1,17 @@
 'use client';
 
 import React from 'react';
-import classNames from 'classnames';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import MenuItem from './menu-item';
+import { useQuery } from '@tanstack/react-query';
+import StatsService, { MenuStats, useMenuStats } from '@/services/stats';
 
 interface MenuItemData {
   imageFilename: string;
   targetPath: string;
   label: string;
+  statsKey?: keyof MenuStats;
 }
 
 interface MenuItemGroupData {
@@ -34,27 +36,25 @@ const MENU_ITEMS: (MenuItemData | MenuItemGroupData)[] = [
     targetPath: '/app/scaling-plans',
     label: 'Scaling Plans',
     imageFilename: 'scaling-plans.svg',
+    statsKey: 'scalingPlansCount',
   },
   {
     targetPath: '/app/metrics',
     label: 'Metrics',
     imageFilename: 'metrics.svg',
+    statsKey: 'metricsCount',
   },
   {
     targetPath: '/app/scaling-components',
     label: 'Scaling Components',
     imageFilename: 'scaling-components.svg',
+    statsKey: 'scalingComponentsCount',
   },
-  // { groupLabel: 'About' },
-  // {
-  //   targetPath: 'https://github.com/STCLab-Inc/wave-autoscale',
-  //   label: 'Github',
-  //   imageFilename: 'github.svg',
-  // },
 ];
 
 export default function Menu() {
   const pathname = usePathname();
+  const { data: stats } = useMenuStats();
 
   return (
     <ul className="flex h-full w-full flex-col items-center bg-wa-gray-50">
@@ -79,6 +79,7 @@ export default function Menu() {
           );
         }
         const menuItem = item as MenuItemData;
+
         return (
           <MenuItem
             key={index}
@@ -86,6 +87,7 @@ export default function Menu() {
             label={menuItem.label}
             targetPath={menuItem.targetPath}
             selected={pathname === menuItem.targetPath}
+            badgeCount={menuItem.statsKey && stats?.[menuItem.statsKey]}
           />
         );
       })}

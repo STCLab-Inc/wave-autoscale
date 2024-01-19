@@ -1,11 +1,12 @@
 import classNames from 'classnames';
 import Link from 'next/link';
+import DefinitionCountBadge from '../definition-count-badge';
 
 interface MenuItemProps {
   iconUrl: string;
   label: string;
   targetPath: string;
-  badgeCount?: string;
+  badgeCount?: number;
   selected?: boolean;
 }
 export default function MenuItem({
@@ -32,11 +33,7 @@ export default function MenuItem({
         {/* Label */}
         <span className="ml-2 text-sm text-wa-gray-700">{label}</span>
         {/* Badge Count */}
-        {badgeCount && (
-          <div className="ml-auto flex items-center justify-center rounded-[10px] bg-wa-blue-300 text-[10px] font-medium text-wa-gray-50">
-            {badgeCount}
-          </div>
-        )}
+        {badgeCount && <DefinitionCountBadge count={badgeCount} />}
       </li>
     </Link>
   );

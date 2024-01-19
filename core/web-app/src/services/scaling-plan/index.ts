@@ -1,5 +1,6 @@
 import { DataLayer } from '@/infra/data-layer';
 import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
+import StatsService from '../stats';
 
 class ScalingPlanServiceClass {
   async getScalingPlans() {
@@ -16,6 +17,7 @@ class ScalingPlanServiceClass {
     const response = await DataLayer.post('/api/plans', {
       plans: [plan],
     });
+    await StatsService.invalidateStats();
     return response.data;
   }
 
@@ -26,6 +28,7 @@ class ScalingPlanServiceClass {
 
   async deleteScalingPlan(id: string) {
     const response = await DataLayer.delete(`/api/plans/${id}`);
+    await StatsService.invalidateStats();
     return response.data;
   }
 }

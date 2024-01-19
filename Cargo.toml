@@ -7,6 +7,10 @@ members = [
 ]
 
 [workspace.package]
+version = "0.1.0"
 rust-version = "1.70.0"
+edition = "2021"
 authors = ["Wave Autoscale Team in STCLab, Inc"]
+homepage = "https://waveautoscale.com"
 documentation = "https://waveautoscale.com/docs"
+keywords = ["wave-autoscale", "autoscaling", "cloud-native"]

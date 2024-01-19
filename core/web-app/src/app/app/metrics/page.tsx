@@ -1,6 +1,5 @@
 'use client';
 
-import ContentHeader from '../common/content-header';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import {
@@ -9,13 +8,13 @@ import {
 } from '@/utils/metric-binding';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { debounce } from 'lodash';
-import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
 import WASimpleTable from '../common/wa-simple-table';
 import { PageSectionTitle } from '../common/page-section-title';
 import MetricService from '@/services/metric';
 import PageHeader from '../common/page-header';
+import { createColumnHelper } from '@tanstack/react-table';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -110,9 +109,22 @@ export default function MetricsPage() {
   const handleSave = async () => {
     try {
       const metricDefinitions = deserializeMetricDefinitions(yaml);
+      const originalMetrics = await getMetrics();
+      // Upsert
       const promises = metricDefinitions.map((metricDefinition) => {
         return MetricService.createMetric(metricDefinition);
       });
+      // Delete
+      const deletedMetrics = originalMetrics.filter(
+        (originalMetric) =>
+          !metricDefinitions.find(
+            (metricDefinition) => metricDefinition.id === originalMetric.id
+          )
+      );
+      const deletePromises = deletedMetrics.map((deletedMetric) => {
+        return MetricService.deleteMetric(deletedMetric.db_id);
+      });
+      promises.push(...deletePromises);
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);

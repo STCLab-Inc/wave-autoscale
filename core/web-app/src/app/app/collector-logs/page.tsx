@@ -8,6 +8,7 @@ import { InflowLogItem } from '@/types/inflow-log';
 import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import dayjs from 'dayjs';
+import { parseDateToDayjs } from '@/utils/date';
 
 const COUNT_OPTIONS = [10, 20, 50, 100];
 
@@ -45,7 +46,19 @@ const columns = [
   }),
   columnHelper.accessor('timestamp', {
     header: () => 'Timestamp',
-    cell: (cell) => dayjs(cell.getValue()).format('YYYY-MM-DD HH:mm:ss'),
+    cell: (cell) => {
+      const EMPTY = '(empty)';
+      const timestamp = cell.getValue();
+      if (!timestamp) {
+        return EMPTY;
+      }
+      try {
+        const date = parseDateToDayjs(timestamp);
+        return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+      } catch (error) {
+        return EMPTY;
+      }
+    },
   }),
 ];
 
