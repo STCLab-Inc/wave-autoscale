@@ -4,6 +4,6 @@ CREATE TABLE scaling_component (
   component_kind TEXT NOT NULL,
   metadata TEXT,
   enabled BOOLEAN,
-  created_at timestamptz,
-  updated_at timestamptz
+  created_at TEXT,
+  updated_at TEXT
 );

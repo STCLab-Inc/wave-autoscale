@@ -217,7 +217,7 @@ impl DataLayer {
                 };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
-                    let updated_at: chrono::DateTime<Utc> = row.get(0);
+                    let updated_at: String = row.get(0);
                     updated_at_hash_string.push_str(&updated_at.to_string());
                 }
 
@@ -287,7 +287,7 @@ impl DataLayer {
             let query_string =
                 "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, enabled, updated_at) = ($8,$9,$10,$11)";
             let db_id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(db_id)
@@ -295,13 +295,13 @@ impl DataLayer {
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(metric.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(metric.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 // Run
                 .execute(&self.pool)
                 .await;
@@ -434,7 +434,7 @@ impl DataLayer {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
             "UPDATE metric SET id=$1, collector=$2, metadata=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         let result = sqlx::query(query_string)
             // SET
             .bind(metric.id)
@@ -466,7 +466,7 @@ impl DataLayer {
             let query_string =
                 "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, enabled, updated_at) = ($8,$9,$10)";
             let id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(id)
@@ -474,12 +474,12 @@ impl DataLayer {
                 .bind(scaling_component.component_kind)
                 .bind(metadata_string.clone())
                 .bind(scaling_component.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metadata_string.clone())
                 .bind(scaling_component.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 // Run
                 .execute(&self.pool)
                 .await;
@@ -614,7 +614,7 @@ impl DataLayer {
         let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
         let query_string =
             "UPDATE scaling_component SET id=$1, component_kind=$2, metadata=$3, enabled=$4, updated_at=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         let result = sqlx::query(query_string)
             // SET
             .bind(scaling_component.id)
@@ -643,7 +643,7 @@ impl DataLayer {
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
             let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, plans, enabled, updated_at) = ($8, $9, $10, $11)";
             let id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(id)
@@ -651,13 +651,13 @@ impl DataLayer {
                 .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -785,7 +785,7 @@ impl DataLayer {
         let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
         let query_string =
             "UPDATE plan SET id=$1, metadata=$2, plans=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         let result = sqlx::query(query_string)
             // SET
             .bind(plan.id)
@@ -1379,6 +1379,108 @@ mod tests {
             .filter(|value| value.get("metric_id").unwrap() == "source_metrics_test_1")
             .collect();
         assert!(!source_metrics_filter_arr.is_empty());
+    }
+
+    #[tokio::test]
+    #[traced_test]
+    async fn test_get_all_metrics_json() {
+        let data_layer = get_data_layer_with_sqlite().await;
+        test_get_all_metrics_json_with_data_layer(data_layer).await;
+
+        let data_layer = get_data_layer_with_postgres().await;
+        test_get_all_metrics_json_with_data_layer(data_layer).await;
+    }
+    async fn test_get_all_metrics_json_with_data_layer(data_layer: DataLayer) {
+        let metric_definition = MetricDefinition {
+            kind: ObjectKind::Metric,
+            db_id: Ulid::new().to_string(),
+            id: "metric_test_id".to_string(),
+            collector: "vector".to_string(),
+            metadata: HashMap::new(),
+            enabled: true,
+        };
+        // add metrics
+        let add_metrics_result = data_layer
+            .add_metrics(vec![metric_definition.clone()])
+            .await;
+        assert!(add_metrics_result.is_ok());
+
+        // read metrics
+        let source_metrics = data_layer.get_all_metrics_json().await;
+        source_metrics.unwrap().iter().for_each(|metric| {
+            if metric.get("id").unwrap() == "metric_test_id" {
+                assert_eq!(metric.get("enabled").unwrap(), &true);
+            }
+        });
+    }
+
+    #[tokio::test]
+    #[traced_test]
+    async fn test_get_all_scaling_components_json() {
+        let data_layer = get_data_layer_with_sqlite().await;
+        test_get_all_scaling_components_json_with_data_layer(data_layer).await;
+
+        let data_layer = get_data_layer_with_postgres().await;
+        test_get_all_scaling_components_json_with_data_layer(data_layer).await;
+    }
+    async fn test_get_all_scaling_components_json_with_data_layer(data_layer: DataLayer) {
+        let scaling_component_definition = ScalingComponentDefinition {
+            kind: ObjectKind::ScalingComponent,
+            db_id: Ulid::new().to_string(),
+            id: "scaling_component_test_id".to_string(),
+            component_kind: "test_component_kind".to_string(),
+            metadata: HashMap::new(),
+            enabled: true,
+        };
+        // add scaling_components
+        let add_scaling_components_result = data_layer
+            .add_scaling_components(vec![scaling_component_definition.clone()])
+            .await;
+        assert!(add_scaling_components_result.is_ok());
+
+        // read scaling_components
+        let scaling_components = data_layer.get_all_scaling_components_json().await;
+        scaling_components
+            .unwrap()
+            .iter()
+            .for_each(|scaling_component| {
+                if scaling_component.get("id").unwrap() == "scaling_component_test_id" {
+                    assert_eq!(scaling_component.get("enabled").unwrap(), &true);
+                }
+            });
+    }
+
+    #[tokio::test]
+    #[traced_test]
+    async fn test_get_all_plans_json() {
+        let data_layer = get_data_layer_with_sqlite().await;
+        test_get_all_plans_json_with_data_layer(data_layer).await;
+
+        let data_layer = get_data_layer_with_postgres().await;
+        test_get_all_plans_json_with_data_layer(data_layer).await;
+    }
+    async fn test_get_all_plans_json_with_data_layer(data_layer: DataLayer) {
+        let scaling_plan_definition = ScalingPlanDefinition {
+            kind: ObjectKind::ScalingPlan,
+            db_id: Ulid::new().to_string(),
+            id: "scaling_plan_test_id".to_string(),
+            metadata: HashMap::new(),
+            plans: vec![],
+            enabled: true,
+        };
+        // add plans
+        let add_plans_result: std::prelude::v1::Result<(), anyhow::Error> = data_layer
+            .add_plans(vec![scaling_plan_definition.clone()])
+            .await;
+        assert!(add_plans_result.is_ok());
+
+        // read plans
+        let scaling_plans = data_layer.get_all_plans_json().await;
+        scaling_plans.unwrap().iter().for_each(|scaling_plan| {
+            if scaling_plan.get("id").unwrap() == "scaling_plan_test_id" {
+                assert_eq!(scaling_plan.get("enabled").unwrap(), &true);
+            }
+        });
     }
 
     #[tokio::test]

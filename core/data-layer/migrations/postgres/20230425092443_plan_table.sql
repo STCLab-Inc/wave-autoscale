@@ -6,6 +6,6 @@ CREATE TABLE
     metadata TEXT,
     plans TEXT,
     enabled BOOLEAN,
-    created_at timestamptz,
-    updated_at timestamptz
+    created_at TEXT,
+    updated_at TEXT
   );
