@@ -217,7 +217,7 @@ impl DataLayer {
                 };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
-                    let updated_at: chrono::DateTime<Utc> = row.get(0);
+                    let updated_at: String = row.get(0);
                     updated_at_hash_string.push_str(&updated_at.to_string());
                 }
 
@@ -287,7 +287,7 @@ impl DataLayer {
             let query_string =
                 "INSERT INTO metric (db_id, id, collector, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (collector, metadata, enabled, updated_at) = ($8,$9,$10,$11)";
             let db_id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(db_id)
@@ -295,13 +295,13 @@ impl DataLayer {
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(metric.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metric.collector.to_lowercase())
                 .bind(metadata_string.clone())
                 .bind(metric.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 // Run
                 .execute(&self.pool)
                 .await;
@@ -434,7 +434,7 @@ impl DataLayer {
         let metadata_string = serde_json::to_string(&metric.metadata).unwrap();
         let query_string =
             "UPDATE metric SET id=$1, collector=$2, metadata=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let result = sqlx::query(query_string)
             // SET
             .bind(metric.id)
@@ -466,7 +466,7 @@ impl DataLayer {
             let query_string =
                 "INSERT INTO scaling_component (db_id, id, component_kind, metadata, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, enabled, updated_at) = ($8,$9,$10)";
             let id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(id)
@@ -474,12 +474,12 @@ impl DataLayer {
                 .bind(scaling_component.component_kind)
                 .bind(metadata_string.clone())
                 .bind(scaling_component.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metadata_string.clone())
                 .bind(scaling_component.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 // Run
                 .execute(&self.pool)
                 .await;
@@ -614,7 +614,7 @@ impl DataLayer {
         let metadata_string = serde_json::to_string(&scaling_component.metadata).unwrap();
         let query_string =
             "UPDATE scaling_component SET id=$1, component_kind=$2, metadata=$3, enabled=$4, updated_at=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let result = sqlx::query(query_string)
             // SET
             .bind(scaling_component.id)
@@ -643,7 +643,7 @@ impl DataLayer {
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
             let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, plans, enabled, updated_at) = ($8, $9, $10, $11)";
             let id = Uuid::new_v4().to_string();
-            let updated_at = Utc::now();
+            let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
             let result = sqlx::query(query_string)
                 // Values for insert
                 .bind(id)
@@ -651,13 +651,13 @@ impl DataLayer {
                 .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
-                .bind(updated_at)
-                .bind(updated_at)
+                .bind(updated_at.clone())
+                .bind(updated_at.clone())
                 // Values for update
                 .bind(metatdata_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
-                .bind(updated_at)
+                .bind(updated_at.clone())
                 .execute(&self.pool)
                 .await;
             if result.is_err() {
@@ -785,7 +785,7 @@ impl DataLayer {
         let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
         let query_string =
             "UPDATE plan SET id=$1, metadata=$2, plans=$3, updated_at=$4, enabled=$5 WHERE db_id=$6";
-        let updated_at = Utc::now();
+        let updated_at = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let result = sqlx::query(query_string)
             // SET
             .bind(plan.id)
