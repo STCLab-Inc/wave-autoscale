@@ -340,7 +340,10 @@ impl MetricsCollectorManager {
 
         let mut collector_processes: Vec<process::AppInfo> = Vec::new();
 
+        //
         // collector: vector
+        //
+
         let mut vector_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
             if metric_definition.collector == VECTOR_COLLECTOR {
@@ -370,7 +373,10 @@ impl MetricsCollectorManager {
             }
         }
 
+        //
         // collector: telegraf
+        //
+
         let mut telegraf_metric_definitions: Vec<&MetricDefinition> = Vec::new();
         for metric_definition in metric_definitions {
             if metric_definition.collector == TELEGRAF_COLLECTOR {
@@ -400,7 +406,9 @@ impl MetricsCollectorManager {
             }
         }
 
-        // kill agent process
+        //
+        // kill agent process (vector, telegraf)
+        //
         if let Some(running_apps) = &mut self.running_apps {
             running_apps
                 .iter_mut()
@@ -428,7 +436,10 @@ impl MetricsCollectorManager {
             self.running_apps = Some(running_apps);
         }
 
+        //
+        // wa-generator
         // Find the metric definitions that use WA Generator collector
+        //
 
         // Stop the running tasks
         if let Some(running_tasks) = &mut self.running_tasks {
@@ -446,12 +457,15 @@ impl MetricsCollectorManager {
         }
         if !wa_generator_metric_definitions.is_empty() {
             // Run the collector binaries
-            let mut running_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
             for metric_definition in wa_generator_metric_definitions {
                 let output_url = self.output_url.clone();
                 let handle = wa_generator::run(metric_definition.clone(), output_url);
                 if let Ok(handle) = handle {
-                    running_tasks.push(handle);
+                    if let Some(running_tasks) = &mut self.running_tasks {
+                        running_tasks.push(handle);
+                    } else {
+                        self.running_tasks = Some(vec![handle]);
+                    }
                 }
             }
         }
