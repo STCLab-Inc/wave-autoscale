@@ -51,6 +51,9 @@ body {
   text-decoration: none;
   font-weight: normal;
 }
+.btn:disabled {
+  opacity: 0.5;
+}
 
 .btn.btn-ghost {
   border: none;

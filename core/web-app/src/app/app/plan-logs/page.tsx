@@ -68,7 +68,7 @@ const columns = [
       return (
         <div>
           <StatusBadge success={!failMessage} />
-          {failMessage && <div className="mt-2 text-xs">{failMessage}</div>}
+          {failMessage && <div className="mt-2 text-xs whitespace-pre">{failMessage}</div>}
         </div>
       );
     },
@@ -123,16 +123,21 @@ export default function AutoscalingHistoryPage() {
   const fetchAutoscalingHistory = async () => {
     setIsFetching(true);
     try {
-      let autoscalingHistoryData = await getAutoscalingHistory(
-        fromDayjs,
-        toDayjs
-      );
+      let autoscalingHistoryData: AutoscalingHistoryDefinitionEx[] =
+        (await getAutoscalingHistory(
+          fromDayjs,
+          toDayjs
+        )) as AutoscalingHistoryDefinitionEx[];
       autoscalingHistoryData = autoscalingHistoryData.map(
         (autoscalingHistoryDataItem: AutoscalingHistoryDefinition) =>
           ({
             ...autoscalingHistoryDataItem,
             created_at: decodeTime(autoscalingHistoryDataItem.id),
           } as AutoscalingHistoryDefinitionEx)
+      );
+      // Sort descending by created_at
+      autoscalingHistoryData = autoscalingHistoryData.sort(
+        (a, b) => b.created_at - a.created_at
       );
       setAutoscalingHistory(autoscalingHistoryData);
     } catch (error) {

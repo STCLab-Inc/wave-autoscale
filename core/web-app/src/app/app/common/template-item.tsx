@@ -1,9 +1,10 @@
 import { Template } from '@/data/wa-templates';
 import DefinitionService from '@/services/definition';
+import { errorToast } from '@/utils/toast';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+const YAMLEditor = dynamic(() => import('./yaml-editor'), {
   ssr: false,
 });
 
@@ -68,7 +69,7 @@ export function TemplateItem({
       const response = await DefinitionService.createDefinitions(code);
     } catch (error: any) {
       console.log(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
     if (template.metricsOnly) {

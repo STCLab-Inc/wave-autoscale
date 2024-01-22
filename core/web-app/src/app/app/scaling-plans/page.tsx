@@ -14,6 +14,8 @@ import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
 import PageHeader from '../common/page-header';
 import DefinitionCountBadge from '../common/definition-count-badge';
+import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
+import { errorToast, successToast } from '@/utils/toast';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -30,8 +32,11 @@ export default function ScalingPlansPage() {
   const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinition[]>([]);
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>();
   const [selectedPlanYaml, setSelectedPlanYaml] = useState<string>('');
+  const [annotations, setAnnotations] = useState<any[]>([]);
+
   // Show preview from YAML automatically
   const selectedPlanPreview = useMemo<ScalingPlanDefinition | undefined>(() => {
+    setAnnotations([]);
     if (selectedPlanIndex === undefined) {
       return;
     }
@@ -40,13 +45,13 @@ export default function ScalingPlansPage() {
         deserializeScalingPlanDefinition(selectedPlanYaml);
       return deserializedPlan;
     } catch (error: any) {
-      console.error(error);
-      // alert(error.message);
+      console.log(error);
+      // TODO: Annotations
+      // const annotations = getAnnotationsFromError(error);
+      // setAnnotations(annotations);
     }
     return undefined;
   }, [selectedPlanYaml, selectedPlanIndex]);
-  // const [selectedPlanPreview, setSelectedPlanPreview] =
-  //   useState<ScalingPlanDefinition>();
 
   // Effects
   useEffect(() => {
@@ -82,6 +87,7 @@ export default function ScalingPlansPage() {
   };
 
   const handleSelectedPlan = (index: number | undefined) => {
+    setAnnotations([]);
     setSelectedPlanIndex(index);
     if (index === undefined) {
       setSelectedPlanYaml('');
@@ -109,7 +115,7 @@ export default function ScalingPlansPage() {
     await ScalingPlanService.deleteScalingPlan(plan.db_id);
     setSelectedPlanIndex(undefined);
     fetch();
-    alert('Deleted!');
+    successToast('Deleted!');
   };
 
   const handleReset = () => {
@@ -128,10 +134,10 @@ export default function ScalingPlansPage() {
       const result = await ScalingPlanService.createScalingPlan(scalingPlan);
       console.info({ result });
       fetch();
-      alert('Saved!');
+      successToast('Saved!');
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
   };
@@ -200,7 +206,11 @@ export default function ScalingPlansPage() {
               </button>
             </div>
           </div>
-          <YAMLEditor value={selectedPlanYaml} onChange={handleYamlChange} />
+          <YAMLEditor
+            value={selectedPlanYaml}
+            onChange={handleYamlChange}
+            annotations={annotations}
+          />
         </div>
       </div>
     </main>

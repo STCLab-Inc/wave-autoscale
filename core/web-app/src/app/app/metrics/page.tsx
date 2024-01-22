@@ -15,6 +15,8 @@ import { PageSectionTitle } from '../common/page-section-title';
 import MetricService from '@/services/metric';
 import PageHeader from '../common/page-header';
 import { createColumnHelper } from '@tanstack/react-table';
+import { errorToast, successToast } from '@/utils/toast';
+import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -56,14 +58,17 @@ async function getMetrics(): Promise<MetricDefinition[]> {
 export default function MetricsPage() {
   const [yaml, setYaml] = useState<string>('');
   const [previewData, setPreviewData] = useState<MetricDefinition[]>([]);
-
+  const [annotations, setAnnotations] = useState<any[]>([]);
   // Effects
   useEffect(() => {
     loadFromService();
   }, []);
 
   // Handlers
+
+  // Load from service
   const loadFromService = async () => {
+    setAnnotations([]);
     const metrics = await getMetrics();
     // YAML
     try {
@@ -71,7 +76,7 @@ export default function MetricsPage() {
       setYaml(newYaml);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
 
@@ -79,16 +84,18 @@ export default function MetricsPage() {
     setPreviewData(metrics);
   };
 
+  // YAML change
   const handleYamlChange = debounce((value: string) => {
+    setAnnotations([]);
     setYaml(value);
 
     let newPreviewData;
     try {
       newPreviewData = deserializeMetricDefinitions(value);
     } catch (error: any) {
-      console.error(error);
-      alert(error.message);
-      // TODO: Set annotations
+      console.log(error);
+      const annotations = getAnnotationsFromError(error);
+      setAnnotations(annotations);
       return;
     }
 
@@ -96,7 +103,7 @@ export default function MetricsPage() {
       setPreviewData(newPreviewData);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
   }, 500);
@@ -107,6 +114,8 @@ export default function MetricsPage() {
   };
 
   const handleSave = async () => {
+    handleYamlChange.flush();
+
     try {
       const metricDefinitions = deserializeMetricDefinitions(yaml);
       const originalMetrics = await getMetrics();
@@ -128,11 +137,11 @@ export default function MetricsPage() {
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
     loadFromService();
-    alert('Saved');
+    successToast('Saved');
   };
 
   return (
@@ -174,12 +183,17 @@ export default function MetricsPage() {
               <button
                 className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
+                disabled={annotations.length > 0}
               >
                 Save
               </button>
             </div>
           </div>
-          <YAMLEditor value={yaml} onChange={handleYamlChange} />
+          <YAMLEditor
+            value={yaml}
+            onChange={handleYamlChange}
+            annotations={annotations}
+          />
         </div>
       </div>
     </main>

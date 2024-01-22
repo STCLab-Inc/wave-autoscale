@@ -15,6 +15,8 @@ import {
 } from '@/utils/scaling-component-binding';
 import { PageSectionTitle } from '../common/page-section-title';
 import PageHeader from '../common/page-header';
+import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
+import { errorToast, successToast } from '@/utils/toast';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -59,6 +61,7 @@ export default function ScalingComponentsPage() {
   const [previewData, setPreviewData] = useState<ScalingComponentDefinition[]>(
     []
   );
+  const [annotations, setAnnotations] = useState<any[]>([]);
 
   // Effects
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function ScalingComponentsPage() {
 
   // Handlers
   const loadFromService = async () => {
+    setAnnotations([]);
     const scalingComponents = await getScalingComponents();
     // YAML
     try {
@@ -74,7 +78,7 @@ export default function ScalingComponentsPage() {
       setYaml(newYaml);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
 
@@ -83,15 +87,16 @@ export default function ScalingComponentsPage() {
   };
 
   const handleYamlChange = debounce((value: string) => {
+    setAnnotations([]);
     setYaml(value);
 
     let newPreviewData;
     try {
       newPreviewData = deserializeScalingComponentDefinitions(value);
     } catch (error: any) {
-      console.error(error);
-      alert(error.message);
-      // TODO: Set annotations
+      console.log(error);
+      const annotations = getAnnotationsFromError(error);
+      setAnnotations(annotations);
       return;
     }
 
@@ -99,7 +104,7 @@ export default function ScalingComponentsPage() {
       setPreviewData(newPreviewData);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
   }, 500);
@@ -138,11 +143,11 @@ export default function ScalingComponentsPage() {
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      errorToast(error.message);
       return;
     }
     loadFromService();
-    alert('Saved');
+    successToast('Saved');
   };
 
   return (
@@ -185,12 +190,17 @@ export default function ScalingComponentsPage() {
               <button
                 className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
+                disabled={annotations.length > 0}
               >
                 Save
               </button>
             </div>
           </div>
-          <YAMLEditor value={yaml} onChange={handleYamlChange} />
+          <YAMLEditor
+            value={yaml}
+            onChange={handleYamlChange}
+            annotations={annotations}
+          />
         </div>
       </div>
     </main>
