@@ -52,7 +52,7 @@ const columns = [
     },
   }),
   columnHelper.accessor('metadata_values_json', {
-    header: () => 'Metadata',
+    header: () => 'Scaling Components',
     cell: (cell) => {
       return renderKeyValuePairsWithJson(cell.getValue(), true);
     },
@@ -68,7 +68,9 @@ const columns = [
       return (
         <div>
           <StatusBadge success={!failMessage} />
-          {failMessage && <div className="mt-2 text-xs whitespace-pre">{failMessage}</div>}
+          {failMessage && (
+            <div className="mt-2 whitespace-pre text-xs">{failMessage}</div>
+          )}
         </div>
       );
     },
