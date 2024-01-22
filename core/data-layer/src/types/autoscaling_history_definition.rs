@@ -1,5 +1,3 @@
-
-
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use ts_rs::TS;

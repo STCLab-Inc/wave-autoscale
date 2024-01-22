@@ -102,8 +102,6 @@ tasks:
       - "run"
       - "-p"
       - "wave-autoscale"
-      # - "--quiet"
-      # - "--verbose"
   run-help:
     command:
       - "cargo"
