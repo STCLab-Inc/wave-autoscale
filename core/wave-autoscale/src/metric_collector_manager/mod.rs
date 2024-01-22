@@ -1443,7 +1443,10 @@ mod tests {
         assert!(!validate_telegraf_definition(&metric_definition_fail_1));
     }
 
+    // TODO: Run test
+
     #[test]
+    #[traced_test]
     fn retry_test() {
         fn return_ok_of_num(ok_num: i32) -> Result<(), ()> {
             if ok_num == 2 {
