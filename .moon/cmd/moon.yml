@@ -7,9 +7,9 @@ tasks:
     options:
       runFromWorkspaceRoot: true
   lint:
-    command: "echo archiver"
+    command: "echo cmd"
   test:
-    command: "echo archiver"
+    command: "echo cmd"
   clean-cargo-cache:
     command: "cargo cache --autoclean"
   test-docker-build:
