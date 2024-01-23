@@ -20,7 +20,7 @@ projects:
   # Node based
   web-app: "core/web-app"
   # For building
-  archiver: ".moon/archiver"
+  cmd: ".moon/cmd"
   deployment: "deployment"
 
 codeowners:
@@ -47,7 +47,5 @@ vcs:
       - "moon run :lint"
     pre-push:
       - "moon sync projects"
-      # TODO: Add back in when we have a fix for 
-      # - "moon run archiver:audit :lint"
       - "moon run :lint"
       - "moon run controller:test"

@@ -1,31 +1,44 @@
-name: Publish Docker Image
+name: CD - Publish Images and Helm Chart to Docker Hub
+
 on:
   push:
     branches:
       - "main"
+    # tags:
+    #   - "v*.*.*"
+  # Manually
   workflow_dispatch:
     inputs:
       env:
-        description: "Environment Mode"
+        description: "Environment Mode for Variables(production/development)"
         required: true
         default: "development"
       app_version:
-        description: "App Version to Publish"
+        description: "App Version for S3 Path (ex: dev, v1.0.0)"
         required: true
         default: "nightly"
       image_tag_version:
-        description: "Image Tag Version to Publish"
+        description: "Image Tag Version for Manifest (ex: latest, 1.0.0)"
         required: true
-        default: "latest"
+        default: "nightly"
 
 env:
   CARGO_TERM_COLOR: always
+  REPOSITORY: stclab-inc/wave-autoscale
+  # Example: :latest-image, :1.0.0-image
+  DOCKER_IMAGE_TAG: ${{ inputs.image_tag_version }}-image
+  # Example: :latest-amd64, :1.0.0-amd64
+  DOCKER_AMD_IMAGE_TAG: ${{ inputs.image_tag_version }}-amd64
+  # Example: :latest-arm64, :1.0.0-arm64
+  DOCKER_ARM_IMAGE_TAG: ${{ inputs.image_tag_version }}-arm64
 
 jobs:
   build-amd64:
+    if: github.repository == 'stclab-inc/wave-autoscale'
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
     environment: ${{ inputs.env || 'development' }}
+    # For S3 Deploy
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -33,13 +46,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         timeout-minutes: 1
+
+      #
+      # Initialize
+      #
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      #
+      # Build
+      #
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -54,6 +76,8 @@ jobs:
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
+
+      # Binary
       - name: Extract the binary from the image
         run: |
           mkdir -p ./bin && cd ./bin
@@ -63,6 +87,8 @@ jobs:
           chmod +x ./wave-autoscale
           cp ../docs/config/* ./
           tar -czvf wave-autoscale-linux-amd64.tar.gz *
+
+      # Upload the binary to S3
       - name: Upload the binary to S3
         uses: reggionick/s3-deploy@v4
         with:
@@ -75,7 +101,9 @@ jobs:
           no-cache: true
           private: true
           files-to-include: "*.tar.gz"
+
   build-arm64:
+    if: github.repository == 'stclab-inc/wave-autoscale'
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
     environment: ${{ inputs.env || 'development' }}
@@ -128,7 +156,9 @@ jobs:
           no-cache: true
           private: true
           files-to-include: "*.tar.gz"
+
   manifest:
+    if: github.repository == 'stclab-inc/wave-autoscale'
     needs: [build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: ${{ inputs.env || 'development' }}

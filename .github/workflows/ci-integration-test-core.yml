@@ -1,20 +1,24 @@
-name: Integration tests
-run-name: ${{ github.actor }} has created a pull request
+name: CI - Integration Test
+
 on:
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  # on Pull Request
   pull_request:
     branches:
-      - 'main'
+      - "main"
+  # on Push
   push:
     branches:
-      - 'main'
-      - 'release-*'
+      - "main"
+      - "release-*"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test-on-pull-request:
+  integration-test:
+    if: github.repository == 'stclab-inc/wave-autoscale'
     runs-on: wave-autoscale-runner
     timeout-minutes: 30
 
@@ -25,21 +29,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Set up cargo cache
-      #   uses: actions/cache@v3
-      #   continue-on-error: false
-      #   timeout-minutes: 5
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       ~/.cargo/advisory-db/
-      #       target/
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-cargo-
+      #
+      # Dependencies
+      #
+      - name: Install Moonrepo
+        uses: moonrepo/setup-moon-action@v1
 
       - name: Set up moon cache
         uses: actions/cache@v3
@@ -52,37 +46,35 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-moon-
 
-      - name: Install Moonrepo
-        uses: moonrepo/setup-moon-action@v1
-
       - name: Install Clippy
         run: rustup component add clippy
-      
+
       # WORKAROUND: moon 1.13.2 has a bug of cargo binstall
       - name: Install BInstall
         run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-      
+
       - name: Install cargo-nextest
         run: cargo binstall -y cargo-nextest
-      
+
       - name: Install cargo-cache
         run: cargo binstall -y cargo-cache
-      
+
       - name: Install cargo-deny
         run: cargo binstall -y cargo-deny
       ## END OF WORKAROUND
 
+      #
+      # Licenses, Bans
+      #
       - name: Cargo-deny Check (Licenses, Bans)
         run: cargo deny check licenses ban
 
-      # - name: Run audit
-      #   run: moon run archiver:audit -f
-
-      # - name: Run lint
-      #   run: moon run :lint -f
-
+      #
+      # Test
+      #
       - name: Run test
         run: moon run controller:test -f
 
+      # Clean up
       - name: Cargo Autoclean
-        run: moon run archiver:clean-cargo-cache -f
+        run: moon run cmd:clean-cargo-cache -f
