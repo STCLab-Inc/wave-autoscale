@@ -131,6 +131,10 @@ export default function ScalingPlansPage() {
   const handleSave = async () => {
     try {
       const scalingPlan = deserializeScalingPlanDefinition(selectedPlanYaml);
+      if (!scalingPlan?.id) {
+        handleDelete();
+        return;
+      }
       const result = await ScalingPlanService.createScalingPlan(scalingPlan);
       console.info({ result });
       fetch();
