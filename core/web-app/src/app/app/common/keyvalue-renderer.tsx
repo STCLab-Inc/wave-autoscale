@@ -54,7 +54,7 @@ export function renderKeyValuePairs(
             </div>
           ) : (
             <div key={key} className="flex w-full flex-col">
-              <span className="hitespace-normal flex w-full flex-col break-all font-bold">
+              <span className="whitespace-normal flex w-full flex-col break-all font-bold">
                 {key}
               </span>
               <span className="flex w-full flex-col whitespace-normal break-all">
