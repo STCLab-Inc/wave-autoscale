@@ -33,7 +33,9 @@ export default function MenuItem({
         {/* Label */}
         <span className="ml-2 text-sm text-wa-gray-700">{label}</span>
         {/* Badge Count */}
-        {badgeCount && <DefinitionCountBadge count={badgeCount} />}
+        {(badgeCount !== undefined) && (
+          <DefinitionCountBadge count={badgeCount} />
+        )}
       </li>
     </Link>
   );
