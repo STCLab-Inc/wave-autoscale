@@ -118,12 +118,18 @@ export default function ScalingComponentsPage() {
     try {
       const scalingComponents = deserializeScalingComponentDefinitions(yaml);
       const originalScalingComponents = await getScalingComponents();
+      const promises = [];
       // Upsert
-      const promises = scalingComponents.map((scalingComponentDefinition) => {
-        return ScalingComponentService.createScalingComponent(
-          scalingComponentDefinition
+      if (scalingComponents.length > 0) {
+        const upsertPromises = scalingComponents.map(
+          (scalingComponentDefinition) => {
+            return ScalingComponentService.createScalingComponent(
+              scalingComponentDefinition
+            );
+          }
         );
-      });
+        promises.push(...upsertPromises);
+      }
       // Delete
       const deletedScalingComponents = originalScalingComponents.filter(
         (originalScalingComponent) => {
@@ -132,14 +138,16 @@ export default function ScalingComponentsPage() {
           });
         }
       );
-      const deletePromises = deletedScalingComponents.map(
-        (deletedScalingComponent) => {
-          return ScalingComponentService.deleteScalingComponent(
-            deletedScalingComponent.db_id
-          );
-        }
-      );
-      promises.push(...deletePromises);
+      if (deletedScalingComponents.length > 0) {
+        const deletePromises = deletedScalingComponents.map(
+          (deletedScalingComponent) => {
+            return ScalingComponentService.deleteScalingComponent(
+              deletedScalingComponent.db_id
+            );
+          }
+        );
+        promises.push(...deletePromises);
+      }
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);

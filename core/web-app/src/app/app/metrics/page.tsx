@@ -119,10 +119,14 @@ export default function MetricsPage() {
     try {
       const metricDefinitions = deserializeMetricDefinitions(yaml);
       const originalMetrics = await getMetrics();
+      const promises = [];
       // Upsert
-      const promises = metricDefinitions.map((metricDefinition) => {
-        return MetricService.createMetric(metricDefinition);
-      });
+      if (metricDefinitions.length > 0) {
+        const upsertPromises = metricDefinitions.map((metricDefinition) => {
+          return MetricService.createMetric(metricDefinition);
+        });
+        promises.push(...upsertPromises);
+      }
       // Delete
       const deletedMetrics = originalMetrics.filter(
         (originalMetric) =>
@@ -130,10 +134,12 @@ export default function MetricsPage() {
             (metricDefinition) => metricDefinition.id === originalMetric.id
           )
       );
-      const deletePromises = deletedMetrics.map((deletedMetric) => {
-        return MetricService.deleteMetric(deletedMetric.db_id);
-      });
-      promises.push(...deletePromises);
+      if (deletedMetrics.length > 0) {
+        const deletePromises = deletedMetrics.map((deletedMetric) => {
+          return MetricService.deleteMetric(deletedMetric.db_id);
+        });
+        promises.push(...deletePromises);
+      }
       await Promise.all(promises);
     } catch (error: any) {
       console.error(error);
