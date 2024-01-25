@@ -58,7 +58,7 @@ jobs:
           fi
       
   build-amd64:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
+    if: github.repository == vars.GITHUB_REPOSITORY
     needs: make-env
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
@@ -129,13 +129,13 @@ jobs:
           files-to-include: "*.tar.gz"
 
       # Rename the binary to 'latest' (if it's a tagging)
-      - if: ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
         name: Rename the binary to 'latest' (if it's a tagging)
         run: |
-          mv wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-amd64.tar.gz wave-autoscale-linux-latest-amd64.tar.gz
+          mv ./bin/wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-amd64.tar.gz wave-autoscale-linux-latest-amd64.tar.gz
 
       # Upload the binary 'latest' to S3 (if it's a tagging)
-      - if: ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
         name: Upload the binary 'latest' to S3 (if it's a tagging)
         uses: reggionick/s3-deploy@v4
         with:
@@ -150,7 +150,7 @@ jobs:
           files-to-include: "*.tar.gz"
 
   build-arm64:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
+    if: github.repository == vars.GITHUB_REPOSITORY
     needs: make-env
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
@@ -220,13 +220,13 @@ jobs:
           files-to-include: "*.tar.gz"
 
       # Rename the binary to 'latest' (if it's a tagging)
-      - if: ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
         name: Rename the binary to 'latest' (if it's a tagging)
         run: |
-          mv wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-arm64.tar.gz wave-autoscale-linux-latest-arm64.tar.gz
+          mv ./bin/wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-arm64.tar.gz wave-autoscale-linux-latest-arm64.tar.gz
 
       # Upload the binary 'latest' to S3 (if it's a tagging)
-      - if: ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
         name: Upload the binary 'latest' to S3 (if it's a tagging)
         uses: reggionick/s3-deploy@v4
         with:
@@ -241,7 +241,7 @@ jobs:
           files-to-include: "*.tar.gz"
 
   manifest-nightly:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'false'
+    if: github.repository == vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'false'
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -267,7 +267,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
   
   manifest-latest:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+    if: github.repository == vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'true'
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -293,7 +293,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
 
   helm-chart-and-manifest:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+    if: github.repository == vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'true'
     needs: [make-env, build-amd64, build-arm64, manifest-nightly, manifest-latest]
     runs-on: wave-autoscale-build-amd64
     environment: development
