@@ -294,7 +294,7 @@ jobs:
 
   helm-chart-and-manifest:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
-    needs: [make-env, build-amd64, build-arm64, manifest-nightly, manifest-latest]
+    needs: [make-env, build-amd64, build-arm64, manifest-version, manifest-latest]
     runs-on: wave-autoscale-build-amd64
     environment: development
     env:
