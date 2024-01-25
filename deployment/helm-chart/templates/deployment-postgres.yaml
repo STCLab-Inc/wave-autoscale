@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wave-autoscale-postgres
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
@@ -42,6 +43,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wa-pvc
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres-pvc
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
@@ -58,6 +60,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wave-autoscale-postgres-service
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale-postgres-service
     app.kubernetes.io/version: {{ .Chart.AppVersion }}

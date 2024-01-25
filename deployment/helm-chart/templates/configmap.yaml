@@ -2,67 +2,27 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wave-config
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale-config
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
     app.kubernetes.io/component: config
-    app.kubernetes.io/part-of: wave-autoscale
+    app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
   wave-config.yaml: |
-    # Data Layer
-    db_url: {{ .Values.config.db_url }}
-    watch_definition_duration: {{ .Values.config.watch_definition_duration }}
-    autoscaling_history_retention: {{ .Values.config.autoscaling_history_retention }}
-    reset_definitions_on_startup: {{ .Values.config.reset_definitions_on_startup }}
-
-    # API Server
-    host: {{ .Values.config.host }}
-    port: {{ .Values.config.port }}
-    
-    # Web Console
-    web_ui: {{ .Values.config.web_ui }}
-    web_ui_host: {{ .Values.config.web_ui_host }}
-    web_ui_port: {{ .Values.config.web_ui_port }}
-
-    vector:
-      macos_x86_64: {{ .Values.config.vector.macos_x86_64 }}
-      macos_aarch64: {{ .Values.config.vector.macos_aarch64 }}
-      linux_x86_64: {{ .Values.config.vector.linux_x86_64 }}
-      linux_aarch64: {{ .Values.config.vector.linux_aarch64 }}
-      windows_x86_64: {{ .Values.config.vector.windows_x86_64 }}
-    telegraf:
-      macos_x86_64: {{ .Values.config.telegraf.macos_x86_64 }}
-      macos_aarch64: {{ .Values.config.telegraf.macos_aarch64 }}
-      linux_x86_64: {{ .Values.config.telegraf.linux_x86_64 }}
-      linux_aarch64: {{ .Values.config.telegraf.linux_aarch64 }}
-      windows_x86_64: {{ .Values.config.telegraf.windows_x86_64 }}
+    {{- (tpl (.Files.Glob "config/wave-config.yaml").AsConfig . ) | nindent 2 }}
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wave-definitions
+  name: wave-definition
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
-    app.kubernetes.io/name: wave-autoscale-definitions
+    app.kubernetes.io/name: wave-autoscale-definition
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
-    app.kubernetes.io/component: definitions
-    app.kubernetes.io/part-of: wave-autoscale
+    app.kubernetes.io/component: definition
+    app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
-  definitions.yaml: |
-    # Your definitions.yaml content here.
-    # See https://waveautoscale.com/docs/guide/getting-started/ for more information.
-    # https://vector.dev/docs/reference/configuration/sources/host_metrics/
-    ---
-    kind: Metric
-    id: vector_host_metrics
-    collector: vector
-    metadata:
-      sources:
-        my_source_id_1:
-          type: host_metrics
-          namespace: host
-          scrape_interval_secs: 5
-      sinks:
-        my_sinks_id:
-          type: wave-autoscale
-          inputs: ["my_source_id_1"]
+  wave-definition.yaml: |
+    {{- (tpl (.Files.Glob "config/wave-definition.yaml").AsConfig . ) | nindent 2 }}

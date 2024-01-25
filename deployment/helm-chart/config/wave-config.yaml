@@ -1,0 +1,35 @@
+# Wave Autoscale
+debug: {{ .Values.config.debug }}
+quiet: {{ .Values.config.quiet }}
+
+# Data Layer
+db_url: {{ .Values.config.db_url }}
+watch_definition_duration: {{ .Values.config.watch_definition_duration }}
+autoscaling_history_retention: {{ .Values.config.autoscaling_history_retention }}
+reset_definitions_on_startup: {{ .Values.config.reset_definitions_on_startup }}
+
+# Metrics
+metric_buffer_size_kb: {{ .Values.config.metric_buffer_size_kb }}
+enable_metrics_log: {{ .Values.config.enable_metrics_log }}
+
+# API Server
+host: {{ .Values.config.host }}
+port: {{ .Values.config.port }}
+
+# Web Console
+web_ui: {{ .Values.config.web_ui }}
+web_ui_host: {{ .Values.config.web_ui_host }}
+web_ui_port: {{ .Values.config.web_ui_port }}
+
+vector:
+  macos_x86_64: {{ .Values.config.vector.macos_x86_64 }}
+  macos_aarch64: {{ .Values.config.vector.macos_aarch64 }}
+  linux_x86_64: {{ .Values.config.vector.linux_x86_64 }}
+  linux_aarch64: {{ .Values.config.vector.linux_aarch64 }}
+  windows_x86_64: {{ .Values.config.vector.windows_x86_64 }}
+telegraf:
+  macos_x86_64: {{ .Values.config.telegraf.macos_x86_64 }}
+  macos_aarch64: {{ .Values.config.telegraf.macos_aarch64 }}
+  linux_x86_64: {{ .Values.config.telegraf.linux_x86_64 }}
+  linux_aarch64: {{ .Values.config.telegraf.linux_aarch64 }}
+  windows_x86_64: {{ .Values.config.telegraf.windows_x86_64 }}

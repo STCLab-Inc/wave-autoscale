@@ -1,0 +1,17 @@
+# Your definitions.yaml content here.
+# See https://waveautoscale.com/docs/guide/getting-started/ for more information.
+# https://vector.dev/docs/reference/configuration/sources/host_metrics/
+---
+kind: Metric
+id: vector_host_metrics
+collector: vector
+metadata:
+  sources:
+    my_source_id_1:
+      type: host_metrics
+      namespace: host
+      scrape_interval_secs: 5
+  sinks:
+    my_sinks_id:
+      type: wave-autoscale
+      inputs: ["my_source_id_1"]

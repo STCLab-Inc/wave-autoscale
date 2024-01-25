@@ -37,6 +37,8 @@ wave-config.yaml
 wave-definition.yaml
 !docs/config/wave-config.yaml
 !docs/config/wave-definition.yaml
+!deployment/helm-chart/config/wave-config.yaml
+!deployment/helm-chart/config/wave-definition.yaml
 
 # VSCode
 .vscode/
