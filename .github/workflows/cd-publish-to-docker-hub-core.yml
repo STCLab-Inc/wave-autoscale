@@ -241,7 +241,7 @@ jobs:
           files-to-include: "*.tar.gz"
 
   manifest-nightly:
-    if: ${{ github.repository ==  vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'false' }}
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'false'
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -267,7 +267,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
   
   manifest-latest:
-    if: ${{ github.repository == vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'true' }}
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -293,7 +293,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
 
   helm-chart-and-manifest:
-    if: ${{ github.repository == vars.GITHUB_REPOSITORY && needs.make-env.outputs.is_trigger_tag == 'true' }}
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
     needs: [make-env, build-amd64, build-arm64, manifest-nightly, manifest-latest]
     runs-on: wave-autoscale-build-amd64
     environment: development
