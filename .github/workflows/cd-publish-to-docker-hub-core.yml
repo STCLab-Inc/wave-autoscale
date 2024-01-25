@@ -241,7 +241,7 @@ jobs:
           files-to-include: "*.tar.gz"
 
   manifest-nightly:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'false'
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} != 'true'
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -324,14 +324,14 @@ jobs:
       - name: Set the version in Chart.yaml
         uses: mikefarah/yq@master
         with:
-          cmd: HELM_IMAGE_TAG=${{ needs.make-env.outputs.is_trigger_tag }} yq e --inplace '.version = strenv(HELM_IMAGE_TAG)' ./$HELM_DIR_NAME/Chart.yaml
+          cmd: HELM_IMAGE_TAG=${{ needs.make-env.outputs.tag_version }} yq e --inplace '.version = strenv(HELM_IMAGE_TAG)' ./$HELM_DIR_NAME/Chart.yaml
 
       - name: Upload Helm Chart to AWS S3
         id: upload-helm-chart
         run: |
           # helm chart version override - print
           cat ./$HELM_DIR_NAME/Chart.yaml
-          helm template ./$HELM_DIR_NAME > wave-autoscale-manifest-${{ needs.make-env.outputs.is_trigger_tag }}.yaml
+          helm template ./$HELM_DIR_NAME > wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
           helm template ./$HELM_DIR_NAME > wave-autoscale-manifest-latest.yaml
           helm package ./$HELM_DIR_NAME
           helm repo index --url https://release.waveautoscale.io/helm --merge ./index_old.yaml .
@@ -352,8 +352,8 @@ jobs:
         continue-on-error: true
         with:
           command: cp
-          source: ./wave-autoscale-${{ needs.make-env.outputs.is_trigger_tag }}.tgz
-          destination: s3://${{ secrets.S3_BUCKET }}/helm/wave-autoscale-${{ needs.make-env.outputs.is_trigger_tag }}.tgz
+          source: ./wave-autoscale-${{ needs.make-env.outputs.tag_version }}.tgz
+          destination: s3://${{ secrets.S3_BUCKET }}/helm/wave-autoscale-${{ needs.make-env.outputs.tag_version }}.tgz
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.S3_BUCKET_REGION }}
@@ -363,8 +363,8 @@ jobs:
         continue-on-error: true
         with:
           command: cp
-          source: ./wave-autoscale-manifest-${{ needs.make-env.outputs.is_trigger_tag }}.yaml
-          destination: s3://${{ secrets.S3_BUCKET }}/manifest/wave-autoscale-manifest-${{ needs.make-env.outputs.is_trigger_tag }}.yaml
+          source: ./wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
+          destination: s3://${{ secrets.S3_BUCKET }}/manifest/wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.S3_BUCKET_REGION }}
