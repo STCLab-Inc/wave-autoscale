@@ -57,7 +57,7 @@ jobs:
       # for jobs condition ('github.*' and 'needs.*' are not available in 'if' condition)
       - id: repository_check
         run: |
-          if [[ ${{ github.repository }} == 'stclab-inc/wave-autoscale' ]]; then
+          if [[ ${{ github.repository }} == 'STCLab-Inc/wave-autoscale' ]]; then
             echo "repository_check=true" >> $GITHUB_OUTPUT
             echo "repository_check=true"
           else
