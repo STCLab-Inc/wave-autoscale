@@ -106,7 +106,7 @@ jobs:
       - name: Extract the binary from the image
         run: |
           mkdir -p ./bin && cd ./bin
-          id=$(docker create ${{ needs.make-env.outputs.tag_version }}-amd64)
+          id=$(docker create ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64)
           docker cp $id:/app/wave-autoscale ./wave-autoscale
           docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
@@ -197,7 +197,7 @@ jobs:
       - name: Extract the binary from the image
         run: |
           mkdir -p ./bin && cd ./bin
-          id=$(docker create ${{ needs.make-env.outputs.tag_version }}-arm64)
+          id=$(docker create ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64)
           docker cp $id:/app/wave-autoscale ./wave-autoscale
           docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
