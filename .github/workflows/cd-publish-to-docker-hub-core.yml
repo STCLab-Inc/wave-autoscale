@@ -240,7 +240,7 @@ jobs:
           private: true
           files-to-include: "*.tar.gz"
 
-  manifest-version:
+  image-manifest-version:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
@@ -266,9 +266,9 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64 
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
   
-  manifest-latest:
+  image-manifest-latest:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
-    needs: [make-env, build-amd64, build-arm64, manifest-version]
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version]
     runs-on: wave-autoscale-build-amd64
     environment: development
     steps:
@@ -292,9 +292,9 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64 
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
 
-  helm-chart-and-manifest:
+  helm-chart-and-k8s-manifest:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
-    needs: [make-env, build-amd64, build-arm64, manifest-version, manifest-latest]
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version, image-manifest-latest]
     runs-on: wave-autoscale-build-amd64
     environment: development
     env:
