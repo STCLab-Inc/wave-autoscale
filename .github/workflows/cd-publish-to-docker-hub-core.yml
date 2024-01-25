@@ -240,8 +240,8 @@ jobs:
           private: true
           files-to-include: "*.tar.gz"
 
-  manifest-nightly:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} != 'true'
+  manifest-version:
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
     needs: [make-env, build-amd64, build-arm64]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -268,7 +268,7 @@ jobs:
   
   manifest-latest:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
-    needs: [make-env, build-amd64, build-arm64]
+    needs: [make-env, build-amd64, build-arm64, manifest-version]
     runs-on: wave-autoscale-build-amd64
     environment: development
     steps:
