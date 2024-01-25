@@ -8,9 +8,6 @@ on:
     tags:
       - "v*.*.*"
 
-env:
-  GITHUB_REPOSITORY: stclab-inc/wave-autoscale
-
 # Example Image Tag
 # nightly-amd64 / nightly-arm64 / nightly
 # 0.1.0-amd64 / 0.1.0-arm64 / 0.1.0
@@ -28,6 +25,7 @@ jobs:
       # tagging true:  waveautoscale/wave-autoscale
       # tagging false: waveautoscale/wave-autoscale-nightly
       docker_hub_repository: ${{ steps.docker_hub_repository.outputs.docker_hub_repository }}
+      repository_check: ${{ steps.repository_check.outputs.repository_check }}
     steps:
       - id: is_trigger_tag
         run: |
@@ -55,6 +53,16 @@ jobs:
           else
             echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly" >> $GITHUB_OUTPUT
             echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly"
+          fi
+      # for jobs condition ('github.*' and 'needs.*' are not available in 'if' condition)
+      - id: repository_check
+        run: |
+          if [[ ${{ github.repository }} == 'stclab-inc/wave-autoscale' ]]; then
+            echo "repository_check=true" >> $GITHUB_OUTPUT
+            echo "repository_check=true"
+          else
+            echo "repository_check=false" >> $GITHUB_OUTPUT
+            echo "repository_check=false"
           fi
       
   build-amd64:
@@ -267,7 +275,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
   
   image-manifest-latest:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+    if: needs.make-env.outputs.repository_check == 'true' && needs.make-env.outputs.is_trigger_tag == 'true'
     needs: [make-env, build-amd64, build-arm64, image-manifest-version]
     runs-on: wave-autoscale-build-amd64
     environment: development
@@ -293,7 +301,7 @@ jobs:
           ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
 
   helm-chart-and-k8s-manifest:
-    if: github.repository == ${{ vars.GITHUB_REPOSITORY }} && ${{ needs.make-env.outputs.is_trigger_tag }} == 'true'
+    if: needs.make-env.outputs.repository_check == 'true' && needs.make-env.outputs.is_trigger_tag == 'true'
     needs: [make-env, build-amd64, build-arm64, image-manifest-version, image-manifest-latest]
     runs-on: wave-autoscale-build-amd64
     environment: development
