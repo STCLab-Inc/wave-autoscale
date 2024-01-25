@@ -33,22 +33,28 @@ jobs:
         run: |
           if [[ ${{ github.ref }} == refs/tags/* ]]; then
             echo "is_trigger_tag=true" >> $GITHUB_OUTPUT
+            echo "is_trigger_tag=true"
           else
             echo "is_trigger_tag=false" >> $GITHUB_OUTPUT
+            echo "is_trigger_tag=false"
           fi
       - id: tag_version
         run: |
           if [[ ${{ github.ref }} == refs/tags/* ]]; then
             echo "tag_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "tag_version=${GITHUB_REF#refs/tags/v}"
           else
             echo "tag_version=nightly" >> $GITHUB_OUTPUT
+            echo "tag_version=nightly"
           fi
       - id: docker_hub_repository
         run: |
           if [[ ${{ github.ref }} == refs/tags/* ]]; then
             echo "docker_hub_repository=waveautoscale/wave-autoscale" >> $GITHUB_OUTPUT
+            echo "docker_hub_repository=waveautoscale/wave-autoscale"
           else
             echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly" >> $GITHUB_OUTPUT
+            echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly"
           fi
       
   build-amd64:
@@ -88,7 +94,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ needs.make-env.outputs.tag_version }}-amd64
+          tags: ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64
           cache-from: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-amd64
           cache-to: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-amd64,mode=max
           labels: |
@@ -102,6 +108,7 @@ jobs:
           mkdir -p ./bin && cd ./bin
           id=$(docker create ${{ needs.make-env.outputs.tag_version }}-amd64)
           docker cp $id:/app/wave-autoscale ./wave-autoscale
+          docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/config/* ./
@@ -178,7 +185,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ needs.make-env.outputs.tag_version }}-arm64
+          tags: ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
           cache-from: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-arm64
           cache-to: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-arm64,mode=max
           labels: |
@@ -192,6 +199,7 @@ jobs:
           mkdir -p ./bin && cd ./bin
           id=$(docker create ${{ needs.make-env.outputs.tag_version }}-arm64)
           docker cp $id:/app/wave-autoscale ./wave-autoscale
+          docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/config/* ./
