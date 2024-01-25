@@ -334,6 +334,11 @@ jobs:
         with:
           cmd: HELM_IMAGE_TAG=${{ needs.make-env.outputs.tag_version }} yq e --inplace '.version = strenv(HELM_IMAGE_TAG)' ./$HELM_DIR_NAME/Chart.yaml
 
+      - name: Set the version in Chart.yaml
+        uses: mikefarah/yq@master
+        with:
+          cmd: HELM_APP_VERSION=${{ needs.make-env.outputs.tag_version }} yq e --inplace '.appVersion = strenv(HELM_APP_VERSION)' ./$HELM_DIR_NAME/Chart.yaml
+
       - name: Upload Helm Chart to AWS S3
         id: upload-helm-chart
         run: |
