@@ -8,7 +8,7 @@ services:
       - "3024:3024"
       - "3025:3025"
     volumes:
-      - ".:/usr/src/wave-autoscale"
+      - "./config:/app/config"
     command: "./wave-autoscale"
   postgres:
     image: "postgres:latest"
@@ -20,7 +20,7 @@ services:
     volumes:
       - "./postgres-data:/var/lib/postgresql/data"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
