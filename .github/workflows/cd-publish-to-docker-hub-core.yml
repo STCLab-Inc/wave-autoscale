@@ -247,6 +247,20 @@ jobs:
           no-cache: true
           private: true
           files-to-include: "*.tar.gz"
+  
+  aws-cloudfront-invalidate-binary:
+    needs: [make-env, build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: "${{ secrets.S3_BUCKET }}/binary/*"
+          AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   image-manifest-version:
     if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
@@ -392,4 +406,18 @@ jobs:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.S3_BUCKET_REGION }}
+
+  aws-cloudfront-invalidate-helm-manifest:
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version, image-manifest-latest, helm-chart-and-k8s-manifest]
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: "${{ secrets.S3_BUCKET }}/helm/* ${{ secrets.S3_BUCKET }}/manifest/*"
+          AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       
