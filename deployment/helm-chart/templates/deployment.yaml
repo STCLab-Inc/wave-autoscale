@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wave-autoscale
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
@@ -22,37 +23,43 @@ spec:
         app.kubernetes.io/component: core
         app.kubernetes.io/part-of: wave-autoscale
     spec:
+      serviceAccountName: wave-autoscale-sa
       containers:
         - name: wave-autoscale
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["./wave-autoscale"]
-          args:
-            [
-              "--config",
-              "/usr/src/wave-autoscale/wave-config.yaml",
-              "--definition",
-              "/usr/src/wave-autoscale/definitions.yaml",
-            ]
+          command: ["/app/wave-autoscale"]
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
           volumeMounts:
             - name: wave-config-volume
-              mountPath: /usr/src/wave-autoscale/wave-config.yaml
+              mountPath: /app/config/wave-config.yaml
               subPath: wave-config.yaml
-            - name: wave-definitions-volume
-              mountPath: /usr/src/wave-autoscale/definitions.yaml
-              subPath: definitions.yaml
+            - name: wave-definition-volume
+              mountPath: /app/config/wave-definition.yaml
+              subPath: wave-definition.yaml
+          ports:
+            - name: api-port
+              containerPort: {{ .Values.config.port }}
+              hostPort: {{ .Values.config.port }}
+            - name: web-ui-port
+              containerPort: {{ .Values.config.web_ui_port }}
+              hostPort: {{ .Values.config.web_ui_port }}
       volumes:
         - name: wave-config-volume
           configMap:
             name: wave-config
-        - name: wave-definitions-volume
+        - name: wave-definition-volume
           configMap:
-            name: wave-definitions
+            name: wave-definition
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: wave-autoscale-lb-service
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
   labels:
     app.kubernetes.io/name: wave-autoscale-lb-service
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
@@ -62,6 +69,11 @@ spec:
   selector:
     app.kubernetes.io/name: wave-autoscale
   ports:
-    - protocol: TCP
+    - name: api-port
+      protocol: TCP
       port: {{ .Values.config.port }}
       targetPort: {{ .Values.config.port }}
+    - name: web-ui-port
+      protocol: TCP
+      port: {{ .Values.config.web_ui_port }}
+      targetPort: {{ .Values.config.web_ui_port }}

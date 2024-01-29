@@ -4,40 +4,72 @@ on:
   push:
     branches:
       - "main"
-    # tags:
-    #   - "v*.*.*"
-  # Manually
-  workflow_dispatch:
-    inputs:
-      env:
-        description: "Environment Mode for Variables(production/development)"
-        required: true
-        default: "development"
-      app_version:
-        description: "App Version for S3 Path (ex: dev, v1.0.0)"
-        required: true
-        default: "nightly"
-      image_tag_version:
-        description: "Image Tag Version for Manifest (ex: latest, 1.0.0)"
-        required: true
-        default: "nightly"
+    tags:
+      - "v*.*.*"
 
-env:
-  CARGO_TERM_COLOR: always
-  REPOSITORY: stclab-inc/wave-autoscale
-  # Example: :latest-image, :1.0.0-image
-  DOCKER_IMAGE_TAG: ${{ inputs.image_tag_version }}-image
-  # Example: :latest-amd64, :1.0.0-amd64
-  DOCKER_AMD_IMAGE_TAG: ${{ inputs.image_tag_version }}-amd64
-  # Example: :latest-arm64, :1.0.0-arm64
-  DOCKER_ARM_IMAGE_TAG: ${{ inputs.image_tag_version }}-arm64
+# Example Image Tag
+# nightly-amd64 / nightly-arm64 / nightly
+# 0.1.0-amd64 / 0.1.0-arm64 / 0.1.0
+# latest-amd64 / latest-arm64 / latest
 
 jobs:
+  make-env:
+    runs-on: ubuntu-latest
+    outputs:
+      # tagging true or false
+      is_trigger_tag: ${{ steps.is_trigger_tag.outputs.is_trigger_tag }}
+      # tagging true:  0.1.0 (tag version)
+      # tagging false: nightly
+      tag_version: ${{ steps.tag_version.outputs.tag_version }}
+      # tagging true:  waveautoscale/wave-autoscale
+      # tagging false: waveautoscale/wave-autoscale-nightly
+      docker_hub_repository: ${{ steps.docker_hub_repository.outputs.docker_hub_repository }}
+      repository_check: ${{ steps.repository_check.outputs.repository_check }}
+    steps:
+      - id: is_trigger_tag
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/* ]]; then
+            echo "is_trigger_tag=true" >> $GITHUB_OUTPUT
+            echo "is_trigger_tag=true"
+          else
+            echo "is_trigger_tag=false" >> $GITHUB_OUTPUT
+            echo "is_trigger_tag=false"
+          fi
+      - id: tag_version
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/* ]]; then
+            echo "tag_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "tag_version=${GITHUB_REF#refs/tags/v}"
+          else
+            echo "tag_version=nightly" >> $GITHUB_OUTPUT
+            echo "tag_version=nightly"
+          fi
+      - id: docker_hub_repository
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/* ]]; then
+            echo "docker_hub_repository=waveautoscale/wave-autoscale" >> $GITHUB_OUTPUT
+            echo "docker_hub_repository=waveautoscale/wave-autoscale"
+          else
+            echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly" >> $GITHUB_OUTPUT
+            echo "docker_hub_repository=waveautoscale/wave-autoscale-nightly"
+          fi
+      # for jobs condition ('github.*' and 'needs.*' are not available in 'if' condition)
+      - id: repository_check
+        run: |
+          if [[ ${{ github.repository }} == 'STCLab-Inc/wave-autoscale' ]]; then
+            echo "repository_check=true" >> $GITHUB_OUTPUT
+            echo "repository_check=true"
+          else
+            echo "repository_check=false" >> $GITHUB_OUTPUT
+            echo "repository_check=false"
+          fi
+      
   build-amd64:
-    if: github.repository == 'stclab-inc/wave-autoscale'
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
+    needs: make-env
     runs-on: wave-autoscale-build-amd64
     timeout-minutes: 30
-    environment: ${{ inputs.env || 'development' }}
+    environment: development
     # For S3 Deploy
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -69,9 +101,9 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64
-          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64
-          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-amd64,mode=max
+          tags: ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64
+          cache-from: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-amd64
+          cache-to: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-amd64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
@@ -81,32 +113,54 @@ jobs:
       - name: Extract the binary from the image
         run: |
           mkdir -p ./bin && cd ./bin
-          id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64)
-          docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
+          id=$(docker create ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64)
+          docker cp $id:/app/wave-autoscale ./wave-autoscale
+          docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/config/* ./
-          tar -czvf wave-autoscale-linux-amd64.tar.gz *
+          tar -czvf wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-amd64.tar.gz *
 
       # Upload the binary to S3
       - name: Upload the binary to S3
         uses: reggionick/s3-deploy@v4
         with:
           folder: bin
-          bucket: ${{ secrets.S3_BUCKET }}/${{ inputs.app_version || 'nightly' }}
+          bucket: ${{ secrets.S3_BUCKET }}/binary/${{ needs.make-env.outputs.tag_version }}
           bucket-region: ${{ secrets.S3_BUCKET_REGION }}
           dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-          invalidation: /
+          delete-removed: false
+          no-cache: true
+          private: true
+          files-to-include: "*.tar.gz"
+
+      # Rename the binary to 'latest' (if it's a tagging)
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
+        name: Rename the binary to 'latest' (if it's a tagging)
+        run: |
+          mkdir ./bin/latest
+          cp ./bin/wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-amd64.tar.gz ./bin/latest/wave-autoscale-linux-latest-amd64.tar.gz
+
+      # Upload the binary 'latest' to S3 (if it's a tagging)
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
+        name: Upload the binary 'latest' to S3 (if it's a tagging)
+        uses: reggionick/s3-deploy@v4
+        with:
+          folder: bin/latest
+          bucket: ${{ secrets.S3_BUCKET }}/binary/latest
+          bucket-region: ${{ secrets.S3_BUCKET_REGION }}
+          dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
           delete-removed: false
           no-cache: true
           private: true
           files-to-include: "*.tar.gz"
 
   build-arm64:
-    if: github.repository == 'stclab-inc/wave-autoscale'
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
+    needs: make-env
     runs-on: wave-autoscale-build-arm64
     timeout-minutes: 30
-    environment: ${{ inputs.env || 'development' }}
+    environment: development
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -114,13 +168,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         timeout-minutes: 1
+      
+      #
+      # Initialize
+      #
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      #
+      # Build
+      #
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -128,41 +191,83 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
-          cache-from: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64
-          cache-to: type=registry,ref=${{ vars.DOCKER_IMAGE_TAG }}:buildcache-arm64,mode=max
+          tags: ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
+          cache-from: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-arm64
+          cache-to: type=registry,ref=${{ needs.make-env.outputs.docker_hub_repository }}:buildcache-arm64,mode=max
           labels: |
             org.opencontainers.image.title=wave-autoscale
             org.opencontainers.image.description="Wave Autoscale is an open-source traffic & scaling automation tool."
             org.opencontainers.image.url="https://waveautoscale.com"
+
+      # Binary
       - name: Extract the binary from the image
         run: |
           mkdir -p ./bin && cd ./bin
-          id=$(docker create ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64)
-          docker cp $id:/usr/local/bin/wave-autoscale ./wave-autoscale
+          id=$(docker create ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64)
+          docker cp $id:/app/wave-autoscale ./wave-autoscale
+          docker cp $id:/app/wave-autoscale-ui ./wave-autoscale-ui
           docker rm -v $id
           chmod +x ./wave-autoscale
           cp ../docs/config/* ./
-          tar -czvf wave-autoscale-linux-arm64.tar.gz *
+          tar -czvf wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-arm64.tar.gz *
+      
+      # Upload the binary to S3
       - name: Upload the binary to S3
         uses: reggionick/s3-deploy@v4
         with:
           folder: bin
-          bucket: ${{ secrets.S3_BUCKET }}/${{ inputs.app_version || 'nightly' }}
+          bucket: ${{ secrets.S3_BUCKET }}/binary/${{ needs.make-env.outputs.tag_version }}
           bucket-region: ${{ secrets.S3_BUCKET_REGION }}
           dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-          invalidation: /
           delete-removed: false
           no-cache: true
           private: true
           files-to-include: "*.tar.gz"
 
-  manifest:
-    if: github.repository == 'stclab-inc/wave-autoscale'
-    needs: [build-amd64, build-arm64]
-    runs-on: wave-autoscale-build-amd64
-    environment: ${{ inputs.env || 'development' }}
+      # Rename the binary to 'latest' (if it's a tagging)
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
+        name: Rename the binary to 'latest' (if it's a tagging)
+        run: |
+          mkdir ./bin/latest
+          cp ./bin/wave-autoscale-linux-${{ needs.make-env.outputs.tag_version }}-arm64.tar.gz ./bin/latest/wave-autoscale-linux-latest-arm64.tar.gz
+
+      # Upload the binary 'latest' to S3 (if it's a tagging)
+      - if: needs.make-env.outputs.is_trigger_tag == 'true'
+        name: Upload the binary 'latest' to S3 (if it's a tagging)
+        uses: reggionick/s3-deploy@v4
+        with:
+          folder: bin/latest
+          bucket: ${{ secrets.S3_BUCKET }}/binary/latest
+          bucket-region: ${{ secrets.S3_BUCKET_REGION }}
+          dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          delete-removed: false
+          no-cache: true
+          private: true
+          files-to-include: "*.tar.gz"
+  
+  aws-cloudfront-invalidate-binary:
+    needs: [make-env, build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    environment: development
     steps:
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: "/binary/*"
+          AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  image-manifest-version:
+    if: github.repository == ${{ vars.GITHUB_REPOSITORY }}
+    needs: [make-env, build-amd64, build-arm64]
+    runs-on: wave-autoscale-build-amd64
+    environment: development
+    steps:
+      # 
+      # Initialize 
+      # 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -172,9 +277,144 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # manifest push
       - name: Create and push Docker manifest
         run: >
           docker buildx imagetools create 
-          -t ${{ vars.DOCKER_IMAGE_TAG }}:${{ inputs.image_tag_version || 'latest' }} 
-          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-amd64 
-          ${{ vars.DOCKER_IMAGE_TAG }}:${{ github.sha }}-arm64
+          -t ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }} 
+          ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64 
+          ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
+  
+  image-manifest-latest:
+    if: needs.make-env.outputs.repository_check == 'true' && needs.make-env.outputs.is_trigger_tag == 'true'
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version]
+    runs-on: wave-autoscale-build-amd64
+    environment: development
+    steps:
+      # 
+      # Initialize 
+      # 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # manifest push
+      - name: Create and push Docker manifest
+        run: >
+          docker buildx imagetools create 
+          -t ${{ needs.make-env.outputs.docker_hub_repository }}:latest
+          ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-amd64 
+          ${{ needs.make-env.outputs.docker_hub_repository }}:${{ needs.make-env.outputs.tag_version }}-arm64
+
+  helm-chart-and-k8s-manifest:
+    if: needs.make-env.outputs.repository_check == 'true' && needs.make-env.outputs.is_trigger_tag == 'true'
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version, image-manifest-latest]
+    runs-on: wave-autoscale-build-amd64
+    environment: development
+    env:
+      HELM_DIR_NAME: wave-autoscale-helm
+    steps:
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Download Helm Chart index_old.yaml from AWS S3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        continue-on-error: true
+        with:
+          command: cp
+          source: s3://${{ secrets.S3_BUCKET }}/helm/index.yaml
+          destination: ./index_old.yaml
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.S3_BUCKET_REGION }}
+
+      - name: Create Helm Chart Directory
+        id: helm-chart-copy-dir
+        run: |
+          echo "pwd - $(pwd)"
+          mkdir -p ./$HELM_DIR_NAME
+          cp -rf ./deployment/helm-chart/* ./$HELM_DIR_NAME
+
+      - name: Set the version in Chart.yaml
+        uses: mikefarah/yq@master
+        with:
+          cmd: HELM_IMAGE_TAG=${{ needs.make-env.outputs.tag_version }} yq e --inplace '.version = strenv(HELM_IMAGE_TAG)' ./$HELM_DIR_NAME/Chart.yaml
+
+      - name: Set the version in Chart.yaml
+        uses: mikefarah/yq@master
+        with:
+          cmd: HELM_APP_VERSION=${{ needs.make-env.outputs.tag_version }} yq e --inplace '.appVersion = strenv(HELM_APP_VERSION)' ./$HELM_DIR_NAME/Chart.yaml
+
+      - name: Upload Helm Chart to AWS S3
+        id: upload-helm-chart
+        run: |
+          # helm chart version override - print
+          cat ./$HELM_DIR_NAME/Chart.yaml
+          helm template ./$HELM_DIR_NAME > wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
+          helm template ./$HELM_DIR_NAME > wave-autoscale-manifest-latest.yaml
+          helm package ./$HELM_DIR_NAME
+          helm repo index --url https://release.waveautoscale.io/helm --merge ./index_old.yaml .
+
+      - name: upload Helm Chart index.yaml from AWS S3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        continue-on-error: true
+        with:
+          command: cp
+          source: ./index.yaml
+          destination: s3://${{ secrets.S3_BUCKET }}/helm/index.yaml
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.S3_BUCKET_REGION }}
+
+      - name: upload Helm Chart tgz from AWS S3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        continue-on-error: true
+        with:
+          command: cp
+          source: ./wave-autoscale-${{ needs.make-env.outputs.tag_version }}.tgz
+          destination: s3://${{ secrets.S3_BUCKET }}/helm/wave-autoscale-${{ needs.make-env.outputs.tag_version }}.tgz
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.S3_BUCKET_REGION }}
+          
+      - name: upload Manifest (version) from AWS S3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        continue-on-error: true
+        with:
+          command: cp
+          source: ./wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
+          destination: s3://${{ secrets.S3_BUCKET }}/manifest/wave-autoscale-manifest-${{ needs.make-env.outputs.tag_version }}.yaml
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.S3_BUCKET_REGION }}
+
+      - name: upload Manifest (latest) from AWS S3
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        continue-on-error: true
+        with:
+          command: cp
+          source: ./wave-autoscale-manifest-latest.yaml
+          destination: s3://${{ secrets.S3_BUCKET }}/manifest/wave-autoscale-manifest-latest.yaml
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.S3_BUCKET_REGION }}
+
+  aws-cloudfront-invalidate-helm-manifest:
+    needs: [make-env, build-amd64, build-arm64, image-manifest-version, image-manifest-latest, helm-chart-and-k8s-manifest]
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: "/helm/* /manifest/*"
+          AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      

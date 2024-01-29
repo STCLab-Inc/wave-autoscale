@@ -4,13 +4,17 @@ image:
   pullPolicy: Always
 
 config:
+  debug: false
+  quiet: false
   db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
   host: localhost
   port: 3024
   watch_definition_duration: 5000
-  autoscaling_history_retention: "1d"
-  reset_definitions_on_startup: true
-  web_ui: false
+  autoscaling_history_retention: "14d"
+  reset_definitions_on_startup: false
+  metric_buffer_size_kb: 500000
+  enable_metrics_log: false
+  web_ui: true
   web_ui_host: 0.0.0.0
   web_ui_port: 3025
   vector:
@@ -32,3 +36,5 @@ postgres:
   postgresPassword: postgres
   postgresDatabase: postgres
   port: 5432
+
+default_namespace: wave-autoscale
