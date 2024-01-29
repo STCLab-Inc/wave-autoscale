@@ -257,7 +257,7 @@ jobs:
         uses: chetan/invalidate-cloudfront-action@v2
         env:
           DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-          PATHS: "${{ secrets.S3_BUCKET }}/binary/*"
+          PATHS: "/binary/*"
           AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -416,7 +416,7 @@ jobs:
         uses: chetan/invalidate-cloudfront-action@v2
         env:
           DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-          PATHS: "${{ secrets.S3_BUCKET }}/helm/* ${{ secrets.S3_BUCKET }}/manifest/*"
+          PATHS: "/helm/* /manifest/*"
           AWS_REGION: ${{ secrets.S3_BUCKET_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
