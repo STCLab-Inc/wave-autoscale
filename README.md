@@ -5,6 +5,8 @@ Wave Autoscale is an unified autoscaling & traffic management tool for clouds an
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/STCLab-Inc/wave-autoscale)
 ![GitHub](https://img.shields.io/github/license/STCLab-Inc/wave-autoscale)
 ![GitHub contributors](https://img.shields.io/github/contributors/STCLab-Inc/wave-autoscale)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+
 
 - Website: https://waveautoscale.com
 - Documentation: [https://waveautoscale.com/docs](https://www.waveautoscale.com/docs)
