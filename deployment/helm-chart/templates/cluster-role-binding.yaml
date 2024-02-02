@@ -34,3 +34,28 @@ roleRef:
   kind: ClusterRole
   name: node-reader
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:  
+  name: istio-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+- apiGroups: ["config.istio.io", "networking.istio.io", "rbac.istio.io", "authentication.istio.io", "security.istio.io"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wave-autoscale-crb-istio-admin
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
+subjects:
+- kind: ServiceAccount
+  name: wave-autoscale-sa
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
+roleRef:
+  kind: ClusterRole
+  name: istio-admin
+  apiGroup: rbac.authorization.k8s.io
