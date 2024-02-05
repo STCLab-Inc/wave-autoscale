@@ -255,6 +255,9 @@ impl<'a> ScalingPlanner {
 
             // Run the loop every interval
             loop {
+                /*
+                 * Cool Down Stage
+                 */
                 if let Some(cool_down) = plan_metadata.get("cool_down") {
                     // apply cool down
                     if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
@@ -272,6 +275,8 @@ impl<'a> ScalingPlanner {
                     }
                 }
                 {
+                    // Prepare the context to evaluate the scaling plan expressions that are written in JavaScript
+                    // Set the get function to get the metric values
                     async_with!(context => |ctx| {
                         let _ = ctx.globals().set(
                             "get",
@@ -281,97 +286,121 @@ impl<'a> ScalingPlanner {
                     .await;
 
                     let mut excuted = false;
-                    // Find the plan that matches the expression
+                    
+                    /*
+                     * Find the plan to execute
+                     * 1. Cron Expression (if it's not yet reached, skip the plan)
+                     * 2. JS Expression (if it's false, skip the plan)
+                     * 3. Execute the plan
+                     */
                     for plan_item in plan_items.iter() {
+                        
                         if plan_item.cron_expression.is_none() && plan_item.expression.is_none() {
                             error!("[ScalingPlanner] Both cron_expression and expression are empty");
+                            // Skip this plan
                             continue;
                         }
-                        // 1. Cron Expression
+                        /*
+                         * 1. Cron Expression
+                         */
                         if let Some(cron_expression) = plan_item.cron_expression.as_ref() {
-                            debug!("[ScalingPlanner] cron_expression - {}", cron_expression);
-                            if !cron_expression.is_empty() {
-                                let schedule = cron::Schedule::from_str(cron_expression.as_str());
-                                if schedule.is_err() {
-                                    error!("[ScalingPlanner] Error parsing cron expression: {}", cron_expression);
-                                    // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
-                                    create_autoscaling_history(
-                                        &data_layer.clone(),
-                                        plan_db_id.clone(),
-                                        plan_id.clone(),
-                                        plan_item,
-                                        None,
-                                        None,
-                                        Some("Failed to parse cron expression".to_string())
-                                    ).await;
-                                    continue;
-                                }
-                                let schedule = schedule.unwrap();
-                                let now = chrono::Utc::now();
-                                let datetime = schedule.upcoming(chrono::Utc).take(1).next();
-                                if datetime.is_none() {
-                                    error!(
-                                        "[ScalingPlanner] Error getting next datetime for cron expression: {}",
-                                        cron_expression
-                                    );
-                                    continue;
-                                }
-                                let datetime = datetime.unwrap();
-                                let duration = datetime - now;
-                                let duration = duration.num_milliseconds();
-                                if duration < 0 || duration > DEFAULT_PLAN_INTERVAL as i64 {
-                                    info!(
-                                        "[ScalingPlanner] The datetime is not yet reached for cron expression: {}",
-                                        cron_expression
-                                    );
-                                    continue;
-                                }
-                                // It is time to execute the plan. Move on.
+                            if cron_expression.is_empty() {
+                                error!("[ScalingPlanner] cron_expression is empty");
+                                // Skip this plan
+                                continue;
                             }
+                            debug!("[ScalingPlanner] cron_expression - {}", cron_expression);
+                            let schedule = cron::Schedule::from_str(cron_expression.as_str());
+                            if schedule.is_err() {
+                                error!("[ScalingPlanner] Error parsing cron expression: {}", cron_expression);
+                                // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
+                                create_autoscaling_history(
+                                    &data_layer.clone(),
+                                    plan_db_id.clone(),
+                                    plan_id.clone(),
+                                    plan_item,
+                                    None,
+                                    None,
+                                    Some("Failed to parse cron expression".to_string())
+                                ).await;
+                                // Skip this plan
+                                continue;
+                            }
+                            let schedule = schedule.unwrap();
+                            let now = chrono::Utc::now();
+                            let datetime = schedule.upcoming(chrono::Utc).take(1).next();
+                            if datetime.is_none() {
+                                error!(
+                                    "[ScalingPlanner] Error getting next datetime for cron expression: {}",
+                                    cron_expression
+                                );
+                                // Skip this plan
+                                continue;
+                            }
+                            let datetime = datetime.unwrap();
+                            let duration = datetime - now;
+                            let duration = duration.num_milliseconds();
+                            if duration < 0 || duration > DEFAULT_PLAN_INTERVAL as i64 {
+                                info!(
+                                    "[ScalingPlanner] The datetime is not yet reached for cron expression: {}",
+                                    cron_expression
+                                );
+                                // Skip this plan
+                                continue;
+                            }
+                            // It's confirmed that the cron expression is valid and the datetime is reached
                         }
 
-                        // 2. JS Expression
-                        let mut expression_value_map: Vec<HashMap<String, Option<f64>>> =
+                        /*
+                         * 2. JS Expression
+                         */
+                        let mut expression_value_map_for_history: Vec<HashMap<String, Option<f64>>> =
                             Vec::new();
+                        
                         if let Some(expression) = plan_item.expression.as_ref() {
-                            if !expression.is_empty() {
-                                debug!("[ScalingPlanner] expression\n{}", expression);
-                                // Evaluate the expression.
-                                let expression_result = async_with!(context => |ctx| {
-                                    let result = ctx.eval::<bool, _>(expression.clone());
-                                    if result.is_err() {
-                                        let message = result.err().unwrap().to_string();
-                                        error!("[ScalingPlanner] Failed to evaluate expression\n{}\n\n{}", expression, message);
-                                        let message = format!("Failed to evaluate expression\n{}", expression);
-                                        return ExressionResult {
-                                            result: false,
-                                            error: true,
-                                            message: Some(message),
-                                        };
-                                    }
-                                    let result = result.unwrap();
-                                    ExressionResult {
-                                        result,
-                                        error: false,
-                                        message: None,
-                                    }
-                                })
-                                .await;
-                                
-                                debug!("[ScalingPlanner] expression result - {:?}", expression_result);
-                                // expression get value (for history)
-                                let expression_map =
-                                    expression_get_value(expression.clone(), context.clone()).await;
-                                expression_value_map.append(&mut expression_map.clone());
-
-                                // If the expression is false, move to the next plan
-                                if !expression_result.result {
-                                    // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
-                                    if expression_result.error {
-                                        create_autoscaling_history(&data_layer.clone(),plan_db_id.clone(),plan_id.clone(),plan_item,None,None,expression_result.message).await;
-                                    }
-                                    continue;
+                            if expression.is_empty() {
+                                error!("[ScalingPlanner] expression is empty");
+                                // Skip this plan
+                                continue;
+                            }
+                            debug!("[ScalingPlanner] expression\n{}", expression);
+                            // Evaluate the expression.
+                            let expression_result = async_with!(context => |ctx| {
+                                let result = ctx.eval::<bool, _>(expression.clone());
+                                if result.is_err() {
+                                    let message = result.err().unwrap().to_string();
+                                    error!("[ScalingPlanner] Failed to evaluate expression\n{}\n\n{}", expression, message);
+                                    let message = format!("Failed to evaluate expression\n{}", expression);
+                                    return ExressionResult {
+                                        result: false,
+                                        error: true,
+                                        message: Some(message),
+                                    };
                                 }
+                                let result = result.unwrap();
+                                ExressionResult {
+                                    result,
+                                    error: false,
+                                    message: None,
+                                }
+                            })
+                            .await;
+                            
+                            debug!("[ScalingPlanner] expression result - {:?}", expression_result);
+
+                            // expression get value (for history)
+                            let expression_map =
+                                expression_get_value(expression.clone(), context.clone()).await;
+                            expression_value_map_for_history.append(&mut expression_map.clone());
+
+                            // If the expression is false, move to the next plan
+                            if !expression_result.result {
+                                // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
+                                if expression_result.error {
+                                    create_autoscaling_history(&data_layer.clone(),plan_db_id.clone(),plan_id.clone(),plan_item,None,None,expression_result.message).await;
+                                }
+                                // Skip this plan
+                                continue;
                             }
                         }
 
@@ -406,7 +435,7 @@ impl<'a> ScalingPlanner {
                                 scaling_plan_definition.db_id.clone(),
                                 scaling_plan_definition.id.clone(),
                                 plan_item,
-                                Some(&expression_value_map),
+                                Some(&expression_value_map_for_history),
                                 Some(&scaling_components_metadata[index]),
                                 fail_message,
                             ).await;
@@ -804,12 +833,10 @@ mod tests {
         let data_layer = Arc::new(data_layer);
 
         let Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-            error!("Error creating runtime");
-            return;
+            panic!("Error creating runtime");
         };
         let Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-            error!("Error creating context");
-            return;
+            panic!("Error creating context");
         };
 
         async_with!(context => |ctx| {
@@ -896,17 +923,62 @@ mod tests {
         let result_fail_metric_id =
             check_expression(expression_fail_metric_id, context.clone()).await;
 
-        assert!(result_avg.unwrap());
-        assert!(result_sum.unwrap());
-        assert!(result_count.unwrap());
-        assert!(result_min.unwrap());
-        assert!(result_max.unwrap());
-        assert!(result_sum_timeover.unwrap());
-        assert!(result_optional_tags.unwrap());
-        assert!(result_optional_stats.unwrap());
-        assert!(result_optional_period_sec.unwrap());
-        assert!(result_optional_stats_period_sec.unwrap());
-        assert!(result_fail_metric_id.is_err());
+
+        match result_avg {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_avg: {:?}", error),
+        }
+        
+        match result_sum {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_sum: {:?}", error),
+        }
+
+        match result_count {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_count: {:?}", error),
+        }
+
+        match result_min {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_min: {:?}", error),
+        }
+
+        match result_max {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_max: {:?}", error),
+        }
+
+        match result_sum_timeover {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_sum_timeover: {:?}", error),
+        }
+
+        match result_optional_tags {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_optional_tags: {:?}", error),
+        }
+
+        match result_optional_stats {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_optional_stats: {:?}", error),
+        }
+
+        match result_optional_period_sec {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_optional_period_sec: {:?}", error),
+        }
+
+        match result_optional_stats_period_sec {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_optional_stats_period_sec: {:?}", error),
+        }
+
+        match result_fail_metric_id {
+            Ok(_) => panic!("Failed to get result_fail_metric_id: {:?}", result_fail_metric_id),
+            Err(_) => assert!(result_fail_metric_id.is_err()),
+        }
+
     }
 
     async fn check_expression(expression: String, context: rquickjs::AsyncContext) -> Result<bool> {
