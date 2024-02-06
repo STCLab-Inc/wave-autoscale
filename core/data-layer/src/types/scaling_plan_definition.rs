@@ -12,6 +12,9 @@ fn default_kind() -> ObjectKind {
 fn default_enabled() -> bool {
     false
 }
+fn default_variables() -> HashMap<String, serde_json::Value> {
+    HashMap::new()
+}
 
 #[derive(TS)]
 #[ts(
@@ -29,6 +32,9 @@ pub struct ScalingPlanDefinition {
     pub id: String,
     #[ts(type = "object")]
     pub metadata: HashMap<String, serde_json::Value>,
+    #[serde(default = "default_variables")]
+    #[ts(type = "object")]
+    pub variables: HashMap<String, serde_json::Value>,
     // #[ts(type = "Array<object>")]
     pub plans: Vec<PlanItemDefinition>,
     #[serde(default = "default_enabled")]
@@ -42,6 +48,7 @@ impl Default for ScalingPlanDefinition {
             db_id: "".to_string(),
             id: "".to_string(),
             metadata: HashMap::new(),
+            variables: HashMap::new(),
             plans: vec![],
             enabled: true,
         }
