@@ -143,6 +143,7 @@ mod tests {
                     db_id: "test1".to_string(),
                     kind: ObjectKind::ScalingPlan,
                     metadata: HashMap::new(),
+                    variables: HashMap::new(),
                     plans: vec![PlanItemDefinition {
                         id: "test1".to_string(),
                         description: None,
@@ -162,6 +163,7 @@ mod tests {
                     db_id: "test2".to_string(),
                     kind: ObjectKind::ScalingPlan,
                     metadata: HashMap::new(),
+                    variables: HashMap::new(),
                     plans: vec![PlanItemDefinition {
                         id: "test2".to_string(),
                         description: None,

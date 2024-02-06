@@ -639,9 +639,10 @@ impl DataLayer {
     pub async fn add_plans(&self, plans: Vec<ScalingPlanDefinition>) -> Result<()> {
         // Define a pool variable that is a trait to pass to the execute function
         for plan in plans {
+            let variables_string = serde_json::to_string(&plan.variables).unwrap();
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET (metadata, plans, enabled, updated_at) = ($8, $9, $10, $11)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, variables, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO UPDATE SET (metadata, variables, plans, enabled, updated_at) = ($9, $10, $11, $12, $13)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
             let result = sqlx::query(query_string)
@@ -649,12 +650,14 @@ impl DataLayer {
                 .bind(id)
                 .bind(plan.id)
                 .bind(metatdata_string.clone())
+                .bind(variables_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
                 .bind(updated_at.clone())
                 .bind(updated_at.clone())
                 // Values for update
                 .bind(metatdata_string.clone())
+                .bind(variables_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
                 .bind(updated_at.clone())
@@ -669,7 +672,8 @@ impl DataLayer {
     // Get all plans from the database
     pub async fn get_all_plans(&self) -> Result<Vec<ScalingPlanDefinition>> {
         let mut plans: Vec<ScalingPlanDefinition> = Vec::new();
-        let query_string = "SELECT db_id, id, plans, priority, metadata, enabled FROM plan";
+        let query_string =
+            "SELECT db_id, id, variables, plans, priority, metadata, enabled FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -693,6 +697,7 @@ impl DataLayer {
                 db_id: row.get("db_id"),
                 id: row.get("id"),
                 metadata: serde_json::from_str(metadata.as_str()).unwrap(),
+                variables: serde_json::from_str(row.get("variables")).unwrap(),
                 plans: serde_json::from_str(row.get("plans")).unwrap(),
                 enabled: row.get("enabled"),
             });
@@ -712,7 +717,7 @@ impl DataLayer {
     pub async fn get_all_plans_json(&self) -> Result<Vec<serde_json::Value>> {
         let mut plans: Vec<serde_json::Value> = Vec::new();
         let query_string =
-            "SELECT db_id, id, plans, priority, metadata, enabled, created_at, updated_at FROM plan";
+            "SELECT db_id, id, variables, plans, priority, metadata, enabled, created_at, updated_at FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -723,6 +728,7 @@ impl DataLayer {
                 "kind": ObjectKind::ScalingPlan,
                 "db_id": row.try_get::<String, _>("db_id")?,
                 "id": row.try_get::<String, _>("id")?,
+                "variables": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("variables")?.as_str())?,
                 "plans": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("plans")?.as_str())?,
                 "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
                 "enabled": row.try_get::<bool, _>("enabled")?,
@@ -735,7 +741,8 @@ impl DataLayer {
     }
     // Get a plan from the database
     pub async fn get_plan_by_id(&self, db_id: String) -> Result<ScalingPlanDefinition> {
-        let query_string = "SELECT db_id, id, metadata, plans, enabled FROM plan WHERE db_id=$1";
+        let query_string =
+            "SELECT db_id, id, metadata, variables, plans, enabled FROM plan WHERE db_id=$1";
         let result = sqlx::query(query_string)
             .bind(db_id)
             .fetch_one(&self.pool)
@@ -749,6 +756,7 @@ impl DataLayer {
             db_id: result.get("db_id"),
             id: result.get("id"),
             metadata: serde_json::from_str(result.get("metadata")).unwrap(),
+            variables: serde_json::from_str(result.get("variables")).unwrap(),
             plans: serde_json::from_str(result.get("plans")).unwrap(),
             enabled: result.get("enabled"),
         };
@@ -1465,6 +1473,7 @@ mod tests {
             db_id: Ulid::new().to_string(),
             id: "scaling_plan_test_id".to_string(),
             metadata: HashMap::new(),
+            variables: HashMap::new(),
             plans: vec![],
             enabled: true,
         };
