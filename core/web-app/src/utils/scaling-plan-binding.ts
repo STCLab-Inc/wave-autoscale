@@ -6,6 +6,7 @@ export function generateScalingPlanDefinition({
   id,
   db_id,
   metadata,
+  variables,
   plans,
   enabled,
 }: {
@@ -13,6 +14,7 @@ export function generateScalingPlanDefinition({
   id?: string;
   db_id?: string;
   metadata?: any;
+  variables?: any;
   plans?: any[];
   enabled?: boolean;
 }) {
@@ -21,6 +23,7 @@ export function generateScalingPlanDefinition({
     id,
     db_id,
     metadata: metadata ?? {},
+    variables: variables ?? {},
     plans: plans ?? [],
     enabled,
   } as ScalingPlanDefinition;
@@ -29,7 +32,8 @@ export function generateScalingPlanDefinition({
 export function serializeScalingPlanDefinition(
   scalingPlanDefinition: ScalingPlanDefinition
 ) {
-  const { kind, id, metadata, plans, enabled } = scalingPlanDefinition;
+  const { kind, id, metadata, plans, enabled, variables } =
+    scalingPlanDefinition;
   const editedPlans = plans?.map((planItem) => {
     const { ui, ...rest } = planItem;
     return {
@@ -40,6 +44,7 @@ export function serializeScalingPlanDefinition(
     kind,
     id,
     metadata,
+    variables,
     plans: editedPlans,
     enabled,
   });
