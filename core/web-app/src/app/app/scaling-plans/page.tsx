@@ -14,7 +14,6 @@ import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
 import PageHeader from '../common/page-header';
 import DefinitionCountBadge from '../common/definition-count-badge';
-import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
 import { errorToast, successToast } from '@/utils/toast';
 
 // Dynamic imports (because of 'window' object)

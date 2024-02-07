@@ -2,4 +2,4 @@
 import type { ObjectKind } from "./object-kind";
 import type { PlanItemDefinition } from "./plan-item-definition";
 
-export interface ScalingPlanDefinition { kind: ObjectKind, db_id: string, id: string, metadata: object, plans: Array<PlanItemDefinition>, enabled: boolean, }
+export interface ScalingPlanDefinition { kind: ObjectKind, db_id: string, id: string, metadata: object, variables: object, plans: Array<PlanItemDefinition>, enabled: boolean, }

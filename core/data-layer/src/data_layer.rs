@@ -217,8 +217,9 @@ impl DataLayer {
                 };
                 let mut updated_at_hash_string: String = String::new();
                 for row in &result_string {
-                    let updated_at: String = row.get(0);
-                    updated_at_hash_string.push_str(&updated_at.to_string());
+                    if let Ok(updated_at) = row.try_get::<String, _>(0) {
+                        updated_at_hash_string.push_str(&updated_at);
+                    }
                 }
 
                 if lastest_updated_at_hash != updated_at_hash_string {
@@ -335,11 +336,11 @@ impl DataLayer {
 
             metrics.push(MetricDefinition {
                 kind: ObjectKind::Metric,
-                db_id: row.get("db_id"),
-                id: row.get("id"),
-                collector: row.get("collector"),
+                db_id: row.try_get("db_id")?,
+                id: row.try_get("id")?,
+                collector: row.try_get("collector")?,
                 metadata: serde_json::from_str(metadata.as_str()).unwrap(),
-                enabled: row.get("enabled"),
+                enabled: row.try_get("enabled")?,
             });
         }
         Ok(metrics)
@@ -394,15 +395,25 @@ impl DataLayer {
         if result.is_empty() {
             return Ok(None);
         }
-        let result = result.get(0).map(|row| MetricDefinition {
+        let Some(row) = result.get(0) else {
+            return Ok(None);
+        };
+        let mut metadata = HashMap::new();
+        if let Ok(metadata_str) = row.try_get::<&str, _>("metadata") {
+            let metadata_json = serde_json::from_str(metadata_str);
+            if metadata_json.is_ok() {
+                metadata = metadata_json.unwrap();
+            }
+        }
+        let metric = MetricDefinition {
             kind: ObjectKind::Metric,
-            db_id: row.get("db_id"),
-            id: row.get("id"),
-            collector: row.get("collector"),
-            metadata: serde_json::from_str(row.get("metadata")).unwrap(),
-            enabled: row.get("enabled"),
-        });
-        Ok(result)
+            db_id: row.try_get("db_id")?,
+            id: row.try_get("id")?,
+            collector: row.try_get("collector")?,
+            metadata,
+            enabled: row.try_get("enabled")?,
+        };
+        Ok(Some(metric))
     }
     // Delete all metrics from the database
     pub async fn delete_all_metrics(&self) -> Result<()> {
@@ -503,22 +514,25 @@ impl DataLayer {
         let variable_mapper_data = get_variable_mapper();
 
         for row in result {
-            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
-                Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
-                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
+            let mut metadata = HashMap::new();
+            if let Ok(metadata_str) = row.try_get::<&str, _>("metadata") {
+                let metadata_json =
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data);
+                if metadata_json.is_ok() {
+                    let json = serde_json::from_str(metadata_json.unwrap().as_str());
+                    if json.is_ok() {
+                        metadata = json.unwrap();
+                    }
                 }
-                Ok(None) => serde_json::Value::Null.to_string(),
-                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
-            };
+            }
 
             scaling_components.push(ScalingComponentDefinition {
                 kind: ObjectKind::ScalingComponent,
-                db_id: row.get("db_id"),
-                id: row.get("id"),
-                component_kind: row.get("component_kind"),
-                metadata: serde_json::from_str(metadata.as_str()).unwrap(),
-                enabled: row.get("enabled"),
+                db_id: row.try_get("db_id")?,
+                id: row.try_get("id")?,
+                component_kind: row.try_get("component_kind")?,
+                metadata,
+                enabled: row.try_get("enabled")?,
             });
         }
         Ok(scaling_components)
@@ -683,23 +697,46 @@ impl DataLayer {
         let variable_mapper_data = get_variable_mapper();
 
         for row in result {
-            let metadata = match row.try_get::<Option<&str>, _>("metadata") {
-                Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
-                        .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
+            let mut metadata = HashMap::new();
+            let metadata_row = row.try_get::<&str, _>("metadata");
+            if metadata_row.is_ok() {
+                let metadata_str = metadata_row.unwrap();
+                let metadata_json =
+                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data);
+                if metadata_json.is_ok() {
+                    let json = serde_json::from_str(metadata_json.unwrap().as_str());
+                    if json.is_ok() {
+                        metadata = json.unwrap();
+                    }
                 }
-                Ok(None) => serde_json::Value::Null.to_string(),
-                Err(e) => return Err(anyhow!("Error getting metadata: {}", e)),
-            };
+            }
+
+            let mut variables = HashMap::new();
+            let variables_row = row.try_get::<&str, _>("variables");
+            if variables_row.is_ok() {
+                let json = serde_json::from_str(variables_row.unwrap());
+                if json.is_ok() {
+                    variables = json.unwrap();
+                }
+            }
+
+            let mut plan_items = Vec::new();
+            let plans_row = row.try_get::<&str, _>("plans");
+            if plans_row.is_ok() {
+                let json = serde_json::from_str(plans_row.unwrap());
+                if json.is_ok() {
+                    plan_items = json.unwrap();
+                }
+            }
 
             plans.push(ScalingPlanDefinition {
                 kind: ObjectKind::ScalingPlan,
-                db_id: row.get("db_id"),
-                id: row.get("id"),
-                metadata: serde_json::from_str(metadata.as_str()).unwrap(),
-                variables: serde_json::from_str(row.get("variables")).unwrap(),
-                plans: serde_json::from_str(row.get("plans")).unwrap(),
-                enabled: row.get("enabled"),
+                db_id: row.try_get::<String, _>("db_id")?,
+                id: row.try_get::<String, _>("id")?,
+                metadata,
+                variables,
+                plans: plan_items,
+                enabled: row.try_get::<bool, _>("enabled").unwrap_or(false),
             });
         }
         Ok(plans)
@@ -857,13 +894,13 @@ impl DataLayer {
 
         for row in result {
             autoscaling_history.push(AutoscalingHistoryDefinition {
-                id: row.get("id"),
-                plan_db_id: row.get("plan_db_id"),
-                plan_id: row.get("plan_id"),
-                plan_item_json: row.get("plan_item_json"),
-                metric_values_json: row.get("metric_values_json"),
-                metadata_values_json: row.get("metadata_values_json"),
-                fail_message: row.get("fail_message"),
+                id: row.try_get("id")?,
+                plan_db_id: row.try_get("plan_db_id")?,
+                plan_id: row.try_get("plan_id")?,
+                plan_item_json: row.try_get("plan_item_json")?,
+                metric_values_json: row.try_get("metric_values_json")?,
+                metadata_values_json: row.try_get("metadata_values_json")?,
+                fail_message: row.try_get("fail_message")?,
             });
         }
         Ok(autoscaling_history)
@@ -897,13 +934,13 @@ impl DataLayer {
 
         for row in result {
             autoscaling_history.push(AutoscalingHistoryDefinition {
-                id: row.get("id"),
-                plan_db_id: row.get("plan_db_id"),
-                plan_id: row.get("plan_id"),
-                plan_item_json: row.get("plan_item_json"),
-                metric_values_json: row.get("metric_values_json"),
-                metadata_values_json: row.get("metadata_values_json"),
-                fail_message: row.get("fail_message"),
+                id: row.try_get("id")?,
+                plan_db_id: row.try_get("plan_db_id")?,
+                plan_id: row.try_get("plan_id")?,
+                plan_item_json: row.try_get("plan_item_json")?,
+                metric_values_json: row.try_get("metric_values_json")?,
+                metadata_values_json: row.try_get("metadata_values_json")?,
+                fail_message: row.try_get("fail_message")?,
             });
         }
         Ok(autoscaling_history)
@@ -1123,8 +1160,8 @@ impl DataLayer {
         let result = result.unwrap();
         let mut metric_values: HashMap<String, serde_json::Value> = HashMap::new();
         for row in result {
-            let metric_id: String = row.get("metric_id");
-            let json_value: String = row.get("json_value");
+            let metric_id: String = row.try_get("metric_id")?;
+            let json_value: String = row.try_get("json_value")?;
             let json_value = json!(json_value);
             metric_values.insert(metric_id, json_value);
         }
@@ -1149,9 +1186,9 @@ impl DataLayer {
         let result = result.unwrap();
         let mut metric_values: Vec<serde_json::Value> = Vec::new();
         for row in result {
-            let metric_id: String = row.get("metric_id");
-            let id: String = row.get("id");
-            let json_value: String = row.get("json_value");
+            let metric_id: String = row.try_get("metric_id")?;
+            let id: String = row.try_get("id")?;
+            let json_value: String = row.try_get("json_value")?;
             let json_value = json!({"metric_id": metric_id, "id": id, "json_value": json_value});
             metric_values.append(&mut vec![json_value]);
         }

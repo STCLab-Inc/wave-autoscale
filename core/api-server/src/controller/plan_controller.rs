@@ -143,7 +143,10 @@ mod tests {
                     db_id: "test1".to_string(),
                     kind: ObjectKind::ScalingPlan,
                     metadata: HashMap::new(),
-                    variables: HashMap::new(),
+                    variables: HashMap::from([
+                        ("test1".to_string(), json!("test1")),
+                        ("test2".to_string(), json!("test2")),
+                    ]),
                     plans: vec![PlanItemDefinition {
                         id: "test1".to_string(),
                         description: None,
@@ -163,7 +166,10 @@ mod tests {
                     db_id: "test2".to_string(),
                     kind: ObjectKind::ScalingPlan,
                     metadata: HashMap::new(),
-                    variables: HashMap::new(),
+                    variables: HashMap::from([
+                        ("test1".to_string(), json!("test1")),
+                        ("test2".to_string(), json!("test2")),
+                    ]),
                     plans: vec![PlanItemDefinition {
                         id: "test2".to_string(),
                         description: None,
@@ -204,6 +210,12 @@ mod tests {
                 assert!(!updated_at.is_empty());
             } else {
                 panic!("updated_at field is missing or not a string");
+            }
+
+            if let Some(variables) = plan.get("variables").and_then(|v| v.as_object()) {
+                assert_eq!(variables.len(), 2);
+            } else {
+                panic!("variables field is missing or not an object");
             }
         }
     }
