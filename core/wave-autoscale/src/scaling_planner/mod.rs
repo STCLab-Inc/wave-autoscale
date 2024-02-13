@@ -46,6 +46,8 @@ enum PlanExpressionStats {
     Count,
     Minimum,
     Maximum,
+    LinearSlope,
+    MovingAverageSlope,
 }
 impl std::fmt::Display for PlanExpressionStats {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -56,6 +58,8 @@ impl std::fmt::Display for PlanExpressionStats {
             PlanExpressionStats::Count => write!(f, "count"),
             PlanExpressionStats::Minimum => write!(f, "min"),
             PlanExpressionStats::Maximum => write!(f, "max"),
+            PlanExpressionStats::LinearSlope => write!(f, "linear_slope"),
+            PlanExpressionStats::MovingAverageSlope => write!(f, "moving_average_slope"),
         }
     }
 }
@@ -773,6 +777,34 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
                     )),
                 }
             }
+            // LinearSlope (Simple Linear Regression)
+            ms if PlanExpressionStats::LinearSlope.to_string() == ms => {
+                calculate_slope(&target_value_arr)
+                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
+            }
+            // MovingAverageSlope
+            ms if PlanExpressionStats::MovingAverageSlope.to_string() == ms => {
+                // Moving average
+                let moving_average_window_size = 3;
+
+                if target_value_arr.len() < moving_average_window_size {
+                    return Err(rquickjs::Error::new_loading(
+                        "The target_value_arr is less than the moving_average_window_size",
+                    ));
+                }
+
+                let mut moving_average: Vec<f64> = Vec::new();
+
+                for index in (moving_average_window_size - 1)..target_value_arr.len() {
+                    let start_index = index - (moving_average_window_size - 1);
+                    let end_index = index + 1;
+                    let average: f64 = target_value_arr[start_index..end_index].iter().sum();
+                    moving_average.append(&mut vec![average / moving_average_window_size as f64]);
+                }
+
+                calculate_slope(&moving_average)
+                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
+            }
             _ => {
                 error!("[get_in_js] stats is valid: {}", stats);
                 Err(rquickjs::Error::new_loading(
@@ -782,6 +814,30 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         };
     debug!("[get_in_js] metric_stats: {:?}", metric_stats);
     metric_stats
+}
+
+/**
+Calculate the slope
+- x: index
+- y: value
+- n: length
+- slope: (n * Σxy - Σx * Σy) / (n * Σx^2 - (Σx)^2)
+ */
+fn calculate_slope(values: &[f64]) -> Result<f64, rquickjs::Error> {
+    let mut x: Vec<f64> = Vec::new();
+    let mut y: Vec<f64> = Vec::new();
+    for (index, value) in values.iter().enumerate() {
+        x.append(&mut vec![(index + 1) as f64]);
+        y.append(&mut vec![value.to_owned()]);
+    }
+    let x_sum: f64 = x.iter().sum();
+    let y_sum: f64 = y.iter().sum();
+    let x_y_sum: f64 = x.iter().zip(y.iter()).map(|(x, y)| x * y).sum();
+    let x_square_sum: f64 = x.iter().map(|x| x * x).sum();
+    let x_sum_square: f64 = x_sum * x_sum;
+    let slope: f64 =
+        (x.len() as f64 * x_y_sum - x_sum * y_sum) / (x.len() as f64 * x_square_sum - x_sum_square);
+    Ok(slope)
 }
 
 async fn expression_get_value(
@@ -929,6 +985,10 @@ mod tests {
         .await;
 
         // Create a MetricDefinition
+        let timeover_json_value = json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
+                                    ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}])
+        .to_string(); // metric1
+
         let json_value =
             json!([{"name": "test", "tags": {"tag1": "value222222"}, "value": 1.0}
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 2.0}]).to_string(); // metric1
@@ -940,9 +1000,6 @@ mod tests {
                                         ,{"name": "test", "tags": {"tag1": "value1"}, "value": 8.0}]).to_string(); // metric2
         let json_value4 =
             json!([{"name": "test2", "tags": {"tag1": "value1"}, "value": 7.0}]).to_string(); // metric1
-        let timeover_json_value =
-            json!([{"name": "test", "tags": {"tag1": "value1"}, "value": 5.0}
-                                        ,{"name": "test", "tags": {"tag1": "value1"}, "value": 6.0}]).to_string(); // metric1
 
         // add data to data_layer
         let _ = data_layer
@@ -992,6 +1049,10 @@ mod tests {
             "get({ stats: 'avg', period_sec: 1, name: 'test', tags: { tag1: 'value1'}}) == 3"
                 .to_string();
 
+        let expression_linear_slope = "get({ metric_id: 'metric1', stats: 'linear_slope', period_sec: 10, name: 'test', tags: { tag1: 'value1'}}) == -0.5".to_string();
+
+        let expression_moving_average_slope = "get({ metric_id: 'metric1', stats: 'moving_average_slope', period_sec: 10, name: 'test', tags: { tag1: 'value1'}}) < -0.6".to_string();
+
         let result_avg = check_expression(expression_avg, context.clone()).await;
         let result_sum = check_expression(expression_sum, context.clone()).await;
         let result_count = check_expression(expression_count, context.clone()).await;
@@ -1008,6 +1069,10 @@ mod tests {
             check_expression(expression_optional_stats_period_sec, context.clone()).await;
         let result_fail_metric_id =
             check_expression(expression_fail_metric_id, context.clone()).await;
+
+        let result_linear_slope = check_expression(expression_linear_slope, context.clone()).await;
+        let result_moving_average_slope =
+            check_expression(expression_moving_average_slope, context.clone()).await;
 
         match result_avg {
             Ok(result) => assert!(result),
@@ -1068,6 +1133,16 @@ mod tests {
                 result_fail_metric_id
             ),
             Err(_) => assert!(result_fail_metric_id.is_err()),
+        }
+
+        match result_linear_slope {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_linear_slope: {:?}", error),
+        }
+
+        match result_moving_average_slope {
+            Ok(result) => assert!(result),
+            Err(error) => panic!("Failed to get result_moving_average_slope: {:?}", error),
         }
     }
 
