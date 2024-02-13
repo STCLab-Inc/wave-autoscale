@@ -779,50 +779,31 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
             }
             // LinearSlope (Simple Linear Regression)
             ms if PlanExpressionStats::LinearSlope.to_string() == ms => {
-                let mut x: Vec<f64> = Vec::new();
-                let mut y: Vec<f64> = Vec::new();
-                for (index, value) in target_value_arr.iter().enumerate() {
-                    x.append(&mut vec![index as f64]);
-                    y.append(&mut vec![value.to_owned()]);
-                }
-                let x_sum: f64 = x.iter().sum();
-                let y_sum: f64 = y.iter().sum();
-                let x_y_sum: f64 = x.iter().zip(y.iter()).map(|(x, y)| x * y).sum();
-                let x_square_sum: f64 = x.iter().map(|x| x * x).sum();
-                let x_sum_square: f64 = x_sum * x_sum;
-                let slope: f64 = (x.len() as f64 * x_y_sum - x_sum * y_sum)
-                    / (x.len() as f64 * x_square_sum - x_sum_square);
-                Ok(slope)
+                calculate_slope(&target_value_arr)
+                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
             }
             // MovingAverageSlope
             ms if PlanExpressionStats::MovingAverageSlope.to_string() == ms => {
                 // Moving average
+                let moving_average_window_size = 3;
+
+                if target_value_arr.len() < moving_average_window_size {
+                    return Err(rquickjs::Error::new_loading(
+                        "The target_value_arr is less than the moving_average_window_size",
+                    ));
+                }
+
                 let mut moving_average: Vec<f64> = Vec::new();
-                for (index, _) in target_value_arr.iter().enumerate() {
-                    let start_index = if index < 5 { 0 } else { index - 5 };
-                    let end_index = if index > target_value_arr.len() - 5 {
-                        target_value_arr.len()
-                    } else {
-                        index + 5
-                    };
+
+                for index in (moving_average_window_size - 1)..target_value_arr.len() {
+                    let start_index = index - (moving_average_window_size - 1);
+                    let end_index = index + 1;
                     let average: f64 = target_value_arr[start_index..end_index].iter().sum();
-                    moving_average.append(&mut vec![average / (end_index - start_index) as f64]);
+                    moving_average.append(&mut vec![average / moving_average_window_size as f64]);
                 }
-                // Simple Linear Regression
-                let mut x: Vec<f64> = Vec::new();
-                let mut y: Vec<f64> = Vec::new();
-                for (index, value) in moving_average.iter().enumerate() {
-                    x.append(&mut vec![index as f64]);
-                    y.append(&mut vec![value.to_owned()]);
-                }
-                let x_sum: f64 = x.iter().sum();
-                let y_sum: f64 = y.iter().sum();
-                let x_y_sum: f64 = x.iter().zip(y.iter()).map(|(x, y)| x * y).sum();
-                let x_square_sum: f64 = x.iter().map(|x| x * x).sum();
-                let x_sum_square: f64 = x_sum * x_sum;
-                let slope: f64 = (x.len() as f64 * x_y_sum - x_sum * y_sum)
-                    / (x.len() as f64 * x_square_sum - x_sum_square);
-                Ok(slope)
+
+                calculate_slope(&moving_average)
+                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
             }
             _ => {
                 error!("[get_in_js] stats is valid: {}", stats);
@@ -833,6 +814,30 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         };
     debug!("[get_in_js] metric_stats: {:?}", metric_stats);
     metric_stats
+}
+
+/**
+Calculate the slope
+- x: index
+- y: value
+- n: length
+- slope: (n * Σxy - Σx * Σy) / (n * Σx^2 - (Σx)^2)
+ */
+fn calculate_slope(values: &[f64]) -> Result<f64, rquickjs::Error> {
+    let mut x: Vec<f64> = Vec::new();
+    let mut y: Vec<f64> = Vec::new();
+    for (index, value) in values.iter().enumerate() {
+        x.append(&mut vec![(index + 1) as f64]);
+        y.append(&mut vec![value.to_owned()]);
+    }
+    let x_sum: f64 = x.iter().sum();
+    let y_sum: f64 = y.iter().sum();
+    let x_y_sum: f64 = x.iter().zip(y.iter()).map(|(x, y)| x * y).sum();
+    let x_square_sum: f64 = x.iter().map(|x| x * x).sum();
+    let x_sum_square: f64 = x_sum * x_sum;
+    let slope: f64 =
+        (x.len() as f64 * x_y_sum - x_sum * y_sum) / (x.len() as f64 * x_square_sum - x_sum_square);
+    Ok(slope)
 }
 
 async fn expression_get_value(
@@ -1045,7 +1050,8 @@ mod tests {
                 .to_string();
 
         let expression_linear_slope = "get({ metric_id: 'metric1', stats: 'linear_slope', period_sec: 10, name: 'test', tags: { tag1: 'value1'}}) == -0.5".to_string();
-        let expression_moving_average_slope = "get({ metric_id: 'metric1', stats: 'moving_average_slope', period_sec: 10, name: 'test', tags: { tag1: 'value1'}}) == -0.5".to_string();
+
+        let expression_moving_average_slope = "get({ metric_id: 'metric1', stats: 'moving_average_slope', period_sec: 10, name: 'test', tags: { tag1: 'value1'}}) < -0.6".to_string();
 
         let result_avg = check_expression(expression_avg, context.clone()).await;
         let result_sum = check_expression(expression_sum, context.clone()).await;
