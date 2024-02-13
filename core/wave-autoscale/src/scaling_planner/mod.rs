@@ -777,7 +777,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
                     )),
                 }
             }
-            // LinearSlope
+            // LinearSlope (Simple Linear Regression)
             ms if PlanExpressionStats::LinearSlope.to_string() == ms => {
                 let mut x: Vec<f64> = Vec::new();
                 let mut y: Vec<f64> = Vec::new();
@@ -808,6 +808,7 @@ fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
                     let average: f64 = target_value_arr[start_index..end_index].iter().sum();
                     moving_average.append(&mut vec![average / (end_index - start_index) as f64]);
                 }
+                // Simple Linear Regression
                 let mut x: Vec<f64> = Vec::new();
                 let mut y: Vec<f64> = Vec::new();
                 for (index, value) in moving_average.iter().enumerate() {
