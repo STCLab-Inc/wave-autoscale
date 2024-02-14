@@ -169,6 +169,7 @@ pub struct ScalingPlanner {
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_item_id: Arc<RwLock<String>>,
     last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
+    last_cool_down: Arc<RwLock<Option<u64>>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
     // For instant action
@@ -190,6 +191,7 @@ impl<'a> ScalingPlanner {
             scaling_component_manager,
             last_plan_item_id: Arc::new(RwLock::new(String::new())),
             last_plan_timestamp: Arc::new(RwLock::new(None)),
+            last_cool_down: Arc::new(RwLock::new(None)),
             data_layer,
             task: None,
             action_task: None,
@@ -212,6 +214,7 @@ impl<'a> ScalingPlanner {
         let shared_scaling_component_manager = self.scaling_component_manager.clone();
         let shared_last_run = self.last_plan_item_id.clone();
         let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
+        let shared_last_cool_down = self.last_cool_down.clone();
         let data_layer: Arc<DataLayer> = self.data_layer.clone();
 
         // PlanDefinition
@@ -260,26 +263,36 @@ impl<'a> ScalingPlanner {
                 return;
             };
 
+            // let mut scaling_plan_cool_down: Option<u64> = None;
+
             // Run the loop every interval
             loop {
                 /*
                  * Cool Down Stage
                  */
-                if let Some(cool_down) = plan_metadata.get("cool_down") {
-                    // apply cool down
-                    if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
-                        let now = Utc::now();
-                        if let Some(cool_down_seconds) = cool_down.as_u64() {
-                            let cool_down_duration =
-                                chrono::Duration::seconds(cool_down_seconds as i64);
+                {
+                    let mut shared_last_cool_down_write = shared_last_cool_down.write().await;
+                    if let Some(cool_down) = plan_metadata.get("cool_down") {
+                        if shared_last_cool_down_write.is_none() {
+                            *shared_last_cool_down_write = cool_down.as_u64();
+                        }
+                    }
+                    if let Some(cool_down) = *shared_last_cool_down_write {
+                        // apply cool down
+                        if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await
+                        {
+                            let now = Utc::now();
+                            let cool_down_duration = chrono::Duration::seconds(cool_down as i64);
                             let time_left = last_plan_timestamp + cool_down_duration - now;
                             if time_left.num_milliseconds() > 0 {
                                 debug!(
-                                    "[ScalingPlanner] Cooling down. Skip the plan. {} seconds left.",
-                                    time_left.num_seconds()
-                                );
+                                "[ScalingPlanner] Cooling down. Skip the plan. {} seconds left.",
+                                time_left.num_seconds()
+                            );
                                 interval.tick().await;
                                 continue;
+                            } else {
+                                *shared_last_cool_down_write = None;
                             }
                         }
                     }
@@ -458,6 +471,12 @@ impl<'a> ScalingPlanner {
                             let mut shared_last_plan_timestamp =
                                 shared_last_plan_timestamp.write().await;
                             *shared_last_plan_timestamp = Some(Utc::now());
+
+                            // save sub cool down
+                            if let Some(sub_cool_down) = plan_item.cool_down {
+                                let mut shared_last_cool_down = shared_last_cool_down.write().await;
+                                *shared_last_cool_down = Some(sub_cool_down);
+                            }
                         }
 
                         // Update the last run
@@ -573,6 +592,11 @@ impl<'a> ScalingPlanner {
     #[allow(dead_code)]
     pub fn get_last_plan_timestamp(&self) -> Arc<RwLock<Option<DateTime<Utc>>>> {
         self.last_plan_timestamp.clone()
+    }
+    // For testing
+    #[allow(dead_code)]
+    pub fn get_last_cool_down(&self) -> Arc<RwLock<Option<u64>>> {
+        self.last_cool_down.clone()
     }
     // For testing
     #[allow(dead_code)]
@@ -884,6 +908,7 @@ mod tests {
     async fn get_scaling_planner_with_variables(
         plans: Vec<PlanItemDefinition>,
         variables: HashMap<String, serde_json::Value>,
+        plan_metadata: HashMap<String, serde_json::Value>,
     ) -> (Arc<DataLayer>, ScalingPlanner) {
         // Initialize DataLayer
         let data_layer = DataLayer::new("", 500_000, false).await;
@@ -914,7 +939,7 @@ mod tests {
             db_id: "".to_string(),
             kind: ObjectKind::ScalingPlan,
             variables,
-            metadata: HashMap::new(),
+            metadata: plan_metadata,
             plans,
             enabled: true,
         };
@@ -929,8 +954,9 @@ mod tests {
     }
     async fn get_scaling_planner(
         plans: Vec<PlanItemDefinition>,
+        plan_metadata: HashMap<String, serde_json::Value>,
     ) -> (Arc<DataLayer>, ScalingPlanner) {
-        get_scaling_planner_with_variables(plans, HashMap::new()).await
+        get_scaling_planner_with_variables(plans, HashMap::new(), plan_metadata).await
     }
 
     #[test]
@@ -1160,15 +1186,19 @@ mod tests {
     async fn test_last_plan_timestamp() {
         let plan_id = uuid::Uuid::new_v4().to_string();
         // Create a ScalingPlanner
-        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
-            id: plan_id.clone(),
-            description: None,
-            expression: None,
-            cron_expression: Some("*/2 * * * * * *".to_string()),
-            priority: 1,
-            scaling_components: vec![json!({"component_id": "test_component_id"})],
-            ui: None,
-        }])
+        let (_, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: plan_id.clone(),
+                description: None,
+                expression: None,
+                cron_expression: Some("*/2 * * * * * *".to_string()),
+                cool_down: None,
+                priority: 1,
+                scaling_components: vec![json!({"component_id": "test_component_id"})],
+                ui: None,
+            }],
+            HashMap::new(),
+        )
         .await;
 
         scaling_planner.run();
@@ -1195,10 +1225,12 @@ mod tests {
                     "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) > 0".to_string()
                 ),
                 cron_expression: None,
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
-            }]
+            }],
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1235,6 +1267,7 @@ mod tests {
                 description: None,
                 expression: Some("$test_variable == 1".to_string()),
                 cron_expression: None,
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
@@ -1250,7 +1283,8 @@ mod tests {
             ]
                 .iter()
                 .cloned()
-                .collect()
+                .collect(),
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1287,6 +1321,7 @@ mod tests {
                 description: None,
                 expression: Some("$test_variable2".to_string()),
                 cron_expression: None,
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
@@ -1302,7 +1337,8 @@ mod tests {
             ]
                 .iter()
                 .cloned()
-                .collect()
+                .collect(),
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1339,6 +1375,7 @@ mod tests {
                 description: None,
                 expression: Some("$test_variable3 == 'string variable'".to_string()),
                 cron_expression: None,
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
@@ -1350,6 +1387,7 @@ mod tests {
             .iter()
             .cloned()
             .collect(),
+            HashMap::new(),
         )
         .await;
         scaling_planner.run();
@@ -1381,15 +1419,19 @@ mod tests {
     async fn test_cron_expression() {
         let plan_id = uuid::Uuid::new_v4().to_string();
         // Create a ScalingPlanner
-        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
-            id: plan_id.clone(),
-            description: None,
-            expression: None,
-            cron_expression: Some("*/2 * * * * * *".to_string()),
-            priority: 1,
-            scaling_components: vec![],
-            ui: None,
-        }])
+        let (_, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: plan_id.clone(),
+                description: None,
+                expression: None,
+                cron_expression: Some("*/2 * * * * * *".to_string()),
+                cool_down: None,
+                priority: 1,
+                scaling_components: vec![],
+                ui: None,
+            }],
+            HashMap::new(),
+        )
         .await;
         scaling_planner.run();
 
@@ -1413,10 +1455,12 @@ mod tests {
                     "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}}) > 0".to_string()
                 ),
                 cron_expression: Some("*/2 * * * * * *".to_string()),
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
-            }]
+            }],
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1455,10 +1499,12 @@ mod tests {
                     "get({ metric_id: 'metric1', stats: 'avg', period_sec: 0, name: 'test', tags: { tag1: 'value1'}}) > 0".to_string()
                 ),
                 cron_expression: Some("*/2 * * * * * *".to_string()),
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
-            }]
+            }],
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1497,10 +1543,12 @@ mod tests {
                     "get({ metric_id: 'metric1', stats: 'avg', period_sec: 60, name: 'test', tags: { tag1: 'value1'}}) > 0".to_string()
                 ),
                 cron_expression: Some("* * * * * * 2007".to_string()),
+                cool_down: None,
                 priority: 1,
                 scaling_components: vec![],
                 ui: None,
-            }]
+            }],
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
@@ -1531,15 +1579,19 @@ mod tests {
     async fn test_empty_expression_to_fail() {
         let plan_id = uuid::Uuid::new_v4().to_string();
         // Create a ScalingPlanner
-        let (_, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
-            id: plan_id.clone(),
-            description: None,
-            expression: None,
-            cron_expression: None,
-            priority: 1,
-            scaling_components: vec![],
-            ui: None,
-        }])
+        let (_, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: plan_id.clone(),
+                description: None,
+                expression: None,
+                cron_expression: None,
+                cool_down: None,
+                priority: 1,
+                scaling_components: vec![],
+                ui: None,
+            }],
+            HashMap::new(),
+        )
         .await;
         scaling_planner.run();
 
@@ -1556,15 +1608,19 @@ mod tests {
     async fn test_run_action_receiver() {
         let plan_item_id = uuid::Uuid::new_v4().to_string();
         // Create a ScalingPlanner
-        let (data_layer, mut scaling_planner) = get_scaling_planner(vec![PlanItemDefinition {
-            id: plan_item_id.clone(),
-            description: None,
-            expression: None,
-            cron_expression: None,
-            priority: 1,
-            scaling_components: vec![],
-            ui: None,
-        }])
+        let (data_layer, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: plan_item_id.clone(),
+                description: None,
+                expression: None,
+                cron_expression: None,
+                cool_down: None,
+                priority: 1,
+                scaling_components: vec![],
+                ui: None,
+            }],
+            HashMap::new(),
+        )
         .await;
         scaling_planner.run();
 
@@ -1578,5 +1634,81 @@ mod tests {
             let shared_last_plan_item_id = last_plan_item_id.read().await;
             assert_eq!(*shared_last_plan_item_id, plan_item_id);
         }
+    }
+
+    #[tokio::test]
+    async fn test_sub_cool_down() {
+        // plan metadata cool_down is 1
+        let plan_metadata = [
+            ("cool_down".to_string(), json!(1)),
+            ("interval".to_string(), json!(1000)),
+        ]
+        .into_iter()
+        .collect();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: "plan_1".to_string(),
+                description: None,
+                expression: Some("2>1".to_string()),
+                cron_expression: None,
+                cool_down: Some(2),
+                priority: 1,
+                scaling_components: vec![json!({"component_id": "test_component_id"})],
+                ui: None,
+            }],
+            plan_metadata,
+        )
+        .await;
+        scaling_planner.run();
+
+        // sec 0: [cool_down: None]
+        // sec 1: plan_1 is executed -> [sub cool_down 2]
+
+        let sec_0_cool_down = *scaling_planner.get_last_cool_down().read().await;
+        assert!(sec_0_cool_down.is_none());
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        let sec_1_cool_down = *scaling_planner.get_last_cool_down().read().await;
+        assert_eq!(sec_1_cool_down, Some(2));
+
+        scaling_planner.stop();
+    }
+
+    #[tokio::test]
+    async fn test_default_cool_down() {
+        // plan metadata cool_down is 1
+        let plan_metadata = [
+            ("cool_down".to_string(), json!(1)),
+            ("interval".to_string(), json!(1000)),
+        ]
+        .into_iter()
+        .collect();
+        // Create a ScalingPlanner
+        let (_, mut scaling_planner) = get_scaling_planner(
+            vec![PlanItemDefinition {
+                id: "plan_1".to_string(),
+                description: None,
+                expression: Some("2>1".to_string()),
+                cron_expression: None,
+                cool_down: None,
+                priority: 1,
+                scaling_components: vec![json!({"component_id": "test_component_id"})],
+                ui: None,
+            }],
+            plan_metadata,
+        )
+        .await;
+        scaling_planner.run();
+
+        // sec 0: [cool_down: None]
+        // sec 1: plan_1 is executed -> [default cool_down 1]
+
+        let sec_0_cool_down = *scaling_planner.get_last_cool_down().read().await;
+        assert!(sec_0_cool_down.is_none());
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        let sec_1_cool_down = *scaling_planner.get_last_cool_down().read().await;
+        assert_eq!(sec_1_cool_down, Some(1));
+
+        scaling_planner.stop();
     }
 }
