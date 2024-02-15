@@ -1106,6 +1106,7 @@ mod tests {
                 expression: Some("$test_variable == 10".to_string()),
                 cron_expression: None,
                 priority: 1,
+                cool_down: None,
                 scaling_components: vec![],
                 ui: None,
             }],
@@ -1122,6 +1123,8 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect()
+            ,
+            HashMap::new(),
         ).await;
         scaling_planner.run();
 
