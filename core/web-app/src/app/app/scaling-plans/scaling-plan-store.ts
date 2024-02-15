@@ -179,17 +179,17 @@ export const useScalingPlanStore = create<ScalingPlanState>((set, get) => ({
             ...(scalingPlan.ui ?? {}),
             metrics: Array.from(metricIdsInScalingPlan).map(
               (metricId) =>
-                ({
-                  id: metricId,
-                  selected: false,
-                } as MetricUI)
+              ({
+                id: metricId,
+                selected: false,
+              } as MetricUI)
             ),
             scalingComponents: Array.from(scalingComponentIdsInScalingPlan).map(
               (scalingComponentId) =>
-                ({
-                  id: scalingComponentId,
-                  selected: false,
-                } as ScalingComponentUI)
+              ({
+                id: scalingComponentId,
+                selected: false,
+              } as ScalingComponentUI)
             ),
           };
         });
@@ -220,6 +220,7 @@ export const useScalingPlanStore = create<ScalingPlanState>((set, get) => ({
             description: '',
             expression: '',
             cron_expression: null,
+            cool_down: null,
             scaling_components: [],
             priority: 0,
           },
