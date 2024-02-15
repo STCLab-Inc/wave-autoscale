@@ -1,11 +1,13 @@
 pub mod scaling_planner_manager;
+mod js_functions;
+
 use crate::{
     metric_updater::SharedMetricUpdater, scaling_component::SharedScalingComponentManager,
 };
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use data_layer::{
-    data_layer::{DataLayer, SOURCE_METRICS_DATA},
+    data_layer::DataLayer,
     types::{
         autoscaling_history_definition::AutoscalingHistoryDefinition,
         plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
@@ -14,15 +16,11 @@ use data_layer::{
 };
 use rquickjs::async_with;
 use serde_json::{json, Value};
-use std::ops::Bound::Included;
-use std::str::FromStr;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
 use tracing::{debug, error, info};
-use ulid::Ulid;
+use js_functions::get_in_js;
 
-// Constants
-const PLAN_EXPRESSION_PERIOD_SEC: u64 = 5 * 60;
 
 /**
  * ExressionResult
@@ -33,35 +31,6 @@ struct ExressionResult {
     result: bool,
     error: bool,
     message: Option<String>,
-}
-
-/**
- * PlanExpressionStats
- */
-#[derive(Debug, Clone)]
-enum PlanExpressionStats {
-    Latest,
-    Average,
-    Sum,
-    Count,
-    Minimum,
-    Maximum,
-    LinearSlope,
-    MovingAverageSlope,
-}
-impl std::fmt::Display for PlanExpressionStats {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            PlanExpressionStats::Latest => write!(f, "latest"),
-            PlanExpressionStats::Average => write!(f, "avg"),
-            PlanExpressionStats::Sum => write!(f, "sum"),
-            PlanExpressionStats::Count => write!(f, "count"),
-            PlanExpressionStats::Minimum => write!(f, "min"),
-            PlanExpressionStats::Maximum => write!(f, "max"),
-            PlanExpressionStats::LinearSlope => write!(f, "linear_slope"),
-            PlanExpressionStats::MovingAverageSlope => write!(f, "moving_average_slope"),
-        }
-    }
 }
 
 /**
@@ -304,16 +273,28 @@ impl<'a> ScalingPlanner {
 
                     // Evaluate "variables" in the scaling plan
                     for (key, value) in plan_variables.clone().iter() {
-                        let value = value.as_str();
-                        if value.is_none() {
-                            error!("[ScalingPlanner] Failed to evaluate the variable: {}", key);
-                            continue;
-                        }
-                        let value = value.unwrap();
+                        // If the value is a string, it should be assigned without quotes.
+                        let value_for_set = if value.is_string() {
+                            let value = value.as_str();
+                            if value.is_none() {
+                                error!("[ScalingPlanner] Failed to evaluate the variable: {}", key);
+                                continue;
+                            }
+                            value.unwrap().to_string()
+                        } else {
+                            let value = serde_json::to_string(value);
+                            if value.is_err() {
+                                error!("[ScalingPlanner] Failed to evaluate the variable: {}", key);
+                                continue;
+                            }
+                            value.unwrap()
+                        };
 
                         // Evaluate the variable and set the value to the context with "$key"
                         async_with!(context => |ctx| {
-                            let expression = format!("var ${} = {};", key, value);
+                            let expression_format = format!("var ${} = {};", key, value_for_set);
+                            println!("{}", expression_format);
+                            let expression = expression_format;
                             let result = ctx.eval::<(), _>(expression);
                             if result.is_err() {
                                 error!(
@@ -322,6 +303,16 @@ impl<'a> ScalingPlanner {
                                     result.err().unwrap()
                                 );
                             }
+
+                            // // Confirm the variable
+                            // let result = ctx.eval::<f64, _>(format!("${}", key));
+                            // if result.is_err() {
+                            //     error!(
+                            //         "[ScalingPlanner] Failed to confirm the variable: {}",
+                            //         key
+                            //     );
+                            // }
+                            // let result = result.unwrap();
                         })
                         .await;
                     }
@@ -634,240 +625,6 @@ async fn run_plan_item(
     results
 }
 
-fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
-    let metric_id = args
-        .get::<String, String>("metric_id".to_string())
-        .map_err(|_| {
-            error!("[ScalingPlan expression error] Failed to get metric_id");
-            rquickjs::Error::new_loading("Failed to get metric_id")
-        })?;
-    let name = args.get::<String, String>("name".to_string()).ok();
-    // tags, stats, period_sec is optional
-    let tags = match args.get::<String, HashMap<String, String>>("tags".to_string()) {
-        Ok(tags) => tags,
-        Err(_) => HashMap::new(),
-    };
-    let stats = args
-        .get::<String, String>("stats".to_string())
-        .unwrap_or("latest".to_string());
-    let period_sec = args
-        .get::<String, u64>("period_sec".to_string())
-        .unwrap_or(PLAN_EXPRESSION_PERIOD_SEC); // default 5 min
-
-    let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
-        error!("[get_in_js] Failed to get source_metrics_data");
-        return Err(rquickjs::Error::new_loading("Failed to get the metrics data"));
-    };
-    let start_time = Ulid::from_datetime(
-        std::time::SystemTime::now() - Duration::from_millis(1000 * period_sec),
-    );
-    let end_time = Ulid::new();
-
-    debug!(
-        "[get_in_js] - metric_id: {}, name: {:?}, tags: {:?}, stats: {}, period_sec: {}",
-        metric_id, name, tags, stats, period_sec
-    );
-
-    // find metric_id
-    let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
-        return Err(rquickjs::Error::new_loading("Failed to get metric_id from the metrics data"));
-    };
-
-    // Filtered metric values
-    let mut target_value_arr: Vec<f64> = Vec::new();
-
-    // Validate whether the start_time is before the last item in the metric_values.
-    // If the start_time is after the last item, then BTreeMap will panic.
-    let last_item = metric_values.iter().last();
-    if last_item.is_none() {
-        return Err(rquickjs::Error::new_loading(
-            "Failed to get the last item in the metric_values",
-        ));
-    }
-    let last_item = last_item.unwrap();
-    let last_item_time = Ulid::from_str(last_item.0.as_str()).unwrap();
-    if last_item_time < start_time {
-        return Err(rquickjs::Error::new_loading(
-            "The start_time is before the last item in the metric_values",
-        ));
-    }
-
-    // Find the metric values between the time range (current time - period_sec, current time)
-    metric_values
-        .range((Included(start_time.to_string()), Included(end_time.to_string())))
-        .for_each(|(_ulid, source_metrics_value)| {
-            // Get the json string
-            let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
-                error!(
-                    "[ScalingPlan expression error] Failed to convert source_metric_data to serde value"
-                );
-                return;
-            };
-            let Some(json_value_str) = value
-                .get("json_value")
-                .and_then(|value| value.as_str()) else {
-                return;
-            };
-            // Transform the json string to serde value
-            let json_value_str = serde_json
-                ::from_str::<Value>(json_value_str)
-                .map_err(|_| {
-                    error!(
-                        "[ScalingPlan expression error] Failed to convert json_value to serde value"
-                    );
-                    rquickjs::Error::Exception
-                })
-                .unwrap();
-
-            // Get the value array
-            let Some(json_values_arr) = json_value_str.as_array() else {
-                return;
-            };
-
-            for json_value_item in json_values_arr.iter() {
-                // Check if the name
-                let item_name = json_value_item.get("name").and_then(Value::as_str);
-                if
-                    name.is_some() &&
-                    item_name.is_some() &&
-                    item_name.unwrap() != name.as_ref().unwrap()
-                {
-                    continue;
-                }
-
-                // Check if the tags match
-                let item_tags = json_value_item.get("tags").and_then(Value::as_object);
-                if !tags.is_empty() {
-                    // If the tags are not empty but the item_tags is None, then it means that it doesn't match
-                    if item_tags.is_none() {
-                        continue;
-                    }
-                    let item_tags = item_tags.unwrap();
-
-                    let mut match_tags = true;
-                    for (key, value) in tags.iter() {
-                        let item_value = item_tags.get(key).and_then(Value::as_str);
-                        if item_value.is_none() || item_value.unwrap() != value {
-                            match_tags = false;
-                            break;
-                        }
-                    }
-
-                    // If the tags don't match, then skip
-                    if !match_tags {
-                        continue;
-                    }
-                }
-
-                // Put the value in the target_value_arr
-                let item_value = json_value_item.get("value").and_then(Value::as_f64);
-                if item_value.is_some() {
-                    target_value_arr.append(&mut vec![item_value.unwrap()]);
-                }
-            }
-        });
-    let metric_stats =
-        match stats.to_lowercase() {
-            ms if PlanExpressionStats::Latest.to_string() == ms => {
-                let Some(latest_value) = target_value_arr.iter().last() else {
-                return Err(rquickjs::Error::new_loading("Failed to get the value with the stats"));
-            };
-                Ok(latest_value.to_owned())
-            }
-            ms if PlanExpressionStats::Average.to_string() == ms => {
-                let sum_value: f64 = target_value_arr.iter().sum();
-                let ms_num: f64 = sum_value / (target_value_arr.len() as f64);
-                Ok(ms_num)
-            }
-            ms if PlanExpressionStats::Sum.to_string() == ms => {
-                let sum_value: f64 = target_value_arr.iter().sum();
-                Ok(sum_value)
-            }
-            ms if PlanExpressionStats::Count.to_string() == ms => Ok(target_value_arr.len() as f64),
-            ms if PlanExpressionStats::Minimum.to_string() == ms => {
-                let min_value = target_value_arr.into_iter().reduce(f64::min).ok_or(
-                    rquickjs::Error::new_loading("Failed to get the value with the stats"),
-                );
-                match min_value {
-                    Ok(min_value) => Ok(min_value),
-                    Err(_) => Err(rquickjs::Error::new_loading(
-                        "Failed to get the value with the stats",
-                    )),
-                }
-            }
-            ms if PlanExpressionStats::Maximum.to_string() == ms => {
-                let max_value = target_value_arr.into_iter().reduce(f64::max).ok_or(
-                    rquickjs::Error::new_loading("Failed to get the value with the stats"),
-                );
-                match max_value {
-                    Ok(max_value) => Ok(max_value),
-                    Err(_) => Err(rquickjs::Error::new_loading(
-                        "Failed to get the value with the stats",
-                    )),
-                }
-            }
-            // LinearSlope (Simple Linear Regression)
-            ms if PlanExpressionStats::LinearSlope.to_string() == ms => {
-                calculate_slope(&target_value_arr)
-                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
-            }
-            // MovingAverageSlope
-            ms if PlanExpressionStats::MovingAverageSlope.to_string() == ms => {
-                // Moving average
-                let moving_average_window_size = 3;
-
-                if target_value_arr.len() < moving_average_window_size {
-                    return Err(rquickjs::Error::new_loading(
-                        "The target_value_arr is less than the moving_average_window_size",
-                    ));
-                }
-
-                let mut moving_average: Vec<f64> = Vec::new();
-
-                for index in (moving_average_window_size - 1)..target_value_arr.len() {
-                    let start_index = index - (moving_average_window_size - 1);
-                    let end_index = index + 1;
-                    let average: f64 = target_value_arr[start_index..end_index].iter().sum();
-                    moving_average.append(&mut vec![average / moving_average_window_size as f64]);
-                }
-
-                calculate_slope(&moving_average)
-                    .map_err(|_| rquickjs::Error::new_loading("Failed to calculate the slope"))
-            }
-            _ => {
-                error!("[get_in_js] stats is valid: {}", stats);
-                Err(rquickjs::Error::new_loading(
-                    "Failed to get the value with the stats",
-                ))
-            }
-        };
-    debug!("[get_in_js] metric_stats: {:?}", metric_stats);
-    metric_stats
-}
-
-/**
-Calculate the slope
-- x: index
-- y: value
-- n: length
-- slope: (n * Σxy - Σx * Σy) / (n * Σx^2 - (Σx)^2)
- */
-fn calculate_slope(values: &[f64]) -> Result<f64, rquickjs::Error> {
-    let mut x: Vec<f64> = Vec::new();
-    let mut y: Vec<f64> = Vec::new();
-    for (index, value) in values.iter().enumerate() {
-        x.append(&mut vec![(index + 1) as f64]);
-        y.append(&mut vec![value.to_owned()]);
-    }
-    let x_sum: f64 = x.iter().sum();
-    let y_sum: f64 = y.iter().sum();
-    let x_y_sum: f64 = x.iter().zip(y.iter()).map(|(x, y)| x * y).sum();
-    let x_square_sum: f64 = x.iter().map(|x| x * x).sum();
-    let x_sum_square: f64 = x_sum * x_sum;
-    let slope: f64 =
-        (x.len() as f64 * x_y_sum - x_sum * y_sum) / (x.len() as f64 * x_square_sum - x_sum_square);
-    Ok(slope)
-}
 
 async fn expression_get_value(
     expression: String,
@@ -903,6 +660,7 @@ mod tests {
     use data_layer::MetricDefinition;
 
     use serde_json::json;
+    use tracing_test::traced_test;
     use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -1263,14 +1021,15 @@ mod tests {
         }
     }
     #[tokio::test]
-    async fn test_simple_expression_with_numeric_variable() {
+    #[traced_test]
+    async fn test_simple_expression_with_multiple_variable() {
         let plan_id = uuid::Uuid::new_v4().to_string();
         // Create a ScalingPlanner
         let (data_layer, mut scaling_planner) = get_scaling_planner_with_variables(
             vec![PlanItemDefinition {
                 id: plan_id.clone(),
                 description: None,
-                expression: Some("$test_variable == 1".to_string()),
+                expression: Some("$test_variable / $number_value == 2 && $boolean_value && $string_value == \"string\" ".to_string()),
                 cron_expression: None,
                 cool_down: None,
                 priority: 1,
@@ -1283,6 +1042,25 @@ mod tests {
                     "test_variable".to_string(),
                     json!(
                         "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}})"
+                    ),
+                    
+                ),
+                (
+                    "number_value".to_string(),
+                    json!(
+                        5
+                    ),
+                ),
+                (
+                    "boolean_value".to_string(),
+                    json!(
+                        true
+                    ),
+                ),
+                (
+                    "string_value".to_string(),
+                    json!(
+                        "\"string\""
                     ),
                 ),
             ]
@@ -1300,7 +1078,64 @@ mod tests {
                 "tags": {
                     "tag1": "value1"
                 },
-                "value": 1,
+                "value": 10,
+            }
+        ])
+        .to_string();
+        let _ = data_layer
+            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .await;
+
+        // Wait for the scaling planner to execute the plan
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        {
+            let last_plan_id = scaling_planner.get_last_plan_item_id();
+            let shared_last_plan_id = last_plan_id.read().await;
+            assert_eq!(*shared_last_plan_id, plan_id);
+        }
+    }
+    #[tokio::test]
+    #[traced_test]
+    async fn test_simple_expression_with_numeric_variable() {
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        // Create a ScalingPlanner
+        let (data_layer, mut scaling_planner) = get_scaling_planner_with_variables(
+            vec![PlanItemDefinition {
+                id: plan_id.clone(),
+                description: None,
+                expression: Some("$test_variable == 10".to_string()),
+                cron_expression: None,
+                priority: 1,
+                cool_down: None,
+                scaling_components: vec![],
+                ui: None,
+            }],
+            [
+                // Define a numeric variable
+                (
+                    "test_variable".to_string(),
+                    json!(
+                        "get({ metric_id: 'metric1', stats: 'max', period_sec: 120, name: 'test', tags: { tag1: 'value1'}})"
+                    ),
+                    
+                )
+            ]
+                .iter()
+                .cloned()
+                .collect()
+            ,
+            HashMap::new(),
+        ).await;
+        scaling_planner.run();
+
+        // Add a metric to the DataLayer
+        let metric = json!([
+            {
+                "name": "test",
+                "tags": {
+                    "tag1": "value1"
+                },
+                "value": 10,
             }
         ])
         .to_string();
