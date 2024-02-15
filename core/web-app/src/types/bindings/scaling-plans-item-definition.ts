@@ -5,6 +5,7 @@ export interface ScalingPlansItemDefinition {
   description: string | null;
   expression: string | null;
   cron_expression: string | null;
+  cool_down: bigint | null;
   priority: number;
   scaling_components: Array<any>;
   ui: any;

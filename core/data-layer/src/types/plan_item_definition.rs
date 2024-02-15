@@ -6,6 +6,10 @@ use serde_json::Value;
 use serde_valid::Validate;
 use ts_rs::TS;
 
+fn default_cool_down() -> Option<u64> {
+    None
+}
+
 #[derive(TS)]
 #[ts(
     export,
@@ -22,6 +26,8 @@ pub struct PlanItemDefinition {
     pub expression: Option<String>,
     #[serde(default)]
     pub cron_expression: Option<String>,
+    #[serde(default = "default_cool_down")]
+    pub cool_down: Option<u64>,
     #[serde(default)]
     pub priority: i16,
     #[ts(type = "Array<any>")]
