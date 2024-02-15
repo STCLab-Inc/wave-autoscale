@@ -1,4 +1,4 @@
-use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition, SloDefinition};
+use crate::{MetricDefinition, ScalingComponentDefinition, ScalingPlanDefinition};
 use anyhow::Result;
 use serde::Deserialize;
 use serde_valid::Validate;
@@ -9,7 +9,6 @@ use tracing::error;
 #[derive(Debug, Default)]
 pub struct ParserResult {
     pub metric_definitions: Vec<MetricDefinition>,
-    pub slo_definitions: Vec<SloDefinition>,
     pub scaling_plan_definitions: Vec<ScalingPlanDefinition>,
     pub scaling_component_definitions: Vec<ScalingComponentDefinition>,
 }
@@ -39,11 +38,6 @@ where
                     let parsed = serde_yaml::from_value::<MetricDefinition>(value)?;
                     parsed.validate()?;
                     result.metric_definitions.push(parsed);
-                }
-                "SLO" => {
-                    let parsed = serde_yaml::from_value::<SloDefinition>(value)?;
-                    parsed.validate()?;
-                    result.slo_definitions.push(parsed);
                 }
                 "ScalingPlan" => {
                     let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value)?;
@@ -78,11 +72,6 @@ pub fn read_definition_yaml(yaml: &str) -> Result<ParserResult> {
                     let parsed = serde_yaml::from_value::<MetricDefinition>(value)?;
                     parsed.validate()?;
                     result.metric_definitions.push(parsed);
-                }
-                "SLO" => {
-                    let parsed = serde_yaml::from_value::<SloDefinition>(value)?;
-                    parsed.validate()?;
-                    result.slo_definitions.push(parsed);
                 }
                 "ScalingPlan" => {
                     let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value)?;
