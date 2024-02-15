@@ -1,15 +1,17 @@
 use crate::app_state::AppState;
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use data_layer::ScalingComponentDefinition;
+use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::Deserialize;
+use tracing::debug;
 use validator::Validate;
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_scaling_components)
-        .service(get_scaling_component_by_id)
-        .service(post_scaling_components)
-        .service(put_scaling_component_by_id)
-        .service(delete_scaling_component_by_id);
+        .service(get_scaling_component_yaml)
+        .service(post_scaling_component_yaml);
+    // .service(get_scaling_component_by_id)
+    // .service(post_scaling_components)
+    // .service(put_scaling_component_by_id)
+    // .service(delete_scaling_component_by_id);
 }
 
 #[get("/api/scaling-components")]
@@ -23,75 +25,104 @@ async fn get_scaling_components(app_state: web::Data<AppState>) -> impl Responde
     HttpResponse::Ok().json(scaling_components.unwrap())
 }
 
-#[get("/api/scaling-components/{db_id}")]
-async fn get_scaling_component_by_id(
-    db_id: web::Path<String>,
-    app_state: web::Data<AppState>,
-) -> impl Responder {
-    let scaling_component = app_state
-        .data_layer
-        .get_scaling_component_by_id(db_id.into_inner())
-        .await;
-    if scaling_component.is_err() {
-        return HttpResponse::InternalServerError().body(format!("{:?}", scaling_component));
+#[get("/api/scaling-components/yaml")]
+async fn get_scaling_component_yaml(app_state: web::Data<AppState>) -> impl Responder {
+    let scaling_components = app_state.data_layer.get_scaling_component_yamls().await;
+    if scaling_components.is_err() {
+        return HttpResponse::InternalServerError().body(format!("{:?}", scaling_components));
     }
-    HttpResponse::Ok().json(scaling_component.unwrap())
+    HttpResponse::Ok().json(scaling_components.unwrap())
 }
 
-// [POST] /scaling-components
+// [POST] /api/scaling-components/yaml
 #[derive(Deserialize, Validate)]
-struct PostScalingComponentsRequest {
-    scaling_components: Vec<ScalingComponentDefinition>,
+struct PostScalingComponentYamlRequest {
+    yaml: String,
 }
 
-#[post("/api/scaling-components")]
-async fn post_scaling_components(
-    request: web::Json<PostScalingComponentsRequest>,
+#[post("/api/scaling-components/yaml")]
+async fn post_scaling_component_yaml(
+    request: web::Json<PostScalingComponentYamlRequest>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    let result = app_state
-        .data_layer
-        .add_scaling_components(request.scaling_components.clone())
-        .await;
+    debug!("Adding scaling components from yaml: {:?}", request.yaml);
+    let yaml = request.yaml.as_str();
+    let result = app_state.data_layer.sync_scaling_component_yaml(yaml).await;
     if result.is_err() {
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
     HttpResponse::Ok().body("ok")
 }
 
-#[put("/api/scaling-components/{db_id}")]
-async fn put_scaling_component_by_id(
-    db_id: web::Path<String>,
-    request: web::Json<ScalingComponentDefinition>,
-    app_state: web::Data<AppState>,
-) -> impl Responder {
-    let mut scaling_component = request.into_inner();
-    scaling_component.db_id = db_id.into_inner();
+// #[get("/api/scaling-components/{db_id}")]
+// async fn get_scaling_component_by_id(
+//     db_id: web::Path<String>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     let scaling_component = app_state
+//         .data_layer
+//         .get_scaling_component_by_id(db_id.into_inner())
+//         .await;
+//     if scaling_component.is_err() {
+//         return HttpResponse::InternalServerError().body(format!("{:?}", scaling_component));
+//     }
+//     HttpResponse::Ok().json(scaling_component.unwrap())
+// }
 
-    let result = app_state
-        .data_layer
-        .update_scaling_component(scaling_component)
-        .await;
-    if result.is_err() {
-        return HttpResponse::InternalServerError().body(format!("{:?}", result));
-    }
-    HttpResponse::Ok().body("ok")
-}
+// // [POST] /scaling-components
+// #[derive(Deserialize, Validate)]
+// struct PostScalingComponentsRequest {
+//     scaling_components: Vec<ScalingComponentDefinition>,
+// }
 
-#[delete("/api/scaling-components/{db_id}")]
-async fn delete_scaling_component_by_id(
-    db_id: web::Path<String>,
-    app_state: web::Data<AppState>,
-) -> impl Responder {
-    let result = app_state
-        .data_layer
-        .delete_scaling_component(db_id.into_inner())
-        .await;
-    if result.is_err() {
-        return HttpResponse::InternalServerError().body(format!("{:?}", result));
-    }
-    HttpResponse::Ok().body("ok")
-}
+// #[post("/api/scaling-components")]
+// async fn post_scaling_components(
+//     request: web::Json<PostScalingComponentsRequest>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     let result = app_state
+//         .data_layer
+//         .add_scaling_components(request.scaling_components.clone())
+//         .await;
+//     if result.is_err() {
+//         return HttpResponse::InternalServerError().body(format!("{:?}", result));
+//     }
+//     HttpResponse::Ok().body("ok")
+// }
+
+// #[put("/api/scaling-components/{db_id}")]
+// async fn put_scaling_component_by_id(
+//     db_id: web::Path<String>,
+//     request: web::Json<ScalingComponentDefinition>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     let mut scaling_component = request.into_inner();
+//     scaling_component.db_id = db_id.into_inner();
+
+//     let result = app_state
+//         .data_layer
+//         .update_scaling_component(scaling_component)
+//         .await;
+//     if result.is_err() {
+//         return HttpResponse::InternalServerError().body(format!("{:?}", result));
+//     }
+//     HttpResponse::Ok().body("ok")
+// }
+
+// #[delete("/api/scaling-components/{db_id}")]
+// async fn delete_scaling_component_by_id(
+//     db_id: web::Path<String>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     let result = app_state
+//         .data_layer
+//         .delete_scaling_component(db_id.into_inner())
+//         .await;
+//     if result.is_err() {
+//         return HttpResponse::InternalServerError().body(format!("{:?}", result));
+//     }
+//     HttpResponse::Ok().body("ok")
+// }
 
 #[cfg(test)]
 mod tests {
@@ -103,28 +134,21 @@ mod tests {
     use std::collections::HashMap;
 
     // Utility functions
-
-    async fn add_scaling_components_for_test(data_layer: &DataLayer) {
-        let _ = data_layer
-            .add_scaling_components(vec![
-                data_layer::ScalingComponentDefinition {
-                    id: "test1".to_string(),
-                    db_id: "test1".to_string(),
-                    component_kind: "test1".to_string(),
-                    kind: ObjectKind::ScalingComponent,
-                    metadata: HashMap::new(),
-                    enabled: true,
-                },
-                data_layer::ScalingComponentDefinition {
-                    id: "test2".to_string(),
-                    db_id: "test2".to_string(),
-                    component_kind: "test2".to_string(),
-                    kind: ObjectKind::ScalingComponent,
-                    metadata: HashMap::new(),
-                    enabled: true,
-                },
-            ])
-            .await;
+    async fn sync_scaling_components_for_test(data_layer: &DataLayer) {
+        let yaml = r#"
+kind: ScalingComponent
+id: test_component_1
+metadata:
+  name: Test Component
+enabled: true
+---
+kind: ScalingComponent
+id: test_component_2
+metadata:
+  name: Test Component
+enabled: true
+"#;
+        data_layer.sync_scaling_component_yaml(yaml).await.unwrap();
     }
 
     // [GET] /api/scaling-components (get_all_scaling_components_json)
@@ -133,7 +157,7 @@ mod tests {
     #[tracing_test::traced_test]
     async fn test_get_all_scaling_components_json() {
         let app_state = get_app_state_for_test().await;
-        add_scaling_components_for_test(&app_state.data_layer).await;
+        sync_scaling_components_for_test(&app_state.data_layer).await;
         let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
         let req = test::TestRequest::get()
             .uri("/api/scaling-components")

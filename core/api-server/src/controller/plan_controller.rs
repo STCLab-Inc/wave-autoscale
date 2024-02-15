@@ -8,7 +8,7 @@ use validator::Validate;
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_plans)
         .service(get_plan_by_id)
-        .service(post_plans)
+        .service(post_plan_yaml)
         .service(put_plan_by_id)
         .service(delete_plan_by_id)
         .service(run_plan);
@@ -44,24 +44,40 @@ async fn get_plan_by_id(
 }
 
 #[derive(Deserialize, Validate)]
-struct PostPlansRequest {
-    plans: Vec<ScalingPlanDefinition>,
+struct PostPlanYamlRequest {
+    yaml: String,
 }
 
-#[post("/api/plans")]
-async fn post_plans(
-    request: web::Json<PostPlansRequest>,
+#[post("/api/plans/yaml")]
+async fn post_plan_yaml(
+    request: web::Json<PostPlanYamlRequest>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {
-    debug!("Adding plans: {:?}", request.plans);
-    let result = app_state.data_layer.add_plans(request.plans.clone()).await;
+    debug!("Adding plans: {:?}", request.yaml);
+    let yaml = request.yaml.as_str();
+    let result = app_state.data_layer.add_plan_yaml(yaml).await;
     if result.is_err() {
         error!("Failed to add plans: {:?}", result);
         return HttpResponse::InternalServerError().body(format!("{:?}", result));
     }
-    debug!("Added plans: {:?}", request.plans);
+    debug!("Added plans: {:?}", yaml);
     HttpResponse::Ok().body("ok")
 }
+
+// #[post("/api/plans")]
+// async fn post_plans(
+//     request: web::Json<PostPlansRequest>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     debug!("Adding plans: {:?}", request.plans);
+//     let result = app_state.data_layer.add_plans(request.plans.clone()).await;
+//     if result.is_err() {
+//         error!("Failed to add plans: {:?}", result);
+//         return HttpResponse::InternalServerError().body(format!("{:?}", result));
+//     }
+//     debug!("Added plans: {:?}", request.plans);
+//     HttpResponse::Ok().body("ok")
+// }
 
 #[put("/api/plans/{db_id}")]
 async fn put_plan_by_id(
@@ -122,72 +138,54 @@ async fn run_plan(
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::test_utils::get_app_state_for_test;
-
     use super::init;
+    use crate::utils::test_utils::get_app_state_for_test;
     use actix_web::{test, App};
-    use data_layer::{
-        data_layer::DataLayer,
-        types::{object_kind::ObjectKind, plan_item_definition::PlanItemDefinition},
-    };
+    use data_layer::data_layer::DataLayer;
     use serde_json::json;
-    use std::collections::HashMap;
 
     // Utility functions
+    async fn add_plan_yaml_for_test(data_layer: &DataLayer) {
+        let yaml = r#"
+id: test1
+kind: ScalingPlan
+metadata: {}
+variables:
+  test1: test1
+  test2: test2
+plans:
+  - id: test1
+    description: null
+    expression: null
+    cron_expression: null
+    cool_down: null
+    priority: 1
+    scaling_components:
+      - name: test1
+        value: 1
+---
+id: test2
+kind: ScalingPlan
+metadata: {}
+variables:
+  test1: test1
+  test2: test2
+plans:
+  - id: test2
+    description: null
+    expression: null
+    cron_expression: null
+    cool_down: null
+    priority: 1
+    scaling_components:
+      - name: test2
+        value: 2
+"#;
 
-    async fn add_plans_for_test(data_layer: &DataLayer) {
-        let _ = data_layer
-            .add_plans(vec![
-                data_layer::ScalingPlanDefinition {
-                    id: "test1".to_string(),
-                    db_id: "test1".to_string(),
-                    kind: ObjectKind::ScalingPlan,
-                    metadata: HashMap::new(),
-                    variables: HashMap::from([
-                        ("test1".to_string(), json!("test1")),
-                        ("test2".to_string(), json!("test2")),
-                    ]),
-                    plans: vec![PlanItemDefinition {
-                        id: "test1".to_string(),
-                        description: None,
-                        expression: None,
-                        cron_expression: None,
-                        cool_down: None,
-                        ui: None,
-                        priority: 1,
-                        scaling_components: vec![json!({
-                            "name": "test1",
-                            "value": 1
-                        })],
-                    }],
-                    enabled: true,
-                },
-                data_layer::ScalingPlanDefinition {
-                    id: "test2".to_string(),
-                    db_id: "test2".to_string(),
-                    kind: ObjectKind::ScalingPlan,
-                    metadata: HashMap::new(),
-                    variables: HashMap::from([
-                        ("test1".to_string(), json!("test1")),
-                        ("test2".to_string(), json!("test2")),
-                    ]),
-                    plans: vec![PlanItemDefinition {
-                        id: "test2".to_string(),
-                        description: None,
-                        expression: None,
-                        cron_expression: None,
-                        cool_down: None,
-                        ui: None,
-                        priority: 1,
-                        scaling_components: vec![json!({
-                            "name": "test2",
-                            "value": 2
-                        })],
-                    }],
-                    enabled: true,
-                },
-            ])
-            .await;
+        let result = data_layer.add_plan_yaml(yaml).await;
+        if result.is_err() {
+            panic!("Failed to add plans: {:?}", result);
+        }
     }
 
     // [GET] /api/plans (get_all_plans_json)
@@ -196,7 +194,7 @@ mod tests {
     #[tracing_test::traced_test]
     async fn test_get_all_plans_json() {
         let app_state = get_app_state_for_test().await;
-        add_plans_for_test(&app_state.data_layer).await;
+        add_plan_yaml_for_test(&app_state.data_layer).await;
         let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
         let req = test::TestRequest::get().uri("/api/plans").to_request();
         let resp: Vec<serde_json::Value> = test::call_and_read_body_json(&app, req).await;

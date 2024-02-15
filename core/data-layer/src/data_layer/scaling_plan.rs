@@ -6,20 +6,41 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use chrono::Utc;
+use serde::Deserialize;
 use serde_json::json;
 use sqlx::{any::AnyQueryResult, Row};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 impl DataLayer {
+    pub async fn add_plan_yaml(&self, yaml: &str) -> Result<()> {
+        let deserializer = serde_yaml::Deserializer::from_str(yaml);
+        let mut scaling_plan_definitions: Vec<(ScalingPlanDefinition, String)> = Vec::new();
+
+        for document in deserializer {
+            // Get the yaml from the document
+            let value = serde_yaml::Value::deserialize(document)?;
+            let kind = value.get("kind").and_then(serde_yaml::Value::as_str);
+            if kind.is_none() || kind.unwrap() != ObjectKind::ScalingPlan.to_string() {
+                continue;
+            }
+            let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value.clone())?;
+            let document_yaml = serde_yaml::to_string(&value)?;
+            scaling_plan_definitions.push((parsed, document_yaml));
+        }
+
+        // Add metrics
+        self.add_plans(scaling_plan_definitions).await
+    }
+
     // Add multiple plans to the database
-    pub async fn add_plans(&self, plans: Vec<ScalingPlanDefinition>) -> Result<()> {
+    pub async fn add_plans(&self, plans: Vec<(ScalingPlanDefinition, String)>) -> Result<()> {
         // Define a pool variable that is a trait to pass to the execute function
-        for plan in plans {
+        for (plan, yaml) in plans {
             let variables_string = serde_json::to_string(&plan.variables).unwrap();
             let plans_string = serde_json::to_string(&plan.plans).unwrap();
             let metatdata_string = serde_json::to_string(&plan.metadata).unwrap();
-            let query_string = "INSERT INTO plan (db_id, id, metadata, variables, plans, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO UPDATE SET (metadata, variables, plans, enabled, updated_at) = ($9, $10, $11, $12, $13)";
+            let query_string = "INSERT INTO plan (db_id, id, metadata, variables, plans, enabled, yaml, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET (metadata, variables, plans, enabled, yaml, updated_at) = ($10, $11, $12, $13, $14, $15)";
             let id = Uuid::new_v4().to_string();
             let updated_at = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
             let result = sqlx::query(query_string)
@@ -30,6 +51,7 @@ impl DataLayer {
                 .bind(variables_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
+                .bind(yaml.clone())
                 .bind(updated_at.clone())
                 .bind(updated_at.clone())
                 // Values for update
@@ -37,6 +59,7 @@ impl DataLayer {
                 .bind(variables_string.clone())
                 .bind(plans_string.clone())
                 .bind(plan.enabled)
+                .bind(yaml)
                 .bind(updated_at.clone())
                 .execute(&self.pool)
                 .await;
@@ -117,7 +140,7 @@ impl DataLayer {
     pub async fn get_all_plans_json(&self) -> Result<Vec<serde_json::Value>> {
         let mut plans: Vec<serde_json::Value> = Vec::new();
         let query_string =
-            "SELECT db_id, id, variables, plans, priority, metadata, enabled, created_at, updated_at FROM plan";
+            "SELECT db_id, id, variables, plans, priority, metadata, enabled, yaml, created_at, updated_at FROM plan";
         let result = sqlx::query(query_string).fetch_all(&self.pool).await;
         if result.is_err() {
             return Err(anyhow!(result.err().unwrap().to_string()));
@@ -132,6 +155,7 @@ impl DataLayer {
                 "plans": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("plans")?.as_str())?,
                 "metadata": serde_json::from_str::<serde_json::Value>(row.try_get::<String, _>("metadata")?.as_str())?,
                 "enabled": row.try_get::<bool, _>("enabled")?,
+                "yaml": row.try_get::<String, _>("yaml")?,
                 "created_at": row.try_get::<Option<String>, _>("created_at")?,
                 "updated_at": row.try_get::<Option<String>, _>("updated_at")?,
             });
@@ -219,42 +243,34 @@ impl DataLayer {
 #[cfg(test)]
 mod tests {
     use super::DataLayer;
-    use super::*;
     use crate::data_layer::tests::{get_data_layer_with_postgres, get_data_layer_with_sqlite};
     use tracing_test::traced_test;
-    use ulid::Ulid;
 
     #[tokio::test]
     #[traced_test]
-    async fn test_get_all_plans_json() {
+    async fn test_add_plan_yaml() {
         let data_layer = get_data_layer_with_sqlite().await;
-        test_get_all_plans_json_with_data_layer(data_layer).await;
+        test_add_plan_yaml_with_data_layer(data_layer).await;
 
         let data_layer = get_data_layer_with_postgres().await;
-        test_get_all_plans_json_with_data_layer(data_layer).await;
+        test_add_plan_yaml_with_data_layer(data_layer).await;
     }
-    async fn test_get_all_plans_json_with_data_layer(data_layer: DataLayer) {
-        let scaling_plan_definition = ScalingPlanDefinition {
-            kind: ObjectKind::ScalingPlan,
-            db_id: Ulid::new().to_string(),
-            id: "scaling_plan_test_id".to_string(),
-            metadata: HashMap::new(),
-            variables: HashMap::new(),
-            plans: vec![],
-            enabled: true,
-        };
-        // add plans
-        let add_plans_result: std::prelude::v1::Result<(), anyhow::Error> = data_layer
-            .add_plans(vec![scaling_plan_definition.clone()])
-            .await;
-        assert!(add_plans_result.is_ok());
-
-        // read plans
-        let scaling_plans = data_layer.get_all_plans_json().await;
-        scaling_plans.unwrap().iter().for_each(|scaling_plan| {
-            if scaling_plan.get("id").unwrap() == "scaling_plan_test_id" {
-                assert_eq!(scaling_plan.get("enabled").unwrap(), &true);
-            }
-        });
+    async fn test_add_plan_yaml_with_data_layer(data_layer: DataLayer) {
+        let yaml = r#"
+kind: ScalingPlan
+id: test_id
+metadata:
+  test_metadata_key: test_metadata_value
+variables:
+  test_variable_key: test_variable_value
+plans:
+  - id: test_plan_id
+    expression: test_expression
+    scaling_components:
+      - id: test_scaling_component_id
+enabled: true
+        "#;
+        let result = data_layer.add_plan_yaml(yaml).await;
+        assert!(result.is_ok());
     }
 }

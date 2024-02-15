@@ -5,7 +5,7 @@ mod scaling_plan;
 mod source_metrics;
 
 use crate::{
-    reader::wave_definition_reader::read_definition_yaml, types::source_metrics::SourceMetrics,
+    types::source_metrics::SourceMetrics,
 };
 use anyhow::{anyhow, Result};
 use chrono::Utc;
@@ -234,28 +234,13 @@ impl DataLayer {
     pub async fn add_definitions(&self, yaml_str: &str) -> Result<()> {
         debug!("Loading the definition string into the database");
 
-        // Parse the plan_file
-        let parser_result = read_definition_yaml(yaml_str);
-        if parser_result.is_err() {
-            return Err(anyhow!(
-                "Failed to parse the definition string: {:?}",
-                parser_result
-            ));
-        }
-        let parser_result = parser_result.unwrap();
-
-        // Save definitions into DataLayer
-        let metric_definitions = parser_result.metric_definitions.clone();
-        let metric_definitions_result = self.add_metrics(metric_definitions).await;
+        let metric_definitions_result = self.sync_metric_yaml(yaml_str).await;
         if metric_definitions_result.is_err() {
             return Err(anyhow!("Failed to save metric definitions into DataLayer"));
         }
 
         // Save definitions into DataLayer
-        let scaling_component_definitions = parser_result.scaling_component_definitions.clone();
-        let scaling_component_definitions_result = self
-            .add_scaling_components(scaling_component_definitions)
-            .await;
+        let scaling_component_definitions_result = self.sync_scaling_component_yaml(yaml_str).await;
         if scaling_component_definitions_result.is_err() {
             return Err(anyhow!(
                 "Failed to save scaling component definitions into DataLayer"
@@ -263,13 +248,11 @@ impl DataLayer {
         }
 
         // Save definitions into DataLayer
-        let scaling_plan_definitions = parser_result.scaling_plan_definitions.clone();
-        let scaling_plan_definitions_result = self.add_plans(scaling_plan_definitions).await;
-        if scaling_plan_definitions_result.is_err() {
-            return Err(anyhow!(
-                "Failed to save scaling plan definitions into DataLayer"
-            ));
+        let plan_definitions_result = self.add_plan_yaml(yaml_str).await;
+        if plan_definitions_result.is_err() {
+            return Err(anyhow!("Failed to save plan definitions into DataLayer"));
         }
+
         Ok(())
     }
 

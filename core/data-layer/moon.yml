@@ -41,6 +41,32 @@ tasks:
       - "@globs(tests)"
     env:
       RUST_LOG: info
+
+  # Migration tasks (https://github.com/launchbadge/sqlx/blob/main/sqlx-cli/README.md)
+  add-migration-postgres:
+    command: "sqlx"
+    args:
+      - "migrate"
+      - "add"
+      - "yaml_column"
+      # - "[migration_name]"
+      - "--source"
+      - "./migrations/postgres"
+    inputs:
+      - "migrations"
+
+  add-migration-sqlite:
+    command: "sqlx"
+    args:
+      - "migrate"
+      - "add"
+      - "yaml_column"
+      # - "[migration_name]"
+      - "--source"
+      - "./migrations/sqlite"
+    inputs:
+      - "migrations"
+
   build:
     command: "cargo build"
     deps:
