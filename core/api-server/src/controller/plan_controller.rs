@@ -152,6 +152,7 @@ mod tests {
                         description: None,
                         expression: None,
                         cron_expression: None,
+                        cool_down: None,
                         ui: None,
                         priority: 1,
                         scaling_components: vec![json!({
@@ -175,6 +176,7 @@ mod tests {
                         description: None,
                         expression: None,
                         cron_expression: None,
+                        cool_down: None,
                         ui: None,
                         priority: 1,
                         scaling_components: vec![json!({
