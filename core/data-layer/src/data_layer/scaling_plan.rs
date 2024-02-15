@@ -1,7 +1,7 @@
 use super::DataLayer;
 use crate::{
     types::object_kind::ObjectKind,
-    variable_mapper::{execute_variable_mapper, get_variable_mapper},
+    values_map::{apply_values_map, get_values_map},
     ScalingPlanDefinition,
 };
 use anyhow::{anyhow, Result};
@@ -57,7 +57,7 @@ impl DataLayer {
         }
         let result = result.unwrap();
 
-        let variable_mapper_data = get_variable_mapper();
+        let variable_mapper_data = get_values_map();
 
         for row in result {
             let mut metadata = HashMap::new();
@@ -65,7 +65,7 @@ impl DataLayer {
             if metadata_row.is_ok() {
                 let metadata_str = metadata_row.unwrap();
                 let metadata_json =
-                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data);
+                    apply_values_map(metadata_str.to_string(), &variable_mapper_data);
                 if metadata_json.is_ok() {
                     let json = serde_json::from_str(metadata_json.unwrap().as_str());
                     if json.is_ok() {

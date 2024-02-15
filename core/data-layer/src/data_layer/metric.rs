@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::DataLayer;
 use crate::{
     types::object_kind::ObjectKind,
-    variable_mapper::{execute_variable_mapper, get_variable_mapper},
+    values_map::{apply_values_map, get_values_map},
     MetricDefinition,
 };
 use anyhow::{anyhow, Result};
@@ -55,12 +55,12 @@ impl DataLayer {
         }
         let result = result.unwrap();
 
-        let variable_mapper_data = get_variable_mapper();
+        let variable_mapper_data = get_values_map();
 
         for row in result {
             let metadata = match row.try_get::<Option<&str>, _>("metadata") {
                 Ok(Some(metadata_str)) => {
-                    execute_variable_mapper(metadata_str.to_string(), &variable_mapper_data)
+                    apply_values_map(metadata_str.to_string(), &variable_mapper_data)
                         .map_err(|e| anyhow!("Error in execute_variable_mapper: {}", e))?
                 }
                 Ok(None) => serde_json::Value::Null.to_string(),
