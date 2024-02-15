@@ -2,10 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import {
-  deserializeMetricDefinitions,
-  serializeMetricDefinitions,
-} from '@/utils/metric-binding';
+import { deserializeMetricDefinitions } from '@/utils/metric-binding';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { debounce } from 'lodash';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
@@ -49,9 +46,9 @@ const columns = [
 ];
 
 // Service
-async function getMetrics(): Promise<MetricDefinition[]> {
-  const metrics = await MetricService.getMetrics();
-  return metrics;
+async function getMetricYamls(): Promise<string[]> {
+  const yamls = await MetricService.getMetricYamls();
+  return yamls;
 }
 
 // Page
@@ -69,19 +66,16 @@ export default function MetricsPage() {
   // Load from service
   const loadFromService = async () => {
     setAnnotations([]);
-    const metrics = await getMetrics();
-    // YAML
+
     try {
-      const newYaml = serializeMetricDefinitions(metrics);
-      setYaml(newYaml);
+      const yamls = await getMetricYamls();
+      const mergedYaml = yamls.join('---\n');
+      handleYamlChange(mergedYaml);
     } catch (error: any) {
       console.error(error);
       errorToast(error.message);
       return;
     }
-
-    // Preview
-    setPreviewData(metrics);
   };
 
   // YAML change
@@ -115,32 +109,9 @@ export default function MetricsPage() {
 
   const handleSave = async () => {
     handleYamlChange.flush();
-
     try {
-      const metricDefinitions = deserializeMetricDefinitions(yaml);
-      const originalMetrics = await getMetrics();
-      const promises = [];
-      // Upsert
-      if (metricDefinitions.length > 0) {
-        const upsertPromises = metricDefinitions.map((metricDefinition) => {
-          return MetricService.createMetric(metricDefinition);
-        });
-        promises.push(...upsertPromises);
-      }
-      // Delete
-      const deletedMetrics = originalMetrics.filter(
-        (originalMetric) =>
-          !metricDefinitions.find(
-            (metricDefinition) => metricDefinition.id === originalMetric.id
-          )
-      );
-      if (deletedMetrics.length > 0) {
-        const deletePromises = deletedMetrics.map((deletedMetric) => {
-          return MetricService.deleteMetric(deletedMetric.db_id);
-        });
-        promises.push(...deletePromises);
-      }
-      await Promise.all(promises);
+      const result = await MetricService.syncMetricYaml(yaml);
+      console.log(result);
     } catch (error: any) {
       console.error(error);
       errorToast(error.message);
