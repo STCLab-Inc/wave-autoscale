@@ -169,7 +169,7 @@ pub struct ScalingPlanner {
     scaling_component_manager: SharedScalingComponentManager,
     last_plan_item_id: Arc<RwLock<String>>,
     last_plan_timestamp: Arc<RwLock<Option<DateTime<Utc>>>>,
-    last_cool_down: Arc<RwLock<Option<u64>>>,
+    last_cool_down: Arc<RwLock<u64>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
     // For instant action
@@ -191,7 +191,7 @@ impl<'a> ScalingPlanner {
             scaling_component_manager,
             last_plan_item_id: Arc::new(RwLock::new(String::new())),
             last_plan_timestamp: Arc::new(RwLock::new(None)),
-            last_cool_down: Arc::new(RwLock::new(None)),
+            last_cool_down: Arc::new(RwLock::new(0)),
             data_layer,
             task: None,
             action_task: None,
@@ -271,29 +271,23 @@ impl<'a> ScalingPlanner {
                  * Cool Down Stage
                  */
                 {
-                    let mut shared_last_cool_down_write = shared_last_cool_down.write().await;
-                    if let Some(cool_down) = plan_metadata.get("cool_down") {
-                        if shared_last_cool_down_write.is_none() {
-                            *shared_last_cool_down_write = cool_down.as_u64();
-                        }
-                    }
-                    if let Some(cool_down) = *shared_last_cool_down_write {
-                        // apply cool down
-                        if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await
-                        {
-                            let now = Utc::now();
-                            let cool_down_duration = chrono::Duration::seconds(cool_down as i64);
-                            let time_left = last_plan_timestamp + cool_down_duration - now;
-                            if time_left.num_milliseconds() > 0 {
-                                debug!(
+                    let mut shared_last_cool_down: tokio::sync::RwLockWriteGuard<'_, u64> =
+                        shared_last_cool_down.write().await;
+                    let cool_down = *shared_last_cool_down;
+                    // apply cool down
+                    if let Some(last_plan_timestamp) = *shared_last_plan_timestamp.read().await {
+                        let now = Utc::now();
+                        let cool_down_duration = chrono::Duration::seconds(cool_down as i64);
+                        let time_left = last_plan_timestamp + cool_down_duration - now;
+                        if time_left.num_milliseconds() > 0 {
+                            debug!(
                                 "[ScalingPlanner] Cooling down. Skip the plan. {} seconds left.",
                                 time_left.num_seconds()
                             );
-                                interval.tick().await;
-                                continue;
-                            } else {
-                                *shared_last_cool_down_write = None;
-                            }
+                            interval.tick().await;
+                            continue;
+                        } else {
+                            *shared_last_cool_down = 0;
                         }
                     }
                 }
@@ -472,10 +466,21 @@ impl<'a> ScalingPlanner {
                                 shared_last_plan_timestamp.write().await;
                             *shared_last_plan_timestamp = Some(Utc::now());
 
-                            // save sub cool down
-                            if let Some(sub_cool_down) = plan_item.cool_down {
+                            {
                                 let mut shared_last_cool_down = shared_last_cool_down.write().await;
-                                *shared_last_cool_down = Some(sub_cool_down);
+                                // save sub cool down
+                                if let Some(sub_cool_down) = plan_item.cool_down {
+                                    *shared_last_cool_down = sub_cool_down;
+                                // save plan cool down
+                                } else if let Some(cool_down) = plan_metadata.get("cool_down") {
+                                    let Some(cool_down) = cool_down.as_u64() else {
+                                        error!("Failed to get cool_down (none) - {:?}", cool_down);
+                                        return;
+                                    };
+                                    *shared_last_cool_down = cool_down;
+                                } else {
+                                    *shared_last_cool_down = 0;
+                                }
                             }
                         }
 
@@ -595,7 +600,7 @@ impl<'a> ScalingPlanner {
     }
     // For testing
     #[allow(dead_code)]
-    pub fn get_last_cool_down(&self) -> Arc<RwLock<Option<u64>>> {
+    pub fn get_last_cool_down(&self) -> Arc<RwLock<u64>> {
         self.last_cool_down.clone()
     }
     // For testing
@@ -1662,14 +1667,14 @@ mod tests {
         .await;
         scaling_planner.run();
 
-        // sec 0: [cool_down: None]
+        // sec 0: [cool_down: 0]
         // sec 1: plan_1 is executed -> [sub cool_down 2]
 
         let sec_0_cool_down = *scaling_planner.get_last_cool_down().read().await;
-        assert!(sec_0_cool_down.is_none());
+        assert_eq!(sec_0_cool_down, 0);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         let sec_1_cool_down = *scaling_planner.get_last_cool_down().read().await;
-        assert_eq!(sec_1_cool_down, Some(2));
+        assert_eq!(sec_1_cool_down, 2);
 
         scaling_planner.stop();
     }
@@ -1700,14 +1705,14 @@ mod tests {
         .await;
         scaling_planner.run();
 
-        // sec 0: [cool_down: None]
+        // sec 0: [cool_down: 0]
         // sec 1: plan_1 is executed -> [default cool_down 1]
 
         let sec_0_cool_down = *scaling_planner.get_last_cool_down().read().await;
-        assert!(sec_0_cool_down.is_none());
+        assert_eq!(sec_0_cool_down, 0);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         let sec_1_cool_down = *scaling_planner.get_last_cool_down().read().await;
-        assert_eq!(sec_1_cool_down, Some(1));
+        assert_eq!(sec_1_cool_down, 1);
 
         scaling_planner.stop();
     }
