@@ -130,20 +130,21 @@ mod tests {
 
     use super::init;
     use actix_web::{test, App};
-    use data_layer::{data_layer::DataLayer};
-    
+    use data_layer::data_layer::DataLayer;
 
     // Utility functions
     async fn sync_scaling_components_for_test(data_layer: &DataLayer) {
         let yaml = r#"
 kind: ScalingComponent
 id: test_component_1
+component_kind: wa-logger
 metadata:
   name: Test Component
 enabled: true
 ---
 kind: ScalingComponent
 id: test_component_2
+component_kind: wa-logger
 metadata:
   name: Test Component
 enabled: true
