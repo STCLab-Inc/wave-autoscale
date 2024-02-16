@@ -33,6 +33,7 @@ export default function ScalingPlansSidebar({
             <EnabledBadge enabled={scalingPlan.enabled} />
             <span className="ml-2 flex-1 truncate text-left text-sm">
               {scalingPlan.id}
+              {scalingPlan.db_id ? '' : ' (new)'}
             </span>
           </button>
         );

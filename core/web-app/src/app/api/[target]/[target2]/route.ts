@@ -22,6 +22,23 @@ export async function GET(request: NextRequest, { params }: Params) {
   });
 }
 
+export async function POST(request: Request, { params }: Params) {
+  const body = await request.text();
+  console.log('body', body);
+  const response = await fetchFromWA(
+    `/api/${params.target}/${params.target2}`,
+    {
+      method: 'POST',
+      body,
+      headers: {
+        // Expect that  all POST requests to the API will be JSON
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return newResponse(response.body);
+}
+
 export async function PUT(request: Request, { params }: Params) {
   const response = await fetchFromWA(
     `/api/${params.target}/${params.target2}`,

@@ -4,7 +4,7 @@ use std::env;
 use std::{collections::HashMap, fs};
 use tracing::debug;
 
-// Function to extract environment variables from the system
+// Function to extract environment valuess from the system
 fn extract_params_from_env() -> Option<serde_json::Value> {
     let mut env_vars = HashMap::new();
     for (key, value) in env::vars() {
@@ -70,36 +70,34 @@ fn extract_params_from_env_file(path: &str) -> Option<serde_json::Value> {
 }
 
 // Function to get config mapper
-pub fn get_variable_mapper() -> serde_json::Value {
-    let yaml_source_path = "./variables.yaml".to_string();
-    let json_source_path = "./variables.json".to_string();
-    let env_source_path = "./variables.env".to_string();
+pub fn get_values_map() -> serde_json::Value {
+    let yaml_source_path = "./values.yaml".to_string();
+    let json_source_path = "./values.json".to_string();
+    let env_source_path = "./values.env".to_string();
 
-    let variables_from_yaml_file = extract_params_from_yaml_file(&yaml_source_path);
-    let variables_from_json_file = extract_params_from_json_file(&json_source_path);
-    let mut variables_from_env_file = extract_params_from_env_file(&env_source_path)
+    let values_from_yaml_file = extract_params_from_yaml_file(&yaml_source_path);
+    let values_from_json_file = extract_params_from_json_file(&json_source_path);
+    let mut values_from_env_file = extract_params_from_env_file(&env_source_path)
         .unwrap_or_default()
         .as_object()
         .unwrap_or(&serde_json::Map::new())
         .clone();
-    let variables_from_env = extract_params_from_env()
+    let values_from_env = extract_params_from_env()
         .unwrap_or_default()
         .as_object()
         .unwrap_or(&serde_json::Map::new())
         .clone();
 
-    variables_from_env_file.extend(variables_from_env);
+    values_from_env_file.extend(values_from_env);
 
     serde_json::json!({
-        "yaml": serde_json::json!(variables_from_yaml_file),
-        "json": serde_json::json!(variables_from_json_file),
-        "env": serde_json::json!(variables_from_env_file),
-
+        "yaml": serde_json::json!(values_from_yaml_file),
+        "json": serde_json::json!(values_from_json_file),
+        "env": serde_json::json!(values_from_env_file),
     })
 }
 
-// Function to execute config mapper
-pub fn execute_variable_mapper(
+pub fn apply_values_map(
     template: String,
     data: &serde_json::Value,
 ) -> Result<String, anyhow::Error> {
@@ -116,47 +114,53 @@ pub fn execute_variable_mapper(
     Ok(result)
 }
 
-#[tokio::test]
-async fn test_get_variable_mapper() {
-    let result = get_variable_mapper();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    println!("RESULT: {:?}", result);
+    #[tokio::test]
+    async fn test_get_values_map() {
+        let result = get_values_map();
 
-    result
-        .get("yaml")
-        .map(|value| {
-            println!("YAML: {:?}", value);
-        })
-        .unwrap_or_else(|| {
-            println!("No YAML data found");
-        });
+        println!("RESULT: {:?}", result);
 
-    result
-        .get("json")
-        .map(|value| {
-            println!("JSON: {:?}", value);
-        })
-        .unwrap_or_else(|| {
-            println!("No JSON data found");
-        });
+        result
+            .get("yaml")
+            .map(|value| {
+                println!("YAML: {:?}", value);
+            })
+            .unwrap_or_else(|| {
+                println!("No YAML data found");
+            });
 
-    result
-        .get("env")
-        .map(|value| {
-            println!("ENV: {:?}", value);
-        })
-        .unwrap_or_else(|| {
-            println!("No ENV data found");
-        });
-}
+        result
+            .get("json")
+            .map(|value| {
+                println!("JSON: {:?}", value);
+            })
+            .unwrap_or_else(|| {
+                println!("No JSON data found");
+            });
 
-#[tokio::test]
-async fn test_execute_variable_mapper() {
-    let data = get_variable_mapper();
-    println!("DATA: {:?}", data);
-    let result = execute_variable_mapper(
-        "{{yaml.user_1_access_key}} {{json.user_2_access_key}} {{env.user_3_region}}".to_string(),
-        &data,
-    );
-    println!("RESULT: {:?}", result);
+        result
+            .get("env")
+            .map(|value| {
+                println!("ENV: {:?}", value);
+            })
+            .unwrap_or_else(|| {
+                println!("No ENV data found");
+            });
+    }
+
+    #[tokio::test]
+    async fn test_apply_values_map() {
+        let data = get_values_map();
+        println!("DATA: {:?}", data);
+        let result = apply_values_map(
+            "{{yaml.user_1_access_key}} {{json.user_2_access_key}} {{env.user_3_region}}"
+                .to_string(),
+            &data,
+        );
+        println!("RESULT: {:?}", result);
+    }
 }

@@ -98,14 +98,17 @@ mod tests {
         let data_layer = DataLayer::new("", 500_000, false).await;
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
-        let metric_definitions = vec![MetricDefinition {
-            id: "metric1".to_string(),
-            metadata: HashMap::new(),
-            kind: ObjectKind::Metric,
-            db_id: "".to_string(),
-            collector: "vector".to_string(),
-            ..Default::default()
-        }];
+        let metric_definitions = vec![(
+            MetricDefinition {
+                id: "metric1".to_string(),
+                metadata: HashMap::new(),
+                kind: ObjectKind::Metric,
+                db_id: "".to_string(),
+                collector: "vector".to_string(),
+                ..Default::default()
+            },
+            String::new(),
+        )];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
         let metric = json!([

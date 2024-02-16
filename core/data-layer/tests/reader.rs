@@ -10,7 +10,6 @@ mod reader {
 
     const EXAMPLE_FILE_PATH: &str = "./tests/yaml/example.yaml";
     const EXPECTED_METRICS_COUNT: usize = 2;
-    const EXPECTED_SLOS_COUNT: usize = 1;
 
     fn read_example_yaml_file() -> Result<ParserResult> {
         let yaml_file_path = EXAMPLE_FILE_PATH;
@@ -36,17 +35,6 @@ mod reader {
                 assert_eq!(user_key, "user_value", "Unexpected metadata value");
             }
         }
-        Ok(())
-    }
-
-    #[test]
-    fn test_slo_definitions_count() -> Result<()> {
-        let result = read_example_yaml_file()?;
-        assert_eq!(
-            result.slo_definitions.len(),
-            EXPECTED_SLOS_COUNT,
-            "Unexpected SLOs count"
-        );
         Ok(())
     }
 

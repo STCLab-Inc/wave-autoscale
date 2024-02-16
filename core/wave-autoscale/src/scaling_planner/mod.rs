@@ -678,14 +678,14 @@ mod tests {
         data_layer.sync("").await;
         let data_layer = Arc::new(data_layer);
         // Create a MetricDefinition
-        let metric_definitions = vec![MetricDefinition {
+        let metric_definitions = vec![(MetricDefinition {
             id: METRIC_DEFINTION_ID.to_string(),
             metadata: HashMap::new(),
             kind: ObjectKind::Metric,
             db_id: "".to_string(),
             collector: COLLECTOR.to_string(),
             enabled: true,
-        }];
+        }, String::new())];
         let _ = data_layer.add_metrics(metric_definitions).await;
 
         // To fetch the metrics, we need to start the MetricUpdater

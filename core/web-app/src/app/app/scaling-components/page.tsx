@@ -9,10 +9,7 @@ import EnabledBadge from '../common/enabled-badge';
 import WASimpleTable from '../common/wa-simple-table';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import ScalingComponentService from '@/services/scaling-component';
-import {
-  deserializeScalingComponentDefinitions,
-  serializeScalingComponentDefinitions,
-} from '@/utils/scaling-component-binding';
+import { deserializeScalingComponentDefinitions } from '@/utils/scaling-component-binding';
 import { PageSectionTitle } from '../common/page-section-title';
 import PageHeader from '../common/page-header';
 import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
@@ -49,10 +46,9 @@ const columns = [
 ];
 
 // Service
-async function getScalingComponents(): Promise<ScalingComponentDefinition[]> {
-  const scalingComponents =
-    await ScalingComponentService.getScalingComponents();
-  return scalingComponents;
+async function getScalingComponentYamls(): Promise<string[]> {
+  const yamls = await ScalingComponentService.getScalingComponentYamls();
+  return yamls;
 }
 
 // Page
@@ -71,19 +67,15 @@ export default function ScalingComponentsPage() {
   // Handlers
   const loadFromService = async () => {
     setAnnotations([]);
-    const scalingComponents = await getScalingComponents();
-    // YAML
+
     try {
-      const newYaml = serializeScalingComponentDefinitions(scalingComponents);
-      setYaml(newYaml);
+      const yamls = await getScalingComponentYamls();
+      const mergedYaml = yamls.join('---\n');
+      handleYamlChange(mergedYaml);
     } catch (error: any) {
       console.error(error);
       errorToast(error.message);
-      return;
     }
-
-    // Preview
-    setPreviewData(scalingComponents);
   };
 
   const handleYamlChange = debounce((value: string) => {
@@ -115,40 +107,13 @@ export default function ScalingComponentsPage() {
   };
 
   const handleSave = async () => {
+    handleYamlChange.flush();
+
     try {
-      const scalingComponents = deserializeScalingComponentDefinitions(yaml);
-      const originalScalingComponents = await getScalingComponents();
-      const promises = [];
-      // Upsert
-      if (scalingComponents.length > 0) {
-        const upsertPromises = scalingComponents.map(
-          (scalingComponentDefinition) => {
-            return ScalingComponentService.createScalingComponent(
-              scalingComponentDefinition
-            );
-          }
-        );
-        promises.push(...upsertPromises);
-      }
-      // Delete
-      const deletedScalingComponents = originalScalingComponents.filter(
-        (originalScalingComponent) => {
-          return !scalingComponents.some((scalingComponent) => {
-            return scalingComponent.id === originalScalingComponent.id;
-          });
-        }
+      const result = await ScalingComponentService.syncScalingComponentYaml(
+        yaml
       );
-      if (deletedScalingComponents.length > 0) {
-        const deletePromises = deletedScalingComponents.map(
-          (deletedScalingComponent) => {
-            return ScalingComponentService.deleteScalingComponent(
-              deletedScalingComponent.db_id
-            );
-          }
-        );
-        promises.push(...deletePromises);
-      }
-      await Promise.all(promises);
+      console.log(result);
     } catch (error: any) {
       console.error(error);
       errorToast(error.message);
