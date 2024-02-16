@@ -67,6 +67,15 @@ tasks:
     inputs:
       - "migrations"
 
+  # Generate the Typescript types from Rust types
+  generate-ts-rs:
+    command: "cargo test export_bindings"
+    inputs:
+      - "@globs(sources)"
+      - "@globs(tests)"
+    env:
+      RUST_LOG: wave_typescript_generator=debug
+
   build:
     command: "cargo build"
     deps:
