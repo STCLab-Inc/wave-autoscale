@@ -5,7 +5,6 @@ import ScalingPlanService from '@/services/scaling-plan';
 import ScalingPlansSidebar from './scaling-plans-sidebar';
 import ScalingPlanDiagram from './scaling-plan-diagram';
 import { PageSectionTitle } from '../common/page-section-title';
-import { ScalingPlanDefinition } from '@/types/bindings/scaling-plan-definition';
 import {
   deserializeScalingPlanDefinition,
   serializeScalingPlanDefinition,
@@ -15,6 +14,7 @@ import dynamic from 'next/dynamic';
 import PageHeader from '../common/page-header';
 import DefinitionCountBadge from '../common/definition-count-badge';
 import { errorToast, successToast } from '@/utils/toast';
+import { ScalingPlanDefinitionEx } from '../../../types/scaling-plan-definition-ex';
 
 // Dynamic imports (because of 'window' object)
 const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
@@ -22,19 +22,29 @@ const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
 });
 
 // Service
-async function getScalingPlans(): Promise<ScalingPlanDefinition[]> {
+async function getScalingPlans(): Promise<ScalingPlanDefinitionEx[]> {
   const scalingPlans = await ScalingPlanService.getScalingPlans();
   return scalingPlans;
 }
 
+// Get YAML from the server or generate from the object
+function getYAMLFromScalingPlan(scalingPlan: ScalingPlanDefinitionEx) {
+  const yaml = scalingPlan.yaml ?? serializeScalingPlanDefinition(scalingPlan);
+  return yaml;
+}
+
 export default function ScalingPlansPage() {
-  const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinition[]>([]);
+  const [scalingPlans, setScalingPlans] = useState<ScalingPlanDefinitionEx[]>(
+    []
+  );
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>();
   const [selectedPlanYaml, setSelectedPlanYaml] = useState<string>('');
   const [annotations, setAnnotations] = useState<any[]>([]);
 
   // Show preview from YAML automatically
-  const selectedPlanPreview = useMemo<ScalingPlanDefinition | undefined>(() => {
+  const selectedPlanPreview = useMemo<
+    ScalingPlanDefinitionEx | undefined
+  >(() => {
     setAnnotations([]);
     if (selectedPlanIndex === undefined) {
       return;
@@ -42,7 +52,7 @@ export default function ScalingPlansPage() {
     try {
       const deserializedPlan =
         deserializeScalingPlanDefinition(selectedPlanYaml);
-      return deserializedPlan;
+      return deserializedPlan as ScalingPlanDefinitionEx;
     } catch (error: any) {
       console.log(error);
       // TODO: Annotations
@@ -79,7 +89,8 @@ export default function ScalingPlansPage() {
     newId = `${newId}${numbering}`;
     const newScalingPlan = {
       id: newId,
-    } as ScalingPlanDefinition;
+      yaml: `kind: ScalingPlan\nid: ${newId}\nmetadata: {}\nvariables: {}\nplans: []\nenabled: false\n`,
+    } as ScalingPlanDefinitionEx;
 
     // Add new scaling plan
     setScalingPlans([...scalingPlans, newScalingPlan]);
@@ -92,7 +103,8 @@ export default function ScalingPlansPage() {
       setSelectedPlanYaml('');
       return;
     }
-    const yaml = serializeScalingPlanDefinition(scalingPlans[index]);
+
+    const yaml = getYAMLFromScalingPlan(scalingPlans[index]);
     setSelectedPlanYaml(yaml);
   };
 
@@ -111,9 +123,25 @@ export default function ScalingPlansPage() {
       return;
     }
     const plan = scalingPlans[selectedPlanIndex];
-    await ScalingPlanService.deleteScalingPlan(plan.db_id);
-    setSelectedPlanIndex(undefined);
-    fetch();
+
+    if (plan.db_id) {
+      try {
+        await ScalingPlanService.deleteScalingPlan(plan.db_id);
+        setSelectedPlanIndex(undefined);
+        fetch();
+      } catch (error: any) {
+        console.error(error);
+        errorToast(error.message);
+        return;
+      }
+    } else {
+      // If it's a new plan, just remove it from the list
+      const newPlans = [...scalingPlans];
+      newPlans.splice(selectedPlanIndex, 1);
+      setScalingPlans(newPlans);
+      setSelectedPlanIndex(undefined);
+    }
+
     successToast('Deleted!');
   };
 
@@ -121,22 +149,37 @@ export default function ScalingPlansPage() {
     if (selectedPlanIndex === undefined) {
       return;
     }
-    const originalYaml = serializeScalingPlanDefinition(
+    const originalYaml = getYAMLFromScalingPlan(
       scalingPlans[selectedPlanIndex]
     );
     setSelectedPlanYaml(originalYaml);
   };
 
   const handleSave = async () => {
+    if (selectedPlanIndex === undefined) {
+      errorToast('No plan selected');
+      return;
+    }
     try {
       const scalingPlan = deserializeScalingPlanDefinition(selectedPlanYaml);
-      if (!scalingPlan?.id) {
+      const scalingPlanId = scalingPlan?.id;
+      if (!scalingPlanId) {
         handleDelete();
         return;
       }
-      const result = await ScalingPlanService.createScalingPlan(scalingPlan);
+      // Sync the plan
+      const result = await ScalingPlanService.syncScalingPlanYaml(
+        selectedPlanYaml
+      );
       console.info({ result });
-      fetch();
+
+      // Remove the old plan if the ID has changed
+      const originalScalingPlan = scalingPlans[selectedPlanIndex];
+      const originalScalingPlanId = originalScalingPlan?.id;
+      if (originalScalingPlanId !== scalingPlanId) {
+        await ScalingPlanService.deleteScalingPlan(originalScalingPlan.db_id);
+      }
+
       successToast('Saved!');
     } catch (error: any) {
       console.error(error);
