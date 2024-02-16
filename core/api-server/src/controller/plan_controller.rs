@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web::{delete, get, post, web, HttpResponse, Responder};
 use serde::Deserialize;
 use tracing::{debug, error};
 use validator::Validate;
