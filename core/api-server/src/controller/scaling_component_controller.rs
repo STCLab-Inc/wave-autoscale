@@ -130,8 +130,8 @@ mod tests {
 
     use super::init;
     use actix_web::{test, App};
-    use data_layer::{data_layer::DataLayer, types::object_kind::ObjectKind};
-    use std::collections::HashMap;
+    use data_layer::{data_layer::DataLayer};
+    
 
     // Utility functions
     async fn sync_scaling_components_for_test(data_layer: &DataLayer) {

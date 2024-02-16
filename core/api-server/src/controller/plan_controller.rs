@@ -1,6 +1,5 @@
 use crate::app_state::AppState;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use data_layer::ScalingPlanDefinition;
 use serde::Deserialize;
 use tracing::{debug, error};
 use validator::Validate;
@@ -9,7 +8,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(get_plans)
         .service(get_plan_by_id)
         .service(post_plan_yaml)
-        .service(put_plan_by_id)
+        // .service(put_plan_by_id)
         .service(delete_plan_by_id)
         .service(run_plan);
 }
@@ -79,24 +78,24 @@ async fn post_plan_yaml(
 //     HttpResponse::Ok().body("ok")
 // }
 
-#[put("/api/plans/{db_id}")]
-async fn put_plan_by_id(
-    db_id: web::Path<String>,
-    request: web::Json<ScalingPlanDefinition>,
-    app_state: web::Data<AppState>,
-) -> impl Responder {
-    let mut plan = request.into_inner();
-    debug!("Updating plan: {:?}", plan);
-    plan.db_id = db_id.into_inner();
+// #[put("/api/plans/{db_id}")]
+// async fn put_plan_by_id(
+//     db_id: web::Path<String>,
+//     request: web::Json<ScalingPlanDefinition>,
+//     app_state: web::Data<AppState>,
+// ) -> impl Responder {
+//     let mut plan = request.into_inner();
+//     debug!("Updating plan: {:?}", plan);
+//     plan.db_id = db_id.into_inner();
 
-    let result = app_state.data_layer.update_plan(plan).await;
-    if result.is_err() {
-        error!("Failed to update plan: {:?}", result);
-        return HttpResponse::InternalServerError().body(format!("{:?}", result));
-    }
-    debug!("Updated plan");
-    HttpResponse::Ok().body("ok")
-}
+//     let result = app_state.data_layer.update_plan(plan).await;
+//     if result.is_err() {
+//         error!("Failed to update plan: {:?}", result);
+//         return HttpResponse::InternalServerError().body(format!("{:?}", result));
+//     }
+//     debug!("Updated plan");
+//     HttpResponse::Ok().body("ok")
+// }
 
 #[delete("/api/plans/{db_id}")]
 async fn delete_plan_by_id(
