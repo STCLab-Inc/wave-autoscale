@@ -25,44 +25,52 @@ impl DataLayer {
          * [ Data structure ]
          *  source metrics - HashMap<key: metric_id, value: BTreeMap<key: ULID, value: SourceMetrics>>
          *  source metrics metadata - LinkedList<(metric_id, ULID, data size(source metrics + source metrics metadata)> - list order by ULID ASC */
-        let Ok(mut source_metrics_data) = self.source_metrics_data.write() else {
-            error!("[add_source_metrics_in_data_layer] Failed to get source metrics data");
-            return Err(anyhow!("Failed to get source metrics data"));
-        };
 
-        let now_ulid = Ulid::new().to_string();
-        let source_metric_insert_data = SourceMetrics {
-            json_value: json_value.to_string(),
-        };
-        // source_metric_insert_data_size = source metrics + source metrics metadata
-        let source_metric_insert_data_size = source_metric_insert_data.get_heap_size()
-            + (metric_id.to_string().get_heap_size() * 2)
-            + (now_ulid.get_heap_size() * 2);
+        // After dropping the lock, check whether saving to the database is enabled
+        // Add '_' to the variable name to suppress the warning
+        let mut _enable_metrics_log = false;
 
-        let mut total_source_metrics_size =
-            source_metrics_data.source_metrics_size + source_metric_insert_data_size;
+        // Acquire write lock on source metrics data but do not hold the lock while 'await'
+        // https://rust-lang.github.io/rust-clippy/master/index.html#/await_holding_lock
+        {
+            let Ok(mut source_metrics_data) = self.source_metrics_data.write() else {
+                error!("[add_source_metrics_in_data_layer] Failed to get source metrics data");
+                return Err(anyhow!("Failed to get source metrics data"));
+            };
 
-        // get remove target data
-        let mut remove_target_data: Vec<(String, String, usize)> = Vec::new();
-        let mut subtract_total_size = total_source_metrics_size;
-        loop {
-            // check size :: buffersize - total size < 0 (None) => remove target data
-            if source_metrics_data
-                .metric_buffer_size_byte
-                .checked_sub(subtract_total_size as u64)
-                .is_some()
-            {
-                break;
-            }
-            let Some(front_source_metrics_metadata) = source_metrics_data.source_metrics_metadata.pop_front() else {
+            let now_ulid = Ulid::new().to_string();
+            let source_metric_insert_data = SourceMetrics {
+                json_value: json_value.to_string(),
+            };
+            // source_metric_insert_data_size = source metrics + source metrics metadata
+            let source_metric_insert_data_size = source_metric_insert_data.get_heap_size()
+                + (metric_id.to_string().get_heap_size() * 2)
+                + (now_ulid.get_heap_size() * 2);
+
+            let mut total_source_metrics_size =
+                source_metrics_data.source_metrics_size + source_metric_insert_data_size;
+
+            // get remove target data
+            let mut remove_target_data: Vec<(String, String, usize)> = Vec::new();
+            let mut subtract_total_size = total_source_metrics_size;
+            loop {
+                // check size :: buffersize - total size < 0 (None) => remove target data
+                if source_metrics_data
+                    .metric_buffer_size_byte
+                    .checked_sub(subtract_total_size as u64)
+                    .is_some()
+                {
+                    break;
+                }
+                let Some(front_source_metrics_metadata) = source_metrics_data.source_metrics_metadata.pop_front() else {
                 break;
             };
-            subtract_total_size -= front_source_metrics_metadata.2; // oldest metadata size
-            remove_target_data.append(&mut vec![front_source_metrics_metadata]);
-        }
+                subtract_total_size -= front_source_metrics_metadata.2; // oldest metadata size
+                remove_target_data.append(&mut vec![front_source_metrics_metadata]);
+            }
 
-        // remove target data
-        remove_target_data
+            // remove target data
+            remove_target_data
             .iter()
             .for_each(|(metric_id, ulid, size)| {
                 let Some(source_metrics_map) = source_metrics_data.source_metrics.get_mut(metric_id) else {
@@ -77,38 +85,40 @@ impl DataLayer {
                 total_source_metrics_size -= size;
             });
 
-        // add source metrics
-        match source_metrics_data.source_metrics.get_mut(metric_id) {
-            Some(source_metrics_map) => {
-                source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data.clone());
+            // add source metrics
+            match source_metrics_data.source_metrics.get_mut(metric_id) {
+                Some(source_metrics_map) => {
+                    source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data);
+                }
+                None => {
+                    let mut source_metrics_map = BTreeMap::new();
+                    source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data);
+                    source_metrics_data
+                        .source_metrics
+                        .insert(metric_id.to_string(), source_metrics_map);
+                }
             }
-            None => {
-                let mut source_metrics_map = BTreeMap::new();
-                source_metrics_map.insert(now_ulid.clone(), source_metric_insert_data.clone());
-                source_metrics_data
-                    .source_metrics
-                    .insert(metric_id.to_string(), source_metrics_map);
-            }
+            // add source metrics metadata
+            source_metrics_data.source_metrics_metadata.push_back((
+                metric_id.to_string(),
+                now_ulid,
+                source_metric_insert_data_size,
+            ));
+
+            debug!(
+                "[source metrics] add item size: {} / total size: {}",
+                source_metric_insert_data_size, total_source_metrics_size
+            );
+
+            // update source_metric_size
+            source_metrics_data.source_metrics_size = total_source_metrics_size;
+            // debug!("Save Metric\n{:?}", source_metric_insert_data);
+
+            _enable_metrics_log = source_metrics_data.enable_metrics_log;
         }
-        // add source metrics metadata
-        source_metrics_data.source_metrics_metadata.push_back((
-            metric_id.to_string(),
-            now_ulid,
-            source_metric_insert_data_size,
-        ));
-
-        debug!(
-            "[source metrics] add item size: {} / total size: {}",
-            source_metric_insert_data_size, total_source_metrics_size
-        );
-
-        // update source_metric_size
-        source_metrics_data.source_metrics_size = total_source_metrics_size;
-
-        // debug!("Save Metric\n{:?}", source_metric_insert_data);
 
         // Save to database
-        if source_metrics_data.enable_metrics_log {
+        if _enable_metrics_log {
             let result_save_db = self
                 .add_source_metric(collector, metric_id, json_value)
                 .await;
