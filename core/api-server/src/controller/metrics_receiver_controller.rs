@@ -157,9 +157,48 @@ async fn post_metrics_receiver(
             }));
         }
     } else {
-        error!("Invalid collector. Only 'vector' and 'telegraf' are supported");
-        return HttpResponse::BadRequest()
-            .body("Invalid collector. Only 'vector' and 'telegraf' are supported");
+        // If an unnamed collector sends metrics that have the schema of what we expect, we can still save them
+        for metric in metrics {
+            let Some(metric) = metric.as_object() else {
+                error!(
+                    "Invalid JSON body. Failed to parse 'metrics' as object: {:?}",
+                    metric
+                );
+                return HttpResponse::BadRequest()
+                    .body("Invalid JSON body. Failed to parse 'metrics' as object");
+            };
+
+            // name and value are required
+            let metric_name = metric.get("name");
+            if metric_name.is_none() {
+                error!("Invalid JSON body. Missing 'name' in metric: {:?}", metric);
+                continue;
+            }
+
+            let metric_value = metric.get("value");
+            if metric_value.is_none() {
+                error!("Invalid JSON body. Missing 'value' in metric: {:?}", metric);
+                continue;
+            }
+
+            // tags and timestamp are optional
+            let metric_tags = metric.get("tags");
+            let timestamp = metric.get("timestamp");
+
+            json_value.push(json!(
+            {
+                "name": metric_name,
+                "tags": metric_tags,
+                "value": metric_value,
+                "timestamp": timestamp,
+            }));
+        }
+
+        // If there is no data in the metrics, return an error
+        if json_value.is_empty() {
+            error!("Invalid JSON body. No metrics found: {:?}", body_json);
+            return HttpResponse::BadRequest().body("Invalid JSON body. No metrics found");
+        }
     }
     let json_value = serde_json::to_string(&json_value);
     if json_value.is_err() {
@@ -288,5 +327,34 @@ mod tests {
             .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    // Send metrics that have the schema of what we expect but it is not named collector
+    #[actix_web::test]
+    #[tracing_test::traced_test]
+    async fn test_post_metrics_receiver_unnamed_collector() {
+        let app_state = get_app_state_for_test().await;
+        let app = test::init_service(App::new().app_data(app_state).configure(init)).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/metrics-receiver?collector=unnamed&metric_id=metric_id_1")
+            .set_payload(
+                r#"{
+                    "metrics": [
+                        {
+                            "name": "metric1",
+                            "tags": {
+                                "tag1": "value1"
+                            },
+                            "value": {
+                                "value": 1
+                            }
+                        }
+                    ]
+                }"#,
+            )
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
     }
 }
