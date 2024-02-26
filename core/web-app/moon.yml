@@ -22,8 +22,7 @@ tasks:
     inputs:
       - '@globs(sources)'
   test:
-    # TODO: Add test command
-    command: 'echo wep-app'
+    command: 'next build'
     deps:
       - 'install'
       - 'lint'
