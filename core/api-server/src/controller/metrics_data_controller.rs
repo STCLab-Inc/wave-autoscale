@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::{
-    post,
+    get, post,
     web::{self, Bytes},
     HttpResponse, Responder,
 };
@@ -9,7 +9,9 @@ use serde_json::json;
 use tracing::{debug, error, info};
 
 pub fn init(cfg: &mut web::ServiceConfig) {
-    cfg.service(post_metrics_receiver);
+    cfg.service(post_metrics_receiver)
+        .service(get_metrics_data_stats)
+        .service(get_metrics_data_by_metric_id);
 }
 
 // [POST] /api/metrics-receiver
@@ -209,11 +211,7 @@ async fn post_metrics_receiver(
     // Save to data_layer
     let data_layer = &app_state.data_layer;
     let result = data_layer
-        .add_source_metrics_in_data_layer(
-            collector.as_str(),
-            metric_id.as_str(),
-            json_value.as_str(),
-        )
+        .add_metrics_data(collector.as_str(), metric_id.as_str(), json_value.as_str())
         .await;
     if result.is_err() {
         error!("Failed to save metric into the data-layer: {:?}", result);
@@ -232,6 +230,62 @@ async fn post_metrics_receiver(
         json_value.len()
     );
     HttpResponse::Ok().finish()
+}
+
+const DEFAULT_DURATION: u64 = 300;
+
+#[derive(Debug, Deserialize)]
+struct MetricsDataStatsRequest {
+    // Seconds
+    duration: Option<u64>,
+}
+
+#[get("/api/metrics-data/stats")]
+async fn get_metrics_data_stats(
+    query: web::Query<MetricsDataStatsRequest>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    debug!("[get_metrics_data_stats]");
+    let duration = if query.duration.is_none() {
+        DEFAULT_DURATION
+    } else {
+        query.duration.unwrap()
+    };
+    let metrics = app_state.data_layer.get_metrics_data_stats(duration).await;
+    if metrics.is_err() {
+        error!("Failed to get metrics: {:?}", metrics);
+        return HttpResponse::InternalServerError().body(format!("{:?}", metrics));
+    }
+    HttpResponse::Ok().json(metrics.unwrap())
+}
+
+#[derive(Debug, Deserialize)]
+struct MetricsDataByMetricIdRequest {
+    duration: Option<u64>,
+}
+
+#[get("/api/metrics-data/metrics/{metric_id}")]
+async fn get_metrics_data_by_metric_id(
+    query: web::Query<MetricsDataByMetricIdRequest>,
+    metric_id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    debug!("[get_metrics_data_by_metric_id]");
+    let metric_id = metric_id.into_inner();
+    let duration = if query.duration.is_none() {
+        DEFAULT_DURATION
+    } else {
+        query.duration.unwrap()
+    };
+    let metrics = app_state
+        .data_layer
+        .get_metrics_data_by_metric_id(metric_id, duration)
+        .await;
+    if metrics.is_err() {
+        error!("Failed to get metrics: {:?}", metrics);
+        return HttpResponse::InternalServerError().body(format!("{:?}", metrics));
+    }
+    HttpResponse::Ok().json(metrics.unwrap())
 }
 
 #[cfg(test)]

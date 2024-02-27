@@ -792,23 +792,23 @@ mod tests {
 
         // add data to data_layer
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", &timeover_json_value)
+            .add_metrics_data("vector", "metric1", &timeover_json_value)
             .await;
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", &json_value)
+            .add_metrics_data("vector", "metric1", &json_value)
             .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", &json_value2)
+            .add_metrics_data("vector", "metric1", &json_value2)
             .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric2", &json_value3)
+            .add_metrics_data("vector", "metric2", &json_value3)
             .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", &json_value4)
+            .add_metrics_data("vector", "metric1", &json_value4)
             .await;
 
         let expression_avg =
@@ -1009,7 +1009,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1083,7 +1083,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1140,7 +1140,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1194,7 +1194,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1244,7 +1244,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1316,7 +1316,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1360,7 +1360,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan
@@ -1404,7 +1404,7 @@ mod tests {
         ])
         .to_string();
         let _ = data_layer
-            .add_source_metrics_in_data_layer("vector", "metric1", metric.as_str())
+            .add_metrics_data("vector", "metric1", metric.as_str())
             .await;
 
         // Wait for the scaling planner to execute the plan

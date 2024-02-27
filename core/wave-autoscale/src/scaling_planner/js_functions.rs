@@ -1,4 +1,4 @@
-use data_layer::data_layer::SOURCE_METRICS_DATA;
+use data_layer::data_layer::METRICS_DATA;
 use serde_json::Value;
 use std::ops::Bound::Included;
 use std::time::Duration;
@@ -58,8 +58,8 @@ pub fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
         .get::<String, u64>("period_sec".to_string())
         .unwrap_or(PLAN_EXPRESSION_PERIOD_SEC); // default 5 min
 
-    let Ok(source_metrics_data) = SOURCE_METRICS_DATA.read() else {
-        error!("[get_in_js] Failed to get source_metrics_data");
+    let Ok(metrics_data) = METRICS_DATA.read() else {
+        error!("[get_in_js] Failed to get metrics_data");
         return Err(rquickjs::Error::new_loading("Failed to get the metrics data"));
     };
     let start_time = Ulid::from_datetime(
@@ -73,7 +73,7 @@ pub fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
     );
 
     // find metric_id
-    let Some(metric_values) = source_metrics_data.source_metrics.get(&metric_id) else {
+    let Some(metric_values) = metrics_data.metrics_data_map.get(&metric_id) else {
         return Err(rquickjs::Error::new_loading("Failed to get metric_id from the metrics data"));
     };
 
@@ -99,11 +99,11 @@ pub fn get_in_js(args: rquickjs::Object<'_>) -> Result<f64, rquickjs::Error> {
     // Find the metric values between the time range (current time - period_sec, current time)
     metric_values
         .range((Included(start_time.to_string()), Included(end_time.to_string())))
-        .for_each(|(_ulid, source_metrics_value)| {
+        .for_each(|(_ulid, metrics_data_item)| {
             // Get the json string
-            let Ok(value) = serde_json::to_value(source_metrics_value.clone()) else {
+            let Ok(value) = serde_json::to_value(metrics_data_item.clone()) else {
                 error!(
-                    "[ScalingPlan expression error] Failed to convert source_metric_data to serde value"
+                    "[ScalingPlan expression error] Failed to convert metric_data_item to serde value"
                 );
                 return;
             };

@@ -96,8 +96,8 @@ tasks:
   #
   run:
     # deps:
-      # - "copy-config"
-      # - "copy-web-app"
+    #   - "copy-config"
+    #   - "copy-web-app"
     command:
       - "cargo"
       - "run"
