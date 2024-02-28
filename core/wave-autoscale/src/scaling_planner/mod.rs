@@ -128,8 +128,8 @@ async fn create_autoscaling_history(
         metadata_values_json.clone(),
         fail_message.clone(),
     );
-    info!(
-        "[ScalingPlanner] autoscaling_history - {:#?}",
+    debug!(
+        "[ScalingPlanner] autoscaling_history - {:?}",
         autoscaling_history
     );
     let _ = data_layer
