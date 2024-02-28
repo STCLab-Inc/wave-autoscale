@@ -1,5 +1,9 @@
 import { DataLayer } from '@/infra/data-layer';
-import { MetricsDataStats } from '@/types/metrics-data-stats';
+import {
+  MetricsDataItem,
+  MetricsDataItems,
+  MetricsDataStats,
+} from '@/types/metrics-data-stats';
 import { parseDateToDayjs } from '@/utils/date';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -29,9 +33,6 @@ class MetricsDataServiceClass {
       }
 
       timestamps.forEach((timestamp: string, index: number) => {
-        if (Math.random() > 0.5) {
-          return;
-        }
         const dayjsTimestamp = parseDateToDayjs(timestamp);
         const diffMinutes = dayjsTimestamp
           .diff(MINUTES_AGO, 'minute')
@@ -59,7 +60,42 @@ class MetricsDataServiceClass {
       };
     });
 
-    return result;
+    const sortedResult = _.sortBy(result, (item) => item.metricId);
+
+    return sortedResult;
+  }
+
+  async getMetricsData(metricId: string): Promise<MetricsDataItems> {
+    const { data } = await DataLayer.get(
+      `/api/metrics-data/metrics/${metricId}`
+    );
+    const itemsMap: { [key: string]: MetricsDataItem[] } = {};
+    _.forEach(data, (values: any[], timestamp: string) => {
+      values.forEach((value: any, index: number) => {
+        const keyObject: any = {};
+        if (value.name) {
+          keyObject.name = value.name;
+        }
+        if (value.tags) {
+          keyObject.tags = value.tags;
+        }
+        const key = JSON.stringify(keyObject);
+        if (!itemsMap[key]) {
+          itemsMap[key] = [];
+        }
+        itemsMap[key].push(value);
+      });
+    });
+    const metricsDataItems: MetricsDataItems = _.map(
+      itemsMap,
+      (values, key) => {
+        return {
+          ...JSON.parse(key),
+          values,
+        };
+      }
+    );
+    return metricsDataItems;
   }
 }
 
@@ -74,4 +110,11 @@ function useMetricsDataStats() {
   });
 }
 
-export { useMetricsDataStats };
+function useMetricsData(metricId: string) {
+  return useQuery({
+    queryKey: ['metrics-data', metricId],
+    queryFn: () => MetricsDataService.getMetricsData(metricId),
+  });
+}
+
+export { useMetricsDataStats, useMetricsData };

@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { parseDateToDayjs } from '@/utils/date';
 import { MetricsDataStats } from '@/types/metrics-data-stats';
 import { useRouter } from 'next/navigation';
-import WAAreaChart from '../common/wa-area-chart';
+import WATinyAreaChart from '../common/wa-tiny-area-chart';
 
 const MINUTES_AGO = dayjs().subtract(5, 'minute');
 const NUMBER_OF_SECONDS = dayjs().diff(MINUTES_AGO, 'second');
@@ -21,7 +21,25 @@ const columns = [
     cell: (cell: any) => {
       const name = cell.getValue();
       2;
-      return <span className="font-bold">{name}</span>;
+      return (
+        <span className="flex items-center justify-start font-bold">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-4 w-4 mr-2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+            />
+          </svg>
+          {name}
+        </span>
+      );
     },
   }),
   columnHelper.accessor('timestampFrequency', {
@@ -34,7 +52,7 @@ const columns = [
       console.log({ timestampFrequency });
       return (
         <div className="h-14 w-24">
-          <WAAreaChart data={timestampFrequency} dataKey="y" />
+          <WATinyAreaChart data={timestampFrequency} dataKey="y" />
         </div>
       );
     },
@@ -56,7 +74,9 @@ const columns = [
   }),
   columnHelper.accessor('lastValues', {
     header: () => 'Last Values',
-    cell: (cell: any) => <div className="line-clamp-1">{cell.getValue()}</div>,
+    cell: (cell: any) => (
+      <div className="line-clamp-1 max-w-xl">{cell.getValue()}</div>
+    ),
   }),
 ];
 
@@ -69,10 +89,10 @@ export default function MetricsViewerPage() {
     <main className="flex h-full w-full flex-col">
       {/* Page Header */}
       <PageHeader title="Metrics Viewer" />
-      <div className="py-6">
+      <div className="flex flex-1 flex-col py-6">
         {/* Table */}
-        <div className="p-6">
-          <div className="wa-card">
+        <div className="flex flex-1 flex-col p-6">
+          <div className="wa-card flex-1">
             <WASimpleTable<MetricsDataStats>
               tableOptions={{
                 data: data ?? [],
@@ -85,6 +105,7 @@ export default function MetricsViewerPage() {
                 }
                 router.push(`/app/metrics-viewer/${row.metricId}`);
               }}
+              rowHeight={80}
             />
           </div>
         </div>
