@@ -17,6 +17,7 @@ pub struct ScalingPlannerManager {
     data_layer: Arc<DataLayer>,
     metric_updater: SharedMetricUpdater,
     scaling_component_manager: SharedScalingComponentManager,
+    webhooks: Option<Vec<utils::wave_config::Webhooks>>,
 }
 
 impl ScalingPlannerManager {
@@ -24,23 +25,27 @@ impl ScalingPlannerManager {
         data_layer: Arc<DataLayer>,
         metric_updater: SharedMetricUpdater,
         scaling_component_manager: SharedScalingComponentManager,
+        webhooks: Option<Vec<utils::wave_config::Webhooks>>,
     ) -> Self {
         ScalingPlannerManager {
             scaling_planners: HashMap::new(),
             data_layer,
             metric_updater,
             scaling_component_manager,
+            webhooks,
         }
     }
     pub fn new_shared(
         data_layer: Arc<DataLayer>,
         metric_updater: SharedMetricUpdater,
         scaling_component_manager: SharedScalingComponentManager,
+        webhooks: Option<Vec<utils::wave_config::Webhooks>>,
     ) -> SharedScalingPlannerManager {
         Arc::new(RwLock::new(ScalingPlannerManager::new(
             data_layer,
             metric_updater,
             scaling_component_manager,
+            webhooks,
         )))
     }
 
@@ -51,6 +56,7 @@ impl ScalingPlannerManager {
             self.metric_updater.clone(),
             self.scaling_component_manager.clone(),
             self.data_layer.clone(),
+            self.webhooks.clone(),
         ))
     }
 

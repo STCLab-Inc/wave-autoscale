@@ -86,7 +86,12 @@ async fn main() {
     }
 
     // Run the main application(controller)
-    let mut app = app::App::new(wave_config.clone(), shared_data_layer.clone()).await;
+    let mut app = app::App::new(
+        wave_config.clone(),
+        shared_data_layer.clone(),
+        wave_config.webhooks.clone(),
+    )
+    .await;
 
     //
     // Run some jobs (Autoscaling History Remover, Reset definitions on startup, Watch the definition file, and the main application(controller))
