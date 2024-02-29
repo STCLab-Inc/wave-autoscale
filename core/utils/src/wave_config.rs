@@ -1,6 +1,6 @@
 use crate::config_path::find_file_in_wa;
 use serde::Deserialize;
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 use tracing::{debug, error};
 
 const CONFIG_FILE_NAME: &str = "wave-config.yaml";
@@ -18,6 +18,9 @@ const DEFAULT_WEB_UI: bool = true;
 const DEFAULT_WEB_UI_HOST: &str = "0.0.0.0";
 const DEFAULT_WEB_UI_PORT: u16 = 3025;
 const DEFAULT_RESET_DEFINITIONS_ON_STARTUP: bool = false;
+const DEFAULT_WEBHOOKS: Option<Vec<Webhooks>> = None;
+const DEFAULT_WEBHOOKS_URL: Option<String> = None;
+const DEFAULT_WEBHOOKS_HEADERS: Option<HashMap<String, String>> = None;
 
 fn default_debug() -> bool {
     DEFAULT_DEBUG
@@ -57,6 +60,15 @@ fn default_web_ui_port() -> u16 {
 }
 fn default_reset_definitions_on_startup() -> bool {
     DEFAULT_RESET_DEFINITIONS_ON_STARTUP
+}
+fn default_webhooks() -> Option<Vec<Webhooks>> {
+    DEFAULT_WEBHOOKS
+}
+fn default_webhooks_url() -> Option<String> {
+    DEFAULT_WEBHOOKS_URL
+}
+fn default_webhooks_headers() -> Option<HashMap<String, String>> {
+    DEFAULT_WEBHOOKS_HEADERS
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default, Clone)]
@@ -127,6 +139,31 @@ pub struct WaveConfig {
     vector: DownloadUrlDefinition,
     #[serde(default)]
     telegraf: DownloadUrlDefinition,
+
+    //
+    // Web hooks
+    //
+    #[serde(default = "default_webhooks")]
+    pub webhooks: Option<Vec<Webhooks>>,
+}
+
+#[derive(PartialEq, Clone, Deserialize, Debug)]
+pub struct Webhooks {
+    pub id: String,
+    pub webhook_type: WebhookType,
+    #[serde(default = "default_webhooks_url")]
+    pub url: Option<String>,
+    #[serde(default = "default_webhooks_headers")]
+    pub headers: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Clone)]
+pub enum WebhookType {
+    #[serde(alias = "Http", alias = "http")]
+    Http,
+    #[serde(alias = "SlackIncomingWebhook", alias = "slackincomingwebhook")]
+    SlackIncomingWebhook,
+    // SlackOauth, // TODO: To be developed.
 }
 
 impl Default for WaveConfig {
@@ -147,6 +184,7 @@ impl Default for WaveConfig {
             web_ui_port: DEFAULT_WEB_UI_PORT,
             vector: DownloadUrlDefinition::default(),
             telegraf: DownloadUrlDefinition::default(),
+            webhooks: DEFAULT_WEBHOOKS,
         }
     }
 }
@@ -227,5 +265,6 @@ mod tests {
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);
         assert_eq!(wave_config.web_ui_host, DEFAULT_WEB_UI_HOST);
         assert_eq!(wave_config.web_ui_port, DEFAULT_WEB_UI_PORT);
+        assert_eq!(wave_config.webhooks, DEFAULT_WEBHOOKS);
     }
 }

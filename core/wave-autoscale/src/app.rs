@@ -33,6 +33,7 @@ impl App {
             shared_data_layer.clone(),
             shared_metric_updater.clone(),
             shared_scaling_component_manager.clone(),
+            wave_config.webhooks.clone(),
         );
 
         // Create App

@@ -1,5 +1,6 @@
 pub mod scaling_planner_manager;
 mod js_functions;
+mod webhooks;
 
 use crate::{
     metric_updater::SharedMetricUpdater, scaling_component::SharedScalingComponentManager,
@@ -103,7 +104,11 @@ async fn create_autoscaling_history(
     expression_value_map: Option<&Vec<HashMap<String, Option<f64>>>>,
     scaling_components_metadata: Option<&Value>,
     fail_message: Option<String>,
+    plan_webhooks: Option<Vec<String>>,
+    webhooks: Option<Vec<utils::wave_config::Webhooks>>,
 ) {
+    let plan_item_id = plan_item.clone().id;
+
     let metric_values_json = if let Some(expression_value_map) = expression_value_map {
         json!(expression_value_map).to_string()
     } else {
@@ -117,11 +122,11 @@ async fn create_autoscaling_history(
         };
     let autoscaling_history: AutoscalingHistoryDefinition = AutoscalingHistoryDefinition::new(
         plan_db_id,
-        plan_id,
-        json!(plan_item).to_string(),
+        plan_id.clone(),
+        json!(plan_item.clone()).to_string(),
         metric_values_json,
-        metadata_values_json,
-        fail_message,
+        metadata_values_json.clone(),
+        fail_message.clone(),
     );
     debug!(
         "[ScalingPlanner] autoscaling_history - {:?}",
@@ -130,6 +135,14 @@ async fn create_autoscaling_history(
     let _ = data_layer
         .add_autoscaling_history(autoscaling_history)
         .await;
+
+    let webhook_request_body = webhooks::WebhookRequestBody {
+        plan_id,
+        plan_item_id,
+        scaling_component_json_str: metadata_values_json,
+        fail_message: fail_message.clone(),
+    };
+    webhooks::send_webhooks(webhooks, plan_webhooks, webhook_request_body);
 }
 
 pub struct ScalingPlanner {
@@ -141,6 +154,7 @@ pub struct ScalingPlanner {
     last_cool_down: Arc<RwLock<u64>>,
     data_layer: Arc<DataLayer>,
     task: Option<JoinHandle<()>>,
+    webhooks: Option<Vec<utils::wave_config::Webhooks>>,
     // For instant action
     action_task: Option<JoinHandle<()>>,
     last_plan_item_id_by_action: Arc<RwLock<String>>,
@@ -153,6 +167,7 @@ impl<'a> ScalingPlanner {
         metric_updater: SharedMetricUpdater,
         scaling_component_manager: SharedScalingComponentManager,
         data_layer: Arc<DataLayer>,
+        webhooks: Option<Vec<utils::wave_config::Webhooks>>,
     ) -> Self {
         ScalingPlanner {
             definition,
@@ -163,6 +178,7 @@ impl<'a> ScalingPlanner {
             last_cool_down: Arc::new(RwLock::new(0)),
             data_layer,
             task: None,
+            webhooks,
             action_task: None,
             last_plan_item_id_by_action: Arc::new(RwLock::new(String::new())),
             last_plan_timestamp_by_action: Arc::new(RwLock::new(None)),
@@ -185,6 +201,7 @@ impl<'a> ScalingPlanner {
         let shared_last_plan_timestamp = self.last_plan_timestamp.clone();
         let shared_last_cool_down = self.last_cool_down.clone();
         let data_layer: Arc<DataLayer> = self.data_layer.clone();
+        let webhooks = self.webhooks.clone();
 
         // PlanDefinition
         let scaling_plan_definition = self.definition.clone();
@@ -214,6 +231,25 @@ impl<'a> ScalingPlanner {
             DEFAULT_PLAN_INTERVAL
         } else {
             plan_interval
+        };
+        let plan_webhooks = match plan_metadata.get("webhooks") {
+            Some(plan_webhooks) => {
+                let Some(plan_webhooks) = plan_webhooks.as_array() else {
+                    error!("[ScalingPlanner] Failed to get plan webhooks Not Array - {:?}", plan_webhooks);
+                    return;
+                };
+                let plan_webhooks = plan_webhooks
+                    .iter()
+                    .map(|webhook| 
+                        webhook.as_str().unwrap_or_else(|| {
+                            error!("[ScalingPlanner] Failed to get plan webhook Not String - {:?}", webhook);
+                            ""
+                        }).to_string()
+                    )
+                    .collect::<Vec<String>>();
+                Some(plan_webhooks)
+            }
+            None => None,
         };
 
         let plan_items = self.sort_plan_by_priority();
@@ -358,6 +394,8 @@ impl<'a> ScalingPlanner {
                                     None,
                                     None,
                                     Some("Failed to parse cron expression".to_string()),
+                                    plan_webhooks.clone(),
+                                    webhooks.clone(),
                                 )
                                 .await;
                                 // Skip this plan
@@ -440,6 +478,8 @@ impl<'a> ScalingPlanner {
                                         None,
                                         None,
                                         expression_result.message,
+                                        plan_webhooks.clone(),
+                                        webhooks.clone(),
                                     )
                                     .await;
                                 }
@@ -500,6 +540,8 @@ impl<'a> ScalingPlanner {
                                 Some(&expression_value_map_for_history),
                                 Some(&scaling_components_metadata[index]),
                                 fail_message,
+                                plan_webhooks.clone(),
+                                webhooks.clone(),
                             )
                             .await;
                         }
@@ -712,6 +754,7 @@ mod tests {
             shared_metric_updater,
             scaling_component_manager,
             data_layer.clone(),
+            None,
         );
         (data_layer, scaling_planner)
     }
