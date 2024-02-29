@@ -136,13 +136,13 @@ async fn create_autoscaling_history(
         .add_autoscaling_history(autoscaling_history)
         .await;
 
-    let webhook_response = webhooks::WebhookResponse {
+    let webhook_request_body = webhooks::WebhookRequestBody {
         plan_id,
         plan_item_id,
         scaling_component_json_str: metadata_values_json,
         fail_message: fail_message.clone(),
     };
-    webhooks::send_webhooks(webhooks, plan_webhooks, webhook_response);
+    webhooks::send_webhooks(webhooks, plan_webhooks, webhook_request_body);
 }
 
 pub struct ScalingPlanner {

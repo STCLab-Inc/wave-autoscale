@@ -21,7 +21,6 @@ const DEFAULT_RESET_DEFINITIONS_ON_STARTUP: bool = false;
 const DEFAULT_WEBHOOKS: Option<Vec<Webhooks>> = None;
 const DEFAULT_WEBHOOKS_URL: Option<String> = None;
 const DEFAULT_WEBHOOKS_HEADERS: Option<HashMap<String, String>> = None;
-const DEFAULT_WEBHOOKS_WEBHOOK_URL: Option<String> = None;
 
 fn default_debug() -> bool {
     DEFAULT_DEBUG
@@ -70,9 +69,6 @@ fn default_webhooks_url() -> Option<String> {
 }
 fn default_webhooks_headers() -> Option<HashMap<String, String>> {
     DEFAULT_WEBHOOKS_HEADERS
-}
-fn default_webhooks_webhook_url() -> Option<String> {
-    DEFAULT_WEBHOOKS_WEBHOOK_URL
 }
 
 #[derive(Debug, PartialEq, Deserialize, Default, Clone)]
@@ -159,13 +155,13 @@ pub struct Webhooks {
     pub url: Option<String>,
     #[serde(default = "default_webhooks_headers")]
     pub headers: Option<HashMap<String, String>>,
-    #[serde(default = "default_webhooks_webhook_url")]
-    pub webhook_url: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Deserialize, Clone)]
 pub enum WebhookType {
+    #[serde(alias = "Http", alias = "http")]
     Http,
+    #[serde(alias = "SlackIncomingWebhook", alias = "slackincomingwebhook")]
     SlackIncomingWebhook,
     // SlackOauth, // TODO: To be developed.
 }

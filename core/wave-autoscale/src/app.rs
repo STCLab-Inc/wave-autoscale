@@ -21,11 +21,7 @@ pub struct App {
 }
 
 impl App {
-    pub async fn new(
-        wave_config: WaveConfig,
-        shared_data_layer: Arc<DataLayer>,
-        webhooks: Option<Vec<utils::wave_config::Webhooks>>,
-    ) -> Self {
+    pub async fn new(wave_config: WaveConfig, shared_data_layer: Arc<DataLayer>) -> Self {
         // Create MetricUpdater
         let shared_metric_updater = MetricUpdater::new_shared(shared_data_layer.clone(), 1000);
 
@@ -37,7 +33,7 @@ impl App {
             shared_data_layer.clone(),
             shared_metric_updater.clone(),
             shared_scaling_component_manager.clone(),
-            webhooks,
+            wave_config.webhooks.clone(),
         );
 
         // Create App
