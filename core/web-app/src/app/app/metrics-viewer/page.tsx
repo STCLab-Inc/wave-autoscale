@@ -29,7 +29,7 @@ const columns = [
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-4 w-4 mr-2"
+            className="mr-2 h-4 w-4"
           >
             <path
               strokeLinecap="round"
@@ -90,6 +90,17 @@ export default function MetricsViewerPage() {
       {/* Page Header */}
       <PageHeader title="Metrics Viewer" />
       <div className="flex flex-1 flex-col py-6">
+        {/* Controls */}
+        <div className="flex flex-row-reverse px-6">
+          <button
+            className="btn-primary btn btn-sm font-bold"
+            onClick={() => {
+              router.push('/app/metrics');
+            }}
+          >
+            Edit Metric Definitions
+          </button>
+        </div>
         {/* Table */}
         <div className="flex flex-1 flex-col p-6">
           <div className="wa-card flex-1">
