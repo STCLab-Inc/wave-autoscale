@@ -49,7 +49,11 @@ impl ScalingComponent for EC2AutoScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata = self.definition.metadata.clone();
 
         if let (
@@ -87,18 +91,17 @@ impl ScalingComponent for EC2AutoScalingComponent {
             // save target value to map
             let current_state_map =
                 get_current_state_map(current_state_array, client.clone(), asg_name.clone()).await;
-            if current_state_map.is_err() {
+            let core::result::Result::Ok(current_state_map) = current_state_map else {
                 return Err(current_state_map.unwrap_err());
             };
 
             // evaluate target value
             let desired =
-                evaluate_expression_with_current_state(desired, current_state_map.unwrap().clone())
+                evaluate_expression_with_current_state(desired, current_state_map.clone(), context)
                     .await;
-            if desired.is_err() {
+            let core::result::Result::Ok(desired) = desired else {
                 return Err(desired.unwrap_err());
-            }
-            let desired = desired.unwrap();
+            };
 
             let mut result = client
                 .update_auto_scaling_group()
@@ -126,7 +129,7 @@ impl ScalingComponent for EC2AutoScalingComponent {
                 });
                 return Err(anyhow::anyhow!(json));
             }
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -203,6 +206,12 @@ mod test {
             "ap-northeast-3".to_string(),    // region
             "wave-ec2-as-nginx".to_string(), // asg_name
         )
+    }
+
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
     }
 
     #[ignore]
@@ -294,7 +303,7 @@ mod test {
         );
 
         let result = scaling_component_manager
-            .apply_to("api_server", options)
+            .apply_to("api_server", options, get_rquickjs_context().await)
             .await;
         assert!(result.is_ok());
     }

@@ -89,6 +89,12 @@ mod test_amazon_emr_ec2 {
         .collect()
     }
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[ignore]
     #[tokio::test]
     async fn test_amazon_emr_ec2_instance_group() {
@@ -129,7 +135,11 @@ mod test_amazon_emr_ec2 {
         );
 
         let result = scaling_component_manager
-            .apply_to("amazon_emr_ec2_server", options)
+            .apply_to(
+                "amazon_emr_ec2_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }
@@ -183,7 +193,11 @@ mod test_amazon_emr_ec2 {
         );
 
         let result = scaling_component_manager
-            .apply_to("amazon_emr_ec2_server", options)
+            .apply_to(
+                "amazon_emr_ec2_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }

@@ -37,7 +37,11 @@ use tokio::sync::RwLock;
 // ScalingComponent can be used in multiple threads. So it needs to be Send + Sync.
 #[async_trait]
 pub trait ScalingComponent: Send + Sync {
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()>;
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>>;
     fn get_scaling_component_kind(&self) -> &str;
     fn get_id(&self) -> &str;
 }
@@ -167,9 +171,10 @@ impl ScalingComponentManager {
         &self,
         id: &str,
         params: HashMap<String, serde_json::Value>,
-    ) -> Result<()> {
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         match self.scaling_components.get(id) {
-            Some(scaling_component) => scaling_component.apply(params).await,
+            Some(scaling_component) => scaling_component.apply(params, context).await,
             None => Err(anyhow::anyhow!("Unknown scaling component kind")),
         }
     }
@@ -194,13 +199,8 @@ pub fn filter_current_state_in_expression(
 pub async fn evaluate_expression_with_current_state(
     expression: &str,
     current_state_map: HashMap<String, i64>,
-) -> Result<i64, anyhow::Error> {
-    let Result::Ok(runtime) = rquickjs::AsyncRuntime::new() else {
-        return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::new() error"));
-    };
-    let Result::Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
-        return Err(anyhow::anyhow!("rquickjs::AsyncRuntime::full() error"));
-    };
+    context: rquickjs::AsyncContext,
+) -> Result<f64, anyhow::Error> {
     rquickjs::async_with!(context => |ctx| {
         current_state_map.iter().for_each(|(current_state_key, current_state_value)| {
             let _ = ctx.globals().set(
@@ -211,7 +211,7 @@ pub async fn evaluate_expression_with_current_state(
     .await;
 
     rquickjs::async_with!(context => |ctx| {
-        let Result::Ok(result) = ctx.eval::<i64, _>(expression) else {
+        let Result::Ok(result) = ctx.eval::<f64, _>(expression) else {
             return Err(anyhow::anyhow!("Invalid target value"));
         };
         Ok(result)
@@ -237,6 +237,12 @@ mod test {
                 TestComponentTargetValue::Test2 => write!(f, "test2"),
             }
         }
+    }
+
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
     }
 
     #[test]
@@ -274,25 +280,37 @@ mod test {
             }
         }
         assert_eq!(
-            evaluate_expression_with_current_state(expression, current_state_map.clone())
-                .await
-                .unwrap(),
+            evaluate_expression_with_current_state(
+                expression,
+                current_state_map.clone(),
+                get_rquickjs_context().await
+            )
+            .await
+            .unwrap() as i64,
             4
         );
 
         let expression2 = "2 * 4";
         assert_eq!(
-            evaluate_expression_with_current_state(expression2, current_state_map.clone())
-                .await
-                .unwrap(),
+            evaluate_expression_with_current_state(
+                expression2,
+                current_state_map.clone(),
+                get_rquickjs_context().await
+            )
+            .await
+            .unwrap() as i64,
             8
         );
 
         let expression3 = "4 * 4";
         assert_eq!(
-            evaluate_expression_with_current_state(expression3, HashMap::new())
-                .await
-                .unwrap(),
+            evaluate_expression_with_current_state(
+                expression3,
+                HashMap::new(),
+                get_rquickjs_context().await
+            )
+            .await
+            .unwrap() as i64,
             16
         );
     }

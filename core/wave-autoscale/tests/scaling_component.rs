@@ -11,6 +11,12 @@ mod scaling_component_test {
 
     const EC2_AUTOSCALING_FILE_PATH: &str = "./tests/yaml/component_ec2_autoscaling.yaml";
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     // multithreaded test
     #[tokio::test]
     #[ignore]
@@ -37,11 +43,16 @@ mod scaling_component_test {
         options.insert("max".to_string(), json!(5));
         options.insert("desired".to_string(), json!(1));
         let result = scaling_component_manager
-            .apply_to("ec2_autoscaling_api_server", options)
+            .apply_to(
+                "ec2_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
-        return result;
+        assert!(result.is_ok());
         Ok(())
     }
+
     #[tokio::test]
     #[ignore]
     async fn k8s_deployment_autoscaling() -> Result<()> {
@@ -67,8 +78,10 @@ mod scaling_component_test {
         let mut options: HashMap<String, Value> = HashMap::new();
         options.insert("replicas".to_string(), json!(5));
 
-        scaling_component_manager
-            .apply_to("k8s_deployment", options)
-            .await
+        let result = scaling_component_manager
+            .apply_to("k8s_deployment", options, get_rquickjs_context().await)
+            .await;
+        assert!(result.is_ok());
+        Ok(())
     }
 }

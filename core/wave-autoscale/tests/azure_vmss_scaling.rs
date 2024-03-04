@@ -16,6 +16,12 @@ mod test_azure_vmss_scaling {
         )
     }
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_azure_vmss_autoscaling() {
@@ -72,7 +78,11 @@ mod test_azure_vmss_scaling {
         options.insert("capacity".to_string(), json!(1));
 
         let result = scaling_component_manager
-            .apply_to("azure_vmss_autoscaling_api_server", options)
+            .apply_to(
+                "azure_vmss_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }

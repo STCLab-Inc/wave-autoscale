@@ -8,9 +8,15 @@ mod test_gcp_mig_scaling {
         gcp_mig_autoscaling::MIGAutoScalingComponent, ScalingComponentManager,
     };
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     #[ignore]
-    async fn test_gcp_mig_autoscaling() -> Result<()> {
+    async fn test_gcp_mig_autoscaling() {
         let mut scaling_component_metadata = HashMap::new();
         scaling_component_metadata.insert(
             "project".to_string(),
@@ -55,8 +61,13 @@ mod test_gcp_mig_scaling {
         let mut options: HashMap<String, serde_json::Value> = HashMap::new();
         options.insert("resize".to_string(), json!(2));
 
-        scaling_component_manager
-            .apply_to("gcp_mig_region_autoscaling_api_server", options)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "gcp_mig_region_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

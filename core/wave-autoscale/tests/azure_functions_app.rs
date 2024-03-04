@@ -8,9 +8,15 @@ mod google_cloud_run_service_test {
     use wave_autoscale::scaling_component::azure_functions_app::AzureFunctionsAppScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     #[ignore]
-    async fn apply_maximum_scale_out_limit_for_consumption_plan() -> Result<()> {
+    async fn apply_maximum_scale_out_limit_for_consumption_plan() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("client_id"), serde_json::json!("CLIENT_ID")),
             (
@@ -59,14 +65,19 @@ mod google_cloud_run_service_test {
                 .into_iter()
                 .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_azure_functions_app", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_azure_functions_app",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     #[ignore]
-    async fn apply_maximum_always_ready_instance_for_premium_plan() -> Result<()> {
+    async fn apply_maximum_always_ready_instance_for_premium_plan() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("client_id"), serde_json::json!("CLIENT_ID")),
             (
@@ -117,8 +128,13 @@ mod google_cloud_run_service_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_azure_functions_app", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_azure_functions_app",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

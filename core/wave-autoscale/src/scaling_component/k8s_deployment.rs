@@ -88,7 +88,11 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         let metadata = self.definition.metadata.clone();
 
         if let (
@@ -96,7 +100,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             Some(Value::String(namespace)),
             Some(Value::String(name)),
             Some(Value::String(ca_cert)),
-            Some(Value::String(replicas)),
+            Some(replicas),
         ) = (
             metadata.get("api_server_endpoint"),
             metadata.get("namespace"),
@@ -113,34 +117,49 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             }
             let client = client.unwrap();
 
-            // check target value contains enum variables
-            let current_state_key_array = K8sComponentTargetValue::iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>();
-            let current_state_array =
-                filter_current_state_in_expression(replicas, current_state_key_array);
-            // save target value to map
-            let current_state_map = get_current_state_map(
-                current_state_array,
-                client.clone(),
-                namespace.to_string(),
-                name.to_string(),
-            )
-            .await;
-            if current_state_map.is_err() {
-                return Err(current_state_map.unwrap_err());
-            };
+            let replicas_value = match replicas {
+                Value::String(replicas) => {
+                    // check target value contains enum variables
+                    let current_state_key_array = K8sComponentTargetValue::iter()
+                        .map(|value| value.to_string())
+                        .collect::<Vec<String>>();
+                    let current_state_array =
+                        filter_current_state_in_expression(replicas, current_state_key_array);
+                    // save target value to map
+                    let current_state_map = get_current_state_map(
+                        current_state_array,
+                        client.clone(),
+                        namespace.to_string(),
+                        name.to_string(),
+                    )
+                    .await;
+                    let core::result::Result::Ok(current_state_map) = current_state_map else {
+                        return Err(current_state_map.unwrap_err());
+                    };
 
-            // evaluate target value
-            let replicas = evaluate_expression_with_current_state(
-                replicas,
-                current_state_map.unwrap().clone(),
-            )
-            .await;
-            if replicas.is_err() {
-                return Err(replicas.unwrap_err());
+                    // evaluate target value
+                    let replicas = evaluate_expression_with_current_state(
+                        replicas,
+                        current_state_map.clone(),
+                        context,
+                    )
+                    .await;
+                    let core::result::Result::Ok(replicas) = replicas else {
+                        return Err(replicas.unwrap_err());
+                    };
+                    core::result::Result::Ok(replicas as i64)
+                }
+                Value::Number(replicas) => {
+                    let Some(replicas) = replicas.as_f64() else {
+                        return Err(anyhow::anyhow!("Invalid replicas"));
+                    };
+                    core::result::Result::Ok(replicas as i64)
+                }
+                _ => Err(anyhow::anyhow!("Invalid replicas")),
             };
-            let replicas = replicas.unwrap();
+            let core::result::Result::Ok(replicas_value) = replicas_value else {
+                return Err(replicas_value.unwrap_err());
+            };
 
             let deployment_api: Api<Deployment> = Api::namespaced(client, namespace);
             // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#deployment-v1-apps
@@ -148,7 +167,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
                 "apiVersion": "apps/v1",
                 "kind": "Deployment",
                 "spec": {
-                    "replicas": replicas
+                    "replicas": replicas_value
                 }
             });
 
@@ -166,7 +185,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
 
             if let Some(spec) = result.spec {
                 if let Some(replicas_result) = spec.replicas {
-                    if replicas_result != replicas as i32 {
+                    if replicas_result != replicas_value as i32 {
                         return Err(anyhow::anyhow!("Failed to scale deployment"));
                     }
                 } else {
@@ -175,7 +194,7 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
             } else {
                 return Err(anyhow::anyhow!("Failed to scale deployment"));
             }
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -270,6 +289,12 @@ mod test {
         )
     }
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[ignore]
     #[tokio::test]
     async fn test_get_deployment_replicas() {
@@ -336,7 +361,7 @@ mod test {
         );
 
         let result = scaling_component_manager
-            .apply_to("api_server", options)
+            .apply_to("api_server", options, get_rquickjs_context().await)
             .await;
         assert!(result.is_ok());
     }

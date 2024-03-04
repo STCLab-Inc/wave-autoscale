@@ -32,7 +32,11 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
@@ -161,7 +165,7 @@ impl ScalingComponent for CloudFunctionsInstanceScalingComponent {
                 return Err(anyhow::anyhow!(json));
             }
 
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -188,6 +192,12 @@ mod test {
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
+
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
 
     #[ignore]
     #[tokio::test]
@@ -223,10 +233,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_functions_instance_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudFunctionsInstanceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_functions_instance_scaling_component.is_ok());
     }
@@ -269,10 +281,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_functions_instance_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudFunctionsInstanceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_functions_instance_scaling_component.is_ok());
     }
@@ -311,10 +325,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_functions_instance_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudFunctionsInstanceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_functions_instance_scaling_component.is_err());
     }
@@ -357,10 +373,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_functions_instance_scaling_component: Result<(), anyhow::Error> =
-            CloudFunctionsInstanceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_functions_instance_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudFunctionsInstanceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_functions_instance_scaling_component.is_err());
     }

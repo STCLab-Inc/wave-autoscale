@@ -8,9 +8,15 @@ mod amazon_dynamodb_table_test {
     use wave_autoscale::scaling_component::amazon_dynamodb_table::DynamoDbTableScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
+    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     #[ignore]
-    async fn apply_provisioned_off_write() -> Result<()> {
+    async fn apply_provisioned_off_write() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("region"), serde_json::json!("region")),
             (String::from("access_key"), serde_json::json!("access_key")),
@@ -55,8 +61,13 @@ mod amazon_dynamodb_table_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_dynamodb_table", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_dynamodb_table",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

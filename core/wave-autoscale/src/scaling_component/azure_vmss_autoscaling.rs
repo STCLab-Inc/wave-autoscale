@@ -35,7 +35,11 @@ impl ScalingComponent for VMSSAutoScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> anyhow::Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        context: rquickjs::AsyncContext,
+    ) -> anyhow::Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
         if let (
             Some(serde_json::Value::String(subscription_id)),
@@ -173,7 +177,7 @@ impl ScalingComponent for VMSSAutoScalingComponent {
             error!("Invalid metadata");
             return Err(anyhow::anyhow!("Invalid metadata"));
         }
-        Ok(())
+        Ok(params)
     }
 }
 
