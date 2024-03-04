@@ -13,7 +13,12 @@ import { useRef } from 'react';
 
 const NUMBER_OF_SKELETONS = 5;
 
-export default function WASimpleTable<TData extends RowData>({
+/**
+WAVirtualizedTable is a virtualized table component that uses tanstack/react-table and tanstack/react-virtual
+
+It should be used with a element that has a fixed width and height
+ */
+export default function WAVirtualizedTable<TData extends RowData>({
   tableOptions,
   onRowClick,
   isLoading,
@@ -78,7 +83,7 @@ export default function WASimpleTable<TData extends RowData>({
                 </tr>
               ))}
             </thead>
-            <tbody className="text-sm text-wa-gray-700">
+            <tbody className="bg-white text-sm text-wa-gray-700">
               {virtualizer.getVirtualItems().map((virtualRow, index) => {
                 const row = rows[virtualRow.index] as Row<TData>;
                 return (

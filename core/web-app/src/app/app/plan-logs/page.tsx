@@ -9,7 +9,7 @@ import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-histo
 import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
 import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
 import PageHeader from '../common/page-header';
-import WASimpleTable from '../common/wa-simple-table';
+import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import StatusBadge from './status-badge';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
@@ -218,7 +218,7 @@ export default function AutoscalingHistoryPage() {
         {/* Table */}
         <div className="p-6">
           <div className="wa-card">
-            <WASimpleTable<AutoscalingHistoryDefinitionEx>
+            <WAVirtualizedTable<AutoscalingHistoryDefinitionEx>
               tableOptions={{
                 data: autoscalingHistory,
                 columns,

@@ -3,7 +3,7 @@
 import React from 'react';
 import PageHeader from '../common/page-header';
 import { useMetricsDataStats } from '@/services/metrics-data';
-import WASimpleTable from '../common/wa-simple-table';
+import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { parseDateToDayjs } from '@/utils/date';
@@ -93,7 +93,7 @@ export default function MetricsViewerPage() {
         {/* Table */}
         <div className="flex flex-1 flex-col p-6">
           <div className="wa-card flex-1">
-            <WASimpleTable<MetricsDataStats>
+            <WAVirtualizedTable<MetricsDataStats>
               tableOptions={{
                 data: data ?? [],
                 columns,

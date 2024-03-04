@@ -7,7 +7,7 @@ import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { debounce } from 'lodash';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
-import WASimpleTable from '../common/wa-simple-table';
+import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { PageSectionTitle } from '../common/page-section-title';
 import MetricService from '@/services/metric';
 import PageHeader from '../common/page-header';
@@ -134,8 +134,8 @@ export default function MetricsPage() {
             <PageSectionTitle title="Preview" />
           </div>
           {/* Table */}
-          <div className="px-6 pb-6">
-            <WASimpleTable<MetricDefinition>
+          <div className="flex-1 px-6 pb-6">
+            <WAVirtualizedTable<MetricDefinition>
               tableOptions={{
                 data: previewData,
                 columns,
@@ -152,13 +152,13 @@ export default function MetricsPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-ghost btn btn-sm flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
                 Reset Code
               </button>
               <button
-                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-gray btn btn-sm flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
                 disabled={annotations.length > 0}
               >
