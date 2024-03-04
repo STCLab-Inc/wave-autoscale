@@ -35,7 +35,7 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
     async fn apply(
         &self,
         params: HashMap<String, Value>,
-        context: rquickjs::AsyncContext,
+        _context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, Value>> {
         let metadata = self.definition.metadata.clone();
 

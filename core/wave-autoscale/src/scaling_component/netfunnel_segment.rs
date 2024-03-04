@@ -49,7 +49,7 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
     async fn apply(
         &self,
         params: HashMap<String, serde_json::Value>,
-        context: rquickjs::AsyncContext,
+        _context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
@@ -114,15 +114,10 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
 #[cfg(test)]
 mod test {
     use super::NetfunnelSegmentScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     #[tokio::test]
     #[ignore]

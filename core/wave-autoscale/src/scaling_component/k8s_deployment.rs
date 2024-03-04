@@ -278,6 +278,7 @@ async fn get_deployment_replicas(
 mod test {
     use super::super::ScalingComponentManager;
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
 
     fn get_data() -> (String, String, String, String) {
@@ -287,12 +288,6 @@ mod test {
             "echo".to_string(),                // name
             "ca_cert".to_string(),             // ca_cert
         )
-    }
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
     }
 
     #[ignore]

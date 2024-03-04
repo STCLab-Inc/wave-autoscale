@@ -1,5 +1,6 @@
+mod scaling_component;
 mod test_gcp_mig_scaling {
-    use anyhow::Result;
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
     use serde_json::json;
@@ -7,12 +8,6 @@ mod test_gcp_mig_scaling {
     use wave_autoscale::scaling_component::{
         gcp_mig_autoscaling::MIGAutoScalingComponent, ScalingComponentManager,
     };
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     #[tokio::test]
     #[ignore]

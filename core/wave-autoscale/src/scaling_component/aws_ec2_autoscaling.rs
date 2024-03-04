@@ -197,6 +197,7 @@ async fn get_auto_scaling_group_capacity(
 mod test {
     use super::super::ScalingComponentManager;
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use serde_json::{json, Value};
     use std::collections::HashMap;
@@ -206,12 +207,6 @@ mod test {
             "ap-northeast-3".to_string(),    // region
             "wave-ec2-as-nginx".to_string(), // asg_name
         )
-    }
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
     }
 
     #[ignore]

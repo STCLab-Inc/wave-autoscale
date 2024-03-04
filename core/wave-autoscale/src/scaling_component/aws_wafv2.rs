@@ -29,7 +29,7 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>, context: rquickjs::AsyncContext,) -> Result<HashMap<String, Value>> {
+    async fn apply(&self, params: HashMap<String, Value>, _context: rquickjs::AsyncContext,) -> Result<HashMap<String, Value>> {
         let metadata = &self.definition.metadata;
         let (
             Some(Value::String(web_acl_id)), 
@@ -123,12 +123,8 @@ mod test {
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
+    use crate::scaling_component::test::get_rquickjs_context;
 
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]

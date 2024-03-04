@@ -36,7 +36,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
     async fn apply(
         &self,
         params: HashMap<String, serde_json::Value>,
-        context: rquickjs::AsyncContext,
+        _context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
@@ -424,15 +424,10 @@ fn create_payload_based_on_api_version_2(
 #[cfg(test)]
 mod test {
     use super::CloudRunServiceScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     #[ignore]
     #[tokio::test]

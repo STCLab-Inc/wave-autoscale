@@ -34,7 +34,7 @@ impl ScalingComponent for MIGAutoScalingComponent {
     async fn apply(
         &self,
         params: HashMap<String, serde_json::Value>,
-        context: rquickjs::AsyncContext,
+        _context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
         if let (

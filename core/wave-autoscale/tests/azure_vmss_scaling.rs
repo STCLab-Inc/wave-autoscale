@@ -1,4 +1,6 @@
+mod scaling_component;
 mod test_azure_vmss_scaling {
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
     use serde_json::json;
@@ -14,12 +16,6 @@ mod test_azure_vmss_scaling {
             std::env::var("AZURE_TENANT_ID").unwrap(),
             std::env::var("AZURE_SUBSCRIPTION_ID").unwrap(),
         )
-    }
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
     }
 
     #[tokio::test]

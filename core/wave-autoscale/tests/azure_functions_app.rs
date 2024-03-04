@@ -1,18 +1,11 @@
+mod scaling_component;
 mod google_cloud_run_service_test {
-    use std::collections::HashMap;
-
-    use anyhow::Result;
-
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
     use wave_autoscale::scaling_component::azure_functions_app::AzureFunctionsAppScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     #[tokio::test]
     #[ignore]

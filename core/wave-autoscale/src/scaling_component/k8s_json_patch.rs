@@ -41,7 +41,7 @@ impl ScalingComponent for K8sPatchScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>, context: rquickjs::AsyncContext) -> anyhow::Result<HashMap<String, serde_json::Value>> {
+    async fn apply(&self, params: HashMap<String, serde_json::Value>, _context: rquickjs::AsyncContext) -> anyhow::Result<HashMap<String, serde_json::Value>> {
         let metadata = self.definition.metadata.clone();
 
         let (
@@ -106,6 +106,7 @@ impl ScalingComponent for K8sPatchScalingComponent {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
 
     fn get_value_of_istio_delay_add() -> serde_json::Value {
         serde_json::json!([
@@ -215,12 +216,6 @@ mod test {
             metadata: HashMap::new(),
             ..Default::default()
         })
-    }
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
     }
 
 

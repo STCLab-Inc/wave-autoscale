@@ -239,7 +239,7 @@ mod test {
         }
     }
 
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+    pub async fn get_rquickjs_context() -> rquickjs::AsyncContext {
         rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
             .await
             .unwrap()

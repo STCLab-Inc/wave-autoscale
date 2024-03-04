@@ -31,7 +31,7 @@ impl ScalingComponent for WALoggerComponent {
     async fn apply(
         &self,
         params: HashMap<String, Value>,
-        context: rquickjs::AsyncContext,
+        _context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, Value>> {
         info!("[wa-logger] params: {:?}", params);
         Ok(params)
@@ -41,15 +41,10 @@ impl ScalingComponent for WALoggerComponent {
 #[cfg(test)]
 mod test {
     use super::WALoggerComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
-
-    async fn get_rquickjs_context() -> rquickjs::AsyncContext {
-        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
-            .await
-            .unwrap()
-    }
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]

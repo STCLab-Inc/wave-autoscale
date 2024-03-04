@@ -16,7 +16,7 @@ use data_layer::{
     ScalingPlanDefinition,
 };
 use rquickjs::async_with;
-use serde::de::value;
+
 use serde_json::{json, Value};
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
@@ -130,7 +130,7 @@ async fn create_autoscaling_history(
                 Ok(scaling_components_metadata) => {
                     json!(scaling_components_metadata).to_string()
                 }
-                Err(error) => {
+                Err(_error) => {
                     "".to_string()
                 }
             }
@@ -541,12 +541,12 @@ impl<'a> ScalingPlanner {
                         }
 
                         // Add the result of the scaling plan to the history
-                        for (index, result) in results.iter().enumerate() {
+                        for (_index, result) in results.iter().enumerate() {
                             let fail_message: Option<String> = match result {
                                 Ok(_) => None,
                                 Err(error) => Some(error.to_string()),
                             };
-                            let scaling_components_metadata = &plan_item.scaling_components;
+                            let _scaling_components_metadata = &plan_item.scaling_components;
 
                             // Create a AutoscalingHistoryDefinition
                             create_autoscaling_history(
