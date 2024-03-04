@@ -17,6 +17,8 @@ tasks:
     command: 'next lint'
     inputs:
       - '@globs(sources)'
+    deps:
+      - 'install'
   audit:
     command: 'npm audit'
     inputs:
