@@ -34,7 +34,7 @@ mod simulation_test {
 
         // Call
         let _ = data_layer
-            .add_source_metric(
+            .add_metrics_data_into_db(
                 collector,
                 metric_id,
                 json_template
@@ -48,7 +48,7 @@ mod simulation_test {
 
         // Call
         let _ = data_layer
-            .add_source_metric(
+            .add_metrics_data_into_db(
                 collector,
                 metric_id,
                 json_template
@@ -62,7 +62,7 @@ mod simulation_test {
 
         // Call
         let _ = data_layer
-            .add_source_metric(
+            .add_metrics_data_into_db(
                 collector,
                 metric_id,
                 json_template

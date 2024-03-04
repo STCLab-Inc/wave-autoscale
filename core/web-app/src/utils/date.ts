@@ -14,10 +14,11 @@ export function parseDateToDayjs(date: Date | string | number): Dayjs {
   // If date is unix timestamp
   if (
     unixTimestampRegex.test(date.toString()) ||
-    unixTimestampMsRegex.test(date.toString()) ||
     unixTimestampMsWithPointRegex.test(date.toString())
   ) {
     return dayjs.unix(Number(date));
+  } else if (unixTimestampMsRegex.test(date.toString())) {
+    return dayjs(Number(date));
   }
   // Else, parse date with dayjs
   return dayjs(date);
