@@ -20,6 +20,12 @@ const DETAIL_MODAL_ID = 'metrics-viewer-detail-modal';
 // Table columns
 const columnHelper = createColumnHelper<MetricsDataItem>();
 const columns = [
+  columnHelper.display({
+    id: 'index',
+    header: () => '',
+    size: 50,
+    cell: (cell) => cell.row.index + 1,
+  }),
   columnHelper.accessor('name', {
     header: () => 'Name',
     cell: (cell: any) => {
@@ -134,7 +140,7 @@ export default function MetricsViewerDetailPage({
       <PageHeader title="Metrics Viewer" backButton subtitle={metricId} />
       <div className="flex flex-1 flex-col py-6">
         {/* Controls */}
-        <div className="flex px-6">
+        <div className="flex px-6 space-x-4">
           {/* Search */}
           <div className="w-[300px]">
             <label className="input-bordered input input-sm flex items-center gap-2">
@@ -157,6 +163,15 @@ export default function MetricsViewerDetailPage({
                 />
               </svg>
             </label>
+          </div>
+          {/* Stats */}
+          <div className="flex flex-1 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-wa-gray-500">Total:</span>
+              <span className="text-wa-gray-700">
+                {filteredData?.length ?? 0} items
+              </span>
+            </div>
           </div>
         </div>
         {/* Table */}
