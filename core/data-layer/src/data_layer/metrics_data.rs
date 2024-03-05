@@ -183,25 +183,24 @@ impl DataLayer {
     pub async fn get_metrics_data_by_metric_id(
         &self,
         metric_id: String,
-        duration: u64,
+        from: u64,
+        to: u64,
     ) -> Result<BTreeMap<String, serde_json::Value>> {
         let metrics_data = self.metrics_data.read().unwrap();
         // Use BTreeMap to sort the keys
         let mut metric_values: BTreeMap<String, serde_json::Value> = BTreeMap::new();
         if let Some(metrics_data_item_map) = metrics_data.metrics_data_map.get(&metric_id) {
-            let minutes_ago = SystemTime::now() - Duration::from_secs(duration);
             for (ulid, metrics_data_item) in metrics_data_item_map.iter().rev() {
                 let timestamp_ms = Ulid::from_string(ulid);
                 if timestamp_ms.is_err() {
                     break;
                 }
                 let timestamp_ms = timestamp_ms.unwrap().timestamp_ms();
-                if timestamp_ms
-                    < minutes_ago
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis() as u64
-                {
+                // iter returns the data in descending order
+                if timestamp_ms > to {
+                    continue;
+                }
+                if timestamp_ms < from {
                     break;
                 }
                 let json_value = serde_json::from_str(&metrics_data_item.json_value);

@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use data_layer::{
     data_layer::DataLayer,
     types::{
-        autoscaling_history_definition::AutoscalingHistoryDefinition,
+        plan_log_definition::PlanLogDefinition,
         plan_item_definition::PlanItemDefinition, scaling_plan_definition::DEFAULT_PLAN_INTERVAL,
     },
     ScalingPlanDefinition,
@@ -88,14 +88,14 @@ async fn apply_scaling_components(
 }
 
 /**
-Create a AutoscalingHistoryDefinition
+Create a PlanLogDefinition
 - plan_db_id
 - plan_id
 - plan_item_json
 - metric_values_json
 - metadata_values_json
 */
-async fn create_autoscaling_history(
+async fn create_plan_log(
     // plan_db_id, paln
     data_layer: &Arc<DataLayer>,
     plan_db_id: String,
@@ -120,7 +120,7 @@ async fn create_autoscaling_history(
         } else {
             "".to_string()
         };
-    let autoscaling_history: AutoscalingHistoryDefinition = AutoscalingHistoryDefinition::new(
+    let plan_log: PlanLogDefinition = PlanLogDefinition::new(
         plan_db_id,
         plan_id.clone(),
         json!(plan_item.clone()).to_string(),
@@ -129,11 +129,11 @@ async fn create_autoscaling_history(
         fail_message.clone(),
     );
     debug!(
-        "[ScalingPlanner] autoscaling_history - {:?}",
-        autoscaling_history
+        "[ScalingPlanner] plan_log - {:?}",
+        plan_log
     );
     let _ = data_layer
-        .add_autoscaling_history(autoscaling_history)
+        .add_plan_logs(plan_log)
         .await;
 
     let webhook_request_body = webhooks::WebhookRequestBody {
@@ -385,8 +385,8 @@ impl<'a> ScalingPlanner {
                                     "[ScalingPlanner] Error parsing cron expression: {}",
                                     cron_expression
                                 );
-                                // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
-                                create_autoscaling_history(
+                                // If the expression is invalid, create a PlanLogDefinition for the error
+                                create_plan_log(
                                     &data_layer.clone(),
                                     plan_db_id.clone(),
                                     plan_id.clone(),
@@ -468,9 +468,9 @@ impl<'a> ScalingPlanner {
 
                             // If the expression is false, move to the next plan
                             if !expression_result.result {
-                                // If the expression is invalid, create a AutoscalingHistoryDefinition for the error
+                                // If the expression is invalid, create a PlanLogDefinition for the error
                                 if expression_result.error {
-                                    create_autoscaling_history(
+                                    create_plan_log(
                                         &data_layer.clone(),
                                         plan_db_id.clone(),
                                         plan_id.clone(),
@@ -531,8 +531,8 @@ impl<'a> ScalingPlanner {
                             };
                             let scaling_components_metadata = &plan_item.scaling_components;
 
-                            // Create a AutoscalingHistoryDefinition
-                            create_autoscaling_history(
+                            // Create a PlanLogDefinition
+                            create_plan_log(
                                 &data_layer,
                                 scaling_plan_definition.db_id.clone(),
                                 scaling_plan_definition.id.clone(),

@@ -27,8 +27,8 @@ tasks:
       runDepsInParallel: false
     env:
       RUST_LOG: data_layer=debug
-  test-history:
-    command: "cargo test --test data_layer test_autoscaling_history -- --nocapture"
+  test-plan-log:
+    command: "cargo test --test data_layer test_plan_log -- --nocapture"
     inputs:
       - "@globs(sources)"
       - "@globs(tests)"

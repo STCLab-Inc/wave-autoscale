@@ -5,7 +5,7 @@ quiet: false
 # Data Layer
 db_url: sqlite://./wave.db
 watch_definition_duration: 5000
-autoscaling_history_retention: "14d"
+plan_logs_retention: "14d"
 reset_definitions_on_startup: false
 
 # Metrics

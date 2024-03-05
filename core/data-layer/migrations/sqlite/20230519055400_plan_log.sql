@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE autoscaling_history (
+CREATE TABLE plan_log (
   id TEXT PRIMARY KEY,
   plan_db_id TEXT,
   plan_id TEXT,

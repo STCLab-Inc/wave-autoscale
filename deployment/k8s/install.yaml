@@ -14,7 +14,7 @@ data:
     # Data Layer
     db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
     watch_definition_duration: 5000
-    autoscaling_history_retention: 1d
+    plan_logs_retention: 1d
     reset_definitions_on_startup: true
 
     # API Server

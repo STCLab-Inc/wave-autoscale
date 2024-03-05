@@ -48,6 +48,7 @@ async fn performance_test_add_metrics_data_in_data_layer() {
         .await;
         sample_total_size_100mb += sample_total_size;
     }
+    println!(" >> sample_total_size_100mb: {}", sample_total_size_100mb);
 
     let save_time_100mb = chrono::Utc::now();
     println!(

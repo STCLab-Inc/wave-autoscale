@@ -11,7 +11,7 @@ const DEFAULT_DB_URL: &str = "sqlite://./wave.db";
 const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
 const DEFAULT_ENABLE_METRICS_LOG: bool = false;
 const DEFAULT_WATCH_DEFINITION_DURATION: u64 = 5000;
-const DEFAULT_AUTOSCALING_HISTORY_RETENTION: &str = "14d";
+const DEFAULT_PLAN_LOGS_RETENTION: &str = "14d";
 const DEFAULT_API_HOST: &str = "0.0.0.0";
 const DEFAULT_API_PORT: u16 = 3024;
 const DEFAULT_WEB_UI: bool = true;
@@ -40,8 +40,8 @@ fn default_enable_metrics_log() -> bool {
 fn default_watch_definition_duration() -> u64 {
     DEFAULT_WATCH_DEFINITION_DURATION
 }
-fn default_autoscaling_history_retention() -> String {
-    DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string()
+fn default_plan_logs_retention() -> String {
+    DEFAULT_PLAN_LOGS_RETENTION.to_string()
 }
 fn default_api_host() -> String {
     DEFAULT_API_HOST.to_string()
@@ -98,9 +98,9 @@ pub struct WaveConfig {
     // milliseconds
     #[serde(default = "default_watch_definition_duration")]
     pub watch_definition_duration: u64,
-    // Autoscaling history retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
-    #[serde(default = "default_autoscaling_history_retention")]
-    pub autoscaling_history_retention: String,
+    // Plan logs retention. You can specify a duration like 1d, 2w, 3m, 4y, etc.
+    #[serde(default = "default_plan_logs_retention")]
+    pub plan_logs_retention: String,
     // Reset definitions on startup
     #[serde(default = "default_reset_definitions_on_startup")]
     pub reset_definitions_on_startup: bool,
@@ -175,7 +175,7 @@ impl Default for WaveConfig {
             metric_buffer_size_kb: DEFAULT_METRIC_BUFFER_SIZE_KB,
             enable_metrics_log: DEFAULT_ENABLE_METRICS_LOG,
             watch_definition_duration: DEFAULT_WATCH_DEFINITION_DURATION,
-            autoscaling_history_retention: DEFAULT_AUTOSCALING_HISTORY_RETENTION.to_string(),
+            plan_logs_retention: DEFAULT_PLAN_LOGS_RETENTION.to_string(),
             reset_definitions_on_startup: DEFAULT_RESET_DEFINITIONS_ON_STARTUP,
             host: DEFAULT_API_HOST.to_string(),
             port: DEFAULT_API_PORT,
@@ -256,10 +256,7 @@ mod tests {
             wave_config.watch_definition_duration,
             DEFAULT_WATCH_DEFINITION_DURATION
         );
-        assert_eq!(
-            wave_config.autoscaling_history_retention,
-            DEFAULT_AUTOSCALING_HISTORY_RETENTION
-        );
+        assert_eq!(wave_config.plan_logs_retention, DEFAULT_PLAN_LOGS_RETENTION);
         assert_eq!(wave_config.host, DEFAULT_API_HOST);
         assert_eq!(wave_config.port, DEFAULT_API_PORT);
         assert_eq!(wave_config.web_ui, DEFAULT_WEB_UI);

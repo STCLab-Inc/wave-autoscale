@@ -1,9 +1,9 @@
-pub mod autoscaling_history_definition;
 pub mod metric;
 pub mod metric_definition;
 pub mod metrics_data_item;
 pub mod object_kind;
 pub mod plan_item_definition;
+pub mod plan_log_definition;
 pub mod scaling_component;
 pub mod scaling_component_definition;
 pub mod scaling_plan_definition;

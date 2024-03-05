@@ -10,7 +10,7 @@ config:
   host: localhost
   port: 3024
   watch_definition_duration: 5000
-  autoscaling_history_retention: "14d"
+  plan_logs_retention: "14d"
   reset_definitions_on_startup: false
   metric_buffer_size_kb: 500000
   enable_metrics_log: false

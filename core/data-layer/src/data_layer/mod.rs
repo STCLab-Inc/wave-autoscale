@@ -1,6 +1,6 @@
-mod autoscaling_history;
 mod metric;
 mod metrics_data;
+mod plan_logs;
 mod scaling_component;
 mod scaling_plan;
 
