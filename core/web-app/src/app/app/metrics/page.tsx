@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { deserializeMetricDefinitions } from '@/utils/metric-binding';
+import { deserializeMetricDefinitions } from '@/utils/metric';
 import { MetricDefinition } from '@/types/bindings/metric-definition';
 import { debounce } from 'lodash';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';

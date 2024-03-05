@@ -2,18 +2,20 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 
-export default function WAAreaChart({
+export default function MetricsTimelineChart({
   data,
   yDataKey = 'y',
   xDataKey = 'x',
   syncId = 'syncId',
   simpleXAxis,
+  autoscalingLogs,
   xTickFormatter,
 }: {
   data: any;
@@ -21,8 +23,10 @@ export default function WAAreaChart({
   xDataKey: string;
   syncId?: string;
   simpleXAxis?: boolean;
+  autoscalingLogs?: any[];
   xTickFormatter?: (value: any) => string;
 }) {
+  console.log({ autoscalingLogs });
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart
@@ -59,7 +63,17 @@ export default function WAAreaChart({
         />
         <Tooltip />
         <CartesianGrid strokeDasharray="3 3" />
-
+        {
+          // Show the ReferenceLines for autoscalingLogs
+          autoscalingLogs?.map((log, index) => (
+            <ReferenceLine
+              key={index}
+              x={log.created_at}
+              stroke="#FF0000"
+              // strokeDasharray="3 3"
+            />
+          ))
+        }
         <Area
           type="basis"
           dataKey={yDataKey}

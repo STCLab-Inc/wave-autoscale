@@ -29,7 +29,7 @@ const columns = [
   columnHelper.accessor('name', {
     header: () => 'Name',
     cell: (cell: any) => {
-      const name = cell.getValue();
+      const name = cell.getValue() ?? '()';
       return (
         <span className="break-all font-bold" style={{ width: '16rem' }}>
           {name}
@@ -40,7 +40,7 @@ const columns = [
   columnHelper.accessor('tags', {
     header: () => 'Tags',
     cell: (cell: any) => {
-      const tags = cell.getValue();
+      const tags = cell.getValue() ?? {};
       return (
         <div className="break-all" style={{ width: '20rem' }}>
           {JSON.stringify(tags)}
@@ -64,7 +64,7 @@ const columns = [
     cell: (cell: any) => {
       const values = cell.getValue();
       const lastTimestamp = values[values.length - 1].timestamp;
-      return parseDateToDayjs(lastTimestamp).format('YYYY-MM-DD HH:mm:ss');
+      return parseDateToDayjs(lastTimestamp)?.format('YYYY-MM-DD HH:mm:ss');
     },
   }),
   columnHelper.accessor('values', {
@@ -140,7 +140,7 @@ export default function MetricsViewerDetailPage({
       <PageHeader title="Metrics Viewer" backButton subtitle={metricId} />
       <div className="flex flex-1 flex-col py-6">
         {/* Controls */}
-        <div className="flex px-6 space-x-4">
+        <div className="flex space-x-4 px-6">
           {/* Search */}
           <div className="w-[300px]">
             <label className="input-bordered input input-sm flex items-center gap-2">

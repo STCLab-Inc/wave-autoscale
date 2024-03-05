@@ -9,7 +9,7 @@ import EnabledBadge from '../common/enabled-badge';
 import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import ScalingComponentService from '@/services/scaling-component';
-import { deserializeScalingComponentDefinitions } from '@/utils/scaling-component-binding';
+import { deserializeScalingComponentDefinitions } from '@/utils/scaling-component';
 import { PageSectionTitle } from '../common/page-section-title';
 import PageHeader from '../common/page-header';
 import { getAnnotationsFromError } from '../common/yaml-editor/annotation';

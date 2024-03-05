@@ -29,7 +29,7 @@ class StatsServiceClass {
 
     const getAutoscalingHistoryStats = async () => {
       const autoscalingHistory = await DataLayer.get(
-        `/api/autoscaling-history?from=${
+        `/api/plan-logs?from=${
           from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
         }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
       );

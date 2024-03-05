@@ -1,11 +1,17 @@
 import dayjs, { Dayjs } from 'dayjs';
+import { decodeTime } from 'ulid';
 
 // Regex to match unix timestamp
 const unixTimestampRegex = /^\d{10}$/;
 const unixTimestampMsRegex = /^\d{13}$/;
 const unixTimestampMsWithPointRegex = /^\d{10}\.\d{3}$/;
 
-export function parseDateToDayjs(date: Date | string | number): Dayjs {
+export function parseDateToDayjs(
+  date: Date | string | number
+): Dayjs | undefined {
+  if (!date) {
+    return;
+  }
   // If date is Date type
   if (date instanceof Date) {
     return dayjs(date);
@@ -22,4 +28,8 @@ export function parseDateToDayjs(date: Date | string | number): Dayjs {
   }
   // Else, parse date with dayjs
   return dayjs(date);
+}
+
+export function parseUlidToDayjs(ulid: string): Dayjs | undefined {
+  return parseDateToDayjs(decodeTime(ulid));
 }

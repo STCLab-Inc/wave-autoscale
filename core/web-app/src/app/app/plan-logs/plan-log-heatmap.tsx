@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
-import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
+import { PlanLogDefinitionEx } from '../../../types/plan-log-definition-ex';
 import { addAlpha } from '@/utils/color';
 
 const MAX_ERROR_COUNT = 10;
@@ -10,7 +10,7 @@ const MAX_SUCCESS_COUNT = 10;
 
 // Interfaces
 interface AutoscalingHistoryHeatmapProps {
-  autoscalingHistory: AutoscalingHistoryDefinitionEx[];
+  autoscalingHistory: PlanLogDefinitionEx[];
   from: Dayjs;
   to: Dayjs;
 }

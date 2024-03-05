@@ -16,11 +16,16 @@ const NUMBER_OF_SECONDS = dayjs().diff(MINUTES_AGO, 'second');
 // Table columns
 const columnHelper = createColumnHelper<MetricsDataStats>();
 const columns = [
+  columnHelper.display({
+    id: 'index',
+    header: () => '',
+    size: 50,
+    cell: (cell) => cell.row.index + 1,
+  }),
   columnHelper.accessor('metricId', {
     header: () => 'Metric ID',
     cell: (cell: any) => {
       const name = cell.getValue();
-      2;
       return (
         <span className="flex items-center justify-start font-bold">
           <svg
@@ -65,7 +70,7 @@ const columns = [
         return;
       }
       const lastTimestamp = timestamps[timestamps.length - 1];
-      return parseDateToDayjs(lastTimestamp).format('YYYY-MM-DD HH:mm:ss');
+      return parseDateToDayjs(lastTimestamp)?.format('YYYY-MM-DD HH:mm:ss');
     },
   }),
   columnHelper.accessor('numberOfValues', {
@@ -98,7 +103,7 @@ export default function MetricsViewerPage() {
               router.push('/app/metrics');
             }}
           >
-            Edit Metric Definitions
+            Edit Metric
           </button>
         </div>
         {/* Table */}

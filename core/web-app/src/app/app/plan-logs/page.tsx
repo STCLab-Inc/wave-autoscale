@@ -4,10 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import dayjs, { Dayjs } from 'dayjs';
 import { decodeTime } from 'ulid';
-import AutoscalingHistoryService from '@/services/autoscaling-history';
-import { AutoscalingHistoryDefinition } from '@/types/bindings/autoscaling-history-definition';
-import AutoscalingHistoryHeatmap from './autoscaling-history-heatmap';
-import { AutoscalingHistoryDefinitionEx } from './autoscaling-history-definition-ex';
+import PlanLogService from '@/services/plan-log';
+import { PlanLogDefinition } from '@/types/bindings/plan-log-definition';
+import AutoscalingHistoryHeatmap from './plan-log-heatmap';
+import { PlanLogDefinitionEx } from '../../../types/plan-log-definition-ex';
 import PageHeader from '../common/page-header';
 import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -19,7 +19,7 @@ const DEFAULT_FROM = dayjs().subtract(7, 'days');
 const DEFAULT_TO = dayjs();
 
 // Table columns
-const columnHelper = createColumnHelper<AutoscalingHistoryDefinitionEx>();
+const columnHelper = createColumnHelper<PlanLogDefinitionEx>();
 const columns = [
   // Index
   columnHelper.display({
@@ -88,8 +88,11 @@ const columns = [
 const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD');
 
 async function getAutoscalingHistory(from: Dayjs, to: Dayjs) {
-  const autoscalingHistory =
-    await AutoscalingHistoryService.getAutoscalingHistoryByFromTo(from, to);
+  const autoscalingHistory = await PlanLogService.getPlanLogsByFromTo(
+    undefined,
+    from,
+    to
+  );
   return autoscalingHistory;
 }
 
@@ -108,12 +111,12 @@ export default function AutoscalingHistoryPage() {
 
   // Data
   const [autoscalingHistory, setAutoscalingHistory] = useState<
-    AutoscalingHistoryDefinitionEx[]
+    PlanLogDefinitionEx[]
   >([]);
 
   // Effects
 
-  // Fetch Autoscaling History Data when the page is loaded with from and to params
+  // Fetch plan logs when the page is loaded with from and to params
   useEffect(() => {
     fetchAutoscalingHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,21 +124,21 @@ export default function AutoscalingHistoryPage() {
 
   // Handlers
 
-  // Fetch Autoscaling History Data
+  // Fetch plan logs
   const fetchAutoscalingHistory = async () => {
     setIsFetching(true);
     try {
-      let autoscalingHistoryData: AutoscalingHistoryDefinitionEx[] =
+      let autoscalingHistoryData: PlanLogDefinitionEx[] =
         (await getAutoscalingHistory(
           fromDayjs,
           toDayjs
-        )) as AutoscalingHistoryDefinitionEx[];
+        )) as PlanLogDefinitionEx[];
       autoscalingHistoryData = autoscalingHistoryData.map(
-        (autoscalingHistoryDataItem: AutoscalingHistoryDefinition) =>
+        (autoscalingHistoryDataItem: PlanLogDefinition) =>
           ({
             ...autoscalingHistoryDataItem,
             created_at: decodeTime(autoscalingHistoryDataItem.id),
-          } as AutoscalingHistoryDefinitionEx)
+          } as PlanLogDefinitionEx)
       );
       // Sort descending by created_at
       autoscalingHistoryData = autoscalingHistoryData.sort(
@@ -198,7 +201,7 @@ export default function AutoscalingHistoryPage() {
           </div>
           {/* Refresh Button */}
           <button
-            className="btn-primary btn-sm btn w-32"
+            className="btn-primary btn btn-sm w-32"
             onClick={fetchAutoscalingHistory}
             disabled={isFetching}
           >
@@ -218,7 +221,7 @@ export default function AutoscalingHistoryPage() {
         {/* Table */}
         <div className="p-6">
           <div className="wa-card">
-            <WAVirtualizedTable<AutoscalingHistoryDefinitionEx>
+            <WAVirtualizedTable<PlanLogDefinitionEx>
               tableOptions={{
                 data: autoscalingHistory,
                 columns,

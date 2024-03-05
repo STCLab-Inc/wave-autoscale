@@ -6,8 +6,9 @@ import {
 } from '@/types/metrics-data-stats';
 import { parseDateToDayjs } from '@/utils/date';
 import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import _ from 'lodash';
+import queryString from 'query-string';
 
 class MetricsDataServiceClass {
   async getStats(): Promise<MetricsDataStats[]> {
@@ -34,6 +35,9 @@ class MetricsDataServiceClass {
 
       timestamps.forEach((timestamp: string, index: number) => {
         const dayjsTimestamp = parseDateToDayjs(timestamp);
+        if (!dayjsTimestamp) {
+          return;
+        }
         const diffMinutes = dayjsTimestamp
           .diff(MINUTES_AGO, 'minute')
           .toString();
@@ -65,10 +69,22 @@ class MetricsDataServiceClass {
     return sortedResult;
   }
 
-  async getMetricsData(metricId: string): Promise<MetricsDataItems> {
-    const { data } = await DataLayer.get(
-      `/api/metrics-data/metrics/${metricId}`
-    );
+  async getMetricsData(
+    metricId: string,
+    from?: Dayjs,
+    to?: Dayjs
+  ): Promise<MetricsDataItems> {
+    const query: any = {};
+    if (from) {
+      query['from'] = from.valueOf();
+    }
+    if (to) {
+      query['to'] = to.valueOf();
+    }
+    const { data }: { data: { [ulid: string]: MetricsDataItem[] } } =
+      await DataLayer.get(
+        `/api/metrics-data/metrics/${metricId}?${queryString.stringify(query)}`
+      );
     const itemsMap: { [key: string]: MetricsDataItem[] } = {};
     _.forEach(data, (values: any[], timestamp: string) => {
       values.forEach((value: any, index: number) => {
@@ -103,6 +119,8 @@ const MetricsDataService = new MetricsDataServiceClass();
 
 export default MetricsDataService;
 
+// Hooks
+
 function useMetricsDataStats() {
   return useQuery({
     queryKey: ['metrics-data-stats'],
@@ -110,10 +128,10 @@ function useMetricsDataStats() {
   });
 }
 
-function useMetricsData(metricId: string) {
+function useMetricsData(metricId: string, from?: Dayjs, to?: Dayjs) {
   return useQuery({
     queryKey: ['metrics-data', metricId],
-    queryFn: () => MetricsDataService.getMetricsData(metricId),
+    queryFn: () => MetricsDataService.getMetricsData(metricId, from, to),
   });
 }
 
