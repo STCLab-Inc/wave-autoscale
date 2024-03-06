@@ -4,6 +4,7 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   backButton?: boolean;
+  backUrl?: string;
 }
 export default function PageHeader(props: PageHeaderProps) {
   const router = useRouter();
@@ -14,7 +15,13 @@ export default function PageHeader(props: PageHeaderProps) {
         <div className="flex items-center">
           <button
             className="btn-ghost btn mr-2 w-10 p-2"
-            onClick={() => router.back()}
+            onClick={() => {
+              if (props.backUrl) {
+                router.push(props.backUrl);
+                return;
+              }
+              router.back();
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -14,10 +14,10 @@ class PlanLogServiceClass {
     from: Dayjs,
     to: Dayjs
   ): Promise<PlanLogDefinitionEx[]> {
-    /* TODO */
     const query: any = {
-      from: from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z',
-      to: to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z',
+      // Unix timestamp in milliseconds
+      from: from.valueOf(),
+      to: to.valueOf(),
     };
     if (planId) {
       query['plan_id'] = planId;

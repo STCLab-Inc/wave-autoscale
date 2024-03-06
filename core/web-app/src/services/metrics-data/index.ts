@@ -3,6 +3,7 @@ import {
   MetricsDataItem,
   MetricsDataItems,
   MetricsDataStats,
+  MetricsDataStatsMap,
 } from '@/types/metrics-data-stats';
 import { parseDateToDayjs } from '@/utils/date';
 import { useQuery } from '@tanstack/react-query';
@@ -12,61 +13,69 @@ import queryString from 'query-string';
 
 class MetricsDataServiceClass {
   async getStats(): Promise<MetricsDataStats[]> {
-    const { data } = await DataLayer.get(`/api/metrics-data/stats`);
+    const { data }: { data: MetricsDataStatsMap } = await DataLayer.get(
+      `/api/metrics-data/stats`
+    );
 
-    const result: MetricsDataStats[] = _.map(data, (value, metricId) => {
-      // THe number of values is the length of the lastValues array
-      const timestamps = value[0];
-      const lastValues = value[1];
-      let numberOfValues = 0;
-      try {
-        numberOfValues = JSON.parse(lastValues).length;
-      } catch (e) {
-        console.error(e);
-      }
+    let metricsDataStats: MetricsDataStats[] = _.map(
+      data,
+      (value, metricId) => {
+        const timestamps = value[0];
+        // lastValues is a JSON string including metrics data
+        const lastValues = value[1];
+        // The number of values is the length of the lastValues array
+        let numberOfValues = 0;
 
-      // Frequency in minutes last 5 minutes
-      const MINUTES_AGO = dayjs().subtract(5, 'minute');
-      const frequencyMap: { [key: string]: number } = {};
-      // Initialize frequencyMap
-      for (let i = 0; i < dayjs().diff(MINUTES_AGO, 'minute'); i++) {
-        frequencyMap[i.toString()] = 0;
-      }
-
-      timestamps.forEach((timestamp: string, index: number) => {
-        const dayjsTimestamp = parseDateToDayjs(timestamp);
-        if (!dayjsTimestamp) {
-          return;
+        try {
+          numberOfValues = JSON.parse(lastValues).length;
+        } catch (e) {
+          console.error(e);
         }
-        const diffMinutes = dayjsTimestamp
-          .diff(MINUTES_AGO, 'minute')
-          .toString();
-        frequencyMap[diffMinutes] = frequencyMap[diffMinutes]
-          ? frequencyMap[diffMinutes] + 1
-          : 1;
-      });
-      const timestampFrequency: MetricsDataStats['timestampFrequency'] = _.map(
-        frequencyMap,
-        (value, key) => {
-          return {
-            x: key,
-            y: value,
-          };
+
+        // Frequency in minutes last 5 minutes
+        const MINUTES_AGO = dayjs().subtract(5, 'minute');
+        const countPerMinuteMap: { [key: string]: number } = {};
+
+        // Initialize countPerMinuteMap with 0 for each minute
+        for (let i = 0; i < dayjs().diff(MINUTES_AGO, 'minute'); i++) {
+          countPerMinuteMap[i.toString()] = 0;
         }
-      );
 
-      return {
-        metricId,
-        timestamps,
-        timestampFrequency,
-        numberOfValues,
-        lastValues,
-      };
-    });
+        timestamps.forEach((timestamp: number) => {
+          const dayjsTimestamp = parseDateToDayjs(timestamp);
+          if (!dayjsTimestamp) {
+            return;
+          }
+          const diffMinutes = dayjsTimestamp
+            .diff(MINUTES_AGO, 'minute')
+            .toString();
+          countPerMinuteMap[diffMinutes] = countPerMinuteMap[diffMinutes]
+            ? countPerMinuteMap[diffMinutes] + 1
+            : 1;
+        });
+        const countPerMinute: MetricsDataStats['countPerMinute'] = _.map(
+          countPerMinuteMap,
+          (value, key) => {
+            return {
+              minute: key,
+              count: value,
+            };
+          }
+        );
 
-    const sortedResult = _.sortBy(result, (item) => item.metricId);
+        return {
+          metricId,
+          timestamps,
+          countPerMinute,
+          numberOfValues,
+          lastValues,
+        };
+      }
+    );
 
-    return sortedResult;
+    // Sort by metricId for consistency
+    metricsDataStats = _.sortBy(metricsDataStats, (item) => item.metricId);
+    return metricsDataStats;
   }
 
   async getMetricsData(
@@ -130,7 +139,7 @@ function useMetricsDataStats() {
 
 function useMetricsData(metricId: string, from?: Dayjs, to?: Dayjs) {
   return useQuery({
-    queryKey: ['metrics-data', metricId],
+    queryKey: ['metrics-data', metricId, from?.valueOf(), to?.valueOf()],
     queryFn: () => MetricsDataService.getMetricsData(metricId, from, to),
   });
 }

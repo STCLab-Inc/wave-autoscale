@@ -16,18 +16,19 @@ export function parseDateToDayjs(
   if (date instanceof Date) {
     return dayjs(date);
   }
-  // If date is string or number type
-  // If date is unix timestamp
-  if (
+  // Mostly, Wave Autoscale uses unix timestamp in milliseconds
+  if (unixTimestampMsRegex.test(date.toString())) {
+    return dayjs(Number(date));
+  } else if (
+    // If date is string or number type
+    // If date is unix timestamp
     unixTimestampRegex.test(date.toString()) ||
     unixTimestampMsWithPointRegex.test(date.toString())
   ) {
     return dayjs.unix(Number(date));
-  } else if (unixTimestampMsRegex.test(date.toString())) {
-    return dayjs(Number(date));
   }
   // Else, parse date with dayjs
-  return dayjs(date);
+  else return dayjs(date);
 }
 
 export function parseUlidToDayjs(ulid: string): Dayjs | undefined {
