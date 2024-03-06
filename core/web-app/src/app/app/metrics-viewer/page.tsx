@@ -5,14 +5,11 @@ import PageHeader from '../common/page-header';
 import { useMetricsDataStats } from '@/services/metrics-data';
 import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
 import { parseDateToDayjs } from '@/utils/date';
 import { MetricsDataStats } from '@/types/metrics-data-stats';
 import { useRouter } from 'next/navigation';
 import WATinyAreaChart from '../common/wa-tiny-area-chart';
 
-const MINUTES_AGO = dayjs().subtract(5, 'minute');
-const NUMBER_OF_SECONDS = dayjs().diff(MINUTES_AGO, 'second');
 // Table columns
 const columnHelper = createColumnHelper<MetricsDataStats>();
 const columns = [
@@ -28,36 +25,22 @@ const columns = [
       const name = cell.getValue();
       return (
         <span className="flex items-center justify-start font-bold">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="mr-2 h-4 w-4"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-            />
-          </svg>
           {name}
         </span>
       );
     },
   }),
-  columnHelper.accessor('timestampFrequency', {
-    header: () => 'Frequency',
+  columnHelper.accessor('countPerMinute', {
+    header: () => 'Count Per Minute',
     cell: (cell: any) => {
-      const timestampFrequency = cell.getValue();
-      if (!timestampFrequency) {
+      const countPerMinute: MetricsDataStats['countPerMinute'] =
+        cell.getValue();
+      if (!countPerMinute) {
         return;
       }
-      console.log({ timestampFrequency });
       return (
-        <div className="h-14 w-24">
-          <WATinyAreaChart data={timestampFrequency} dataKey="y" />
+        <div className="h-14 w-28">
+          <WATinyAreaChart data={countPerMinute} yDataKey="count" />
         </div>
       );
     },
@@ -87,7 +70,6 @@ const columns = [
 
 export default function MetricsViewerPage() {
   const router = useRouter();
-  // const [data, setData] = useState<MetricsDataStats[]>([]);
   const { data, isLoading } = useMetricsDataStats();
 
   return (
