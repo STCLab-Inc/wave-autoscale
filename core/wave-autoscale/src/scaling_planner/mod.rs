@@ -80,10 +80,11 @@ async fn apply_scaling_components(
         // Convert metadata to HashMap => (Number to f64, String to String)
         let mut params = HashMap::new();
         for (key, value) in metadata_object.iter() {
-            if value.as_str().is_none() {
-                continue;
+            if value.is_string() {
+                params.insert(key.to_string(), convert_js_expression(context.clone(), value.as_str().unwrap()).await);
+            } else {
+                params.insert(key.to_string(), value.clone());
             }
-            params.insert(key.to_string(), convert_js_expression(context.clone(), value.as_str().unwrap()).await);
         }
 
         {

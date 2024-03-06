@@ -55,12 +55,7 @@ impl ScalingComponent for EC2AutoScalingComponent {
         context: rquickjs::AsyncContext,
     ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata = self.definition.metadata.clone();
-
-        if let (
-            Some(Value::String(asg_name)),
-            Some(Value::String(region)),
-            Some(Value::String(desired)),
-        ) = (
+        if let (Some(Value::String(asg_name)), Some(Value::String(region)), Some(desired)) = (
             metadata.get("asg_name"),
             metadata.get("region"),
             params.get("desired"),
@@ -82,31 +77,53 @@ impl ScalingComponent for EC2AutoScalingComponent {
             let config = config.unwrap();
             let client = Client::new(&config);
 
-            let current_state_key_array = EC2ComponentTargetValue::iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>();
-            // check target value contains enum variables
-            let current_state_array =
-                filter_current_state_in_expression(desired, current_state_key_array);
-            // save target value to map
-            let current_state_map =
-                get_current_state_map(current_state_array, client.clone(), asg_name.clone()).await;
-            let core::result::Result::Ok(current_state_map) = current_state_map else {
-                return Err(current_state_map.unwrap_err());
-            };
-
-            // evaluate target value
-            let desired =
-                evaluate_expression_with_current_state(desired, current_state_map.clone(), context)
+            let desired_value = match desired {
+                Value::String(desired) => {
+                    let current_state_key_array = EC2ComponentTargetValue::iter()
+                        .map(|value| value.to_string())
+                        .collect::<Vec<String>>();
+                    // check target value contains enum variables
+                    let current_state_array =
+                        filter_current_state_in_expression(desired, current_state_key_array);
+                    // save target value to map
+                    let current_state_map = get_current_state_map(
+                        current_state_array,
+                        client.clone(),
+                        asg_name.clone(),
+                    )
                     .await;
-            let core::result::Result::Ok(desired) = desired else {
-                return Err(desired.unwrap_err());
+                    let core::result::Result::Ok(current_state_map) = current_state_map else {
+                        return Err(current_state_map.unwrap_err());
+                    };
+
+                    // evaluate target value
+                    let desired = evaluate_expression_with_current_state(
+                        desired,
+                        current_state_map.clone(),
+                        context,
+                    )
+                    .await;
+                    let core::result::Result::Ok(desired) = desired else {
+                        return Err(desired.unwrap_err());
+                    };
+                    core::result::Result::Ok(desired)
+                }
+                Value::Number(desired) => {
+                    let Some(desired) = desired.as_f64() else {
+                        return Err(anyhow::anyhow!("desired replicas"));
+                    };
+                    core::result::Result::Ok(desired)
+                }
+                _ => Err(anyhow::anyhow!("Invalid desired")),
+            };
+            let core::result::Result::Ok(desired_value) = desired_value else {
+                return Err(desired_value.unwrap_err());
             };
 
             let mut result = client
                 .update_auto_scaling_group()
                 .auto_scaling_group_name(asg_name)
-                .desired_capacity(desired as i32);
+                .desired_capacity(desired_value as i32);
 
             if let Some(min) = params.get("min").and_then(Value::as_i64) {
                 result = result.min_size(min as i32);
