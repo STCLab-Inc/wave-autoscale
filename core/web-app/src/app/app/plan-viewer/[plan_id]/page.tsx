@@ -6,20 +6,18 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { usePlanLogs } from '@/services/plan-log';
 import dayjs, { Dayjs } from 'dayjs';
 import WAVirtualizedTable from '../../common/wa-virtualized-table';
-import { PlanLogDefinitionEx } from '../../../../types/plan-log-definition-ex';
 import StatusBadge from './status-badge';
 import { renderKeyValuePairsWithJson } from '../../common/keyvalue-renderer';
 import { reverse } from 'lodash';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import AutoscalingTimelineChart from './autoscaling-timeline-chart';
 import { useScalingPlan } from '@/services/scaling-plan';
 import { extractMetricsFromScalingPlan } from '@/utils/scaling-plan';
 import MetricsDataService from '@/services/metrics-data';
-import { GetJSParamDefinition } from '@/types/get-js-param-definition';
-import { MetricsData, MetricsDataItem } from '@/types/metrics-data-stats';
-import WAAreaChart from '../../common/wa-area-chart';
+import { MetricsDataItem } from '@/types/metrics-data-stats';
 import { parseDateToDayjs } from '@/utils/date';
 import MetricsTimelineChart from './metrics-timeline-chart';
+import { PlanLogDefinitionEx } from '@/types/plan-log-definition-ex';
+import classNames from 'classnames';
 
 // Default Values
 const DEFAULT_FROM = dayjs().subtract(3, 'hours');
@@ -31,21 +29,15 @@ const parseDateTime = (date: string) => dayjs(date, 'YYYY-MM-DDTHH:mm');
 // Table columns
 const columnHelper = createColumnHelper<PlanLogDefinitionEx>();
 const columns = [
-  // // Index
-  // columnHelper.display({
-  //   id: 'index',
-  //   header: () => '#',
-  //   size: 50,
-  //   cell: (cell) => cell.row.index + 1,
-  // }),
   columnHelper.accessor('created_at', {
     header: () => 'Date',
     cell: (cell) => {
       const date = cell.getValue();
-      return dayjs.unix(date).format('YYYY-MM-DD HH:mm:ss');
+      return parseDateToDayjs(date)?.format('YYYY-MM-DD HH:mm:ss');
     },
   }),
   columnHelper.accessor('metric_values_json', {
+    id: 'metrics',
     header: () => 'Metrics',
     cell: (cell) => {
       let json: any[] = [];
@@ -67,6 +59,7 @@ const columns = [
     },
   }),
   columnHelper.accessor('metadata_values_json', {
+    id: 'metadata',
     header: () => 'Scaling Components',
     cell: (cell) => {
       return renderKeyValuePairsWithJson(cell.getValue(), true);
@@ -80,9 +73,7 @@ const columns = [
       return (
         <div>
           <StatusBadge success={!failMessage} />
-          {failMessage && (
-            <div className="mt-2 whitespace-pre text-xs">{failMessage}</div>
-          )}
+          {failMessage && <div className="mt-2 text-xs">{failMessage}</div>}
         </div>
       );
     },
@@ -106,21 +97,33 @@ export default function PlanViewerDetailPage({
 
   const [metricsData, setMetricsData] = useState<MetricsDataItemEx[]>([]);
   const { data: scalingPlan } = useScalingPlan(planId);
-  const { data: autoscalingLogs, isLoading } = usePlanLogs(
+  const { data: planLogs, isLoading } = usePlanLogs(
     planId,
-    dayjs(from).startOf('day'),
-    dayjs(to).endOf('day')
+    dayjs(from),
+    dayjs(to)
   );
-  const autoscalingLogsForGraph = useMemo(() => {
-    return autoscalingLogs?.map((log) => {
+  const planLogsForGraph = useMemo(() => {
+    return planLogs?.map((log) => {
       return {
         ...log,
+        timestamp: log.created_at,
         status: log.fail_message ? false : true,
         minutes: Math.floor(dayjs.unix(log.created_at).minute() / 10),
       };
     });
-  }, [autoscalingLogs]);
-  const reversedData = reverse([...(autoscalingLogs ?? [])]);
+  }, [planLogs]);
+  const totalCount = useMemo(() => planLogs?.length ?? 0, [planLogs]);
+  const successCount = useMemo(() => {
+    return planLogs?.filter((log) => !log.fail_message).length ?? 0;
+  }, [planLogs]);
+  const failCount = useMemo(
+    () => totalCount - successCount,
+    [totalCount, successCount]
+  );
+  const reversedData = useMemo(
+    () => reverse([...(planLogs ?? [])]),
+    [planLogs]
+  );
 
   // Effects
   useEffect(() => {
@@ -165,6 +168,12 @@ export default function PlanViewerDetailPage({
             return;
           }
           (metrics as MetricsDataItemEx).metricId = getJsParam.metricId;
+          metrics.values = metrics.values.map((item) => {
+            return {
+              ...item,
+              timestamp: parseDateToDayjs(item.timestamp)?.valueOf() ?? 0,
+            };
+          });
           return metrics;
         })
       );
@@ -180,11 +189,17 @@ export default function PlanViewerDetailPage({
   // Handlers
   // Date Picker Handler
   const handleDate = (field: 'from' | 'to', value: string) => {
-    const newDate = dayjs(value);
+    let newDate = dayjs(value);
     const isValidDate = newDate.isValid();
 
     if (!isValidDate) {
       return;
+    }
+
+    if (field === 'from' && newDate.isAfter(parseDateTime(to))) {
+      newDate = parseDateTime(to);
+    } else if (field === 'to' && newDate.isBefore(parseDateTime(from))) {
+      newDate = parseDateTime(from);
     }
     const params = {
       from: field === 'from' ? formatDateTime(newDate) : from,
@@ -193,12 +208,15 @@ export default function PlanViewerDetailPage({
     router.push(`${pathname}?from=${params.from}&to=${params.to}`);
   };
 
-  console.log({ metricsData });
-
   return (
     <main className="flex h-full w-full flex-col">
       {/* Page Header */}
-      <PageHeader title="Plan Viewer" backButton subtitle={planId} />
+      <PageHeader
+        title="Plan Viewer"
+        backButton
+        subtitle={planId}
+        backUrl="/api/plan-viewer"
+      />
       <div className="flex flex-1 flex-col py-6">
         {/* Controls */}
         <div className="flex space-x-4 px-6">
@@ -227,55 +245,64 @@ export default function PlanViewerDetailPage({
               </label>
             </div>
           </div>
+          {/* Stats */}
+          {!isLoading && (
+            <div className="flex flex-1 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-wa-gray-500">Total:</span>
+                <span className="text-wa-gray-700">{totalCount} logs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-wa-gray-500">Success:</span>
+                <span className="text-wa-gray-700">{successCount} logs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-wa-gray-500">Fail:</span>
+                <span className="text-wa-gray-700">{failCount} logs</span>
+              </div>
+            </div>
+          )}
         </div>
         {/* Composite Graph */}
-        <div className="flex flex-col p-6">
-          <div className="wa-card flex-1 flex-col px-10 py-10">
-            {metricsData.map((item, index) => {
-              return (
-                <div key={index} className="flex items-center">
-                  <div className="font-bold">{item.metricId}</div>
-                  <div className="h-[100px] flex-1">
-                    <MetricsTimelineChart
-                      data={item.values}
-                      yDataKey="value"
-                      xDataKey="timestamp"
-                      simpleXAxis
-                      autoscalingLogs={autoscalingLogsForGraph}
-                      xTickFormatter={(value) => {
-                        const date = parseDateToDayjs(value);
-                        if (!date) {
-                          return '';
-                        }
-                        return date.format(DEFAULT_DATE_FORMAT);
-                      }}
-                    />
+        <div
+          className={classNames(
+            'flex flex-col p-6',
+            `h-[${metricsData.length * 100 + 100}px]`
+          )}
+        >
+          <div className="wa-card flex-col px-10 py-10">
+            {isLoading && <div className="skeleton h-[100px]" />}
+            {!isLoading && metricsData.length === 0 && (
+              <div className="text-wa-gray-500 h-[100px] text-center text-2xl text-gray-200">
+                No metrics data
+              </div>
+            )}
+            {!isLoading &&
+              metricsData.map((item, index) => {
+                return (
+                  <div key={index} className="flex items-center">
+                    <div className="w-40 overflow-hidden break-all font-bold">
+                      {item.metricId}
+                    </div>
+                    <div key={index} className="h-[100px] flex-1">
+                      <MetricsTimelineChart
+                        data={item.values}
+                        yDataKey="value"
+                        xDataKey="timestamp"
+                        planLogs={planLogsForGraph}
+                        simpleXAxis={index !== metricsData.length - 1}
+                        xTickFormatter={(value) => {
+                          const date = parseDateToDayjs(value);
+                          if (!date) {
+                            return '';
+                          }
+                          return date.format(DEFAULT_DATE_FORMAT);
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-            {metricsData.map((item, index) => {
-              return (
-                <div key={index} className="flex items-center">
-                  <div className="font-bold">{item.metricId}</div>
-                  <div key={index} className="h-[100px] flex-1">
-                    <MetricsTimelineChart
-                      data={item.values}
-                      yDataKey="value"
-                      xDataKey="timestamp"
-                      autoscalingLogs={autoscalingLogsForGraph}
-                      xTickFormatter={(value) => {
-                        const date = parseDateToDayjs(value);
-                        if (!date) {
-                          return '';
-                        }
-                        return date.format(DEFAULT_DATE_FORMAT);
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             {/* <div className="h-[100px]">
               <AutoscalingTimelineChart
                 data={autoscalingLogsForGraph}
@@ -296,6 +323,7 @@ export default function PlanViewerDetailPage({
                 data: reversedData ?? [],
                 columns,
               }}
+              rowHeight={100}
               isLoading={isLoading}
               onRowClick={(row) => {
                 // setSelectedRow(row);

@@ -1,11 +1,11 @@
 export interface PlanLogStats {
-  numberOfEvents: number;
-  numberOfDailyEventsByPlan: {
-    [planId: string]: DailyEvent[];
+  totalCount: number;
+  countPerDayByPlanId: {
+    [planId: string]: PlanLogCountPerDay[];
   };
 }
 
-export interface DailyEvent {
+export interface PlanLogCountPerDay {
   date: string;
   count: number;
 }

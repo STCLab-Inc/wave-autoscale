@@ -15,7 +15,7 @@ export default function MetricsTimelineChart({
   xDataKey = 'x',
   syncId = 'syncId',
   simpleXAxis,
-  autoscalingLogs,
+  planLogs,
   xTickFormatter,
 }: {
   data: any;
@@ -23,10 +23,9 @@ export default function MetricsTimelineChart({
   xDataKey: string;
   syncId?: string;
   simpleXAxis?: boolean;
-  autoscalingLogs?: any[];
+  planLogs?: any[];
   xTickFormatter?: (value: any) => string;
 }) {
-  console.log({ autoscalingLogs });
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart
@@ -53,6 +52,8 @@ export default function MetricsTimelineChart({
           tickFormatter={xTickFormatter}
           tickLine={!simpleXAxis}
           tick={!simpleXAxis}
+          domain={[data[0]?.[xDataKey], data[data.length - 1]?.[xDataKey]]}
+          type="number"
         />
 
         <YAxis
@@ -60,19 +61,24 @@ export default function MetricsTimelineChart({
           style={{
             fontSize: '0.75rem',
           }}
+          type="number"
         />
-        <Tooltip />
+        <Tooltip labelFormatter={xTickFormatter} />
         <CartesianGrid strokeDasharray="3 3" />
         {
           // Show the ReferenceLines for autoscalingLogs
-          autoscalingLogs?.map((log, index) => (
-            <ReferenceLine
-              key={index}
-              x={log.created_at}
-              stroke="#FF0000"
-              // strokeDasharray="3 3"
-            />
-          ))
+          planLogs?.map((log, index) => {
+            console.log({ log: log[xDataKey] });
+            return (
+              <ReferenceLine
+                key={index}
+                x={log[xDataKey]}
+                stroke={log.status ? 'green' : 'red'}
+                strokeWidth={2}
+                // strokeDasharray="3 3"
+              />
+            );
+          })
         }
         <Area
           type="basis"

@@ -6,20 +6,10 @@ import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import {
-  useScalingPlans,
-  useScalingPlansWithStats,
-} from '@/services/scaling-plan';
-import {
-  ScalingPlanDefinitionEx,
-  ScalingPlanWithStats,
-} from '@/types/scaling-plan-definition-ex';
+import { useScalingPlansWithStats } from '@/services/scaling-plan';
+import { ScalingPlanWithStats } from '@/types/scaling-plan-definition-ex';
 import EnabledBadge from '../common/enabled-badge';
-import { usePlanLogStats } from '@/services/plan-log';
-import {
-  PlanLogStats,
-  DailyEvent,
-} from '@/types/plan-log-stats';
+import { PlanLogCountPerDay } from '@/types/plan-log-stats';
 import WATinyBarChart from '../common/wa-tiny-bar-chart';
 
 // Default Values
@@ -36,40 +26,47 @@ const columns = [
     cell: (cell) => cell.row.index + 1,
   }),
   columnHelper.accessor('id', {
+    id: 'id',
     header: () => 'Plan ID',
     cell: (cell: any) => {
       const name = cell.getValue();
       return <div className="font-bold">{name}</div>;
     },
   }),
-  columnHelper.accessor('dailyStats', {
+  columnHelper.accessor('countPerDay', {
+    id: 'last_7_days',
     header: () => 'Last 7 Days',
     cell: (cell: any) => {
-      const dailyStats = cell.getValue();
-      if (!dailyStats) {
+      const countPerDay = cell.getValue();
+      if (!countPerDay) {
         return;
       }
       return (
         <div className="h-14 w-24">
-          <WATinyBarChart data={dailyStats} yDataKey="count" xDataKey="date" />
+          <WATinyBarChart data={countPerDay} yDataKey="count" xDataKey="date" />
         </div>
       );
     },
   }),
-  columnHelper.accessor('dailyStats', {
-    header: () => 'Triggered Events',
+  columnHelper.accessor('countPerDay', {
+    id: 'countPerDay',
+    header: () => 'Plan Logs',
     cell: (cell: any) => {
-      const dailyStats = cell.getValue();
-      if (!dailyStats) {
+      const countPerDay = cell.getValue();
+      if (!countPerDay) {
         return;
       }
-      const count = dailyStats.reduce((acc: number, curr: DailyEvent) => {
-        return acc + curr.count;
-      }, 0);
+      const count = countPerDay.reduce(
+        (acc: number, curr: PlanLogCountPerDay) => {
+          return acc + curr.count;
+        },
+        0
+      );
       return count;
     },
   }),
   columnHelper.accessor('plans', {
+    id: 'plans',
     header: () => 'Plan Items',
     cell: (cell: any) => {
       const plans = cell.getValue();
@@ -77,6 +74,7 @@ const columns = [
     },
   }),
   columnHelper.accessor('variables', {
+    id: 'variables',
     header: () => 'Variables',
     cell: (cell: any) => {
       const variables = cell.getValue();
@@ -84,6 +82,7 @@ const columns = [
     },
   }),
   columnHelper.accessor('enabled', {
+    id: 'enabled',
     header: () => 'Enabled',
     cell: (cell: any) => {
       const enabled = cell.getValue();
@@ -94,13 +93,11 @@ const columns = [
 
 export default function PlanViewerPage() {
   const router = useRouter();
-  // const [data, setData] = useState<MetricsDataStats[]>([]);
   const { data, isLoading } = useScalingPlansWithStats(
     DEFAULT_FROM,
     DEFAULT_TO
   );
 
-  console.log({ data });
   return (
     <main className="flex h-full w-full flex-col">
       {/* Page Header */}
