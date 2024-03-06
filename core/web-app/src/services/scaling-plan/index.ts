@@ -32,19 +32,6 @@ class ScalingPlanServiceClass {
     return response.data;
   }
 
-  // async createScalingPlan(plan: ScalingPlanDefinition) {
-  //   const response = await DataLayer.post('/api/plans', {
-  //     plans: [plan],
-  //   });
-  //   await StatsService.invalidateStats();
-  //   return response.data;
-  // }
-
-  // async updateScalingPlan(plan: ScalingPlanDefinition) {
-  //   const response = await DataLayer.put(`/api/plans/${plan.db_id}`, plan);
-  //   return response.data;
-  // }
-
   async deleteScalingPlan(id: string) {
     const response = await DataLayer.delete(`/api/plans/${id}`);
     await StatsService.invalidateStats();
@@ -76,16 +63,17 @@ function useScalingPlan(id: string) {
 
 function useScalingPlansWithStats(from: Dayjs, to: Dayjs) {
   return useQuery<ScalingPlanWithStats[]>({
-    queryKey: ['scaling-plans-with-stats'],
+    queryKey: ['scaling-plans-with-stats', from.valueOf(), to.valueOf()],
     queryFn: async () => {
       const [plans, stats] = await Promise.all([
         ScalingPlanService.getScalingPlans(),
+        // getPlanLogStats returns all plan logs, so we need to filter them by planId later
         PlanLogService.getPlanLogStats(from, to),
       ]);
 
       const plansWithStats = plans.map((plan) => {
-        const dailyStats = stats.numberOfDailyEventsByPlan[plan.id] || [];
-        return { ...plan, dailyStats } as ScalingPlanWithStats;
+        const countPerDay = stats.countPerDayByPlanId[plan.id] || [];
+        return { ...plan, countPerDay } as ScalingPlanWithStats;
       });
       return plansWithStats;
     },

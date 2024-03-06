@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use chrono::{DateTime, Utc};
+use chrono::{TimeZone, Utc};
 use serde::Deserialize;
 use serde_json::json;
 use tracing::{debug, error};
@@ -13,8 +13,10 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 #[derive(Debug, Deserialize)]
 struct GetPlanLogsByDateRequest {
     plan_id: Option<String>,
-    from: String,
-    to: String,
+    // Unix timestamp in milliseconds
+    from: u64,
+    // Unix timestamp in milliseconds
+    to: u64,
 }
 
 #[get("/api/plan-logs")]
@@ -24,11 +26,9 @@ async fn get_plan_logs_by_date(
 ) -> impl Responder {
     debug!("Getting plan logs by date: {:?}", query);
     let plan_id = query.plan_id.clone();
-    let from_date = query.from.clone();
-    let to_date = query.to.clone();
-    let from_date = DateTime::parse_from_rfc3339(from_date.as_str());
-    let to_date = DateTime::parse_from_rfc3339(to_date.as_str());
-    if from_date.is_err() || to_date.is_err() {
+    let from_date = Utc.timestamp_millis_opt(query.from as i64).single();
+    let to_date = Utc.timestamp_millis_opt(query.to as i64).single();
+    if from_date.is_none() || to_date.is_none() {
         error!("Invalid date format");
         return HttpResponse::BadRequest().body("Invalid date format");
     }

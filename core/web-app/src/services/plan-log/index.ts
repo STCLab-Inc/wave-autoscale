@@ -28,7 +28,7 @@ class PlanLogServiceClass {
     const result = data.map((item: PlanLogDefinition) => {
       return {
         ...item,
-        created_at: parseUlidToDayjs(item.id)?.unix(),
+        created_at: parseUlidToDayjs(item.id)?.valueOf(),
       };
     });
 
@@ -37,18 +37,18 @@ class PlanLogServiceClass {
   async getPlanLogStats(from: Dayjs, to: Dayjs): Promise<PlanLogStats> {
     const data = await this.getPlanLogsByFromTo(undefined, from, to);
     const stats: PlanLogStats = {
-      numberOfEvents: data.length,
-      numberOfDailyEventsByPlan: {},
+      totalCount: data.length,
+      countPerDayByPlanId: {},
     };
 
     const groupedData = groupBy(data, 'plan_id');
     forEach(groupedData, (historyItems, planId) => {
       // Calculate the number of events for each plan daily
-      stats.numberOfDailyEventsByPlan[planId] = [];
+      stats.countPerDayByPlanId[planId] = [];
       // Initialize the array
       let currentDate = from;
       while (currentDate.isBefore(to) || currentDate.isSame(to)) {
-        stats.numberOfDailyEventsByPlan[planId].push({
+        stats.countPerDayByPlanId[planId].push({
           date: currentDate.format('YYYY-MM-DD'),
           count: 0,
         });
@@ -59,11 +59,11 @@ class PlanLogServiceClass {
         const dateString = parseUlidToDayjs(historyItem.id)?.format(
           'YYYY-MM-DD'
         );
-        const index = stats.numberOfDailyEventsByPlan[planId].findIndex(
+        const index = stats.countPerDayByPlanId[planId].findIndex(
           (item: any) => item.date === dateString
         );
         if (index !== -1) {
-          stats.numberOfDailyEventsByPlan[planId][index].count++;
+          stats.countPerDayByPlanId[planId][index].count++;
         }
       });
     });
