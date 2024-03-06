@@ -9,16 +9,16 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import classNames from 'classnames';
 import _ from 'lodash';
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 
 const NUMBER_OF_SKELETONS = 5;
-
+const SKELETON_DATA = _.range(NUMBER_OF_SKELETONS).map(() => ({} as RowData));
 /**
 WAVirtualizedTable is a virtualized table component that uses tanstack/react-table and tanstack/react-virtual
 
 It should be used with a element that has a fixed width and height
  */
-export default function WAVirtualizedTable<TData extends RowData>({
+function WAVirtualizedTable<TData extends RowData>({
   tableOptions,
   onRowClick,
   isLoading,
@@ -30,9 +30,7 @@ export default function WAVirtualizedTable<TData extends RowData>({
   rowHeight?: number;
 }) {
   if (isLoading) {
-    tableOptions.data = _.range(NUMBER_OF_SKELETONS).map(
-      (index) => ({} as TData)
-    );
+    tableOptions.data = SKELETON_DATA as TData[];
   }
   const table = useReactTable({
     ...tableOptions,
@@ -89,6 +87,10 @@ export default function WAVirtualizedTable<TData extends RowData>({
                 return (
                   <tr
                     key={row.id}
+                    //needed for dynamic row height measurement
+                    data-index={virtualRow.index}
+                    //measure dynamic row height
+                    ref={(node) => virtualizer.measureElement(node)}
                     className={classNames({
                       'cursor-pointer': isClickable,
                       hover: isClickable,
@@ -130,3 +132,5 @@ export default function WAVirtualizedTable<TData extends RowData>({
     </div>
   );
 }
+
+export default memo(WAVirtualizedTable) as typeof WAVirtualizedTable;
