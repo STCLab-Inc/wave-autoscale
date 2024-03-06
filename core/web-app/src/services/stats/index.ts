@@ -7,6 +7,7 @@ import _ from 'lodash';
 import { decodeTime } from 'ulid';
 import { invalidateQuery } from '@/infra/query-client';
 import { useQuery } from '@tanstack/react-query';
+import queryString from 'query-string';
 
 export interface DashboardStats {
   autoscalingHistoryCount: number;
@@ -27,13 +28,15 @@ class StatsServiceClass {
     const to = dayjs();
     const from = to.subtract(13, 'day');
 
-    const getAutoscalingHistoryStats = async () => {
-      const autoscalingHistory = await DataLayer.get(
-        `/api/plan-logs?from=${
-          from.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'
-        }&to=${to.format('YYYY-MM-DDTHH:mm:ss') + '.000Z'}`
+    const getPlanLogStats = async () => {
+      const query = {
+        from: from.valueOf(),
+        to: to.valueOf(),
+      };
+      const planLogs = await DataLayer.get(
+        `/api/plan-logs?${queryString.stringify(query)}`
       );
-      const { data } = autoscalingHistory;
+      const { data } = planLogs;
       const count = data?.length;
       const ordered = _.chain(data)
         .groupBy('plan_id')
@@ -84,16 +87,14 @@ class StatsServiceClass {
       };
     };
 
-    const [autoscalingHistoryStats] = await Promise.all([
-      getAutoscalingHistoryStats(),
-    ]);
+    const [planLogStats] = await Promise.all([getPlanLogStats()]);
 
     return {
-      autoscalingHistoryCount: autoscalingHistoryStats.count,
-      autoscalingHistoryMostTriggered: autoscalingHistoryStats.ordered,
-      dailyAutoscalingHistory: autoscalingHistoryStats.daily,
-      dailyAutoscalingHistoryKeys: autoscalingHistoryStats.dailyKeys,
-      dailyAutoscalingHistoryPlanIds: autoscalingHistoryStats.dailyPlanIds,
+      autoscalingHistoryCount: planLogStats.count,
+      autoscalingHistoryMostTriggered: planLogStats.ordered,
+      dailyAutoscalingHistory: planLogStats.daily,
+      dailyAutoscalingHistoryKeys: planLogStats.dailyKeys,
+      dailyAutoscalingHistoryPlanIds: planLogStats.dailyPlanIds,
     };
   }
   async getMenuStats(): Promise<MenuStats> {
