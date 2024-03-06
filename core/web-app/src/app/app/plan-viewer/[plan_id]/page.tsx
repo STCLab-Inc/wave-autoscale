@@ -215,7 +215,7 @@ export default function PlanViewerDetailPage({
         title="Plan Viewer"
         backButton
         subtitle={planId}
-        backUrl="/api/plan-viewer"
+        backUrl="/app/plan-viewer"
       />
       <div className="flex flex-1 flex-col py-6">
         {/* Controls */}
