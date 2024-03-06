@@ -89,12 +89,12 @@ async fn main() {
     let mut app = app::App::new(wave_config.clone(), shared_data_layer.clone()).await;
 
     //
-    // Run some jobs (Autoscaling History Remover, Reset definitions on startup, Watch the definition file, and the main application(controller))
+    // Run some jobs (Plan Logs Remover, Reset definitions on startup, Watch the definition file, and the main application(controller))
     //
 
-    // Remove autoscaling history
-    if !wave_config.autoscaling_history_retention.is_empty() {
-        app.run_autoscaling_history_cron_job(wave_config.autoscaling_history_retention);
+    // Remove plan logs
+    if !wave_config.plan_logs_retention.is_empty() {
+        app.run_remove_plan_logs_cron_job(wave_config.plan_logs_retention);
     }
 
     // Reset definitions on startup

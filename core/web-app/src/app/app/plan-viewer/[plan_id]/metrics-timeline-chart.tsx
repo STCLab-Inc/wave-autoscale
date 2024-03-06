@@ -2,18 +2,20 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 
-export default function WAAreaChart({
+export default function MetricsTimelineChart({
   data,
   yDataKey = 'y',
   xDataKey = 'x',
   syncId = 'syncId',
   simpleXAxis,
+  planLogs,
   xTickFormatter,
 }: {
   data: any;
@@ -21,6 +23,7 @@ export default function WAAreaChart({
   xDataKey: string;
   syncId?: string;
   simpleXAxis?: boolean;
+  planLogs?: any[];
   xTickFormatter?: (value: any) => string;
 }) {
   return (
@@ -49,6 +52,8 @@ export default function WAAreaChart({
           tickFormatter={xTickFormatter}
           tickLine={!simpleXAxis}
           tick={!simpleXAxis}
+          domain={[data[0]?.[xDataKey], data[data.length - 1]?.[xDataKey]]}
+          type="number"
         />
 
         <YAxis
@@ -56,10 +61,25 @@ export default function WAAreaChart({
           style={{
             fontSize: '0.75rem',
           }}
+          type="number"
         />
-        <Tooltip />
+        <Tooltip labelFormatter={xTickFormatter} />
         <CartesianGrid strokeDasharray="3 3" />
-
+        {
+          // Show the ReferenceLines for autoscalingLogs
+          planLogs?.map((log, index) => {
+            console.log({ log: log[xDataKey] });
+            return (
+              <ReferenceLine
+                key={index}
+                x={log[xDataKey]}
+                stroke={log.status ? 'green' : 'red'}
+                strokeWidth={2}
+                // strokeDasharray="3 3"
+              />
+            );
+          })
+        }
         <Area
           type="basis"
           dataKey={yDataKey}

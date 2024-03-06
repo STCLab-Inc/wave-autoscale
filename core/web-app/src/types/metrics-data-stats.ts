@@ -1,12 +1,19 @@
+// MetricsDataStatsMap is from /api/metrics-data/stats
+export interface MetricsDataStatsMap {
+  // lastValues is a JSON string including metrics data
+  [metricId: string]: [timestamps: number[], lastValues: string];
+}
+
 export interface MetricsDataStats {
   metricId: string;
-  timestamps: string[];
-  timestampFrequency: { x: string; y: number }[];
+  timestamps: number[];
+  countPerMinute: { minute: string; count: number }[];
   numberOfValues: number;
+  // lastValues is a JSON string including metrics data
   lastValues: string;
 }
 
-export interface MetricsData {
+export interface MetricsDataValue {
   name?: string;
   tags?: any;
   value: number;
@@ -16,7 +23,7 @@ export interface MetricsData {
 export type MetricsDataItem = {
   name?: string;
   tags?: any;
-  values: MetricsData[];
+  values: MetricsDataValue[];
 };
 
 export type MetricsDataItems = MetricsDataItem[];

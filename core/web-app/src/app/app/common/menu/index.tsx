@@ -1,14 +1,15 @@
 'use client';
 
+import { URLPattern } from 'urlpattern-polyfill';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import MenuItem from './menu-item';
-import { useQuery } from '@tanstack/react-query';
-import StatsService, { MenuStats, useMenuStats } from '@/services/stats';
+import { MenuStats, useMenuStats } from '@/services/stats';
 
 interface MenuItemData {
   imageFilename: string;
+  pathname: string;
   targetPath: string;
   label: string;
   statsKey?: keyof MenuStats;
@@ -20,31 +21,47 @@ interface MenuItemGroupData {
 
 const MENU_ITEMS: (MenuItemData | MenuItemGroupData)[] = [
   { groupLabel: 'Home' },
-  { targetPath: '/app', label: 'Dashboard', imageFilename: 'dashboard.svg' },
   {
+    pathname: '/app',
+    targetPath: '/app',
+    label: 'Dashboard',
+    imageFilename: 'dashboard.svg',
+  },
+  {
+    pathname: '/app/plan-viewer/:id*',
+    targetPath: '/app/plan-viewer',
+    label: 'Plan Viewer',
+    imageFilename: 'plan-logs.svg',
+  },
+  {
+    pathname: '/app/plan-logs/:id*',
     targetPath: '/app/plan-logs',
     label: 'Plan Logs',
     imageFilename: 'plan-logs.svg',
   },
   {
+    pathname: '/app/metrics-viewer/:id*',
     targetPath: '/app/metrics-viewer',
     label: 'Metrics Viewer',
     imageFilename: 'collector-logs.svg',
   },
   { groupLabel: 'Definitions' },
   {
+    pathname: '/app/scaling-plans/:id*',
     targetPath: '/app/scaling-plans',
     label: 'Scaling Plans',
     imageFilename: 'scaling-plans.svg',
     statsKey: 'scalingPlansCount',
   },
   {
+    pathname: '/app/metrics/:id*',
     targetPath: '/app/metrics',
     label: 'Metrics',
     imageFilename: 'metrics.svg',
     statsKey: 'metricsCount',
   },
   {
+    pathname: '/app/scaling-components/:id*',
     targetPath: '/app/scaling-components',
     label: 'Scaling Components',
     imageFilename: 'scaling-components.svg',
@@ -79,14 +96,16 @@ export default function Menu() {
           );
         }
         const menuItem = item as MenuItemData;
-
+        const selected = new URLPattern({ pathname: menuItem.pathname }).test({
+          pathname,
+        });
         return (
           <MenuItem
             key={index}
             iconUrl={`/assets/sidebar/${menuItem.imageFilename.toLowerCase()}`}
             label={menuItem.label}
             targetPath={menuItem.targetPath}
-            selected={pathname === menuItem.targetPath}
+            selected={selected}
             badgeCount={menuItem.statsKey && stats?.[menuItem.statsKey]}
           />
         );

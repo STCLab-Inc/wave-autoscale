@@ -5,7 +5,7 @@ quiet: {{ .Values.config.quiet }}
 # Data Layer
 db_url: {{ .Values.config.db_url }}
 watch_definition_duration: {{ .Values.config.watch_definition_duration }}
-autoscaling_history_retention: {{ .Values.config.autoscaling_history_retention }}
+plan_logs_retention: {{ .Values.config.plan_logs_retention }}
 reset_definitions_on_startup: {{ .Values.config.reset_definitions_on_startup }}
 
 # Metrics

@@ -5,10 +5,10 @@ use ts_rs::TS;
 #[derive(TS)]
 #[ts(
     export,
-    export_to = "../web-app/src/types/bindings/autoscaling-history-definition.ts"
+    export_to = "../web-app/src/types/bindings/plan-log-definition.ts"
 )]
 #[derive(Debug, Serialize, Deserialize, Validate, Clone)]
-pub struct AutoscalingHistoryDefinition {
+pub struct PlanLogDefinition {
     #[serde(default)]
     pub id: String,
     pub plan_db_id: String,
@@ -19,7 +19,7 @@ pub struct AutoscalingHistoryDefinition {
     pub fail_message: Option<String>,
 }
 
-impl AutoscalingHistoryDefinition {
+impl PlanLogDefinition {
     pub fn new(
         plan_db_id: String,
         plan_id: String,

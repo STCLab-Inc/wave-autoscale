@@ -14,12 +14,6 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         .service(get_metrics_data_by_metric_id);
 }
 
-// [POST] /api/metrics-receiver
-// #[derive(Deserialize, Validate)]
-// struct PostMetricsCollectorRequest {
-//     metrics: Vec<MetricDefinition>,
-// }
-
 #[derive(Deserialize)]
 struct PostMetricsReceiverQuery {
     collector: String,
@@ -232,7 +226,7 @@ async fn post_metrics_receiver(
     HttpResponse::Ok().finish()
 }
 
-const DEFAULT_DURATION: u64 = 300;
+const DEFAULT_STATS_DURATION: u64 = 300;
 
 #[derive(Debug, Deserialize)]
 struct MetricsDataStatsRequest {
@@ -247,7 +241,7 @@ async fn get_metrics_data_stats(
 ) -> impl Responder {
     debug!("[get_metrics_data_stats]");
     let duration = if query.duration.is_none() {
-        DEFAULT_DURATION
+        DEFAULT_STATS_DURATION
     } else {
         query.duration.unwrap()
     };
@@ -259,9 +253,12 @@ async fn get_metrics_data_stats(
     HttpResponse::Ok().json(metrics.unwrap())
 }
 
+const DEFAULT_FROM_MINUTES: i64 = 5;
+
 #[derive(Debug, Deserialize)]
 struct MetricsDataByMetricIdRequest {
-    duration: Option<u64>,
+    from: Option<u64>,
+    to: Option<u64>,
 }
 
 #[get("/api/metrics-data/metrics/{metric_id}")]
@@ -272,14 +269,22 @@ async fn get_metrics_data_by_metric_id(
 ) -> impl Responder {
     debug!("[get_metrics_data_by_metric_id]");
     let metric_id = metric_id.into_inner();
-    let duration = if query.duration.is_none() {
-        DEFAULT_DURATION
+    let from = if query.from.is_none() {
+        // 5 minutes ago
+        (chrono::Utc::now() - chrono::Duration::minutes(DEFAULT_FROM_MINUTES)).timestamp_millis()
+            as u64
     } else {
-        query.duration.unwrap()
+        query.from.unwrap()
+    };
+    let to = if query.to.is_none() {
+        // Now
+        chrono::Utc::now().timestamp_millis() as u64
+    } else {
+        query.to.unwrap()
     };
     let metrics = app_state
         .data_layer
-        .get_metrics_data_by_metric_id(metric_id, duration)
+        .get_metrics_data_by_metric_id(metric_id, from, to)
         .await;
     if metrics.is_err() {
         error!("Failed to get metrics: {:?}", metrics);

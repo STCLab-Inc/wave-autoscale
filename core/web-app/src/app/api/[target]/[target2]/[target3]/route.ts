@@ -25,7 +25,6 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const body = await request.text();
-  console.log('body', body);
   const response = await fetchFromWA(
     `/api/${params.target}/${params.target2}/${params.target3}`,
     {

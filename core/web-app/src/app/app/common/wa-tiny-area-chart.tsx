@@ -1,11 +1,11 @@
-import { Area, AreaChart, ResponsiveContainer, XAxis } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 
 export default function WATinyAreaChart({
   data,
-  dataKey = 'value',
+  yDataKey,
 }: {
   data: any;
-  dataKey: string;
+  yDataKey: string;
 }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -18,7 +18,7 @@ export default function WATinyAreaChart({
         </defs>
         <Area
           type="basis"
-          dataKey={dataKey}
+          dataKey={yDataKey}
           stroke="#8884d8"
           fill="url(#areaColor)"
         />
