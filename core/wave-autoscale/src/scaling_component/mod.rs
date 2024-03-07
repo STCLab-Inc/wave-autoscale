@@ -201,6 +201,7 @@ pub async fn evaluate_expression_with_current_state(
     current_state_map: HashMap<String, i64>,
     context: rquickjs::AsyncContext,
 ) -> Result<f64, anyhow::Error> {
+    let current_state_map_remove_target = current_state_map.clone();
     rquickjs::async_with!(context => |ctx| {
         current_state_map.iter().for_each(|(current_state_key, current_state_value)| {
             let _ = ctx.globals().set(
@@ -214,6 +215,10 @@ pub async fn evaluate_expression_with_current_state(
         let Result::Ok(result) = ctx.eval::<f64, _>(expression) else {
             return Err(anyhow::anyhow!("Invalid target value"));
         };
+        // variables clean up
+        current_state_map_remove_target.iter().for_each(|(current_state_key, _current_state_value)| {
+            let _ = ctx.globals().remove(current_state_key);
+        });
         Ok(result)
     })
     .await
