@@ -14,18 +14,18 @@ $ kubectl apply -f wa-sample-k8s-json-patch.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wa-sample-nginx-deployment
+  name: wa-sample-json-patch-nginx-dp
   labels:
-    app: nginx
+    app: json-patch-nginx
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx
+      app: json-patch-nginx
   template:
     metadata:
       labels:
-        app: nginx
+        app: json-patch-nginx
     spec:
       containers:
       - name: nginx
@@ -36,11 +36,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: wa-sample-nginx-service
+  name: wa-sample-json-patch-sv
 spec:
   type: NodePort
   selector:
-    app: nginx
+    app: json-patch-nginx
   ports:
     - protocol: TCP
       port: 80
@@ -49,13 +49,13 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: wa-sample-istio-vs
+  name: wa-sample-json-patch-istio-vs
   namespace: istio-system
 spec:
   hosts:
     - "*"
   gateways:
-    - wa-sample-istio-gateway
+    - wa-sample-json-patch-istio-gateway
   http:
     - match:
         - uri:
@@ -63,14 +63,14 @@ spec:
           port: 80
       route:
         - destination:
-            host: wa-sample-nginx-service.default.svc.cluster.local
+            host: wa-sample-json-patch-nginx-sv.default.svc.cluster.local
             port:
               number: 80
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
-  name: wa-sample-istio-gateway
+  name: wa-sample-json-patch-istio-gateway
   namespace: istio-system
 spec:
   selector:
@@ -90,7 +90,8 @@ $ kubectl delete -f wa-sample-k8s-json-patch.yaml
 ```
 
 ### Sample Scaling Plan
-examples > scaling-component > kubernetes > istio_delay.yaml
+- examples/scaling-component/kubernetes/istio_delay.yaml
+- examples/scaling-component/kubernetes/istio_retry.yaml
 
 
 ### Scaling Plan - component metadata
@@ -114,9 +115,9 @@ examples > scaling-component > kubernetes > istio_delay.yaml
 ```yaml
 # example
 scaling_components:
-  - component_id: wa_sample_k8s_json_patch
+  - component_id: wa_sample_component_k8s_json_patch_istio_delay
     namespace: istio-system
-    name: wa-sample-istio-vs
+    name: wa-sample-json-patch-istio-vs
     api_version: networking.istio.io/v1beta1
     kind: VirtualService
     json_patch:

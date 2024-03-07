@@ -1,90 +1,56 @@
 kind: Metric
-id: prometheus_node_exporter_mem_usage
-collector: vector
+id: wa_sample_metric_k8s_json_patch_istio_retry
+collector: wa-generator
+enabled: true
 metadata:
-  sources:
-    my_source_id_1:
-      type: http_client
-      endpoint: "http://localhost:9090/api/v1/query"
-      scrape_interval_secs: 30
-      query:
-        "query":
-          [
-            "100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[1m]) + avg_over_time(node_memory_Cached_bytes[1m]) + avg_over_time(node_memory_Buffers_bytes[1m])) / avg_over_time(node_memory_MemTotal_bytes[1m])))",
-          ]
-  transforms:
-    my_transforms_id_1:
-      inputs: ["my_source_id_1"]
-      type: remap
-      source: |-
-        . = parse_json!(.message)
-        tally = []
-        for_each(array!(.data.result)) -> |_index, value| {
-            tally = push(tally, {"name": "mem_usage", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : to_float!(value.value[1])}})
-        }
-        tally
-        . = tally
-  sinks:
-    my_sinks_id:
-      type: wave-autoscale
-      inputs: ["my_transforms_id_1"]
+  pattern: [30, 70]
+  gap_seconds: 10
 ---
 kind: ScalingComponent
-id: k8s_patch
+id: wa_sample_component_k8s_json_patch_istio_retry
+enabled: true
 component_kind: kubernetes-json-patch
 ---
 kind: ScalingPlan
-id: scaling_plan_k8s_patch_scaling
+id: wa_sample_plan_k8s_json_patch_istio_retry
 metadata:
-  title: "Scaling Plan for K8S Patch Scaling - istio virtual service dely"
-  cool_down: 30 # seconds
+  title: "Sample Scaling Plan - k8s istio virtual service retry"
+  cool_down: 0 # seconds
   interval: 10000 # milliseconds
+enabled: true
+variables:
+  metric: |
+    get({
+        metric_id: 'wa_sample_metric_k8s_json_patch_istio_retry'
+    })
 plans:
-  - id: plan-scale-out
-    description: "Scale out if CPU Utilization is greater than 70%."
+  - id: add-istio-retry
     # JavaScript expression that returns a boolean value.
-    expression: >
-      get({
-        metric_id: 'prometheus_node_exporter_mem_usage',
-        name: 'mem_usage',
-        stats: 'max',
-        period_sec: 100
-      }) >= 70
+    expression: $metric >= 70
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
-      - component_id: k8s_patch
+      - component_id: wa_sample_component_k8s_json_patch_istio_retry
         namespace: istio-system
-        name: istio-vs
+        name: wa-sample-json-patch-istio-vs
         api_version: networking.istio.io/v1beta1
         kind: VirtualService
-        # Kubernetes json patch
-        # maximum of 3 retries and each with a 2 second timeout.
         json_patch:
           - op: add
-            path: /spec/http/1/retries
+            path: /spec/http/0/retries
             value: { "attempts": 3, "perTryTimeout": "2s" }
-  - id: plan-scale-in
-    description: "Scale in if CPU Utilization is less than 30."
+  - id: remove-istio-retry
     # JavaScript expression that returns a boolean value.
-    expression: >
-      get({
-        metric_id: 'prometheus_node_exporter_mem_usage',
-        name: 'mem_usage',
-        stats: 'max',
-        period_sec: 30
-      }) < 30
+    expression: $metric < 70
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
-      - component_id: k8s_patch
+      - component_id: wa_sample_component_k8s_json_patch_istio_retry
         namespace: istio-system
-        name: istio-vs
+        name: wa-sample-json-patch-istio-vs
         api_version: networking.istio.io/v1beta1
         kind: VirtualService
-        # Kubernetes json patch
-        # maximum of 1 retries and each with a 5 second timeout.
         json_patch:
-          - op: add
-            path: /http/1/retries
-            value: { "attempts": 1, "perTryTimeout": "5s" }
+          - op: replace
+            path: /spec/http/0/retries
+            value: null

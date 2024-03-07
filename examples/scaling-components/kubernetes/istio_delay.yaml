@@ -1,5 +1,5 @@
 kind: Metric
-id: wa_sample_metric_k8s_json_patch
+id: wa_sample_metric_k8s_json_patch_istio_delay
 collector: wa-generator
 enabled: true
 metadata:
@@ -7,12 +7,12 @@ metadata:
   gap_seconds: 10
 ---
 kind: ScalingComponent
-id: wa_sample_k8s_json_patch
+id: wa_sample_component_k8s_json_patch_istio_delay
 enabled: true
 component_kind: kubernetes-json-patch
 ---
 kind: ScalingPlan
-id: wa_sample_k8s_istio_vs_delay
+id: wa_sample_plan_k8s_json_patch_istio_delay
 metadata:
   title: "Sample Scaling Plan - k8s istio virtual service dely"
   cool_down: 0 # seconds
@@ -21,7 +21,7 @@ enabled: true
 variables:
   metric: |
     get({
-        metric_id: 'wa_sample_metric_k8s_json_patch'
+        metric_id: 'wa_sample_metric_k8s_json_patch_istio_delay'
     })
 plans:
   - id: add-istio-fault-injection
@@ -30,9 +30,9 @@ plans:
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
-      - component_id: wa_sample_k8s_json_patch
+      - component_id: wa_sample_component_k8s_json_patch_istio_delay
         namespace: istio-system
-        name: wa-sample-istio-vs
+        name: wa-sample-json-patch-istio-vs
         api_version: networking.istio.io/v1beta1
         kind: VirtualService
         json_patch:
@@ -48,9 +48,9 @@ plans:
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
-      - component_id: wa_sample_k8s_json_patch
+      - component_id: wa_sample_component_k8s_json_patch_istio_delay
         namespace: istio-system
-        name: wa-sample-istio-vs
+        name: wa-sample-json-patch-istio-vs
         api_version: networking.istio.io/v1beta1
         kind: VirtualService
         json_patch:
