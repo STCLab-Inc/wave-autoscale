@@ -70,11 +70,10 @@ impl ScalingComponent for ECSServiceScalingComponent {
 
             if result.is_err() {
                 let error = result.err().unwrap();
-                let meta = error.meta();
                 let json = json!({
-                    "message": meta.message(),
-                    "code": meta.code(),
-                    "extras": meta.to_string()
+                    "message": error.message(),
+                    "code": error.code(),
+                    "extras": error.to_string()
                 });
 
                 return Err(anyhow::anyhow!(json));
