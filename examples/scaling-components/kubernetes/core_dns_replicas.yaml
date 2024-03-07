@@ -1,75 +1,46 @@
 kind: Metric
-id: prometheus_coredns_request_5m
-collector: vector
+id: wa_sample_metric_k8s_deployment_core_dns_replicas
+collector: wa-generator
+enabled: true
 metadata:
-  sources:
-    my_source_id_1:
-      type: http_client
-      endpoint: "http://localhost:9090/api/v1/query"
-      scrape_interval_secs: 30
-      query:
-        "query": ['rate(coredns_dns_requests_total{type=~"A|AAAA"}[5m])']
-  transforms:
-    my_transforms_id_1:
-      inputs: ["my_source_id_1"]
-      type: remap
-      source: |-
-        . = parse_json!(.message)
-        tally = []
-        for_each(array!(.data.result)) -> |_index, value| {
-            tally = push(tally, {"name": "coredns_request", "tags": value.metric, "timestamp": value.value[0], "gauge": {"value" : to_float!(value.value[1])}})
-        }
-        tally
-        . = tally
-  sinks:
-    my_sinks_id:
-      type: wave-autoscale
-      inputs: ["my_transforms_id_1"]
+  pattern: [30, 70]
+  gap_seconds: 10
 ---
 kind: ScalingComponent
-id: k8s_corddns
+id: wa_sample_component_k8s_deployment_core_dns_replicas
 component_kind: kubernetes-deployment
+enabled: true
 metadata:
-  api_server_endpoint: ""
   namespace: kube-system
   name: coredns
-  ca_cert: ""
 ---
 kind: ScalingPlan
-id: scaling_plan_k8s_coredns_scaling
+id: wa_sample_plan_k8s_deployment_core_dns_replicas
 metadata:
-  title: "Scaling Plan for K8S CoreDNS Scaling - scaling replicas"
-  cool_down: 30 # seconds
+  title: "Sample Scaling Plan - core dns scaling replicas"
+  cool_down: 0 # seconds
   interval: 10000 # milliseconds
+enabled: true
+variables:
+  core_dns_cnt: 2
+  metric: |
+    get({
+        metric_id: 'wa_sample_metric_k8s_deployment_core_dns_replicas'
+    })
 plans:
   - id: plan-scale-out
-    description: "Scale out if CoreDNS request rate of increase is greater than 40%."
     # JavaScript expression that returns a boolean value.
-    expression: >
-      get({
-        metric_id: 'prometheus_coredns_request_5m',
-        name: 'coredns_request',
-        stats: 'max',
-        period_sec: 60
-      }) >= 40
+    expression: $metric >= 70
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
-      - component_id: k8s_corddns
+      - component_id: wa_sample_component_k8s_deployment_core_dns_replicas
         replicas: $replicas + 1
   - id: plan-scale-in
-    description: "Scale in if CoreDNS request rate of increase is less than 10%."
     # JavaScript expression that returns a boolean value.
-    expression: >
-      get({
-        metric_id: 'prometheus_coredns_request_5m',
-        name: 'coredns_request',
-        stats: 'max',
-        period_sec: 60
-      }) < 10
+    expression: $metric < 70
     # Higher priority values will be checked first.
     priority: 1
     scaling_components:
-      - component_id: k8s_corddns
-        # replicas must string type
-        replicas: "2"
+      - component_id: wa_sample_component_k8s_deployment_core_dns_replicas
+        replicas: $core_dns_cnt

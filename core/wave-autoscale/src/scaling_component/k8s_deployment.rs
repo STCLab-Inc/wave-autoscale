@@ -41,10 +41,10 @@ impl K8sDeploymentScalingComponent {
 
     async fn get_client(
         &self,
-        _api_server_endpoint: &String,
-        _ca_cert: &String,
-        _namespace: &String,
-    ) -> Result<kube::Client> {
+        _api_server_endpoint: Option<String>,
+        _ca_cert: Option<String>,
+        _namespace: Option<String>,
+    ) -> anyhow::Result<kube::Client> {
         // TODO: Use the metadata to create a Kubernetes Client
         // Infer the runtime environment and try to create a Kubernetes Client
         let client = Client::try_default().await?;
@@ -95,22 +95,18 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
     ) -> Result<HashMap<String, Value>> {
         let metadata = self.definition.metadata.clone();
 
-        if let (
-            Some(Value::String(api_server_endpoint)),
-            Some(Value::String(namespace)),
-            Some(Value::String(name)),
-            Some(Value::String(ca_cert)),
-            Some(replicas),
-        ) = (
-            metadata.get("api_server_endpoint"),
+        if let (Some(Value::String(namespace)), Some(Value::String(name)), Some(replicas)) = (
             metadata.get("namespace"),
             metadata.get("name"),
-            metadata.get("ca_cert"),
             params.get("replicas"),
         ) {
             // TODO: Use the metadata to create a Kubernetes Client
+            let api_server_endpoint = metadata
+                .get("api_server_endpoint")
+                .map(|api_server_endpoint| api_server_endpoint.to_string());
+            let ca_cert = metadata.get("ca_cert").map(|ca_cert| ca_cert.to_string());
             let client = self
-                .get_client(api_server_endpoint, ca_cert, namespace)
+                .get_client(api_server_endpoint, ca_cert, Some(namespace.to_string()))
                 .await;
             if let Err(e) = client {
                 return Err(anyhow::anyhow!(e));
