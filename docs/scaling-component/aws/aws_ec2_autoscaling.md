@@ -39,6 +39,15 @@
 examples > scaling-component > aws > aws_ec2_autoscaling.yaml
 
 
+### Scaling Component
+- **asg_name**  
+  *String | Required*
+  - AWS EC2 Auto Scaling Group name
+- **region**  
+  *String | Required*
+  - AWS EC2 Auto Scaling Group region
+
+
 ### Scaling Plan - component metadata
 - **desired**  
   *Number or String | Required*

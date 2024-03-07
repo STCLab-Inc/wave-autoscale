@@ -11,7 +11,7 @@ id: wa_sample_component_aws_ecs_service_scaling
 component_kind: amazon-ecs
 enabled: true
 metadata:
-  region: "ap-northeast-2" #"{{ region }}"
+  region: "{{ region }}"
   cluster_name: "wa-sample-ecs-cluster"
   service_name: "wa-sample-ecs-service-fargate"
 ---
@@ -28,7 +28,7 @@ variables:
         metric_id: 'wa_sample_metric_aws_ecs_service_scaling'
     })
 plans:
-  - id: asg-scale-out
+  - id: service-scale-out
     # JavaScript expression that returns a boolean value.
     expression: >
       $metric >= 70
@@ -36,7 +36,7 @@ plans:
     scaling_components:
       - component_id: wa_sample_component_aws_ecs_service_scaling
         desired: 3
-  - id: asg-scale-in
+  - id: service-scale-in
     # JavaScript expression that returns a boolean value.
     expression: >
       $metric < 70

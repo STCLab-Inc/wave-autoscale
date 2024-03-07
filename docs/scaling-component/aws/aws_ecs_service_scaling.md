@@ -94,33 +94,27 @@
 examples/scaling-component/aws/aws_ecs_service_scaling.yaml
 
 
+### Scaling Component
+- **cluster_name**  
+  *String | Required*
+  - AWS ECS Cluster name
+- **service_name**  
+  *String | Required*
+  - AWS ECS Service name
+- **region**  
+  *String | Required*
+  - AWS ECS region
+
+
 ### Scaling Plan - component metadata
 - **desired**  
-  *Number or String | Required*
-  - Change the Desired Capacity of the Auto Scaling Group.
-  - `desired` can be a number or an expression. The variables that can be used when using an expression are as follows.
-    - `$desired`: Desired Capacity of the Auto Scaling Group
-    - `$min`: Min Capacity of the Auto Scaling Group
-    - `$max`: Max Capacity of the Auto Scaling Group
-- **min**  
-  *Number | Optional*
-  - Change the Min Capacity of the Auto Scaling Group.
-- **max**  
-  *Number | Optional*
-  - Change the Max Capacity of the Auto Scaling Group.
+  *Number | Required*
+  - Change the Desired Capacity of the ECS Service.
 
 ```yaml
-# example 1
+# example
 scaling_components:
-  - component_id: wa_sample_component_aws_ec2_autoscaling
-    desired: $desired + 1
-```
-```yaml
-# example 2
-scaling_components:
-  - component_id: wa_sample_component_aws_ec2_autoscaling
-    desired: 2
-    min: 1
-    max: 3
+  - component_id: wa_sample_component_aws_ecs_service_scaling
+    desired: 3
 ```
 
