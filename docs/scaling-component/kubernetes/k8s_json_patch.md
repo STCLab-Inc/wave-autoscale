@@ -4,6 +4,7 @@
 **Precondition**:  
 Start with a pre-built *Kubernetes* & *Istio* environment.  
 
+
 #### manifest install
 apply the `wa-sample-k8s-json-patch.yaml` file to the Kubernetes cluster.
 ```bash
@@ -89,6 +90,12 @@ spec:
 $ kubectl delete -f wa-sample-k8s-json-patch.yaml
 ```
 
+
+### Permissions
+Service Account (wave-autoscale-sa) should have edit permissions by deployment target.  
+> Add ClusterRole, ClusterRoleBinding for wave-autoscale-sa.
+
+
 ### Sample Scaling Plan
 - examples/scaling-component/kubernetes/istio_delay.yaml
 - examples/scaling-component/kubernetes/istio_retry.yaml
@@ -128,8 +135,3 @@ scaling_components:
         path: /spec/http/0/fault/delay/percentage
         value: { "value": 100 }
 ```
-
-
-### Permissions
-Service Account (wave-autoscale-sa) should have edit permissions by deployment target.  
-> Add ClusterRole, ClusterRoleBinding for wave-autoscale-sa.

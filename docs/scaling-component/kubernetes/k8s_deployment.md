@@ -4,6 +4,7 @@
 **Precondition**:  
 Start with a pre-built *Kubernetes* & *CoreDNS* environment.  
 
+
 #### manifest install
 apply the `wa-sample-k8s-deployment.yaml` file to the Kubernetes cluster.
 ```bash
@@ -38,6 +39,12 @@ spec:
 ```bash
 $ kubectl delete -f wa-sample-k8s-deployment.yaml
 ```
+
+
+### Permissions
+Service Account (wave-autoscale-sa) should have edit permissions by deployment target.  
+> Add ClusterRole, ClusterRoleBinding for wave-autoscale-sa.
+
 
 ### Sample Scaling Plan
 - examples/scaling-component/kubernetes/core_dns_replicas.yaml
@@ -76,9 +83,4 @@ scaling_components:
   - component_id: wa_sample_component_k8s_deployment_core_dns_replicas
     replicas: $replicas + 1
 ```
-
-
-### Permissions
-Service Account (wave-autoscale-sa) should have edit permissions by deployment target.  
-> Add ClusterRole, ClusterRoleBinding for wave-autoscale-sa.
 

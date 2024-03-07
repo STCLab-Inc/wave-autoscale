@@ -14,6 +14,27 @@
     - Automatic scaling: `No scaling policies`
 
 
+### Permissions
+```yaml
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "autoscaling:UpdateAutoScalingGroup",
+                "autoscaling:DescribeAutoScalingGroups"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+```
+
+
 ### Sample Scaling Plan
 examples > scaling-component > aws > aws_ec2_autoscaling.yaml
 
@@ -46,25 +67,4 @@ scaling_components:
     desired: 2
     min: 1
     max: 3
-```
-
-
-### Permissions
-```yaml
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "Statement1",
-            "Effect": "Allow",
-            "Action": [
-                "autoscaling:UpdateAutoScalingGroup",
-                "autoscaling:DescribeAutoScalingGroups"
-            ],
-            "Resource": [
-                "*"
-            ]
-        }
-    ]
-}
 ```
