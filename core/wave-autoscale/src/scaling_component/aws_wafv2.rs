@@ -2,6 +2,7 @@ use super::ScalingComponent;
 use crate::util::aws::get_aws_config_with_metadata;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
+use aws_sdk_applicationautoscaling::error::ProvideErrorMetadata;
 use aws_sdk_wafv2::Client as WAFClient;
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
@@ -66,7 +67,11 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
             .await;
         if web_acl.is_err() {
             let web_acl_err = web_acl.err().unwrap();
-            return Err(anyhow::anyhow!(web_acl_err));
+            return Err(anyhow::anyhow!(serde_json::json!({
+                "message": web_acl_err.message(),
+                "code": web_acl_err.code(),
+                "extras": web_acl_err.to_string()
+            })));
         }
         let web_acl = web_acl.unwrap();
         let lock_token = web_acl.lock_token.clone().unwrap();
@@ -111,7 +116,11 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
         
         if result.is_err() {
             let result_err = result.err().unwrap();
-            return Err(anyhow::anyhow!(result_err));
+            return Err(anyhow::anyhow!(serde_json::json!({
+                "message": result_err.message(),
+                "code": result_err.code(),
+                "extras": result_err.to_string()
+            })));
         }
         Ok(params)
     }
