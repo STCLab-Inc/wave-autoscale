@@ -181,6 +181,7 @@ export default function ScalingPlansPage() {
       }
 
       successToast('Saved!');
+      fetch();
     } catch (error: any) {
       console.error(error);
       errorToast(error.message);
@@ -239,13 +240,13 @@ export default function ScalingPlansPage() {
               {/* divider */}
               <div className="mx-5 h-6 w-[1px] bg-wa-gray-400" />
               <button
-                className="btn-ghost btn-sm btn mr-5 flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-ghost btn btn-sm mr-5 flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
                 Reset
               </button>
               <button
-                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-gray btn btn-sm flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
               >
                 Save
