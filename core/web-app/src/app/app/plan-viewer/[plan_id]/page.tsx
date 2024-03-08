@@ -233,7 +233,7 @@ export default function PlanViewerDetailPage({
           <div className="flex flex-1 items-center">
             <div className="form-control mr-2">
               <div className="label">
-                <span className="label-text font-bold text-xs">From</span>
+                <span className="label-text text-xs font-bold">From</span>
               </div>
               <label className="input-group-sm">
                 <input
@@ -247,7 +247,7 @@ export default function PlanViewerDetailPage({
             </div>
             <div className="form-control">
               <div className="label">
-                <span className="label-text font-bold text-xs">To</span>
+                <span className="label-text text-xs font-bold">To</span>
               </div>
               <label className="input-group-sm">
                 <input
@@ -261,7 +261,7 @@ export default function PlanViewerDetailPage({
             </div>
             <div className="form-control ml-4">
               <div className="label">
-                <span className="label-text font-bold text-xs">Quick</span>
+                <span className="label-text text-xs font-bold">Quick</span>
               </div>
               <div className="join">
                 <button
@@ -289,7 +289,7 @@ export default function PlanViewerDetailPage({
           {!isLoading && (
             <div className="form-control">
               <div className="label">
-                <span className="label-text font-bold text-xs">Stats</span>
+                <span className="label-text text-xs font-bold">Stats</span>
               </div>
               <div className="flex h-8 items-center gap-2">
                 <div className="badge badge-primary gap-2 px-5 py-3 text-xs">
