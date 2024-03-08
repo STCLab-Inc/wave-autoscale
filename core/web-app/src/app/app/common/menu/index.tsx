@@ -34,12 +34,6 @@ const MENU_ITEMS: (MenuItemData | MenuItemGroupData)[] = [
     imageFilename: 'plan-logs.svg',
   },
   {
-    pathname: '/app/plan-logs/:id*',
-    targetPath: '/app/plan-logs',
-    label: 'Plan Logs',
-    imageFilename: 'plan-logs.svg',
-  },
-  {
     pathname: '/app/metrics-viewer/:id*',
     targetPath: '/app/metrics-viewer',
     label: 'Metrics Viewer',

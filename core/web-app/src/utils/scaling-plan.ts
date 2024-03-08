@@ -76,14 +76,13 @@ export function deserializeScalingPlanDefinition(serialized: string) {
 export function extractMetricsFromScalingPlan(
   scalingPlan: ScalingPlanDefinition
 ) {
-  const metrics: GetJSParamDefinition[] = [];
-
+  const metricsMap: Map<string, GetJSParamDefinition> = new Map();
   scalingPlan?.plans?.forEach((plan) => {
     const expression = plan.expression;
     if (expression) {
       const metricDefinition = extractGetJsParamsFromExpression(expression);
       if (metricDefinition) {
-        metrics.push(metricDefinition);
+        metricsMap.set(metricDefinition.metricId, metricDefinition);
       }
     }
   });
@@ -92,10 +91,12 @@ export function extractMetricsFromScalingPlan(
     if (typeof value === 'string') {
       const metricDefinition = extractGetJsParamsFromExpression(value);
       if (metricDefinition) {
-        metrics.push(metricDefinition);
+        metricsMap.set(metricDefinition.metricId, metricDefinition);
       }
     }
   });
+
+  const metrics: GetJSParamDefinition[] = Array.from(metricsMap.values());
 
   return metrics;
 }

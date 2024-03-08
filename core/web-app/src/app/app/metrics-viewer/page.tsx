@@ -17,18 +17,22 @@ const columns = [
     id: 'index',
     header: () => '',
     size: 50,
-    cell: (cell) => cell.row.index + 1,
+    cell: (cell) => (
+      <span className="flex items-start justify-start">
+        {cell.row.index + 1}
+      </span>
+    ),
   }),
   columnHelper.accessor('metricId', {
     header: () => 'Metric ID',
     cell: (cell: any) => {
       const name = cell.getValue();
       return (
-        <span className="flex items-center justify-start font-bold">
-          {name}
-        </span>
+        <span className="flex items-start justify-start font-bold">{name}</span>
       );
     },
+    size: 500,
+    minSize: 500,
   }),
   columnHelper.accessor('countPerMinute', {
     header: () => 'Count Per Minute',
@@ -44,6 +48,7 @@ const columns = [
         </div>
       );
     },
+    size: 200,
   }),
   columnHelper.accessor('timestamps', {
     header: () => 'Last Timestamp',
@@ -55,16 +60,20 @@ const columns = [
       const lastTimestamp = timestamps[timestamps.length - 1];
       return parseDateToDayjs(lastTimestamp)?.format('YYYY-MM-DD HH:mm:ss');
     },
+    size: 200,
   }),
   columnHelper.accessor('numberOfValues', {
     header: () => 'The Number of Values',
     cell: (cell: any) => cell.getValue(),
+    size: 200,
   }),
   columnHelper.accessor('lastValues', {
     header: () => 'Last Values',
     cell: (cell: any) => (
       <div className="line-clamp-1 max-w-xl">{cell.getValue()}</div>
     ),
+    size: 0,
+    minSize: 0,
   }),
 ];
 

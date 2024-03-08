@@ -63,6 +63,7 @@ const columns = [
         </span>
       );
     },
+    size: 400,
   }),
   columnHelper.accessor('tags', {
     id: 'tags',
@@ -75,6 +76,7 @@ const columns = [
         </div>
       );
     },
+    size: 400,
   }),
   columnHelper.accessor('values', {
     id: 'values',
@@ -87,6 +89,7 @@ const columns = [
         </div>
       );
     },
+    size: 200,
   }),
   columnHelper.accessor('values', {
     id: 'lastTimestamp',
@@ -96,6 +99,7 @@ const columns = [
       const lastTimestamp = values[values.length - 1].timestamp;
       return parseDateToDayjs(lastTimestamp)?.format('YYYY-MM-DD HH:mm:ss');
     },
+    size: 200,
   }),
   columnHelper.accessor('values', {
     id: 'lastValue',
@@ -105,11 +109,12 @@ const columns = [
       const lastValue = values[values.length - 1].value;
       return lastValue;
     },
+    size: 200,
   }),
   columnHelper.display({
     id: 'code',
     header: () => 'Expression Code',
-    size: 50,
+    size: 200,
     cell: (cell) => {
       return (
         // Copy to clipboard
