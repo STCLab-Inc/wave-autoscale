@@ -171,8 +171,8 @@ export default function DiagramFlow({
         };
       });
 
-      const scalingPlanNodes = renderingScalingPlansItem.plans?.map(
-        (plan, index) => {
+      const scalingPlanNodes =
+        renderingScalingPlansItem.plans?.map((plan, index) => {
           return {
             // Default properties
             id: plan.id,
@@ -188,8 +188,7 @@ export default function DiagramFlow({
             sourcePosition: Position.Right,
             targetPosition: Position.Left,
           };
-        }
-      ) ?? [];
+        }) ?? [];
 
       const scalingComponentNodes = scalingComponents.map(
         (scalingComponent: ScalingComponentUI, index) => {

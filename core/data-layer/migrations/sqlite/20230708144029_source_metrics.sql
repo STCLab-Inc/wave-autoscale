@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE source_metrics (
+CREATE TABLE metrics_data (
     id TEXT PRIMARY KEY,
     collector TEXT NOT NULL,
     metric_id TEXT NOT NULL,

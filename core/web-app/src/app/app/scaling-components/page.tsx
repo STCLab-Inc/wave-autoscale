@@ -6,10 +6,10 @@ import { debounce } from 'lodash';
 import { createColumnHelper } from '@tanstack/react-table';
 import { renderKeyValuePairsWithJson } from '../common/keyvalue-renderer';
 import EnabledBadge from '../common/enabled-badge';
-import WASimpleTable from '../common/wa-simple-table';
+import WAVirtualizedTable from '../common/wa-virtualized-table';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import ScalingComponentService from '@/services/scaling-component';
-import { deserializeScalingComponentDefinitions } from '@/utils/scaling-component-binding';
+import { deserializeScalingComponentDefinitions } from '@/utils/scaling-component';
 import { PageSectionTitle } from '../common/page-section-title';
 import PageHeader from '../common/page-header';
 import { getAnnotationsFromError } from '../common/yaml-editor/annotation';
@@ -137,8 +137,8 @@ export default function ScalingComponentsPage() {
             <PageSectionTitle title="Preview" />
           </div>
           {/* Table */}
-          <div className="px-6 pb-6">
-            <WASimpleTable<ScalingComponentDefinition>
+          <div className="flex-1 px-6 pb-6">
+            <WAVirtualizedTable<ScalingComponentDefinition>
               tableOptions={{
                 data: previewData,
                 columns,
@@ -155,13 +155,13 @@ export default function ScalingComponentsPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                className="btn-ghost btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-ghost btn btn-sm flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleReset}
               >
                 Reset Code
               </button>
               <button
-                className="btn-gray btn-sm btn flex h-8 items-center justify-center rounded-md text-sm"
+                className="btn-gray btn btn-sm flex h-8 items-center justify-center rounded-md text-sm"
                 onClick={handleSave}
                 disabled={annotations.length > 0}
               >

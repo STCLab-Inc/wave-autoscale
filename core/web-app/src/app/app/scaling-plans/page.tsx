@@ -8,7 +8,7 @@ import { PageSectionTitle } from '../common/page-section-title';
 import {
   deserializeScalingPlanDefinition,
   serializeScalingPlanDefinition,
-} from '@/utils/scaling-plan-binding';
+} from '@/utils/scaling-plan';
 import { debounce } from 'lodash';
 import dynamic from 'next/dynamic';
 import PageHeader from '../common/page-header';

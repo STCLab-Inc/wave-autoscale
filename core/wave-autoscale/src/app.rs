@@ -17,7 +17,7 @@ pub struct App {
     shared_metric_updater: SharedMetricUpdater,
     shared_scaling_component_manager: SharedScalingComponentManager,
     shared_scaling_planner_manager: SharedScalingPlannerManager,
-    autoscaling_history_remover_handle: Option<tokio::task::JoinHandle<()>>,
+    plan_logs_remover_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl App {
@@ -43,7 +43,7 @@ impl App {
             shared_metric_updater,
             shared_scaling_component_manager,
             shared_scaling_planner_manager,
-            autoscaling_history_remover_handle: None,
+            plan_logs_remover_handle: None,
         }
     }
 
@@ -135,11 +135,11 @@ impl App {
         }
     }
 
-    // Run the cron job to remove the old Autoscaling History
-    pub fn run_autoscaling_history_cron_job(&mut self, duration_string: String) {
-        self.stop_autoscaling_history_cron_job();
+    // Run the cron job to remove the old plan logs
+    pub fn run_remove_plan_logs_cron_job(&mut self, duration_string: String) {
+        self.stop_remove_plan_logs_cron_job();
         debug!(
-            "[run_autoscaling_history_cron_job] duration_string: {}",
+            "[run_remove_plan_logs_cron_job] duration_string: {}",
             duration_string
         );
         let duration = duration_str::parse(&duration_string);
@@ -157,23 +157,23 @@ impl App {
         let to_date = chrono::Utc::now() - duration;
         let data_layer = self.shared_data_layer.clone();
         let handle = tokio::spawn(async move {
-            let result = data_layer.remove_old_autoscaling_history(to_date).await;
+            let result = data_layer.remove_old_plan_logs_in_db(to_date).await;
             if result.is_err() {
                 let error = result.err().unwrap();
-                debug!("Error removing old autoscaling history: {}", error);
+                debug!("Error removing old plan logs: {}", error);
             }
 
             sleep(std::time::Duration::from_secs(60)).await;
         });
-        self.autoscaling_history_remover_handle = Some(handle);
+        self.plan_logs_remover_handle = Some(handle);
     }
 
-    // Stop the cron job to remove the old Autoscaling History
-    pub fn stop_autoscaling_history_cron_job(&mut self) {
-        if self.autoscaling_history_remover_handle.is_some() {
-            if let Some(handle) = self.autoscaling_history_remover_handle.take() {
+    // Stop the cron job to remove the old plan logs
+    pub fn stop_remove_plan_logs_cron_job(&mut self) {
+        if self.plan_logs_remover_handle.is_some() {
+            if let Some(handle) = self.plan_logs_remover_handle.take() {
                 handle.abort();
-                self.autoscaling_history_remover_handle = None;
+                self.plan_logs_remover_handle = None;
             }
         }
     }

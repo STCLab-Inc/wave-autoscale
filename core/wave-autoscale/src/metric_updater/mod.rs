@@ -51,7 +51,7 @@ impl MetricUpdater {
         let task = tokio::spawn(async move {
             loop {
                 let new_metric_values = data_layer
-                    .get_source_metrics_values(metric_ids.clone(), MAX_TIME_GREATER_THAN)
+                    .get_metrics_data_from_db(metric_ids.clone(), MAX_TIME_GREATER_THAN)
                     .await;
 
                 if let Ok(new_metric_values) = new_metric_values {
@@ -124,7 +124,7 @@ mod tests {
         let metric = metric.as_str();
 
         let _ = data_layer
-            .add_source_metric("vector", "metric1", metric)
+            .add_metrics_data_into_db("vector", "metric1", metric)
             .await;
 
         let mut metric_updater = MetricUpdater::new(data_layer.clone(), 1000);

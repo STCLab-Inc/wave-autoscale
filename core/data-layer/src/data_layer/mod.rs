@@ -1,12 +1,10 @@
-mod autoscaling_history;
 mod metric;
+mod metrics_data;
+mod plan_logs;
 mod scaling_component;
 mod scaling_plan;
-mod source_metrics;
 
-use crate::{
-    types::source_metrics::SourceMetrics,
-};
+use crate::types::metrics_data_item::MetricsDataItem;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use once_cell::sync::Lazy;
@@ -28,35 +26,38 @@ use tokio::sync::watch;
 use tracing::{debug, error, info};
 
 const DEFAULT_DB_URL: &str = "sqlite://wave.db";
-const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
+const DEFAULT_METRICS_DATA_BUFFER_SIZE_KB: u64 = 500_000;
 
+/**
+**MetricsData is a struct to store metrics data**
+ */
 #[derive(Debug)]
-pub struct SourceMetricsData {
+pub struct MetricsData {
     metric_buffer_size_byte: u64,
     enable_metrics_log: bool,
-    pub source_metrics: HashMap<String, BTreeMap<String, SourceMetrics>>,
-    source_metrics_metadata: LinkedList<(String, String, usize)>,
-    source_metrics_size: usize,
+    pub metrics_data_map: HashMap<String, BTreeMap<String, MetricsDataItem>>,
+    metrics_data_metadata: LinkedList<(String, String, usize)>,
+    metrics_data_total_size: usize,
 }
 
-type SharedSourceMetricsData = Arc<RwLock<SourceMetricsData>>;
+type SharedMetricsData = Arc<RwLock<MetricsData>>;
 
-pub static SOURCE_METRICS_DATA: Lazy<SharedSourceMetricsData> = Lazy::new(|| {
-    let source_metrics_data = SourceMetricsData {
+pub static METRICS_DATA: Lazy<SharedMetricsData> = Lazy::new(|| {
+    let metrics_data = MetricsData {
         metric_buffer_size_byte: 500_000,
         enable_metrics_log: false,
-        source_metrics: HashMap::new(),
-        source_metrics_metadata: LinkedList::new(),
-        source_metrics_size: 0,
+        metrics_data_map: HashMap::new(),
+        metrics_data_metadata: LinkedList::new(),
+        metrics_data_total_size: 0,
     };
-    Arc::new(RwLock::new(source_metrics_data))
+    Arc::new(RwLock::new(metrics_data))
 });
 
 #[derive(Debug)]
 pub struct DataLayer {
     // Pool is a connection pool to the database. Postgres, Mysql, SQLite supported.
     pool: AnyPool,
-    source_metrics_data: SharedSourceMetricsData,
+    metrics_data: SharedMetricsData,
     action_sender: tokio::sync::broadcast::Sender<serde_json::Value>,
 }
 
@@ -68,25 +69,25 @@ impl DataLayer {
             sql_url
         };
         let metric_buffer_size_byte = if metric_buffer_size_kb == 0 {
-            DEFAULT_METRIC_BUFFER_SIZE_KB * 1000
+            DEFAULT_METRICS_DATA_BUFFER_SIZE_KB * 1000
         } else {
             metric_buffer_size_kb * 1000
         };
 
         {
-            let source_metrics_data = SOURCE_METRICS_DATA.clone();
-            let Ok(mut source_metrics_data) = source_metrics_data.write() else {
-                error!("[DataLayer::new()] Failed to get the lock of source_metrics_data");
-                panic!("Failed to get the lock of source_metrics_data");
+            let metrics_data = METRICS_DATA.clone();
+            let Ok(mut metrics_data) = metrics_data.write() else {
+                error!("[DataLayer::new()] Failed to get the lock of metrics_data");
+                panic!("Failed to get the lock of metrics_data");
             };
-            source_metrics_data.metric_buffer_size_byte = metric_buffer_size_byte;
-            source_metrics_data.enable_metrics_log = enable_metrics_log;
+            metrics_data.metric_buffer_size_byte = metric_buffer_size_byte;
+            metrics_data.enable_metrics_log = enable_metrics_log;
         }
         let (action_sender, _) = tokio::sync::broadcast::channel::<serde_json::Value>(16);
 
         DataLayer {
             pool: DataLayer::get_pool(sql_url).await,
-            source_metrics_data: SOURCE_METRICS_DATA.clone(),
+            metrics_data: METRICS_DATA.clone(),
             action_sender,
         }
     }
@@ -286,7 +287,7 @@ pub mod tests {
     use super::DataLayer;
     use tracing::error;
 
-    const DEFAULT_METRIC_BUFFER_SIZE_KB: u64 = 500_000;
+    const DEFAULT_METRICS_DATA_BUFFER_SIZE_KB: u64 = 500_000;
     const DEFAULT_ENABLE_METRICS_LOG: bool = false;
 
     pub async fn get_data_layer_with_sqlite() -> DataLayer {
@@ -299,7 +300,7 @@ pub mod tests {
         }
         let data_layer = DataLayer::new(
             DEFAULT_DB_URL,
-            DEFAULT_METRIC_BUFFER_SIZE_KB,
+            DEFAULT_METRICS_DATA_BUFFER_SIZE_KB,
             DEFAULT_ENABLE_METRICS_LOG,
         )
         .await;
@@ -311,7 +312,7 @@ pub mod tests {
         const DEFAULT_DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
         let data_layer = DataLayer::new(
             DEFAULT_DB_URL,
-            DEFAULT_METRIC_BUFFER_SIZE_KB,
+            DEFAULT_METRICS_DATA_BUFFER_SIZE_KB,
             DEFAULT_ENABLE_METRICS_LOG,
         )
         .await;

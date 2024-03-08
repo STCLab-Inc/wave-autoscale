@@ -34,6 +34,7 @@ tasks:
       - "utils:test"
       - "data-layer:test"
       - "api-server:test"
+      - "web-app:test"
     env:
       RUST_LOG: wave_autoscale=debug
   test-aws-ecs-service-scaling:
@@ -94,9 +95,9 @@ tasks:
   # Run
   #
   run:
-    deps:
-      - "copy-config"
-      - "copy-web-app"
+    # deps:
+    #   - "copy-config"
+    #   - "copy-web-app"
     command:
       - "cargo"
       - "run"
