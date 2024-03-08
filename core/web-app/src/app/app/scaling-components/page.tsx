@@ -25,11 +25,17 @@ const columnHelper = createColumnHelper<ScalingComponentDefinition>();
 const columns = [
   columnHelper.accessor('id', {
     header: () => 'ID',
-    cell: (cell) => cell?.getValue(),
+    cell: (cell) => (
+      <span className="flex flex-col items-center break-all text-start font-bold">
+        {cell.getValue()}
+      </span>
+    ),
+    size: 300,
   }),
   columnHelper.accessor('component_kind', {
     header: () => 'Component Kind',
     cell: (cell) => cell?.getValue(),
+    size: 150,
   }),
   columnHelper.accessor('metadata', {
     header: () => 'Metadata',
@@ -38,6 +44,7 @@ const columns = [
         {renderKeyValuePairsWithJson(cell?.getValue(), true)}
       </span>
     ),
+    size: 200,
   }),
   columnHelper.accessor('enabled', {
     header: () => 'Enabled',
@@ -143,6 +150,7 @@ export default function ScalingComponentsPage() {
                 data: previewData,
                 columns,
               }}
+              isLoading={yaml === ''}
             />
           </div>
         </div>

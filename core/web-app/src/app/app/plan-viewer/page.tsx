@@ -32,6 +32,7 @@ const columns = [
       const name = cell.getValue();
       return <div className="font-bold">{name}</div>;
     },
+    size: 400,
   }),
   columnHelper.accessor('countPerDay', {
     id: 'last_7_days',
@@ -47,6 +48,7 @@ const columns = [
         </div>
       );
     },
+    size: 200,
   }),
   columnHelper.accessor('countPerDay', {
     id: 'countPerDay',
@@ -64,6 +66,7 @@ const columns = [
       );
       return count;
     },
+    size: 200,
   }),
   columnHelper.accessor('plans', {
     id: 'plans',
@@ -72,6 +75,7 @@ const columns = [
       const plans = cell.getValue();
       return plans.length ?? 0;
     },
+    size: 200,
   }),
   columnHelper.accessor('variables', {
     id: 'variables',
@@ -80,6 +84,7 @@ const columns = [
       const variables = cell.getValue();
       return variables.length ?? 0;
     },
+    size: 200,
   }),
   columnHelper.accessor('enabled', {
     id: 'enabled',
@@ -88,6 +93,7 @@ const columns = [
       const enabled = cell.getValue();
       return <EnabledBadge enabled={enabled} />;
     },
+    size: 200,
   }),
 ];
 

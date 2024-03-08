@@ -44,6 +44,11 @@ function WAVirtualizedTable<TData extends RowData>({
     count: rows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => rowHeight,
+    measureElement:
+      typeof window !== 'undefined' &&
+      navigator.userAgent.indexOf('Firefox') === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
     overscan: 20,
   });
 
@@ -51,23 +56,23 @@ function WAVirtualizedTable<TData extends RowData>({
 
   return (
     <div className="relative h-full w-full">
-      <div className="absolute h-full w-full overflow-auto" ref={parentRef}>
-        <div
-          className="relative"
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-          }}
-        >
-          <table className="table-compact table w-full">
-            <thead className="bg-wa-gray-200 text-sm font-bold text-wa-gray-900">
+      <div className="absolute h-full w-full">
+        <div ref={parentRef} className="relative h-full overflow-auto">
+          <table className="table-compact table grid w-full">
+            <thead className="sticky top-0 z-10 grid w-full bg-wa-gray-200 text-sm font-bold text-wa-gray-900">
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="px-6">
+                <tr
+                  key={headerGroup.id}
+                  className="flex w-full border-b bg-wa-gray-100"
+                >
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className={'h-12 border-b bg-wa-gray-100 first:pl-8'}
+                      className={'flex h-12 first:pl-8'}
                       style={{
-                        width: header.getSize(),
+                        width:
+                          header.getSize() !== 0 ? header.getSize() : undefined,
+                        flex: header.getSize() !== 0 ? undefined : 1,
                       }}
                     >
                       {header.isPlaceholder
@@ -81,26 +86,33 @@ function WAVirtualizedTable<TData extends RowData>({
                 </tr>
               ))}
             </thead>
-            <tbody className="bg-white text-sm text-wa-gray-700">
+            <tbody
+              className="relative grid bg-white text-sm text-wa-gray-700"
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+              }}
+            >
               {virtualizer.getVirtualItems().map((virtualRow, index) => {
                 const row = rows[virtualRow.index] as Row<TData>;
                 return (
                   <tr
                     key={row.id}
-                    //needed for dynamic row height measurement
                     data-index={virtualRow.index}
-                    //measure dynamic row height
                     ref={(node) => virtualizer.measureElement(node)}
                     className={classNames({
                       'cursor-pointer': isClickable,
                       hover: isClickable,
                     })}
                     style={{
-                      height: `${virtualRow.size}px`,
-                      maxHeight: `${virtualRow.size}px`,
-                      transform: `translateY(${
-                        virtualRow.start - index * virtualRow.size
-                      }px)`,
+                      // height: `${virtualRow.size}px`,
+                      // maxHeight: `${virtualRow.size}px`,
+                      // transform: `translateY(${
+                      //   virtualRow.start - index * virtualRow.size
+                      // }px)`,
+                      display: 'flex',
+                      position: 'absolute',
+                      transform: `translateY(${virtualRow.start}px)`,
+                      width: '100%',
                     }}
                     onClick={
                       isClickable
@@ -111,7 +123,18 @@ function WAVirtualizedTable<TData extends RowData>({
                     }
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td className={classNames('first:pl-8')} key={cell.id}>
+                      <td
+                        className={classNames('first:pl-8')}
+                        key={cell.id}
+                        style={{
+                          display: 'flex',
+                          width:
+                            cell.column.getSize() !== 0
+                              ? cell.column.getSize()
+                              : undefined,
+                          flex: cell.column.getSize() !== 0 ? undefined : 1,
+                        }}
+                      >
                         {isLoading ? (
                           <div className="skeleton h-5 w-full"></div>
                         ) : (

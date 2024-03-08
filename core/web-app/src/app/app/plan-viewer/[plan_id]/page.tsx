@@ -35,6 +35,7 @@ const columns = [
       const date = cell.getValue();
       return parseDateToDayjs(date)?.format('YYYY-MM-DD HH:mm:ss');
     },
+    size: 200,
   }),
   columnHelper.accessor('metric_values_json', {
     id: 'metrics',
@@ -57,6 +58,9 @@ const columns = [
         </div>
       );
     },
+    enableResizing: true,
+    minSize: 0,
+    size: 0,
   }),
   columnHelper.accessor('metadata_values_json', {
     id: 'metadata',
@@ -64,6 +68,9 @@ const columns = [
     cell: (cell) => {
       return renderKeyValuePairsWithJson(cell.getValue(), true);
     },
+    enableResizing: true,
+    minSize: 0,
+    size: 0,
   }),
   columnHelper.display({
     id: 'status',
@@ -77,6 +84,7 @@ const columns = [
         </div>
       );
     },
+    size: 200,
   }),
 ];
 
@@ -365,12 +373,8 @@ export default function PlanViewerDetailPage({
                 data: reversedData ?? [],
                 columns,
               }}
-              rowHeight={100}
+              rowHeight={70}
               isLoading={isLoading}
-              onRowClick={(row) => {
-                // setSelectedRow(row);
-                // (document.getElementById(DETAIL_MODAL_ID) as any).showModal();
-              }}
             />
           </div>
         </div>

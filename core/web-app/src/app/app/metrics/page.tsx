@@ -25,11 +25,17 @@ const columnHelper = createColumnHelper<MetricDefinition>();
 const columns = [
   columnHelper.accessor('id', {
     header: () => 'ID',
-    cell: (cell) => cell.getValue(),
+    cell: (cell) => (
+      <span className="flex flex-col items-center break-all text-start font-bold">
+        {cell.getValue()}
+      </span>
+    ),
+    size: 300,
   }),
   columnHelper.accessor('collector', {
     header: () => 'Collector',
     cell: (cell) => cell.getValue(),
+    size: 150,
   }),
   columnHelper.accessor('metadata', {
     header: () => 'Metadata',
@@ -38,6 +44,7 @@ const columns = [
         {renderKeyValuePairsWithJson(cell.getValue(), true)}
       </span>
     ),
+    size: 200,
   }),
   columnHelper.accessor('enabled', {
     header: () => 'Enabled',
@@ -140,6 +147,7 @@ export default function MetricsPage() {
                 data: previewData,
                 columns,
               }}
+              isLoading={yaml === ''}
             />
           </div>
         </div>
