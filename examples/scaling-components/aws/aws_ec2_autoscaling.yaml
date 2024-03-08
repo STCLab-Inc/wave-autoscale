@@ -22,6 +22,7 @@ metadata:
   interval: 60000 # milliseconds
 enabled: true
 variables:
+  max: 3
   metric: |
     get({
         metric_id: 'wa_sample_metric_aws_ec2_autoscaling_cpu'
@@ -33,9 +34,8 @@ plans:
     priority: 2
     scaling_components:
       - component_id: wa_sample_component_aws_ec2_autoscaling
-        desired: $desired + 1
-        min: 1
-        max: 5
+        desired: Math.min($desired + 1, $max)
+        min: 2
   - id: asg-scale-in
     expression: >
       $metric < 70
@@ -43,4 +43,4 @@ plans:
     scaling_components:
       - component_id: wa_sample_component_aws_ec2_autoscaling
         desired: 1
-        max: 3
+        min: 1
