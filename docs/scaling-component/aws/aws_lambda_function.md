@@ -46,7 +46,7 @@ examples/scaling-component/aws/aws_lambda.yaml
   - AWS Lambda Provisioned concurrency configurations Qualifier name
 - **region**  
   *String | Required*
-  - AWS ECS region
+  - AWS Lambda region
 
 
 ### Scaling Plan - component metadata

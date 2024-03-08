@@ -4,7 +4,7 @@ collector: wa-generator
 enabled: true
 metadata:
   pattern: [30, 70, 80, 90, 30]
-  gap_seconds: 30
+  gap_seconds: 10
 ---
 kind: ScalingComponent
 id: wa_sample_component_aws_lambda_function_provisioned
@@ -28,7 +28,7 @@ id: wa_sample_plan_aws_lambda_function
 metadata:
   title: Sample Scaling Plan - AWS Lambda Function
   cool_down: 0 # seconds
-  interval: 30000 # milliseconds
+  interval: 10000 # milliseconds
 enabled: true
 variables:
   metric: |
@@ -41,18 +41,19 @@ plans:
     expression: >
       $metric >= 70
     priority: 2
+    cool_down: 30 # seconds
     scaling_components:
-      - component_id: wa_sample_component_aws_lambda_function_provisioned
-        provisioned_concurrency: 5
       - component_id: wa_sample_component_aws_lambda_function_reserved
         reserved_concurrency: 5
+      - component_id: wa_sample_component_aws_lambda_function_provisioned
+        provisioned_concurrency: 5
   - id: lambda-scale-in
     # JavaScript expression that returns a boolean value.
     expression: >
       $metric < 70
-    priority: 2
+    priority: 1
     scaling_components:
-      - component_id: wa_sample_component_aws_lambda_function_provisioned
-        provisioned_concurrency: 1
       - component_id: wa_sample_component_aws_lambda_function_reserved
         reserved_concurrency: 1
+      - component_id: wa_sample_component_aws_lambda_function_provisioned
+        provisioned_concurrency: 1

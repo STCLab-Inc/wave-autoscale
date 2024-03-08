@@ -3,7 +3,7 @@ id: wa_sample_metric_k8s_deployment_core_dns_replicas
 collector: wa-generator
 enabled: true
 metadata:
-  pattern: [30, 70]
+  pattern: [30, 70, 80, 90, 30]
   gap_seconds: 10
 ---
 kind: ScalingComponent
@@ -22,7 +22,8 @@ metadata:
   interval: 10000 # milliseconds
 enabled: true
 variables:
-  core_dns_cnt: 2
+  core_dns_max_cnt: 4
+  core_dns_min_cnt: 2
   metric: |
     get({
         metric_id: 'wa_sample_metric_k8s_deployment_core_dns_replicas'
@@ -35,7 +36,7 @@ plans:
     priority: 2
     scaling_components:
       - component_id: wa_sample_component_k8s_deployment_core_dns_replicas
-        replicas: $replicas + 1
+        replicas: Math.min($replicas + 1, $core_dns_max_cnt)
   - id: plan-scale-in
     # JavaScript expression that returns a boolean value.
     expression: $metric < 70
@@ -43,4 +44,4 @@ plans:
     priority: 1
     scaling_components:
       - component_id: wa_sample_component_k8s_deployment_core_dns_replicas
-        replicas: $core_dns_cnt
+        replicas: $core_dns_min_cnt
