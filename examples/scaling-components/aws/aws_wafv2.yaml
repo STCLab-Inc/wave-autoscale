@@ -1,0 +1,51 @@
+kind: Metric
+id: wa_sample_metric_aws_wafv2
+collector: wa-generator
+enabled: true
+metadata:
+  pattern: [30, 70, 80, 90, 30]
+  gap_seconds: 30
+---
+kind: ScalingComponent
+id: wa_sample_component_aws_wafv2
+component_kind: aws-wafv2
+enabled: true
+metadata:
+  region: "{{ region }}"
+  web_acl_id: "{{ web_acl_id }}"
+  web_acl_name: wa-sample-wafv2
+  scope: regional
+---
+kind: ScalingPlan
+id: wa_sample_plan_aws_wafv2
+metadata:
+  title: Sample Scaling Plan - AWS WAF
+  cool_down: 0 # seconds
+  interval: 30000 # milliseconds
+enabled: true
+variables:
+  metric: |
+    get({
+        metric_id: 'wa_sample_metric_aws_wafv2'
+    })
+plans:
+  - id: wafv2-scale-out
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      $metric >= 70
+    # Higher priority values will be checked first.
+    priority: 2
+    scaling_components:
+      - component_id: wa_sample_component_aws_wafv2
+        rule_name: wa-sample-wafv2-rule
+        rate_limit: 200
+  - id: wafv2-scale-in
+    # JavaScript expression that returns a boolean value.
+    expression: >
+      $metric < 70
+    # Higher priority values will be checked first.
+    priority: 1
+    scaling_components:
+      - component_id: wa_sample_component_aws_wafv2
+        rule_name: wa-sample-wafv2-rule
+        rate_limit: 100

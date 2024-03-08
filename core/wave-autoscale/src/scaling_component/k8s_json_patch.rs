@@ -41,7 +41,7 @@ impl ScalingComponent for K8sPatchScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> anyhow::Result<()> {
+    async fn apply(&self, params: HashMap<String, serde_json::Value>, _context: rquickjs::AsyncContext) -> anyhow::Result<HashMap<String, serde_json::Value>> {
         let metadata = self.definition.metadata.clone();
 
         let (
@@ -99,13 +99,14 @@ impl ScalingComponent for K8sPatchScalingComponent {
             return Err(anyhow::anyhow!(e));
         }
 
-        Ok(())
+        Ok(params)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
 
     fn get_value_of_istio_delay_add() -> serde_json::Value {
         serde_json::json!([
@@ -230,11 +231,11 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("VirtualService".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_istio_delay_add());
 
-        let istio_delay_add_result = scaling_component.apply(apply_params.clone());
+        let istio_delay_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(istio_delay_add_result.await.is_ok());
 
         apply_params.insert("json_patch".to_string(), get_value_of_istio_delay_remove());
-        let istio_delay_remove_result = scaling_component.apply(apply_params);
+        let istio_delay_remove_result = scaling_component.apply(apply_params, get_rquickjs_context().await);
         assert!(istio_delay_remove_result.await.is_ok());
     }
 
@@ -251,15 +252,15 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("VirtualService".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_istio_delay_add());
 
-        let istio_delay_add_result = scaling_component.apply(apply_params.clone());
+        let istio_delay_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(istio_delay_add_result.await.is_ok());
 
         apply_params.insert("json_patch".to_string(), get_value_of_istio_delay_remove_fail());
-        let istio_delay_remove_result = scaling_component.apply(apply_params.clone());
+        let istio_delay_remove_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(istio_delay_remove_result.await.is_ok());
 
         apply_params.insert("json_patch".to_string(), get_value_of_istio_delay_remove_fail());
-        let istio_delay_remove_result = scaling_component.apply(apply_params);
+        let istio_delay_remove_result = scaling_component.apply(apply_params, get_rquickjs_context().await);
         assert!(istio_delay_remove_result.await.is_err());
     }
 
@@ -275,7 +276,7 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("VirtualService".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_istio_retry_add());
 
-        let istio_delay_add_result = scaling_component.apply(apply_params.clone());
+        let istio_delay_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(istio_delay_add_result.await.is_ok());
     }
 
@@ -291,7 +292,7 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("VirtualService".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_istio_weight_add());
 
-        let istio_delay_add_result = scaling_component.apply(apply_params.clone());
+        let istio_delay_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(istio_delay_add_result.await.is_ok());
     }
 
@@ -306,12 +307,12 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("Deployment".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_deployment_replicas_add(2));
 
-        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone());
+        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(deployment_replicas_add_result.await.is_ok());
 
         apply_params.insert("json_patch".to_string(), get_value_of_deployment_replicas_add(1));
 
-        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone());
+        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(deployment_replicas_add_result.await.is_ok());
     }
 
@@ -326,7 +327,7 @@ mod test {
         apply_params.insert("kind".to_string(), serde_json::Value::String("Deployment".to_string()));
         apply_params.insert("json_patch".to_string(), get_value_of_deployment_resource_cpu_mem_add("250m".to_string(), "64Mi".to_string()));
 
-        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone());
+        let deployment_replicas_add_result = scaling_component.apply(apply_params.clone(), get_rquickjs_context().await);
         assert!(deployment_replicas_add_result.await.is_ok());
     }
 }

@@ -1,4 +1,6 @@
+mod scaling_component;
 mod test_amazon_emr_ec2 {
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
     use serde_json::json;
@@ -129,7 +131,11 @@ mod test_amazon_emr_ec2 {
         );
 
         let result = scaling_component_manager
-            .apply_to("amazon_emr_ec2_server", options)
+            .apply_to(
+                "amazon_emr_ec2_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }
@@ -183,7 +189,11 @@ mod test_amazon_emr_ec2 {
         );
 
         let result = scaling_component_manager
-            .apply_to("amazon_emr_ec2_server", options)
+            .apply_to(
+                "amazon_emr_ec2_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }

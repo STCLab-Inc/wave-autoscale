@@ -28,15 +28,20 @@ impl ScalingComponent for WALoggerComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         info!("[wa-logger] params: {:?}", params);
-        Ok(())
+        Ok(params)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::WALoggerComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -64,7 +69,7 @@ mod test {
             ),
         ]);
         let scaling_component = WALoggerComponent::new(scaling_definition)
-            .apply(params)
+            .apply(params, get_rquickjs_context().await)
             .await;
         assert!(scaling_component.is_ok());
     }

@@ -31,7 +31,11 @@ impl ScalingComponent for MIGAutoScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
         if let (
             Some(serde_json::Value::String(project)),
@@ -72,7 +76,10 @@ impl ScalingComponent for MIGAutoScalingComponent {
                         gcp_mig_setting_common,
                     )
                     .await;
-                    return integrate_all_response;
+                    match integrate_all_response {
+                        core::result::Result::Ok(_) => Ok(params),
+                        Err(e) => Err(e),
+                    }
                 }
                 GcpMigLocationKind::Region => {
                     let integrate_all_response = integrate_call_gcp_mig_region_resize(
@@ -86,7 +93,10 @@ impl ScalingComponent for MIGAutoScalingComponent {
                         gcp_mig_setting_common,
                     )
                     .await;
-                    return integrate_all_response;
+                    match integrate_all_response {
+                        core::result::Result::Ok(_) => Ok(params),
+                        Err(e) => Err(e),
+                    }
                 }
                 _ => {
                     return Err(anyhow::anyhow!("Invalid location_kind"));

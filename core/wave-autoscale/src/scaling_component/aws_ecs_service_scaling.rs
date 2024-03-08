@@ -1,5 +1,5 @@
 use super::ScalingComponent;
-use crate::util::aws::get_aws_config;
+use crate::util::aws::get_aws_config_with_metadata;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use aws_sdk_ecs::{error::ProvideErrorMetadata, Client};
@@ -27,65 +27,60 @@ impl ScalingComponent for ECSServiceScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         let metadata: HashMap<String, Value> = self.definition.metadata.clone();
-        if let (
-            Some(Value::String(region)),
+        let (
             Some(Value::String(cluster_name)),
             Some(Value::String(service_name)),
             Some(desired),
         ) = (
-            metadata.get("region"),
             metadata.get("cluster_name"),
             metadata.get("service_name"),
             params.get("desired").and_then(Value::as_i64),
-        ) {
-            let access_key = metadata
-                .get("access_key")
-                .map(|access_key| access_key.to_string());
-            let secret_key = metadata
-                .get("secret_key")
-                .map(|secret_key| secret_key.to_string());
-            let config =
-                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
-            if config.is_err() {
-                let config_err = config.err().unwrap();
-                return Err(anyhow::anyhow!(config_err));
-            }
-            let config = config.unwrap();
-
-            let client = Client::new(&config);
-
-            let result = client
-                .update_service()
-                .cluster(cluster_name)
-                .service(service_name)
-                .desired_count(desired as i32);
-
-            let result = result.send().await;
-
-            if result.is_err() {
-                let error = result.err().unwrap();
-                let meta = error.meta();
-                let json = json!({
-                    "message": meta.message(),
-                    "code": meta.code(),
-                    "extras": meta.to_string()
-                });
-
-                return Err(anyhow::anyhow!(json));
-            }
-
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Invalid metadata"))
+        ) else {
+            return Err(anyhow::anyhow!("Invalid metadata"));
+        };
+        // AWS Credentials
+        let config = get_aws_config_with_metadata(&metadata).await;
+        if config.is_err() {
+            let config_err = config.err().unwrap();
+            return Err(anyhow::anyhow!(config_err));
         }
+        let config = config.unwrap();
+
+        let client = Client::new(&config);
+
+        let result = client
+            .update_service()
+            .cluster(cluster_name)
+            .service(service_name)
+            .desired_count(desired as i32);
+
+        let result = result.send().await;
+
+        if result.is_err() {
+            let error = result.err().unwrap();
+            let json = json!({
+                "message": error.message(),
+                "code": error.code(),
+                "extras": error.to_string()
+            });
+
+            return Err(anyhow::anyhow!(json));
+        }
+
+        Ok(params)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::ECSServiceScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -104,7 +99,7 @@ mod test {
 
         let params = HashMap::new();
         let ecs_service_scaling_component = ECSServiceScalingComponent::new(scaling_definition)
-            .apply(params)
+            .apply(params, get_rquickjs_context().await)
             .await;
         assert!(ecs_service_scaling_component.is_err());
     }

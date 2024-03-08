@@ -1,5 +1,6 @@
+mod scaling_component;
 mod test_gcp_mig_scaling {
-    use anyhow::Result;
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
     use serde_json::json;
@@ -10,7 +11,7 @@ mod test_gcp_mig_scaling {
 
     #[tokio::test]
     #[ignore]
-    async fn test_gcp_mig_autoscaling() -> Result<()> {
+    async fn test_gcp_mig_autoscaling() {
         let mut scaling_component_metadata = HashMap::new();
         scaling_component_metadata.insert(
             "project".to_string(),
@@ -55,8 +56,13 @@ mod test_gcp_mig_scaling {
         let mut options: HashMap<String, serde_json::Value> = HashMap::new();
         options.insert("resize".to_string(), json!(2));
 
-        scaling_component_manager
-            .apply_to("gcp_mig_region_autoscaling_api_server", options)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "gcp_mig_region_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

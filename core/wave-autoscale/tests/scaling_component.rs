@@ -1,6 +1,15 @@
+pub mod scaling_component_common {
+    pub async fn get_rquickjs_context() -> rquickjs::AsyncContext {
+        rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap())
+            .await
+            .unwrap()
+    }
+}
+
 mod scaling_component_test {
     use std::collections::HashMap;
 
+    use super::scaling_component_common::get_rquickjs_context;
     use anyhow::Result;
     use data_layer::reader::wave_definition_reader::read_definition_yaml_file;
     use serde_json::{json, Value};
@@ -37,11 +46,16 @@ mod scaling_component_test {
         options.insert("max".to_string(), json!(5));
         options.insert("desired".to_string(), json!(1));
         let result = scaling_component_manager
-            .apply_to("ec2_autoscaling_api_server", options)
+            .apply_to(
+                "ec2_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
-        return result;
+        assert!(result.is_ok());
         Ok(())
     }
+
     #[tokio::test]
     #[ignore]
     async fn k8s_deployment_autoscaling() -> Result<()> {
@@ -67,8 +81,10 @@ mod scaling_component_test {
         let mut options: HashMap<String, Value> = HashMap::new();
         options.insert("replicas".to_string(), json!(5));
 
-        scaling_component_manager
-            .apply_to("k8s_deployment", options)
-            .await
+        let result = scaling_component_manager
+            .apply_to("k8s_deployment", options, get_rquickjs_context().await)
+            .await;
+        assert!(result.is_ok());
+        Ok(())
     }
 }

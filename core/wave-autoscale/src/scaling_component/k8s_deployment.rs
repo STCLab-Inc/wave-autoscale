@@ -41,10 +41,10 @@ impl K8sDeploymentScalingComponent {
 
     async fn get_client(
         &self,
-        _api_server_endpoint: &String,
-        _ca_cert: &String,
-        _namespace: &String,
-    ) -> Result<kube::Client> {
+        _api_server_endpoint: Option<String>,
+        _ca_cert: Option<String>,
+        _namespace: Option<String>,
+    ) -> anyhow::Result<kube::Client> {
         // TODO: Use the metadata to create a Kubernetes Client
         // Infer the runtime environment and try to create a Kubernetes Client
         let client = Client::try_default().await?;
@@ -88,97 +88,115 @@ impl ScalingComponent for K8sDeploymentScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         let metadata = self.definition.metadata.clone();
 
-        if let (
-            Some(Value::String(api_server_endpoint)),
-            Some(Value::String(namespace)),
-            Some(Value::String(name)),
-            Some(Value::String(ca_cert)),
-            Some(Value::String(replicas)),
-        ) = (
-            metadata.get("api_server_endpoint"),
+        let (Some(Value::String(namespace)), Some(Value::String(name)), Some(replicas)) = (
             metadata.get("namespace"),
             metadata.get("name"),
-            metadata.get("ca_cert"),
             params.get("replicas"),
-        ) {
-            // TODO: Use the metadata to create a Kubernetes Client
-            let client = self
-                .get_client(api_server_endpoint, ca_cert, namespace)
-                .await;
-            if let Err(e) = client {
-                return Err(anyhow::anyhow!(e));
-            }
-            let client = client.unwrap();
-
-            // check target value contains enum variables
-            let current_state_key_array = K8sComponentTargetValue::iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>();
-            let current_state_array =
-                filter_current_state_in_expression(replicas, current_state_key_array);
-            // save target value to map
-            let current_state_map = get_current_state_map(
-                current_state_array,
-                client.clone(),
-                namespace.to_string(),
-                name.to_string(),
-            )
+        ) else {
+            return Err(anyhow::anyhow!("Invalid metadata"));
+        };
+        // TODO: Use the metadata to create a Kubernetes Client
+        let api_server_endpoint = metadata
+            .get("api_server_endpoint")
+            .map(|api_server_endpoint| api_server_endpoint.to_string());
+        let ca_cert = metadata.get("ca_cert").map(|ca_cert| ca_cert.to_string());
+        let client = self
+            .get_client(api_server_endpoint, ca_cert, Some(namespace.to_string()))
             .await;
-            if current_state_map.is_err() {
-                return Err(current_state_map.unwrap_err());
-            };
+        if let Err(e) = client {
+            return Err(anyhow::anyhow!(e));
+        }
+        let client = client.unwrap();
 
-            // evaluate target value
-            let replicas = evaluate_expression_with_current_state(
-                replicas,
-                current_state_map.unwrap().clone(),
-            )
-            .await;
-            if replicas.is_err() {
-                return Err(replicas.unwrap_err());
-            };
-            let replicas = replicas.unwrap();
-
-            let deployment_api: Api<Deployment> = Api::namespaced(client, namespace);
-            // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#deployment-v1-apps
-            let patch = json!({
-                "apiVersion": "apps/v1",
-                "kind": "Deployment",
-                "spec": {
-                    "replicas": replicas
-                }
-            });
-
-            let patch_params = PatchParams::apply("wave-autoscale");
-            let patch_params = PatchParams::force(patch_params);
-
-            let result = deployment_api
-                .patch(name, &patch_params, &Patch::Apply(patch))
+        let replicas_value = match replicas {
+            Value::String(replicas) => {
+                // check target value contains enum variables
+                let current_state_key_array = K8sComponentTargetValue::iter()
+                    .map(|value| value.to_string())
+                    .collect::<Vec<String>>();
+                let current_state_array =
+                    filter_current_state_in_expression(replicas, current_state_key_array);
+                // save target value to map
+                let current_state_map = get_current_state_map(
+                    current_state_array,
+                    client.clone(),
+                    namespace.to_string(),
+                    name.to_string(),
+                )
                 .await;
+                let core::result::Result::Ok(current_state_map) = current_state_map else {
+                    return Err(current_state_map.unwrap_err());
+                };
 
-            if let Err(e) = result {
-                return Err(anyhow::anyhow!(e));
+                // evaluate target value
+                let replicas = evaluate_expression_with_current_state(
+                    replicas,
+                    current_state_map.clone(),
+                    context,
+                )
+                .await;
+                let core::result::Result::Ok(replicas) = replicas else {
+                    return Err(replicas.unwrap_err());
+                };
+                core::result::Result::Ok(replicas as i64)
             }
-            let result = result.unwrap();
+            Value::Number(replicas) => {
+                let Some(replicas) = replicas.as_f64() else {
+                    return Err(anyhow::anyhow!("Invalid replicas"));
+                };
+                core::result::Result::Ok(replicas as i64)
+            }
+            _ => Err(anyhow::anyhow!("Invalid replicas")),
+        };
+        let core::result::Result::Ok(replicas_value) = replicas_value else {
+            return Err(replicas_value.unwrap_err());
+        };
 
-            if let Some(spec) = result.spec {
-                if let Some(replicas_result) = spec.replicas {
-                    if replicas_result != replicas as i32 {
-                        return Err(anyhow::anyhow!("Failed to scale deployment"));
-                    }
-                } else {
+        let deployment_api: Api<Deployment> = Api::namespaced(client, namespace);
+        // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#deployment-v1-apps
+        let patch = json!({
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "spec": {
+                "replicas": replicas_value
+            }
+        });
+
+        let patch_params = PatchParams::apply("wave-autoscale");
+        let patch_params = PatchParams::force(patch_params);
+
+        let result = deployment_api
+            .patch(name, &patch_params, &Patch::Apply(patch))
+            .await;
+
+        if let Err(e) = result {
+            return Err(anyhow::anyhow!(e));
+        }
+        let result = result.unwrap();
+
+        if let Some(spec) = result.spec {
+            if let Some(replicas_result) = spec.replicas {
+                if replicas_result != replicas_value as i32 {
                     return Err(anyhow::anyhow!("Failed to scale deployment"));
                 }
             } else {
                 return Err(anyhow::anyhow!("Failed to scale deployment"));
             }
-            Ok(())
         } else {
-            Err(anyhow::anyhow!("Invalid metadata"))
+            return Err(anyhow::anyhow!("Failed to scale deployment"));
         }
+
+        // Reflect the result value.
+        let mut return_params = params.clone();
+        return_params.insert("replicas".to_string(), Value::from(replicas_value));
+        Ok(return_params)
     }
 }
 
@@ -259,6 +277,7 @@ async fn get_deployment_replicas(
 mod test {
     use super::super::ScalingComponentManager;
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
 
     fn get_data() -> (String, String, String, String) {
@@ -336,7 +355,7 @@ mod test {
         );
 
         let result = scaling_component_manager
-            .apply_to("api_server", options)
+            .apply_to("api_server", options, get_rquickjs_context().await)
             .await;
         assert!(result.is_ok());
     }

@@ -1,16 +1,15 @@
+mod scaling_component;
 mod google_cloud_run_service_test {
-    use std::collections::HashMap;
-
-    use anyhow::Result;
-
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
     use wave_autoscale::scaling_component::azure_functions_app::AzureFunctionsAppScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
     #[tokio::test]
     #[ignore]
-    async fn apply_maximum_scale_out_limit_for_consumption_plan() -> Result<()> {
+    async fn apply_maximum_scale_out_limit_for_consumption_plan() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("client_id"), serde_json::json!("CLIENT_ID")),
             (
@@ -59,14 +58,19 @@ mod google_cloud_run_service_test {
                 .into_iter()
                 .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_azure_functions_app", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_azure_functions_app",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     #[ignore]
-    async fn apply_maximum_always_ready_instance_for_premium_plan() -> Result<()> {
+    async fn apply_maximum_always_ready_instance_for_premium_plan() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("client_id"), serde_json::json!("CLIENT_ID")),
             (
@@ -117,8 +121,13 @@ mod google_cloud_run_service_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_azure_functions_app", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_azure_functions_app",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

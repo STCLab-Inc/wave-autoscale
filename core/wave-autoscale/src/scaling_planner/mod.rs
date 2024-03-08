@@ -16,6 +16,7 @@ use data_layer::{
     ScalingPlanDefinition,
 };
 use rquickjs::async_with;
+
 use serde_json::{json, Value};
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinHandle, time};
@@ -64,22 +65,32 @@ fn parse_action(action: serde_json::Value) -> Result<(String, String)> {
 async fn apply_scaling_components(
     scaling_components_metadata: &[Value],
     shared_scaling_component_manager: &SharedScalingComponentManager,
-) -> Vec<Result<()>> {
-    let mut scaling_results: Vec<Result<()>> = Vec::new();
+    context: rquickjs::AsyncContext
+) -> Vec<Result<HashMap<String, serde_json::Value>>> {
+    let mut scaling_results: Vec<Result<HashMap<String, serde_json::Value>>> = Vec::new();
     for metadata in scaling_components_metadata.iter() {
-        let scaling_component_id = metadata["component_id"].as_str().unwrap();
-
-        let params = metadata
-            .as_object()
-            .unwrap()
-            .iter()
-            .map(|(key, value)| (key.to_string(), value.clone()))
-            .collect::<HashMap<String, Value>>();
+        let Some(scaling_component_id) = metadata["component_id"].as_str() else {
+            error!("[ScalingPlanner] Failed to get component_id");
+            continue;
+        };
+        let Some(metadata_object) = metadata.as_object() else {
+            error!("[ScalingPlanner] Failed to get metadata as object");
+            continue;
+        };
+        // Convert metadata to HashMap => (Number to f64, String to String)
+        let mut params = HashMap::new();
+        for (key, value) in metadata_object.iter() {
+            if value.is_string() {
+                params.insert(key.to_string(), convert_js_expression(context.clone(), value.as_str().unwrap()).await);
+            } else {
+                params.insert(key.to_string(), value.clone());
+            }
+        }
 
         {
             let shared_scaling_component_manager = shared_scaling_component_manager.read().await;
             let result = shared_scaling_component_manager
-                .apply_to(scaling_component_id, params)
+                .apply_to(scaling_component_id, params, context.clone())
                 .await;
             scaling_results.push(result);
         }
@@ -102,7 +113,7 @@ async fn create_plan_log(
     plan_id: String,
     plan_item: &PlanItemDefinition,
     expression_value_map: Option<&Vec<HashMap<String, Option<f64>>>>,
-    scaling_components_metadata: Option<&Value>,
+    scaling_components_metadata: Option<&Result<HashMap<String,Value>>>,
     fail_message: Option<String>,
     plan_webhooks: Option<Vec<String>>,
     webhooks: Option<Vec<utils::wave_config::Webhooks>>,
@@ -116,7 +127,14 @@ async fn create_plan_log(
     };
     let metadata_values_json =
         if let Some(scaling_components_metadata) = scaling_components_metadata {
-            json!(scaling_components_metadata).to_string()
+            match scaling_components_metadata {
+                Ok(scaling_components_metadata) => {
+                    json!(scaling_components_metadata).to_string()
+                }
+                Err(_error) => {
+                    "".to_string()
+                }
+            }
         } else {
             "".to_string()
         };
@@ -489,7 +507,7 @@ impl<'a> ScalingPlanner {
                         }
 
                         let results =
-                            run_plan_item(plan_item, &shared_scaling_component_manager).await;
+                            run_plan_item(plan_item, &shared_scaling_component_manager, context.clone()).await;
 
                         // update last plan timestamp
                         if !results.is_empty() {
@@ -524,12 +542,12 @@ impl<'a> ScalingPlanner {
                         }
 
                         // Add the result of the scaling plan to the history
-                        for (index, result) in results.iter().enumerate() {
+                        for (_index, result) in results.iter().enumerate() {
                             let fail_message: Option<String> = match result {
                                 Ok(_) => None,
                                 Err(error) => Some(error.to_string()),
                             };
-                            let scaling_components_metadata = &plan_item.scaling_components;
+                            let _scaling_components_metadata = &plan_item.scaling_components;
 
                             // Create a PlanLogDefinition
                             create_plan_log(
@@ -538,7 +556,7 @@ impl<'a> ScalingPlanner {
                                 scaling_plan_definition.id.clone(),
                                 plan_item,
                                 Some(&expression_value_map_for_history),
-                                Some(&scaling_components_metadata[index]),
+                                Some(result),
                                 fail_message,
                                 plan_webhooks.clone(),
                                 webhooks.clone(),
@@ -571,6 +589,14 @@ impl<'a> ScalingPlanner {
         let last_plan_id_by_action = self.last_plan_item_id_by_action.clone();
         let last_plan_timestamp_by_action = self.last_plan_timestamp_by_action.clone();
         let action_task = tokio::spawn(async move {
+            let Ok(runtime) = rquickjs::AsyncRuntime::new() else {
+                error!("[ScalingPlanner] Error creating runtime");
+                return;
+            };
+            let Ok(context) = rquickjs::AsyncContext::full(&runtime).await else {
+                error!("[ScalingPlanner] Error creating context");
+                return;
+            };
             while let action = receiver.recv().await {
                 if action.is_err() {
                     continue;
@@ -595,7 +621,7 @@ impl<'a> ScalingPlanner {
                 }
 
                 let plan_item = plan_item.unwrap();
-                let _results = run_plan_item(plan_item, &scaling_component_manager).await;
+                let _results = run_plan_item(plan_item, &scaling_component_manager, context.clone()).await;
 
                 // Update the last run
                 {
@@ -653,12 +679,14 @@ async fn run_plan_item(
     shared_scaling_component_manager: &Arc<
         RwLock<crate::scaling_component::ScalingComponentManager>,
     >,
-) -> Vec<Result<()>> {
+    context: rquickjs::AsyncContext,
+) -> Vec<Result<HashMap<String, serde_json::Value>>> {
     // Apply the scaling components
     let scaling_components_metadata = &plan.scaling_components;
     let results = apply_scaling_components(
         scaling_components_metadata,
         shared_scaling_component_manager,
+        context,
     )
     .await;
 
@@ -672,14 +700,24 @@ async fn expression_get_value(
     expression: String,
     context: rquickjs::AsyncContext,
 ) -> Vec<HashMap<String, Option<f64>>> {
-    let re = regex::Regex::new(r"[get\()](.*?)[\)]").unwrap();
+    let re_get_fn = regex::Regex::new(r"[get\()](.*?)[\)]").unwrap();
+    let re_varables = regex::Regex::new(r"\$[^\s]+\s").unwrap();
     let expression = expression.replace('\n', "");
     let mut expression_value_map: Vec<HashMap<String, Option<f64>>> = Vec::new();
-    for cap in re.find_iter(expression.as_str()) {
-        let get_result = async_with!(context => |ctx| {
-            let get_value =  ctx.eval::<f64, _>(cap.as_str());
+    let mut expression_arr = Vec::new();
+    // get function from expression
+    for cap in re_get_fn.find_iter(expression.as_str()) {
+        expression_arr.push(cap.as_str().to_string());
+    }
+    // variables from expression
+    for cap in re_varables.find_iter(expression.as_str()) {
+        expression_arr.push(cap.as_str().to_string());
+    }
+    for value in expression_arr.iter() {
+        let get_result: HashMap<String, Option<f64>> = async_with!(context => |ctx| {
+            let get_value =  ctx.eval::<f64, _>(value.as_str());
             let mut history_map = HashMap::new();
-            history_map.insert(cap.as_str().to_string(), match get_value {
+            history_map.insert(value.as_str().to_string(), match get_value {
                 Ok(value) => Some(value),
                 Err(_) => None,
             });
@@ -688,8 +726,16 @@ async fn expression_get_value(
         .await;
         expression_value_map.append(&mut vec![get_result.clone()]);
     }
-
     expression_value_map
+}
+
+async fn convert_js_expression(context: rquickjs::AsyncContext, expression: &str) -> serde_json::Value {
+    async_with!(context => |ctx| {
+        let Ok(result) = ctx.eval::<f64, _>(expression) else {
+            return serde_json::Value::from(expression);
+        };
+        serde_json::Value::from(result)
+    }).await
 }
 
 #[cfg(test)]
@@ -786,7 +832,20 @@ mod tests {
         let expression =
             "get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'max',\n  period_sec: 120\n}) <= 30 || get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'min',\n  period_sec: 120\n}) <= 40\n";
         assert_eq!(
-            expression_get_value(expression.to_string(), context)
+            expression_get_value(expression.to_string(), context.clone())
+                .await
+                .len(),
+            2
+        );
+        async_with!(context => |ctx| {
+            let expression = "var $test = 1; var $test2 = 2;";
+            let _ = ctx.eval::<(), _>(expression);
+        })
+        .await;
+        let expression =
+            "$test == 1 && $test2 > 1";
+        assert_eq!(
+            expression_get_value(expression.to_string(), context.clone())
                 .await
                 .len(),
             2
@@ -1593,5 +1652,31 @@ mod tests {
         assert_eq!(sec_1_cool_down, 1);
 
         scaling_planner.stop();
+    }
+
+    #[tokio::test]
+    async fn test_convert_js_expression() {
+        let context = rquickjs::AsyncContext::full(&rquickjs::AsyncRuntime::new().unwrap()).await.unwrap();
+        async_with!(context => |ctx| {
+            let expression = "var $test_1 = 1; var $test_2 = 2;";
+            let _ = ctx.eval::<(), _>(expression);
+        }).await;
+
+        let expression = "$test_1 + $test_2";
+        let result = convert_js_expression(context.clone(), expression).await;
+        assert_eq!(result.as_f64().unwrap(), 3.0);
+
+        let expression = "1.1";
+        let result = convert_js_expression(context.clone(), expression).await;
+        assert_eq!(result.as_f64().unwrap(), 1.1);
+
+        let expression = "3";
+        let result = convert_js_expression(context.clone(), expression).await;
+        assert_eq!(result.as_f64().unwrap() as i64, 3);
+
+        let expression = "component_id";
+        let result = convert_js_expression(context.clone(), expression).await;
+        assert_eq!(result.as_str().unwrap(), expression);
+
     }
 }

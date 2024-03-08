@@ -1,4 +1,6 @@
+mod scaling_component;
 mod test_azure_vmss_scaling {
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use data_layer::ScalingComponentDefinition;
     use serde_json::json;
@@ -72,7 +74,11 @@ mod test_azure_vmss_scaling {
         options.insert("capacity".to_string(), json!(1));
 
         let result = scaling_component_manager
-            .apply_to("azure_vmss_autoscaling_api_server", options)
+            .apply_to(
+                "azure_vmss_autoscaling_api_server",
+                options,
+                get_rquickjs_context().await,
+            )
             .await;
         assert!(result.is_ok());
     }

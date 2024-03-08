@@ -32,7 +32,11 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         let metadata = self.definition.metadata.clone();
 
         if let (
@@ -138,7 +142,7 @@ impl ScalingComponent for EMREC2AutoScalingComponent {
                     return Err(update_cluster_step_concurrency_level.err().unwrap());
                 }
             }
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }

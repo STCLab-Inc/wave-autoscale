@@ -1,16 +1,15 @@
+mod scaling_component;
 mod google_cloud_run_service_test {
-    use std::collections::HashMap;
-
-    use anyhow::Result;
-
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
     use wave_autoscale::scaling_component::google_cloud_run_service::CloudRunServiceScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
     #[tokio::test]
     #[ignore]
-    async fn apply_minimum_service_without_coldstart_for_version_1_api() -> Result<()> {
+    async fn apply_minimum_service_without_coldstart_for_version_1_api() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v1")),
             (
@@ -64,14 +63,19 @@ mod google_cloud_run_service_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_cloud_run_service", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_cloud_run_service",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     #[ignore]
-    async fn apply_service_with_max_request_per_instance_for_version_2_api() -> Result<()> {
+    async fn apply_service_with_max_request_per_instance_for_version_2_api() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v2")),
             (
@@ -125,14 +129,19 @@ mod google_cloud_run_service_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_cloud_run_service", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_cloud_run_service",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     #[ignore]
-    async fn apply_service_with_changed_instance_count_for_version_2_api() -> Result<()> {
+    async fn apply_service_with_changed_instance_count_for_version_2_api() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("api_version"), serde_json::json!("v2")),
             (
@@ -186,8 +195,13 @@ mod google_cloud_run_service_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_cloud_run_service", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_cloud_run_service",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

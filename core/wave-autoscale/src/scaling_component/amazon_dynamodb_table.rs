@@ -439,7 +439,11 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
@@ -670,13 +674,14 @@ impl ScalingComponent for DynamoDbTableScalingComponent {
         } else {
             return Err(anyhow::anyhow!("Invalid metadata"));
         }
-        Ok(())
+        Ok(params)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::DynamoDbTableScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -708,10 +713,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ -> ok
@@ -748,10 +755,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE -> ok
@@ -788,10 +797,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: READ_WRITE -> ok
@@ -836,10 +847,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ -> ok
@@ -874,10 +887,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE -> ok
@@ -912,10 +927,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: READ_WRITE -> ok
@@ -954,10 +971,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_ok());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: ON, capacity_unit: WRITE, without write_capacity_units -> error
@@ -991,10 +1010,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_err());
     }
     // capacity_mode: PROVISIONED, autoscaling_mode: OFF, capacity_unit: WRITE, without write_capacity_units -> error
@@ -1028,10 +1049,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let dynamodb_table_scaling_component: Result<(), anyhow::Error> =
-            DynamoDbTableScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let dynamodb_table_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = DynamoDbTableScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(dynamodb_table_scaling_component.is_err());
     }
 }

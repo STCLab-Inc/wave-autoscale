@@ -46,7 +46,11 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
@@ -88,7 +92,7 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
                     .send()
                     .await?;
                 if result.status().is_success() {
-                    return Ok(());
+                    return Ok(params);
                 } else {
                     let result = result.text().await?;
                     let response: NetfunnelResponse = serde_json::from_str(&result)?;
@@ -103,13 +107,14 @@ impl ScalingComponent for NetfunnelSegmentScalingComponent {
         } else {
             return Err(anyhow::anyhow!("Invalid metadata"));
         }
-        Ok(())
+        Ok(params)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::NetfunnelSegmentScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -150,10 +155,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let netfunnel_segment_scaling_component: Result<(), anyhow::Error> =
-            NetfunnelSegmentScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let netfunnel_segment_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = NetfunnelSegmentScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
         assert!(netfunnel_segment_scaling_component.is_ok());
     }
 }

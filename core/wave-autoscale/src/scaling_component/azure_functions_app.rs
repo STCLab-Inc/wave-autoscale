@@ -33,7 +33,11 @@ impl ScalingComponent for AzureFunctionsAppScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
@@ -117,7 +121,7 @@ impl ScalingComponent for AzureFunctionsAppScalingComponent {
                 return Err(anyhow::anyhow!(json));
             }
 
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -156,6 +160,7 @@ fn create_payload(
 #[cfg(test)]
 mod test {
     use super::AzureFunctionsAppScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -194,10 +199,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
-            AzureFunctionsAppScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let azure_functions_app_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = AzureFunctionsAppScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(azure_functions_app_scaling_component.is_ok());
     }
@@ -238,10 +245,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
-            AzureFunctionsAppScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let azure_functions_app_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = AzureFunctionsAppScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(azure_functions_app_scaling_component.is_ok());
     }
@@ -282,10 +291,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let azure_functions_app_scaling_component: Result<(), anyhow::Error> =
-            AzureFunctionsAppScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let azure_functions_app_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = AzureFunctionsAppScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(azure_functions_app_scaling_component.is_ok());
     }

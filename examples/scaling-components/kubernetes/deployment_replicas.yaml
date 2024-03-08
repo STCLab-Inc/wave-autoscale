@@ -1,55 +1,46 @@
-kind: ScalingComponent
-id: k8s_deployment
-component_kind: kubernetes-deployment
-metadata:
-  api_server_endpoint: http://localhost:8080
-  namespace: deployment-namespace
-  name: deployment-name
----
-# Metrics for the example above
 kind: Metric
-id: wa_metrics_generator
+id: wa_sample_metric_k8s_deployment_replicas
 collector: wa-generator
+enabled: true
 metadata:
-  pattern: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+  pattern: [30, 70, 80, 90, 30]
   gap_seconds: 10
 ---
-kind: ScalingPlan
-id: scaling_plan_k8s_deployment_scaling
+kind: ScalingComponent
+id: wa_sample_component_k8s_deployment_replicas
+component_kind: kubernetes-deployment
+enabled: true
 metadata:
-  title: "Scaling Plan for K8S Deployment Scaling - deployment replicas"
-  cool_down: 60 # seconds
+  namespace: default
+  name: wa-sample-deployment-nginx-dp
+---
+kind: ScalingPlan
+id: wa_sample_plan_k8s_deployment_replicas
+metadata:
+  title: "Sample Scaling Plan - deployment scaling replicas"
+  cool_down: 0 # seconds
   interval: 10000 # milliseconds
+enabled: true
+variables:
+  max: 3
+  metric: |
+    get({
+        metric_id: 'wa_sample_metric_k8s_deployment_replicas'
+    })
 plans:
   - id: plan-scale-out
-    description: "Scale out if the metrics count is greater than 100 for 5 seconds"
-    expression: >
-      get({
-        metric_id: 'wa_metrics_generator',
-        stats: 'max',
-        period_sec: 5
-      }) >= 100
+    # JavaScript expression that returns a boolean value.
+    expression: $metric >= 70
     # Higher priority values will be checked first.
     priority: 2
     scaling_components:
-      - component_id: k8s_deployment
-        # Available variables in the replicas expression:
-        # - $replicas: current number of replicas
-        # - $unavailable_replicas: current number of unavailable replicas
-        # - $available_replicas: current number of available replicas
-        # - $ready_replicas: current number of ready replicas
-        # - $updated_replicas: current number of updated replicas
-        replicas: $replicas + 3
+      - component_id: wa_sample_component_k8s_deployment_replicas
+        replicas: Math.min($replicas + 1, $max)
   - id: plan-scale-in
-    description: "Scale in if the metrics count is less than 50 for 5 seconds"
     # JavaScript expression that returns a boolean value.
-    expression: >
-      get({
-        metric_id: 'wa_metrics_generator',
-        stats: 'max',
-        period_sec: 5
-      }) < 50
+    expression: $metric < 70
+    # Higher priority values will be checked first.
     priority: 1
     scaling_components:
-      - component_id: k8s_deployment
-        replicas: 1
+      - component_id: wa_sample_component_k8s_deployment_replicas
+        replicas: 2

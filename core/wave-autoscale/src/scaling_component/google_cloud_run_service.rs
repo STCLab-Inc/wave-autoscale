@@ -33,7 +33,11 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
         &self.definition.id
     }
 
-    async fn apply(&self, params: HashMap<String, serde_json::Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, serde_json::Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata: HashMap<String, serde_json::Value> = self.definition.metadata.clone();
 
         if let (
@@ -162,7 +166,7 @@ impl ScalingComponent for CloudRunServiceScalingComponent {
                 return Err(anyhow::anyhow!(json));
             }
 
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -420,6 +424,7 @@ fn create_payload_based_on_api_version_2(
 #[cfg(test)]
 mod test {
     use super::CloudRunServiceScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -450,10 +455,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_ok());
     }
@@ -484,10 +491,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_ok());
     }
@@ -531,10 +540,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_ok());
     }
@@ -578,10 +589,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_ok());
     }
@@ -616,10 +629,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }
@@ -654,10 +669,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }
@@ -702,10 +719,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }
@@ -750,10 +769,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }
@@ -798,10 +819,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }
@@ -849,10 +872,12 @@ mod test {
             metadata,
             ..Default::default()
         };
-        let cloud_run_service_scaling_component: Result<(), anyhow::Error> =
-            CloudRunServiceScalingComponent::new(scaling_definition)
-                .apply(params)
-                .await;
+        let cloud_run_service_scaling_component: Result<
+            HashMap<String, serde_json::Value>,
+            anyhow::Error,
+        > = CloudRunServiceScalingComponent::new(scaling_definition)
+            .apply(params, get_rquickjs_context().await)
+            .await;
 
         assert!(cloud_run_service_scaling_component.is_err());
     }

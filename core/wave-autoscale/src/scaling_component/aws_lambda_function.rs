@@ -33,7 +33,11 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        _context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, Value>> {
         let metadata: HashMap<String, Value> = self.definition.metadata.clone();
 
         if let (
@@ -115,7 +119,7 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
                     return Err(anyhow::anyhow!(json));
                 }
             }
-            Ok(())
+            Ok(params)
         } else {
             Err(anyhow::anyhow!("Invalid metadata"))
         }
@@ -125,6 +129,7 @@ impl ScalingComponent for LambdaFunctionScalingComponent {
 #[cfg(test)]
 mod test {
     use super::LambdaFunctionScalingComponent;
+    use crate::scaling_component::test::get_rquickjs_context;
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
@@ -144,7 +149,7 @@ mod test {
         let params = HashMap::new();
         let lambda_function_scaling_component =
             LambdaFunctionScalingComponent::new(scaling_definition)
-                .apply(params)
+                .apply(params, get_rquickjs_context().await)
                 .await;
         assert!(lambda_function_scaling_component.is_err());
     }

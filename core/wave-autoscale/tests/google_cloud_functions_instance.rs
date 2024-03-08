@@ -1,16 +1,15 @@
+mod scaling_component;
 mod google_cloud_functions_instance_test {
-    use std::collections::HashMap;
-
-    use anyhow::Result;
-
+    use crate::scaling_component::scaling_component_common::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
+    use std::collections::HashMap;
     use wave_autoscale::scaling_component::google_cloud_functions_instance::CloudFunctionsInstanceScalingComponent;
     use wave_autoscale::scaling_component::ScalingComponentManager;
 
     #[tokio::test]
     #[ignore]
-    async fn apply_instance_change_for_version_1_function() -> Result<()> {
+    async fn apply_instance_change_for_version_1_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v1")),
             (
@@ -59,14 +58,19 @@ mod google_cloud_functions_instance_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_cloud_functions_instance", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_cloud_functions_instance",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 
     #[ignore]
     #[tokio::test]
-    async fn apply_instance_change_for_version_2_function() -> Result<()> {
+    async fn apply_instance_change_for_version_2_function() {
         let metadata: HashMap<String, serde_json::Value> = vec![
             (String::from("function_version"), serde_json::json!("v2")),
             (
@@ -119,8 +123,13 @@ mod google_cloud_functions_instance_test {
         .into_iter()
         .collect();
 
-        scaling_component_manager
-            .apply_to("scaling_component_cloud_functions_instance", params)
-            .await
+        let result = scaling_component_manager
+            .apply_to(
+                "scaling_component_cloud_functions_instance",
+                params,
+                get_rquickjs_context().await,
+            )
+            .await;
+        assert!(result.is_ok());
     }
 }

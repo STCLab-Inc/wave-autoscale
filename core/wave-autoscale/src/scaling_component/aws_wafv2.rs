@@ -2,6 +2,7 @@ use super::ScalingComponent;
 use crate::util::aws::get_aws_config_with_metadata;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
+use aws_sdk_applicationautoscaling::error::ProvideErrorMetadata;
 use aws_sdk_wafv2::Client as WAFClient;
 use data_layer::ScalingComponentDefinition;
 use serde_json::Value;
@@ -29,7 +30,7 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(&self, params: HashMap<String, Value>, _context: rquickjs::AsyncContext,) -> Result<HashMap<String, Value>> {
         let metadata = &self.definition.metadata;
         let (
             Some(Value::String(web_acl_id)), 
@@ -66,7 +67,11 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
             .await;
         if web_acl.is_err() {
             let web_acl_err = web_acl.err().unwrap();
-            return Err(anyhow::anyhow!(web_acl_err));
+            return Err(anyhow::anyhow!(serde_json::json!({
+                "message": web_acl_err.message(),
+                "code": web_acl_err.code(),
+                "extras": web_acl_err.to_string()
+            })));
         }
         let web_acl = web_acl.unwrap();
         let lock_token = web_acl.lock_token.clone().unwrap();
@@ -111,9 +116,13 @@ impl ScalingComponent for AWSWAFv2ScalingComponent {
         
         if result.is_err() {
             let result_err = result.err().unwrap();
-            return Err(anyhow::anyhow!(result_err));
+            return Err(anyhow::anyhow!(serde_json::json!({
+                "message": result_err.message(),
+                "code": result_err.code(),
+                "extras": result_err.to_string()
+            })));
         }
-        Ok(())
+        Ok(params)
     }
 }
 
@@ -123,6 +132,8 @@ mod test {
     use crate::scaling_component::ScalingComponent;
     use data_layer::ScalingComponentDefinition;
     use std::collections::HashMap;
+    use crate::scaling_component::test::get_rquickjs_context;
+
 
     // Purpose of the test is call apply function and fail test. just consists of test forms only.
     #[tokio::test]
@@ -165,7 +176,7 @@ mod test {
             ),
         ]);
         let lambda_function_scaling_component = AWSWAFv2ScalingComponent::new(scaling_definition)
-            .apply(params)
+            .apply(params, get_rquickjs_context().await)
             .await;
         assert!(lambda_function_scaling_component.is_ok());
     }
@@ -210,7 +221,7 @@ mod test {
             ),
         ]);
         let lambda_function_scaling_component = AWSWAFv2ScalingComponent::new(scaling_definition)
-            .apply(params)
+            .apply(params, get_rquickjs_context().await)
             .await;
         assert!(lambda_function_scaling_component.is_err());
     }

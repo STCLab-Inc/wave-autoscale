@@ -1,6 +1,6 @@
 use super::ScalingComponent;
 use super::{evaluate_expression_with_current_state, filter_current_state_in_expression};
-use crate::util::aws::get_aws_config;
+use crate::util::aws::get_aws_config_with_metadata;
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
 use aws_sdk_autoscaling::{error::ProvideErrorMetadata, Client};
@@ -49,87 +49,95 @@ impl ScalingComponent for EC2AutoScalingComponent {
     fn get_id(&self) -> &str {
         &self.definition.id
     }
-    async fn apply(&self, params: HashMap<String, Value>) -> Result<()> {
+    async fn apply(
+        &self,
+        params: HashMap<String, Value>,
+        context: rquickjs::AsyncContext,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         let metadata = self.definition.metadata.clone();
-
-        if let (
-            Some(Value::String(asg_name)),
-            Some(Value::String(region)),
-            Some(Value::String(desired)),
-        ) = (
+        let (Some(Value::String(asg_name)), Some(desired)) = (
             metadata.get("asg_name"),
-            metadata.get("region"),
             params.get("desired"),
-        ) {
-            // AWS Credentials
-            let access_key = metadata
-                .get("access_key")
-                .map(|access_key| access_key.to_string());
-            let secret_key = metadata
-                .get("secret_key")
-                .map(|secret_key| secret_key.to_string());
-
-            let config =
-                get_aws_config(Some(region.to_string()), access_key, secret_key, None, None).await;
-            if config.is_err() {
-                let config_err = config.err().unwrap();
-                return Err(anyhow::anyhow!(config_err));
-            }
-            let config = config.unwrap();
-            let client = Client::new(&config);
-
-            let current_state_key_array = EC2ComponentTargetValue::iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>();
-            // check target value contains enum variables
-            let current_state_array =
-                filter_current_state_in_expression(desired, current_state_key_array);
-            // save target value to map
-            let current_state_map =
-                get_current_state_map(current_state_array, client.clone(), asg_name.clone()).await;
-            if current_state_map.is_err() {
-                return Err(current_state_map.unwrap_err());
-            };
-
-            // evaluate target value
-            let desired =
-                evaluate_expression_with_current_state(desired, current_state_map.unwrap().clone())
-                    .await;
-            if desired.is_err() {
-                return Err(desired.unwrap_err());
-            }
-            let desired = desired.unwrap();
-
-            let mut result = client
-                .update_auto_scaling_group()
-                .auto_scaling_group_name(asg_name)
-                .desired_capacity(desired as i32);
-
-            if let Some(min) = params.get("min").and_then(Value::as_i64) {
-                result = result.min_size(min as i32);
-            }
-            if let Some(max) = params.get("max").and_then(Value::as_i64) {
-                result = result.max_size(max as i32);
-            }
-
-            let result = result.send().await;
-
-            if result.is_err() {
-                let error = result.err().unwrap();
-                // error.
-                let meta = error.meta();
-                // meta.ex
-                let json = json!({
-                    "message": meta.message(),
-                    "code": meta.code(),
-                    "extras": meta.to_string()
-                });
-                return Err(anyhow::anyhow!(json));
-            }
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Invalid metadata"))
+        ) else {
+            return Err(anyhow::anyhow!("Invalid metadata"));
+        };
+        // AWS Credentials
+        let config = get_aws_config_with_metadata(&metadata).await;
+        if config.is_err() {
+            let config_err = config.err().unwrap();
+            return Err(anyhow::anyhow!(config_err));
         }
+        let config = config.unwrap();
+        let client = Client::new(&config);
+
+        let desired_value = match desired {
+            Value::String(desired) => {
+                let current_state_key_array = EC2ComponentTargetValue::iter()
+                    .map(|value| value.to_string())
+                    .collect::<Vec<String>>();
+                // check target value contains enum variables
+                let current_state_array =
+                    filter_current_state_in_expression(desired, current_state_key_array);
+                // save target value to map
+                let current_state_map =
+                    get_current_state_map(current_state_array, client.clone(), asg_name.clone())
+                        .await;
+                let core::result::Result::Ok(current_state_map) = current_state_map else {
+                    return Err(current_state_map.unwrap_err());
+                };
+
+                // evaluate target value
+                let desired = evaluate_expression_with_current_state(
+                    desired,
+                    current_state_map.clone(),
+                    context,
+                )
+                .await;
+                let core::result::Result::Ok(desired) = desired else {
+                    return Err(desired.unwrap_err());
+                };
+                core::result::Result::Ok(desired)
+            }
+            Value::Number(desired) => {
+                let Some(desired) = desired.as_f64() else {
+                    return Err(anyhow::anyhow!("desired replicas"));
+                };
+                core::result::Result::Ok(desired)
+            }
+            _ => Err(anyhow::anyhow!("Invalid desired")),
+        };
+        let core::result::Result::Ok(desired_value) = desired_value else {
+            return Err(desired_value.unwrap_err());
+        };
+
+        let mut result = client
+            .update_auto_scaling_group()
+            .auto_scaling_group_name(asg_name)
+            .desired_capacity(desired_value as i32);
+
+        if let Some(min) = params.get("min").and_then(Value::as_i64) {
+            result = result.min_size(min as i32);
+        }
+        if let Some(max) = params.get("max").and_then(Value::as_i64) {
+            result = result.max_size(max as i32);
+        }
+
+        let result = result.send().await;
+
+        if result.is_err() {
+            let error = result.err().unwrap();
+            let json = json!({
+                "message": error.message(),
+                "code": error.code(),
+                "extras": error.to_string()
+            });
+            return Err(anyhow::anyhow!(json));
+        }
+
+        // Reflect the result value.
+        let mut return_params = params.clone();
+        return_params.insert("desired".to_string(), Value::from(desired_value));
+        Ok(return_params)
     }
 }
 
@@ -194,38 +202,44 @@ async fn get_auto_scaling_group_capacity(
 mod test {
     use super::super::ScalingComponentManager;
     use super::*;
+    use crate::scaling_component::test::get_rquickjs_context;
     use data_layer::types::object_kind::ObjectKind;
     use serde_json::{json, Value};
     use std::collections::HashMap;
 
-    fn get_data() -> (String, String) {
-        (
-            "ap-northeast-3".to_string(),    // region
-            "wave-ec2-as-nginx".to_string(), // asg_name
-        )
+    fn get_metadata() -> HashMap<String, Value> {
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "region".to_string(),
+            serde_json::Value::String("ap-northeast-2".to_string()),
+        );
+        metadata.insert(
+            "asg_name".to_string(),
+            serde_json::Value::String("wa-sample-asg".to_string()),
+        );
+        metadata
     }
 
     #[ignore]
     #[tokio::test]
     async fn test_get_auto_scaling_group_desired_capacity() {
-        let config = get_aws_config(Some(get_data().0), None, None, None, None).await;
+        let metadata = get_metadata();
+        let asg_name = metadata
+            .get("asg_name")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+        let config = get_aws_config_with_metadata(&metadata).await;
         let client = Client::new(&config.unwrap());
         let desired_capacity =
-            get_auto_scaling_group_capacity(client, get_data().1, EC2ComponentTargetValue::Desired);
+            get_auto_scaling_group_capacity(client, asg_name, EC2ComponentTargetValue::Desired);
         assert!(desired_capacity.await.unwrap() > 0);
     }
 
     #[test]
     fn test() {
-        let mut metadata: HashMap<String, Value> = HashMap::new();
-        metadata.insert(
-            "region".to_string(),
-            Value::String("ap-northeast-3".to_string()),
-        );
-        metadata.insert(
-            "asg_name".to_string(),
-            Value::String("wave-ec2-as".to_string()),
-        );
+        let metadata = get_metadata();
 
         let mut params: HashMap<String, Value> = HashMap::new();
         params.insert("desired".to_string(), json!(2));
@@ -240,19 +254,26 @@ mod test {
             assert_eq!(access_key, None);
             assert_eq!(secret_key, None);
         } else {
-            assert!(false);
+            panic!("Invalid metadata");
         }
     }
 
     #[ignore]
     #[tokio::test]
     async fn test_get_current_state_map() {
-        let config = get_aws_config(Some(get_data().0), None, None, None, None).await;
+        let metadata = get_metadata();
+        let asg_name = metadata
+            .get("asg_name")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+        let config = get_aws_config_with_metadata(&metadata).await;
         let client = Client::new(&config.unwrap());
         let map = get_current_state_map(
             vec!["$min".to_string(), "$desired".to_string()],
             client,
-            get_data().1,
+            asg_name,
         )
         .await
         .unwrap();
@@ -263,22 +284,14 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_aws_ec2_autoscaling() {
-        let mut scaling_component_metadata = HashMap::new();
-        scaling_component_metadata.insert(
-            "region".to_string(),
-            serde_json::Value::String(get_data().0),
-        );
-        scaling_component_metadata.insert(
-            "asg_name".to_string(),
-            serde_json::Value::String(get_data().1),
-        );
+        let metadata = get_metadata();
 
         let scaling_component_definitions = vec![ScalingComponentDefinition {
             kind: ObjectKind::ScalingComponent,
             db_id: "".to_string(),
             id: "api_server".to_string(),
             component_kind: "aws-ec2-autoscaling".to_string(),
-            metadata: scaling_component_metadata,
+            metadata,
             ..Default::default()
         }];
 
@@ -294,7 +307,7 @@ mod test {
         );
 
         let result = scaling_component_manager
-            .apply_to("api_server", options)
+            .apply_to("api_server", options, get_rquickjs_context().await)
             .await;
         assert!(result.is_ok());
     }
