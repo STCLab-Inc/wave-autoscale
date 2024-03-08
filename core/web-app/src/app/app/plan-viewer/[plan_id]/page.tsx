@@ -20,7 +20,7 @@ import { PlanLogDefinitionEx } from '@/types/plan-log-definition-ex';
 import classNames from 'classnames';
 
 // Default Values
-const DEFAULT_FROM = dayjs().subtract(3, 'hours');
+const DEFAULT_FROM = dayjs().subtract(1, 'hours');
 const DEFAULT_TO = dayjs();
 const DEFAULT_DATE_FORMAT = 'MM-DD HH:mm';
 
@@ -99,8 +99,8 @@ export default function PlanViewerDetailPage({
   const { data: scalingPlan } = useScalingPlan(planId);
   const { data: planLogs, isLoading } = usePlanLogs(
     planId,
-    dayjs(from),
-    dayjs(to)
+    dayjs(from).startOf('minute'),
+    dayjs(to).endOf('minute')
   );
   const planLogsForGraph = useMemo(() => {
     return planLogs?.map((log) => {
@@ -208,6 +208,15 @@ export default function PlanViewerDetailPage({
     router.push(`${pathname}?from=${params.from}&to=${params.to}`);
   };
 
+  const handleRefreshWithMinutes = (minutes: number) => {
+    const newDate = dayjs().subtract(minutes, 'minutes');
+    const params = {
+      from: formatDateTime(newDate),
+      to: formatDateTime(dayjs()),
+    };
+    router.push(`${pathname}?from=${params.from}&to=${params.to}`);
+  };
+
   return (
     <main className="flex h-full w-full flex-col">
       {/* Page Header */}
@@ -217,48 +226,81 @@ export default function PlanViewerDetailPage({
         subtitle={planId}
         backUrl="/app/plan-viewer"
       />
-      <div className="flex flex-1 flex-col py-6">
+      <div className="flex flex-1 flex-col py-3 pb-6">
         {/* Controls */}
-        <div className="flex space-x-4 px-6">
-          <div className="flex items-center">
+        <div className="flex justify-between space-x-4 px-6">
+          {/* From, To */}
+          <div className="flex flex-1 items-center">
             <div className="form-control mr-2">
+              <div className="label">
+                <span className="label-text font-bold text-xs">From</span>
+              </div>
               <label className="input-group-sm">
                 <input
                   type="datetime-local"
-                  className="input-bordered input input-sm max-w-[200px] cursor-text px-2 text-center focus:outline-none"
+                  className="input-bordered input input-sm w-[200px] cursor-text px-2 text-center focus:outline-none"
                   max={formatDateTime(dayjs(to))}
                   value={from}
                   onChange={(event) => handleDate('from', event.target.value)}
                 />
               </label>
             </div>
-            <span>~</span>
-            <div className="form-control ml-2">
+            <div className="form-control">
+              <div className="label">
+                <span className="label-text font-bold text-xs">To</span>
+              </div>
               <label className="input-group-sm">
                 <input
                   type="datetime-local"
-                  className="input-bordered input input-sm max-w-[200px] cursor-text px-2 text-center focus:outline-none"
+                  className="input-bordered input input-sm w-[200px] cursor-text px-2 text-center focus:outline-none"
                   min={formatDateTime(dayjs(from))}
                   value={to}
                   onChange={(event) => handleDate('to', event.target.value)}
                 />
               </label>
             </div>
+            <div className="form-control ml-4">
+              <div className="label">
+                <span className="label-text font-bold text-xs">Quick</span>
+              </div>
+              <div className="join">
+                <button
+                  className="btn btn-xs join-item"
+                  onClick={() => handleRefreshWithMinutes(5)}
+                >
+                  Last 5 minutes
+                </button>
+                <button
+                  className="btn btn-xs join-item"
+                  onClick={() => handleRefreshWithMinutes(30)}
+                >
+                  Last 30 minutes
+                </button>
+                <button
+                  className="btn btn-xs join-item"
+                  onClick={() => handleRefreshWithMinutes(60)}
+                >
+                  Last 1 hour
+                </button>
+              </div>
+            </div>
           </div>
           {/* Stats */}
           {!isLoading && (
-            <div className="flex flex-1 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-wa-gray-500">Total:</span>
-                <span className="text-wa-gray-700">{totalCount} logs</span>
+            <div className="form-control">
+              <div className="label">
+                <span className="label-text font-bold text-xs">Stats</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-wa-gray-500">Success:</span>
-                <span className="text-wa-gray-700">{successCount} logs</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-wa-gray-500">Fail:</span>
-                <span className="text-wa-gray-700">{failCount} logs</span>
+              <div className="flex h-8 items-center gap-2">
+                <div className="badge badge-primary gap-2 px-5 py-3 text-xs">
+                  Total {totalCount}
+                </div>
+                <div className="badge badge-success gap-2 px-5 py-3 text-xs">
+                  Success {successCount}
+                </div>
+                <div className="badge badge-error gap-2 px-5 py-3 text-xs text-white">
+                  Fail {failCount}
+                </div>
               </div>
             </div>
           )}
@@ -266,14 +308,14 @@ export default function PlanViewerDetailPage({
         {/* Composite Graph */}
         <div
           className={classNames(
-            'flex flex-col p-6',
+            'flex min-h-[150px] flex-col p-6',
             `h-[${metricsData.length * 100 + 100}px]`
           )}
         >
           <div className="wa-card flex-col px-10 py-10">
-            {isLoading && <div className="skeleton h-[100px]" />}
+            {isLoading && <div className="skeleton h-full" />}
             {!isLoading && metricsData.length === 0 && (
-              <div className="text-wa-gray-500 h-[100px] text-center text-2xl text-gray-200">
+              <div className="text-wa-gray-500 flex h-full items-center justify-center text-2xl text-gray-200">
                 No metrics data
               </div>
             )}
