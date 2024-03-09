@@ -7,7 +7,7 @@
 FROM rust:1.70.0-slim AS chef
 WORKDIR /usr/src/wave-autoscale
 RUN set -eux; \
-    cargo install cargo-chef; \
+    cargo install cargo-chef@0.1.62 --locked; \
     rm -rf $CARGO_HOME/registry
 
 ### Planner
