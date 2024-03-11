@@ -72,8 +72,8 @@ const MENU_ITEMS: (MenuItemData | MenuItemGroupData)[] = [
     groupLabel: 'Settings',
   },
   {
-    pathname: '/app/scaling-components/:id*',
-    targetPath: '/app/scaling-components',
+    pathname: '/app/wave-config',
+    targetPath: '/app/wave-config',
     label: 'wave-config.yaml',
     imageFilename: 'settings.svg',
   },
