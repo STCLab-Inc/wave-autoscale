@@ -3,7 +3,12 @@
 import React from 'react';
 import PageHeader from '../common/page-header';
 import { useInfo } from '@/services/info';
-import YAMLEditor from '../common/yaml-editor';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports (because of 'window' object)
+const YAMLEditor = dynamic(() => import('../common/yaml-editor'), {
+  ssr: false,
+});
 
 export default function WaveConfigPage() {
   const { data: info } = useInfo();
