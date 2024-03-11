@@ -1,6 +1,9 @@
-use crate::{app_state::get_app_state, controller};
+use crate::{
+    app_state::{get_app_state, AppState},
+    controller,
+};
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use data_layer::data_layer::DataLayer;
 use serde_json::json;
 use std::{
@@ -18,9 +21,11 @@ async fn ping() -> String {
     time.to_string()
 }
 
-async fn get_info() -> impl Responder {
+async fn get_info(app_state: web::Data<AppState>) -> impl Responder {
     let version = env!("CARGO_PKG_VERSION");
-    let json = json!({ "version": version });
+    let wave_config = &app_state.wave_config;
+    let wave_config_yaml = serde_yaml::to_string(wave_config).unwrap();
+    let json = json!({ "version": version, "wave_config": wave_config_yaml});
     HttpResponse::Ok().json(json)
 }
 
@@ -30,11 +35,11 @@ pub async fn run_api_server(
     shared_data_layer: Arc<DataLayer>,
 ) -> std::io::Result<()> {
     // Read arguments
-    let host = wave_config.host;
+    let host = wave_config.host.clone();
     let port = wave_config.port;
 
     // Run HTTP Server
-    let app_state = get_app_state(shared_data_layer);
+    let app_state = get_app_state(shared_data_layer, wave_config);
     let http_server = HttpServer::new(move || {
         let cors = Cors::permissive().max_age(3600);
 
