@@ -6,7 +6,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { decodeTime } from 'ulid';
 import PlanLogService from '@/services/plan-log';
 import { PlanLogDefinition } from '@/types/bindings/plan-log-definition';
-import AutoscalingHistoryHeatmap from './plan-log-heatmap';
+import PlanLogHeatmap from '../plan-log-heatmap';
 import { PlanLogDefinitionEx } from '../../../types/plan-log-definition-ex';
 import PageHeader from '../common/page-header';
 import WAVirtualizedTable from '../common/wa-virtualized-table';
@@ -211,8 +211,8 @@ export default function AutoscalingHistoryPage() {
         {/* Heatmap */}
         <div className="p-6">
           <div className="wa-card">
-            <AutoscalingHistoryHeatmap
-              autoscalingHistory={autoscalingHistory}
+            <PlanLogHeatmap
+              planLogs={autoscalingHistory}
               from={fromDayjs}
               to={toDayjs}
             />

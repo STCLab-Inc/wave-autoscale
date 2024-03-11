@@ -78,7 +78,7 @@ export default PlanLogService;
 // Hooks
 function usePlanLogs(planId: string | undefined, from: Dayjs, to: Dayjs) {
   return useQuery({
-    queryKey: ['plan-log', from, to],
+    queryKey: ['plan-log', planId, from, to],
     queryFn: () => PlanLogService.getPlanLogsByFromTo(planId, from, to),
   });
 }

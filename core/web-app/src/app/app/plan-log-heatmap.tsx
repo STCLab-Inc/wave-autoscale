@@ -1,37 +1,36 @@
 import { memo, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { groupBy } from 'lodash';
-import { ResponsiveHeatMapCanvas } from '@nivo/heatmap';
-import { PlanLogDefinitionEx } from '../../../types/plan-log-definition-ex';
+import { ResponsiveHeatMap, ResponsiveHeatMapCanvas } from '@nivo/heatmap';
+import { PlanLogDefinitionEx } from '../../types/plan-log-definition-ex';
 import { addAlpha } from '@/utils/color';
+import { parseDateToDayjs } from '@/utils/date';
 
-const MAX_ERROR_COUNT = 10;
-const MAX_SUCCESS_COUNT = 10;
+const MAX_SUCCESS_COUNT = 20;
 
 // Interfaces
-interface AutoscalingHistoryHeatmapProps {
-  autoscalingHistory: PlanLogDefinitionEx[];
+
+interface PlanLogDefinitionExWithDayjs extends PlanLogDefinitionEx {
+  created_at_dayjs?: Dayjs;
+}
+
+interface PlanLogHeatmapProps {
+  planLogs: PlanLogDefinitionExWithDayjs[];
   from: Dayjs;
   to: Dayjs;
 }
 
-function AutoscalingHistoryHeatmap({
-  autoscalingHistory,
-  from,
-  to,
-}: AutoscalingHistoryHeatmapProps) {
+function PlanLogHeatmap({ planLogs, from, to }: PlanLogHeatmapProps) {
   const dataForHeatmap = useMemo(() => {
-    if (!autoscalingHistory) {
+    if (!planLogs) {
       return [];
     }
 
-    const groupedByDate = groupBy(
-      autoscalingHistory,
-      (autoscalingHistoryItem) =>
-        dayjs
-          .unix(autoscalingHistoryItem.created_at / 1000)
-          .format('YYYY-MM-DD')
-    );
+    const groupedByDate = groupBy(planLogs, (planLog) => {
+      // Add dayjs to the planLog to avoid parsing the date multiple times
+      planLog.created_at_dayjs = parseDateToDayjs(planLog.created_at);
+      return planLog.created_at_dayjs?.format('YYYY-MM-DD');
+    });
 
     let current = from;
     while (current.isBefore(to) || current.isSame(to)) {
@@ -44,11 +43,9 @@ function AutoscalingHistoryHeatmap({
 
     const data = Object.entries(groupedByDate)
       .sort(([dateA], [dateB]) => (dateA < dateB ? -1 : 1))
-      .map(([date, autoscalingHistoryItems]) => {
-        const groupedByHour = groupBy(
-          autoscalingHistoryItems,
-          (autoscalingHistoryItem) =>
-            dayjs.unix(autoscalingHistoryItem.created_at / 1000).format('HH')
+      .map(([date, planLogsByDate]) => {
+        const groupedByHour = groupBy(planLogsByDate, (planLog) =>
+          planLog.created_at_dayjs?.format('HH')
         );
 
         for (let i = 0; i < 24; i++) {
@@ -59,12 +56,14 @@ function AutoscalingHistoryHeatmap({
         }
 
         return {
+          // Axis Left
           id: date,
+          // Axis Top
           data: Object.entries(groupedByHour)
             .sort(([hourA], [hourB]) => (hourA < hourB ? -1 : 1))
-            .map(([hour, autoscalingHistoryItems]) => {
-              const totalCount = autoscalingHistoryItems.length;
-              const errorCount = autoscalingHistoryItems.filter(
+            .map(([hour, planLogs]) => {
+              const totalCount = planLogs.length;
+              const errorCount = planLogs.filter(
                 (autoscalingHistoryItem) => autoscalingHistoryItem.fail_message
               ).length;
               return {
@@ -79,7 +78,7 @@ function AutoscalingHistoryHeatmap({
       });
 
     return data;
-  }, [autoscalingHistory, from, to]);
+  }, [planLogs, from, to]);
 
   const maxValue = useMemo(() => {
     let maxValue = 0;
@@ -94,31 +93,28 @@ function AutoscalingHistoryHeatmap({
   }, [dataForHeatmap]);
 
   return (
-    <div className="h-80 w-full">
-      <ResponsiveHeatMapCanvas
+    <div className="h-full w-full">
+      <ResponsiveHeatMap
         data={dataForHeatmap}
-        margin={{ top: 50, right: 70, bottom: 30, left: 140 }}
-        axisTop={{
-          tickSize: 0,
-          tickPadding: 10,
-          legendOffset: -40,
-          legendPosition: 'middle',
-        }}
+        margin={{ top: 0, right: 0, bottom: 0, left: 40 }}
+        axisTop={null}
         axisLeft={{
           tickSize: 0,
           tickPadding: 20,
           tickRotation: 0,
-          format: (value) => value.replace(/-/g, '/'),
+          format: (date) => dayjs(date).format('ddd'),
         }}
+        borderRadius={5}
+        forceSquare
         colors={(cell) => {
-          console.log({ cell });
+          // console.log({ cell });
           const { data } = cell;
-          // Error
-          if (data.errorCount > 0) {
-            return addAlpha('#E0242E', data.errorCount / MAX_ERROR_COUNT);
-          }
+          // // Error
+          // if (data.errorCount > 0) {
+          //   return addAlpha('#E0242E', data.errorCount / MAX_ERROR_COUNT);
+          // }
           if (data.y > 0) {
-            return addAlpha('#09AB6E', data.y / MAX_SUCCESS_COUNT);
+            return addAlpha('#863EBE', data.y / MAX_SUCCESS_COUNT);
           }
           return '#EDEEF1';
         }}
@@ -127,18 +123,18 @@ function AutoscalingHistoryHeatmap({
         emptyColor="#EBEBEB"
         borderWidth={0}
         borderColor="#000000"
-        enableLabels={true}
-        labelTextColor={(cell) => {
-          const { data } = cell;
-          // Error
-          if (data.errorCount > 0) {
-            return '#FFFFFF';
-          }
-          if (data.y > 0) {
-            return '#FFFFFF';
-          }
-          return '#00000000';
-        }}
+        enableLabels={false}
+        // labelTextColor={(cell) => {
+        //   const { data } = cell;
+        //   // Error
+        //   if (data.errorCount > 0) {
+        //     return '#FFFFFF';
+        //   }
+        //   if (data.y > 0) {
+        //     return '#FFFFFF';
+        //   }
+        //   return '#00000000';
+        // }}
         annotations={[]}
         tooltip={({ cell }) => (
           <div
@@ -166,4 +162,4 @@ function AutoscalingHistoryHeatmap({
   );
 }
 
-export default memo(AutoscalingHistoryHeatmap);
+export default memo(PlanLogHeatmap);

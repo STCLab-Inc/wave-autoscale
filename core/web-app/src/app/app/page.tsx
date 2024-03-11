@@ -1,71 +1,93 @@
 'use client';
 
-import StatsService, { DashboardStats } from '@/services/stats';
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMetricsDataStats } from '@/services/metrics-data';
 import PageHeader from './common/page-header';
-import { ResponsiveBarCanvas } from '@nivo/bar';
-import SCALING_COMPONENT_TEMPLATES from '@/data/wa-templates/scaling-components';
-import { TemplateItem } from './common/template-item';
+import PlanLogHeatmap from './plan-log-heatmap';
+import { usePlanLogs } from '@/services/plan-log';
+import dayjs from 'dayjs';
+import WATinyAreaChart from './common/wa-tiny-area-chart';
+import { useScalingPlansWithStats } from '@/services/scaling-plan';
+import WATinyBarChart from './common/wa-tiny-bar-chart';
 import classNames from 'classnames';
+import { useScalingComponents } from '@/services/scaling-component';
+import ScalingComponentsGrid from './scaling-components-grid';
 
-const QUICK_START_ITEMS = [
-  // K8s deployment
-  SCALING_COMPONENT_TEMPLATES[0].templates[0],
-  // ECS Autoscaling
-  SCALING_COMPONENT_TEMPLATES[1].templates[1],
-  // EC2 Autoscaling
-  SCALING_COMPONENT_TEMPLATES[1].templates[0],
-];
+const PLAN_LOGS_FROM = dayjs().subtract(6, 'days').startOf('day');
+const PLAN_LOGS_TO = dayjs().endOf('day');
 
-const LinkIcon = ({ fill }: { fill: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    width="24px"
-    height="24px"
-    fill={fill}
-  >
-    <path d="M 19.980469 2.9902344 A 1.0001 1.0001 0 0 0 19.869141 3 L 15 3 A 1.0001 1.0001 0 1 0 15 5 L 17.585938 5 L 8.2929688 14.292969 A 1.0001 1.0001 0 1 0 9.7070312 15.707031 L 19 6.4140625 L 19 9 A 1.0001 1.0001 0 1 0 21 9 L 21 4.1269531 A 1.0001 1.0001 0 0 0 19.980469 2.9902344 z M 5 3 C 3.9069372 3 3 3.9069372 3 5 L 3 19 C 3 20.093063 3.9069372 21 5 21 L 19 21 C 20.093063 21 21 20.093063 21 19 L 21 13 A 1.0001 1.0001 0 1 0 19 13 L 19 19 L 5 19 L 5 5 L 11 5 A 1.0001 1.0001 0 1 0 11 3 L 5 3 z" />
-  </svg>
-);
-
-function RecommendedActionItem({
-  title,
-  href,
+function MetricsDataStatsItem({
+  metricsDataStats,
+  isLoading,
 }: {
-  title: string;
-  href: string;
+  metricsDataStats: any;
+  isLoading: boolean;
 }) {
   return (
-    <Link href={href} className="mb-2 flex items-center">
-      <LinkIcon fill="#656669" />
-      <div className="ml-2 text-sm font-semibold">{title}</div>
-    </Link>
+    <div className="stats">
+      <div className="stat">
+        <div className={classNames('stat-title mb-4', { skeleton: isLoading })}>
+          {metricsDataStats.metricId}
+        </div>
+        <div
+          className={classNames('stat-value flex h-[100px] overflow-hidden', {
+            skeleton: isLoading,
+          })}
+        >
+          <div className="flex-1">
+            <WATinyAreaChart
+              data={metricsDataStats.countPerMinute}
+              yDataKey="count"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>();
-  const graphData = useMemo(() => {
-    if (!stats) {
-      return [];
-    }
 
-    return [
-      {
-        id: 'Triggered Plans',
-        data: stats.dailyAutoscalingHistory,
-      },
-    ];
-  }, [stats]);
-  // Effects
-  useEffect(() => {
-    const fetch = async () => {
-      const stats = await StatsService.getDashboardStats();
-      setStats(stats);
-    };
-    fetch();
-  }, []);
+function PlanLogsItem({
+  planLogsWithStats,
+  isLoading,
+}: {
+  planLogsWithStats: any;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="stats">
+      <div className="stat">
+        <div className={classNames('stat-title mb-4', { skeleton: isLoading })}>
+          {planLogsWithStats.id}
+        </div>
+        <div
+          className={classNames('stat-value flex h-[100px] overflow-hidden', {
+            skeleton: isLoading,
+          })}
+        >
+          <div className="flex-1">
+            <WATinyBarChart
+              data={planLogsWithStats.countPerDay}
+              yDataKey="count"
+              xDataKey="date"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  const { data: planLogs, isLoading: isPlanLogsLoading } = usePlanLogs(
+    undefined,
+    PLAN_LOGS_FROM,
+    PLAN_LOGS_TO
+  );
+  const { data: planLogsWithStats, isLoading: isPlanLogsWithStatsLoading } =
+    useScalingPlansWithStats(PLAN_LOGS_FROM, PLAN_LOGS_TO);
+  const { data: metricsData, isLoading: isMetricsDataLoading } =
+    useMetricsDataStats();
+  const { data: scalingComponents, isLoading: isScalingComponentsLoading } =
+    useScalingComponents();
 
   return (
     <div className="min-h-full">
@@ -73,124 +95,164 @@ export default function DashboardPage() {
       <PageHeader title="Dashboard" />
       {/* Contents */}
       <div className="px-6 py-6">
-        {/* First Row */}
+        {/* First Row - Quick Start */}
         <div className="mb-10 flex space-x-4">
           {/* Quick Start */}
-          <div className="stats flex-1">
-            <div className="stat">
-              <div className="stat-title">Quick Start</div>
-              <div className="stat-value grid grid-cols-2 gap-4 pt-2 xl:grid-cols-2 2xl:grid-cols-4">
-                {QUICK_START_ITEMS.map((template, index) => (
-                  <div
-                    key={template.title}
-                    className={classNames({ 'pl-4': index !== 0 })}
+          <div className="stats flex-1 !border-none">
+            <div className="stat flex h-[200px] bg-gradient-to-r from-[#E9ECFD] to-[#D8C6EE] !py-10">
+              {/* Left column */}
+              <div className="flex flex-2 flex-col justify-between py-2 pl-10">
+                <div className="w-full text-2xl font-bold text-black">
+                  Unified Traffic & Autoscaling Management for Clouds and
+                  Kubernetes
+                </div>
+                <div className="flex space-x-2">
+                  {/* Buttons */}
+                  <a href="/app/templates" className="btn-primary btn btn-sm">
+                    See Templates
+                  </a>
+                  <a
+                    href="https://waveautoscale.com/docs"
+                    className="btn btn-sm"
                   >
-                    <TemplateItem
-                      key={template.title}
-                      template={template}
-                      isCard={false}
-                    />
-                  </div>
-                ))}
-                {/* See more templates */}
-                <div className="flex items-center justify-center p-6 text-base text-wa-gray-700">
-                  <Link
-                    href="/app/templates"
-                    className="flex items-center justify-center"
-                  >
-                    <span className="text-wrap mr-2">See More Templates</span>
-                    <LinkIcon fill="#656669" />
-                  </Link>
+                    Docs
+                  </a>
                 </div>
               </div>
-            </div>
-          </div>
-          {/* Recommendations */}
-          <div className="stats w-96">
-            <div className="stat flex flex-col justify-start">
-              <div className="stat-title mb-4">Recommendation Actions</div>
-              <RecommendedActionItem
-                title="Create A Scaling Component"
-                href="/app/scaling-components"
-              />
-              <RecommendedActionItem
-                title="Create A Metric Definition"
-                href="/app/metrics"
-              />
-
-              <RecommendedActionItem
-                title="Create A Scaling Plan"
-                href="/app/scaling-plans"
-              />
-            </div>
-          </div>
-        </div>
-        {/* Second Row */}
-        <div className="mb-10 flex space-x-4">
-          {/* Autoscaling History Graph */}
-          <div className="stats flex-1">
-            <div className="stat">
-              <div className="stat-title">Triggered Plans</div>
-              <div className="stat-value h-[300px] overflow-hidden">
-                <ResponsiveBarCanvas
-                  data={stats?.dailyAutoscalingHistory ?? []}
-                  margin={{ top: 50, right: 60, bottom: 50, left: 60 }}
-                  pixelRatio={2}
-                  enableLabel={true}
-                  indexBy="date" // minValue="auto"
-                  keys={stats?.dailyAutoscalingHistoryPlanIds ?? []}
-                  // maxValue="auto"
-                  labelSkipHeight={16}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 5,
-                    tickRotation: 0,
-                    truncateTickAt: 0,
-                  }}
-                  tooltip={({ indexValue, value, id }) => (
-                    <div className="rounded-md border border-wa-gray-600 bg-wa-gray-50 p-2 text-sm font-normal">
-                      <div className="">{indexValue}</div>
-                      <div className="">{id}</div>
-                      <div className="">{value} times</div>
-                    </div>
-                  )}
-                  axisLeft={{
-                    tickValues: 5,
-                    tickSize: 0,
-                  }}
-                  colors={{ scheme: 'paired' }}
-                  gridYValues={5}
+              <div className="flex flex-1 items-center justify-center">
+                <img
+                  src="/assets/dashboard/introduction-image.svg"
+                  className="max-h-full"
                 />
               </div>
             </div>
           </div>
-          {/* History */}
-          <div className="stats w-96">
-            <div className="stat flex flex-col justify-start">
-              <div className="stat-title mb-4">Most Triggered Plan IDs</div>
-              {stats?.autoscalingHistoryMostTriggered.map((item, index) => (
-                <div key={index} className="mb-2 flex items-center">
-                  <div className="badge-primary badge badge-xs mr-4" />
-                  <div className="text-sm font-semibold">
-                    {item[0]} ({item[1]} times)
-                  </div>
+        </div>
+        {/* Second Row - Heatmap */}
+        <div className="mb-10 flex space-x-4">
+          <div className="stats flex-1">
+            <div className="stat">
+              <div className="stat-title mb-4">Plan Logs</div>
+              <div className="stat-value flex h-[200px] overflow-hidden">
+                <div
+                  className={classNames('flex-1', {
+                    skeleton: isPlanLogsLoading,
+                  })}
+                >
+                  <PlanLogHeatmap
+                    planLogs={planLogs ?? []}
+                    from={PLAN_LOGS_FROM}
+                    to={PLAN_LOGS_TO}
+                  />
                 </div>
-              ))}
-              <div className="stat-desc">
-                last {stats?.dailyAutoscalingHistoryKeys?.length} days
+                <div className="flex w-48 flex-col justify-start px-4">
+                  {isPlanLogsLoading ? (
+                    <>
+                      <div className="stat-desc skeleton">&nbsp;</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="stat-desc">
+                        {`${PLAN_LOGS_FROM.format(
+                          'DD MMM'
+                        )} ~ ${PLAN_LOGS_TO.format('DD MMM')}`}
+                      </div>
+
+                      <div>
+                        <div className="stat-title">Total </div>
+                        <div className="stat-value">{planLogs?.length}</div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Recent Inflow */}
-        {/* <div className="flex">
-          <div className="stats flex-1">
-            <div className="stat">
-              <div className="stat-title mb-4">Recent Metrics Inflow</div>
+        {/* Third row - Metrics */}
+        <div className="mb-10 flex flex-col">
+          <div className="mb-4 text-lg font-semibold text-gray-500">
+            {`Metrics${metricsData?.length ? ` (${metricsData.length})` : ''}`}
+          </div>
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+            {metricsData?.map((metricsDataStats) => (
+              <MetricsDataStatsItem
+                key={metricsDataStats.metricId}
+                metricsDataStats={metricsDataStats}
+                isLoading={isMetricsDataLoading}
+              />
+            ))}
+            {isMetricsDataLoading && (
+              <>
+                {
+                  // Skeleton
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <MetricsDataStatsItem
+                      key={index}
+                      isLoading={true}
+                      metricsDataStats={{}}
+                    />
+                  ))
+                }
+              </>
+            )}
+            <div className="flex items-center justify-start pl-10">
+              {/* Go to Metrics Viewer */}
+              <a href="/app/metrics-viewer" className="btn btn-sm">
+                Go to Metrics Viewer
+              </a>
             </div>
           </div>
-        </div> */}
+        </div>
+        {/* Forth row - Scaling Plans */}
+        <div className="mb-10 flex flex-col">
+          <div className="mb-4 text-lg font-semibold text-gray-500">
+            {`Scaling Plans${
+              planLogsWithStats?.length ? ` (${planLogsWithStats.length})` : ''
+            }`}
+          </div>
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+            {planLogsWithStats?.map((planLogWithStats) => (
+              <PlanLogsItem
+                key={planLogWithStats.id}
+                planLogsWithStats={planLogWithStats}
+                isLoading={isPlanLogsWithStatsLoading}
+              />
+            ))}
+            {isPlanLogsWithStatsLoading && (
+              <>
+                {
+                  // Skeleton
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <PlanLogsItem
+                      key={index}
+                      isLoading={true}
+                      planLogsWithStats={{}}
+                    />
+                  ))
+                }
+              </>
+            )}
+            <div className="flex items-center justify-start pl-10">
+              {/* Go to Plan Viewer */}
+              <a href="/app/plan-viewer" className="btn btn-sm">
+                Go to Plan Viewer
+              </a>
+            </div>
+          </div>
+        </div>
+        {/* Fifth Row - Scaling Components */}
+        <div className="mb-10 flex flex-col">
+          <div className="mb-4 text-lg font-semibold text-gray-500">
+            {`Scaling Components${
+              scalingComponents?.length ? ` (${scalingComponents.length})` : ''
+            }`}
+          </div>
+          <ScalingComponentsGrid
+            scalingComponents={scalingComponents ?? []}
+            isLoading={isScalingComponentsLoading}
+          />
+        </div>
       </div>
     </div>
   );
