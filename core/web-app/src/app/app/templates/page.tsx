@@ -18,7 +18,7 @@ function TemplateSection({
       <h3 className="mb-4 text-lg font-semibold" id={templateSection.title}>
         {templateSection.title}
       </h3>
-      <div className="grid grid-cols-3 gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+      <div className="grid grid-cols-3 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {templateSection.templates.map((template) => (
           <TemplateItem
             key={template.title}

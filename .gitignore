@@ -22,19 +22,24 @@ archive/
 db/
 wave.db
 :memory:
-telegraf*/
-vector*/
-!examples/metrics/telegraf/
-!examples/metrics/vector/
 !core/web-app/src/data/wa-templates/metrics/telegraf/
 !core/web-app/src/data/wa-templates/metrics/vector/
 core/wave-autoscale/wave-autoscale-ui/
+
+# Config files
 wave-config.yaml
 wave-definition.yaml
 !docs/config/wave-config.yaml
 !docs/config/wave-definition.yaml
 !deployment/helm-chart/config/wave-config.yaml
 !deployment/helm-chart/config/wave-definition.yaml
+
+# Metrics collectors for testing
+telegraf*/
+vector*/
+!examples/metrics/telegraf/
+!examples/metrics/vector/
+core/wave-autoscale/enterprise/
 
 # VSCode
 .vscode/

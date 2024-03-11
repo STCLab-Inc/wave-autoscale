@@ -1,5 +1,5 @@
 use crate::config_path::find_file_in_wa;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs::File};
 use tracing::{debug, error};
 
@@ -71,7 +71,7 @@ fn default_webhooks_headers() -> Option<HashMap<String, String>> {
     DEFAULT_WEBHOOKS_HEADERS
 }
 
-#[derive(Debug, PartialEq, Deserialize, Default, Clone)]
+#[derive(Debug, PartialEq, Deserialize, Default, Clone, Serialize)]
 struct DownloadUrlDefinition {
     macos_x86_64: String,
     macos_aarch64: String,
@@ -80,7 +80,26 @@ struct DownloadUrlDefinition {
     windows_x86_64: String,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Clone)]
+#[derive(PartialEq, Clone, Deserialize, Debug, Serialize)]
+pub struct Webhooks {
+    pub id: String,
+    pub webhook_type: WebhookType,
+    #[serde(default = "default_webhooks_url")]
+    pub url: Option<String>,
+    #[serde(default = "default_webhooks_headers")]
+    pub headers: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
+pub enum WebhookType {
+    #[serde(alias = "Http", alias = "http")]
+    Http,
+    #[serde(alias = "SlackIncomingWebhook", alias = "slackincomingwebhook")]
+    SlackIncomingWebhook,
+    // SlackOauth, // TODO: To be developed.
+}
+
+#[derive(Debug, PartialEq, Deserialize, Clone, Serialize)]
 pub struct WaveConfig {
     // Wave Autoscale
     // Verbose mode, Overridden by 'quiet'
@@ -145,25 +164,6 @@ pub struct WaveConfig {
     //
     #[serde(default = "default_webhooks")]
     pub webhooks: Option<Vec<Webhooks>>,
-}
-
-#[derive(PartialEq, Clone, Deserialize, Debug)]
-pub struct Webhooks {
-    pub id: String,
-    pub webhook_type: WebhookType,
-    #[serde(default = "default_webhooks_url")]
-    pub url: Option<String>,
-    #[serde(default = "default_webhooks_headers")]
-    pub headers: Option<HashMap<String, String>>,
-}
-
-#[derive(Debug, PartialEq, Deserialize, Clone)]
-pub enum WebhookType {
-    #[serde(alias = "Http", alias = "http")]
-    Http,
-    #[serde(alias = "SlackIncomingWebhook", alias = "slackincomingwebhook")]
-    SlackIncomingWebhook,
-    // SlackOauth, // TODO: To be developed.
 }
 
 impl Default for WaveConfig {

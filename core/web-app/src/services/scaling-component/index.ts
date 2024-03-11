@@ -1,9 +1,11 @@
 import { DataLayer } from '@/infra/data-layer';
 import { ScalingComponentDefinition } from '@/types/bindings/scaling-component-definition';
 import StatsService from '../stats';
+import { use } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 class ScalingComponentServiceClass {
-  async getScalingComponents() {
+  async getScalingComponents(): Promise<ScalingComponentDefinition[]> {
     const response = await DataLayer.get('/api/scaling-components', {});
     return response.data;
   }
@@ -52,3 +54,12 @@ class ScalingComponentServiceClass {
 const ScalingComponentService = new ScalingComponentServiceClass();
 
 export default ScalingComponentService;
+
+function useScalingComponents() {
+  return useQuery({
+    queryKey: ['scaling-components'],
+    queryFn: ScalingComponentService.getScalingComponents,
+  });
+}
+
+export { useScalingComponents };
