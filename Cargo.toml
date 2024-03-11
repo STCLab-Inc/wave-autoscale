@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 rust-version = "1.70.0"
 edition = "2021"
 authors = ["Wave Autoscale Team in STCLab, Inc"]
