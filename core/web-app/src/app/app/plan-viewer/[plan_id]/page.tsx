@@ -100,16 +100,19 @@ export default function PlanViewerDetailPage({
   // Data
   const planId = params.plan_id;
   const searchParams = useSearchParams();
+
+  // From, To
   const from = searchParams.get('from') || formatDateTime(DEFAULT_FROM);
   const to = searchParams.get('to') || formatDateTime(DEFAULT_TO);
+  const fromDayjs = useMemo(() => dayjs(from).startOf('minute'), [from]);
+  const toDayjs = useMemo(() => dayjs(to).endOf('minute'), [to]);
 
   const [metricsData, setMetricsData] = useState<MetricsDataItemEx[]>([]);
+  // Get the scaling plan
   const { data: scalingPlan } = useScalingPlan(planId);
-  const { data: planLogs, isLoading } = usePlanLogs(
-    planId,
-    dayjs(from).startOf('minute'),
-    dayjs(to).endOf('minute')
-  );
+
+  // Get the plan logs regarding this plan and transform them to the format that the graph can use
+  const { data: planLogs, isLoading } = usePlanLogs(planId, fromDayjs, toDayjs);
   const planLogsForGraph = useMemo(() => {
     return planLogs?.map((log) => {
       return {
@@ -120,6 +123,8 @@ export default function PlanViewerDetailPage({
       };
     });
   }, [planLogs]);
+
+  // Stats for the plan logs
   const totalCount = useMemo(() => planLogs?.length ?? 0, [planLogs]);
   const successCount = useMemo(() => {
     return planLogs?.filter((log) => !log.fail_message).length ?? 0;
@@ -134,6 +139,8 @@ export default function PlanViewerDetailPage({
   );
 
   // Effects
+
+  // Get the metrics data for the scaling plan
   useEffect(() => {
     if (!scalingPlan) {
       return;
@@ -144,9 +151,11 @@ export default function PlanViewerDetailPage({
         metricsInfo.map(async (getJsParam) => {
           const data = await MetricsDataService.getMetricsData(
             getJsParam.metricId,
-            parseDateTime(from),
-            parseDateTime(to)
+            fromDayjs,
+            toDayjs
           );
+
+          // Filter the metrics data
           const metrics = data.find(
             (metricsDataItem: MetricsDataItem, index: number) => {
               if (
@@ -175,6 +184,8 @@ export default function PlanViewerDetailPage({
           if (!metrics) {
             return;
           }
+
+          // Add metricId to the metrics data
           (metrics as MetricsDataItemEx).metricId = getJsParam.metricId;
           metrics.values = metrics.values.map((item) => {
             return {
@@ -185,9 +196,12 @@ export default function PlanViewerDetailPage({
           return metrics;
         })
       );
+
+      // Filter the metrics data that is not found
       const filtered = metricsData.filter(
         (item) => item !== undefined
       ) as MetricsDataItemEx[];
+
       setMetricsData(filtered);
     };
 

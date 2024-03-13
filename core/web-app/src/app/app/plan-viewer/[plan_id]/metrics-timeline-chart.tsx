@@ -68,7 +68,6 @@ export default function MetricsTimelineChart({
         {
           // Show the ReferenceLines for autoscalingLogs
           planLogs?.map((log, index) => {
-            console.log({ log: log[xDataKey] });
             return (
               <ReferenceLine
                 key={index}

@@ -34,3 +34,7 @@ export function parseDateToDayjs(
 export function parseUlidToDayjs(ulid: string): Dayjs | undefined {
   return parseDateToDayjs(decodeTime(ulid));
 }
+
+export function parseUlidToUnixTimestamp(ulid: string): number | undefined {
+  return decodeTime(ulid);
+}
