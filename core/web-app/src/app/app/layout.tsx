@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <div className="flex w-screen min-w-screen-xl flex-row justify-start overflow-auto pl-64">
         <Sidebar />
-        <main className="wa-main min-h-screen flex-1">{children}</main>
+        <main className="wa-main min-h-screen flex-1 bg-gray-75">{children}</main>
       </div>
       <ToastContainer />
     </QueryClientProvider>
