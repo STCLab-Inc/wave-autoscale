@@ -133,9 +133,9 @@ export default function DashboardPage() {
           <div className="stats flex-1">
             <div className="stat">
               <div className="stat-title mb-4">Plan Logs</div>
-              <div className="stat-value flex h-[200px] overflow-hidden">
+              <div className="stat-value flex h-[200px] w-full overflow-hidden">
                 <div
-                  className={classNames('flex-1', {
+                  className={classNames('min-w-0 flex-1', {
                     skeleton: isPlanLogsLoading,
                   })}
                 >

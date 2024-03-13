@@ -16,12 +16,12 @@ const columns = [
   columnHelper.display({
     id: 'index',
     header: () => '',
-    size: 50,
     cell: (cell) => (
       <span className="flex items-start justify-start">
         {cell.row.index + 1}
       </span>
     ),
+    size: 50,
   }),
   columnHelper.accessor('metricId', {
     header: () => 'Metric ID',

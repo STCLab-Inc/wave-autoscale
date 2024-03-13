@@ -1,9 +1,9 @@
 import { DataLayer } from '@/infra/data-layer';
 import {
-  MetricsDataItem,
   MetricsDataItems,
   MetricsDataStats,
   MetricsDataStatsMap,
+  MetricsDataValue,
 } from '@/types/metrics-data-stats';
 import { parseDateToDayjs } from '@/utils/date';
 import { useQuery } from '@tanstack/react-query';
@@ -90,33 +90,48 @@ class MetricsDataServiceClass {
     if (to) {
       query['to'] = to.valueOf();
     }
-    const { data }: { data: { [ulid: string]: MetricsDataItem[] } } =
+    const {
+      data,
+    }: { data: { [ulidTimestampMs: string]: MetricsDataValue[] } } =
       await DataLayer.get(
         `/api/metrics-data/metrics/${metricId}?${queryString.stringify(query)}`
       );
-    const itemsMap: { [key: string]: MetricsDataItem[] } = {};
-    _.forEach(data, (values: any[], timestamp: string) => {
-      values.forEach((value: any, index: number) => {
-        const keyObject: any = {};
-        if (value.name) {
-          keyObject.name = value.name;
-        }
-        if (value.tags) {
-          keyObject.tags = value.tags;
-        }
-        const key = JSON.stringify(keyObject);
-        if (!itemsMap[key]) {
-          itemsMap[key] = [];
-        }
-        itemsMap[key].push(value);
-      });
-    });
+    const itemsMap: { [key: string]: MetricsDataValue[] } = {};
+    _.forEach(
+      data,
+      (dataValues: MetricsDataValue[], ulidTimestampMs: string) => {
+        dataValues.forEach((dataValue: MetricsDataValue, index: number) => {
+          // Create a key for each item based on name and tags to make it unique
+          const keyObject: any = {};
+          if (dataValue.name) {
+            keyObject.name = dataValue.name;
+          }
+          if (dataValue.tags) {
+            keyObject.tags = dataValue.tags;
+          }
+          const key = JSON.stringify(keyObject);
+          if (!itemsMap[key]) {
+            itemsMap[key] = [];
+          }
+
+          console.log({ dataValue: dataValue });
+          // Add ulidTimestampMs to each value instead of using the value timestamp
+          const newDataValue: MetricsDataValue = {
+            ...dataValue,
+            timestamp: ulidTimestampMs,
+          };
+
+          itemsMap[key].push(newDataValue);
+        });
+      }
+    );
     const metricsDataItems: MetricsDataItems = _.map(
       itemsMap,
-      (values, key) => {
+      (dataValues: MetricsDataValue[], key: string) => {
+        // key is a JSON string including name and tags
         return {
           ...JSON.parse(key),
-          values,
+          values: dataValues,
         };
       }
     );

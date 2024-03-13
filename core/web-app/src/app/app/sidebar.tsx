@@ -10,7 +10,7 @@ export default function Sidebar() {
   const { data: info } = useInfo();
 
   return (
-    <nav className="sidebar min-w-64 fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-wa-gray-500 bg-wa-gray-50 ">
+    <nav className="sidebar min-w-64 fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-wa-gray-500 bg-wa-gray-50 z-50">
       {/* Logo */}
       <figure
         onClick={() => router.push('/app')}

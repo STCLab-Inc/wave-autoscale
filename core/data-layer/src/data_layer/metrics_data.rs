@@ -177,7 +177,11 @@ impl DataLayer {
         from: u64,
         to: u64,
     ) -> Result<BTreeMap<String, serde_json::Value>> {
-        let metrics_data = self.metrics_data.read().unwrap();
+        let metrics_data = self.metrics_data.read();
+        if metrics_data.is_err() {
+            return Err(anyhow!("Failed to get metrics data"));
+        }
+        let metrics_data = metrics_data.unwrap();
         // Use BTreeMap to sort the keys
         let mut metric_values: BTreeMap<String, serde_json::Value> = BTreeMap::new();
         if let Some(metrics_data_item_map) = metrics_data.metrics_data_map.get(&metric_id) {
