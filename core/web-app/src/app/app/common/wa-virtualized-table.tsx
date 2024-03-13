@@ -68,7 +68,7 @@ function WAVirtualizedTable<TData extends RowData>({
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className={'flex h-12 first:pl-8'}
+                      className={'flex h-12 break-all first:pl-8'}
                       style={{
                         width:
                           header.getSize() !== 0 ? header.getSize() : undefined,
@@ -124,7 +124,7 @@ function WAVirtualizedTable<TData extends RowData>({
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
-                        className={classNames('first:pl-8')}
+                        className={classNames('break-all first:pl-8')}
                         key={cell.id}
                         style={{
                           display: 'flex',
