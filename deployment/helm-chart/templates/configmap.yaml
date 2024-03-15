@@ -9,7 +9,6 @@ metadata:
     app.kubernetes.io/component: config
     app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
-  wave-config.yaml: |
     {{- (tpl (.Files.Glob "config/wave-config.yaml").AsConfig . ) | nindent 2 }}
 
 ---
@@ -25,4 +24,3 @@ metadata:
     app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
   wave-definition.yaml: |
-    {{- (tpl (.Files.Glob "config/wave-definition.yaml").AsConfig . ) | nindent 2 }}
