@@ -31,8 +31,8 @@ spec:
           command: ["/app/wave-autoscale"]
           resources:
             requests:
-              memory: "1Gi"
-              cpu: "1000m"
+              memory: {{ .Values.deployment.memory }}
+              cpu: {{ .Values.deployment.cpu }}
           volumeMounts:
             - name: wave-config-volume
               mountPath: /app/config/wave-config.yaml
@@ -40,6 +40,8 @@ spec:
             - name: wave-definition-volume
               mountPath: /app/config/wave-definition.yaml
               subPath: wave-definition.yaml
+            - name: wa-pvc
+              mountPath: /app/data
           ports:
             - name: api-port
               containerPort: {{ .Values.config.port }}
@@ -54,6 +56,26 @@ spec:
         - name: wave-definition-volume
           configMap:
             name: wave-definition
+        - name: wa-pvc
+          persistentVolumeClaim:
+            claimName: wa-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wa-pvc
+  namespace: {{ if eq .Release.Namespace "default" }}{{ .Values.default_namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
+  labels:
+    app.kubernetes.io/name: wave-autoscale-pvc
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/component: data
+    app.kubernetes.io/part-of: wave-autoscale
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.deployment.storage }}
 ---
 apiVersion: v1
 kind: Service

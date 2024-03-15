@@ -6,7 +6,7 @@ image:
 config:
   debug: false
   quiet: false
-  db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
+  db_url: sqlite:///app/data/wave.db
   host: localhost
   port: 3024
   watch_definition_duration: 5000
@@ -30,11 +30,9 @@ config:
     linux_aarch64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_linux_arm64.tar.gz
     windows_x86_64: https://dl.influxdata.com/telegraf/releases/telegraf-1.27.1_windows_amd64.zip
 
-postgres:
-  version: 13.3
-  postgresUser: postgres
-  postgresPassword: postgres
-  postgresDatabase: postgres
-  port: 5432
+deployment:
+  cpu: 1000m
+  memory: 1Gi
+  storage: 10Gi
 
 default_namespace: wave-autoscale

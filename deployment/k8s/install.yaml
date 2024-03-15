@@ -1,31 +1,47 @@
 ---
+# Source: wave-autoscale/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wave-autoscale-sa
+  namespace: wave-autoscale
+---
 # Source: wave-autoscale/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: wave-config
+  namespace: wave-autoscale
   labels:
     app.kubernetes.io/name: wave-autoscale-config
-    app.kubernetes.io/version: 0.0.15
+    app.kubernetes.io/version: 0.2.2
     app.kubernetes.io/component: config
-    app.kubernetes.io/part-of: wave-autoscale
+    app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
-  wave-config.yaml: |
+  wave-config.yaml: |-
+    # Wave Autoscale
+    debug: false
+    quiet: false
+  
     # Data Layer
-    db_url: postgres://postgres:postgres@wave-autoscale-postgres-service:5432/postgres
+    db_url: sqlite:///app/data/wave.db
     watch_definition_duration: 5000
-    plan_logs_retention: 1d
-    reset_definitions_on_startup: true
-
+    plan_logs_retention: 14d
+    reset_definitions_on_startup: false
+  
+    # Metrics
+    metric_buffer_size_kb: 500000
+    enable_metrics_log: false
+  
     # API Server
     host: localhost
     port: 3024
-    
+  
     # Web Console
-    web_ui: false
+    web_ui: true
     web_ui_host: 0.0.0.0
     web_ui_port: 3025
-
+  
     vector:
       macos_x86_64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
       macos_aarch64: https://github.com/vectordotdev/vector/releases/download/v0.30.0/vector-0.30.0-x86_64-apple-darwin.tar.gz
@@ -43,40 +59,25 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wave-definitions
+  name: wave-definition
+  namespace: wave-autoscale
   labels:
-    app.kubernetes.io/name: wave-autoscale-definitions
-    app.kubernetes.io/version: 0.0.15
-    app.kubernetes.io/component: definitions
-    app.kubernetes.io/part-of: wave-autoscale
+    app.kubernetes.io/name: wave-autoscale-definition
+    app.kubernetes.io/version: 0.2.2
+    app.kubernetes.io/component: definition
+    app.kubernetes.io/part-of: wave-autoscale-enterprise
 data:
-  definitions.yaml: |
-    # Your definitions.yaml content here.
-    # See https://waveautoscale.com/docs/guide/getting-started/ for more information.
-    # https://vector.dev/docs/reference/configuration/sources/host_metrics/
-    ---
-    kind: Metric
-    id: vector_host_metrics
-    collector: vector
-    metadata:
-      sources:
-        my_source_id_1:
-          type: host_metrics
-          namespace: host
-          scrape_interval_secs: 5
-      sinks:
-        my_sinks_id:
-          type: wave-autoscale
-          inputs: ["my_source_id_1"]
+  wave-definition.yaml: |
 ---
-# Source: wave-autoscale/templates/deployment-postgres.yaml
+# Source: wave-autoscale/templates/deployment.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wa-pvc
+  namespace: wave-autoscale
   labels:
-    app.kubernetes.io/name: wave-autoscale-postgres-pvc
-    app.kubernetes.io/version: 0.0.15
+    app.kubernetes.io/name: wave-autoscale-pvc
+    app.kubernetes.io/version: 0.2.2
     app.kubernetes.io/component: data
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -86,91 +87,106 @@ spec:
     requests:
       storage: 10Gi
 ---
-# Source: wave-autoscale/templates/deployment-postgres.yaml
-apiVersion: v1
-kind: Service
+# Source: wave-autoscale/templates/cluster-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: wave-autoscale-postgres-service
+  name: node-reader
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+---
+# Source: wave-autoscale/templates/cluster-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:  
+  name: istio-admin
   labels:
-    app.kubernetes.io/name: wave-autoscale-postgres-service
-    app.kubernetes.io/version: 0.0.15
-    app.kubernetes.io/component: service
-    app.kubernetes.io/part-of: wave-autoscale
-spec:
-  selector:
-    app.kubernetes.io/name: wave-autoscale-postgres
-  ports:
-    - protocol: TCP
-      port: 5432
-      targetPort: 5432
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+- apiGroups: ["config.istio.io", "networking.istio.io", "rbac.istio.io", "authentication.istio.io", "security.istio.io"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+# Source: wave-autoscale/templates/cluster-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wave-autoscale-crb-edit
+  namespace: wave-autoscale
+subjects:
+- kind: ServiceAccount
+  name: wave-autoscale-sa
+  namespace: wave-autoscale
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: wave-autoscale/templates/cluster-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wave-autoscale-crb-node-reader
+  namespace: wave-autoscale
+subjects:
+- kind: ServiceAccount
+  name: wave-autoscale-sa
+  namespace: wave-autoscale
+roleRef:
+  kind: ClusterRole
+  name: node-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: wave-autoscale/templates/cluster-role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wave-autoscale-crb-istio-admin
+  namespace: wave-autoscale
+subjects:
+- kind: ServiceAccount
+  name: wave-autoscale-sa
+  namespace: wave-autoscale
+roleRef:
+  kind: ClusterRole
+  name: istio-admin
+  apiGroup: rbac.authorization.k8s.io
 ---
 # Source: wave-autoscale/templates/deployment.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: wave-autoscale-lb-service
+  namespace: wave-autoscale
   labels:
     app.kubernetes.io/name: wave-autoscale-lb-service
-    app.kubernetes.io/version: 0.0.15
+    app.kubernetes.io/version: 0.2.2
     app.kubernetes.io/component: service
     app.kubernetes.io/part-of: wave-autoscale
 spec:
   selector:
     app.kubernetes.io/name: wave-autoscale
   ports:
-    - protocol: TCP
+    - name: api-port
+      protocol: TCP
       port: 3024
       targetPort: 3024
----
-# Source: wave-autoscale/templates/deployment-postgres.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: wave-autoscale-postgres
-  labels:
-    app.kubernetes.io/name: wave-autoscale-postgres
-    app.kubernetes.io/version: 0.0.15
-    app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: wave-autoscale
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: wave-autoscale-postgres
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: wave-autoscale-postgres
-    spec:
-      containers:
-        - name: postgres
-          image: postgres:13.3
-          env:
-            - name: POSTGRES_USER
-              value: postgres
-            - name: POSTGRES_PASSWORD
-              value: postgres
-            - name: POSTGRES_DB
-              value: postgres
-          ports:
-            - containerPort: 5432
-          volumeMounts:
-            - name: postgresdb
-              mountPath: /var/lib/postgresql/data
-              subPath: postgresdb
-      volumes:
-        - name: postgresdb
-          persistentVolumeClaim:
-            claimName: wa-pvc
+    - name: web-ui-port
+      protocol: TCP
+      port: 3025
+      targetPort: 3025
 ---
 # Source: wave-autoscale/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wave-autoscale
+  namespace: wave-autoscale
   labels:
     app.kubernetes.io/name: wave-autoscale
-    app.kubernetes.io/version: 0.0.15
+    app.kubernetes.io/version: 0.2.2
     app.kubernetes.io/component: core
     app.kubernetes.io/part-of: wave-autoscale
 spec:
@@ -184,33 +200,43 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: wave-autoscale
-        app.kubernetes.io/version: 0.0.15
+        app.kubernetes.io/version: 0.2.2
         app.kubernetes.io/component: core
         app.kubernetes.io/part-of: wave-autoscale
     spec:
+      serviceAccountName: wave-autoscale-sa
       containers:
         - name: wave-autoscale
           image: waveautoscale/wave-autoscale:latest
           imagePullPolicy: Always
-          command: ["./wave-autoscale"]
-          args:
-            [
-              "--config",
-              "/usr/src/wave-autoscale/wave-config.yaml",
-              "--definition",
-              "/usr/src/wave-autoscale/definitions.yaml",
-            ]
+          command: ["/app/wave-autoscale"]
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 1000m
           volumeMounts:
             - name: wave-config-volume
-              mountPath: /usr/src/wave-autoscale/wave-config.yaml
+              mountPath: /app/config/wave-config.yaml
               subPath: wave-config.yaml
-            - name: wave-definitions-volume
-              mountPath: /usr/src/wave-autoscale/definitions.yaml
-              subPath: definitions.yaml
+            - name: wave-definition-volume
+              mountPath: /app/config/wave-definition.yaml
+              subPath: wave-definition.yaml
+            - name: wa-pvc
+              mountPath: /app/data
+          ports:
+            - name: api-port
+              containerPort: 3024
+              hostPort: 3024
+            - name: web-ui-port
+              containerPort: 3025
+              hostPort: 3025
       volumes:
         - name: wave-config-volume
           configMap:
             name: wave-config
-        - name: wave-definitions-volume
+        - name: wave-definition-volume
           configMap:
-            name: wave-definitions
+            name: wave-definition
+        - name: wa-pvc
+          persistentVolumeClaim:
+            claimName: wa-pvc
