@@ -13,11 +13,32 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 impl DataLayer {
-    // Sync scaling components with the yaml
+    // Sync scaling components with the yaml - scaling components are all deleted and then added
     pub async fn sync_scaling_component_yaml(&self, yaml: &str) -> Result<()> {
+        self.sync_scaling_component_yaml_for_unmatched_ids(yaml, true)
+            .await
+    }
+
+    // Sync scaling components with the yaml - compare DB and yaml id, match id is ignore (no add)
+    pub async fn sync_scaling_component_yaml_for_unmatched_ids(
+        &self,
+        yaml: &str,
+        reset: bool,
+    ) -> Result<()> {
         let deserializer = serde_yaml::Deserializer::from_str(yaml);
         let mut scaling_component_definitions: Vec<(ScalingComponentDefinition, String)> =
             Vec::new();
+
+        let mut db_scaling_component_ids: HashMap<String, bool> = HashMap::new();
+        if !reset {
+            // search DB ScalingComponent Definitions.
+            let db_all_scaling_components = self.get_all_scaling_components().await?;
+            db_all_scaling_components
+                .iter()
+                .for_each(|scaling_component| {
+                    db_scaling_component_ids.insert(scaling_component.id.clone(), true);
+                });
+        }
 
         for document in deserializer {
             // Get the yaml from the document
@@ -28,11 +49,17 @@ impl DataLayer {
             }
             let parsed = serde_yaml::from_value::<ScalingComponentDefinition>(value.clone())?;
             let document_yaml = serde_yaml::to_string(&value)?;
+            // match id is ignore (no add)
+            if !reset && db_scaling_component_ids.contains_key(parsed.id.as_str()) {
+                continue;
+            }
             scaling_component_definitions.push((parsed, document_yaml));
         }
 
-        // Remove all scaling components
-        self.delete_all_scaling_components().await?;
+        if reset {
+            // Remove all scaling components
+            self.delete_all_scaling_components().await?;
+        }
 
         // Add scaling components
         self.add_scaling_components(scaling_component_definitions)

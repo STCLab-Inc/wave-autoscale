@@ -9,12 +9,28 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::Row;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 impl DataLayer {
+    // Sync metrics from yaml
     pub async fn sync_metric_yaml(&self, yaml: &str) -> Result<()> {
+        self.sync_metric_yaml_for_unmatched_ids(yaml, true).await
+    }
+    // reset - metrics are all deleted and then added
+    // unreset - compare DB and yaml id, match id is ignore (no add)
+    pub async fn sync_metric_yaml_for_unmatched_ids(&self, yaml: &str, reset: bool) -> Result<()> {
         let deserializer = serde_yaml::Deserializer::from_str(yaml);
         let mut metric_definitions: Vec<(MetricDefinition, String)> = Vec::new();
+
+        let mut db_metric_ids: HashMap<String, bool> = HashMap::new();
+        if !reset {
+            // search DB Metric Definitions.
+            let db_all_metrics = self.get_all_metrics().await?;
+            db_all_metrics.iter().for_each(|metric| {
+                db_metric_ids.insert(metric.id.clone(), true);
+            });
+        }
 
         for document in deserializer {
             // Get the yaml from the document
@@ -25,11 +41,17 @@ impl DataLayer {
             }
             let parsed = serde_yaml::from_value::<MetricDefinition>(value.clone())?;
             let document_yaml = serde_yaml::to_string(&value)?;
+            // match id is ignore (no add)
+            if !reset && db_metric_ids.contains_key(parsed.id.as_str()) {
+                continue;
+            }
             metric_definitions.push((parsed, document_yaml));
         }
 
-        // Remove metrics
-        self.delete_all_metrics().await?;
+        if reset {
+            // Remove metrics
+            self.delete_all_metrics().await?;
+        }
 
         // Add metrics
         self.add_metrics(metric_definitions).await

@@ -14,8 +14,20 @@ use uuid::Uuid;
 
 impl DataLayer {
     pub async fn add_plan_yaml(&self, yaml: &str) -> Result<()> {
+        self.add_plan_yaml_for_unmatched_ids(yaml, true).await
+    }
+    pub async fn add_plan_yaml_for_unmatched_ids(&self, yaml: &str, rewrite: bool) -> Result<()> {
         let deserializer = serde_yaml::Deserializer::from_str(yaml);
         let mut scaling_plan_definitions: Vec<(ScalingPlanDefinition, String)> = Vec::new();
+
+        let mut db_plan_ids: HashMap<String, bool> = HashMap::new();
+        if !rewrite {
+            // search DB ScalingComponent Definitions.
+            let db_all_plans = self.get_all_plans().await?;
+            db_all_plans.iter().for_each(|plan| {
+                db_plan_ids.insert(plan.id.clone(), true);
+            });
+        }
 
         for document in deserializer {
             // Get the yaml from the document
@@ -26,6 +38,12 @@ impl DataLayer {
             }
             let parsed = serde_yaml::from_value::<ScalingPlanDefinition>(value.clone())?;
             let document_yaml = serde_yaml::to_string(&value)?;
+            if !rewrite {
+                // match id is ignore (no add)
+                if db_plan_ids.contains_key(parsed.id.as_str()) {
+                    continue;
+                }
+            }
             scaling_plan_definitions.push((parsed, document_yaml));
         }
 
