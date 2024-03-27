@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 impl DataLayer {
-    // Sync scaling components with the yaml
+    // Sync scaling components with the yaml - scaling components are all deleted and then added
     pub async fn sync_scaling_component_yaml(&self, yaml: &str) -> Result<()> {
         let deserializer = serde_yaml::Deserializer::from_str(yaml);
         let mut scaling_component_definitions: Vec<(ScalingComponentDefinition, String)> =
@@ -33,6 +33,40 @@ impl DataLayer {
 
         // Remove all scaling components
         self.delete_all_scaling_components().await?;
+
+        // Add scaling components
+        self.add_scaling_components(scaling_component_definitions)
+            .await
+    }
+
+    // Sync scaling components with the yaml - compare DB and yaml id, match id is ignore (no add)
+    pub async fn sync_scaling_component_yaml_for_no_match_id(&self, yaml: &str) -> Result<()> {
+        let deserializer = serde_yaml::Deserializer::from_str(yaml);
+        let mut scaling_component_definitions: Vec<(ScalingComponentDefinition, String)> =
+            Vec::new();
+        // search DB Metric Definitions.
+        let db_all_metrics = self.get_all_metrics().await?;
+        let mut db_metric_ids: HashMap<String, bool> = HashMap::new();
+        db_all_metrics.iter().for_each(|metric| {
+            db_metric_ids.insert(metric.id.clone(), true);
+        });
+
+        for document in deserializer {
+            // Get the yaml from the document
+            let value = serde_yaml::Value::deserialize(document)?;
+            let kind = value.get("kind").and_then(serde_yaml::Value::as_str);
+            if kind.is_none() || kind.unwrap() != ObjectKind::ScalingComponent.to_string() {
+                continue;
+            }
+            let parsed = serde_yaml::from_value::<ScalingComponentDefinition>(value.clone())?;
+            let document_yaml = serde_yaml::to_string(&value)?;
+
+            // match id is ignore (no add)
+            if db_metric_ids.contains_key(parsed.id.as_str()) {
+                continue;
+            }
+            scaling_component_definitions.push((parsed, document_yaml));
+        }
 
         // Add scaling components
         self.add_scaling_components(scaling_component_definitions)

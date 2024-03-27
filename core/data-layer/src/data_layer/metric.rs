@@ -9,9 +9,11 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::Row;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 impl DataLayer {
+    // Sync metrics from yaml - metrics are all deleted and then added
     pub async fn sync_metric_yaml(&self, yaml: &str) -> Result<()> {
         let deserializer = serde_yaml::Deserializer::from_str(yaml);
         let mut metric_definitions: Vec<(MetricDefinition, String)> = Vec::new();
@@ -30,6 +32,38 @@ impl DataLayer {
 
         // Remove metrics
         self.delete_all_metrics().await?;
+
+        // Add metrics
+        self.add_metrics(metric_definitions).await
+    }
+    // Sync metrics from yaml - compare DB and yaml id, match id is ignore (no add)
+    pub async fn sync_metric_yaml_for_no_match_id(&self, yaml: &str) -> Result<()> {
+        let deserializer = serde_yaml::Deserializer::from_str(yaml);
+        let mut metric_definitions: Vec<(MetricDefinition, String)> = Vec::new();
+
+        // search DB Metric Definitions.
+        let db_all_metrics = self.get_all_metrics().await?;
+        let mut db_metric_ids: HashMap<String, bool> = HashMap::new();
+        db_all_metrics.iter().for_each(|metric| {
+            db_metric_ids.insert(metric.id.clone(), true);
+        });
+
+        for document in deserializer {
+            // Get the yaml from the document
+            let value = serde_yaml::Value::deserialize(document)?;
+            let kind = value.get("kind").and_then(serde_yaml::Value::as_str);
+            if kind.is_none() || kind.unwrap() != ObjectKind::Metric.to_string() {
+                continue;
+            }
+            let parsed = serde_yaml::from_value::<MetricDefinition>(value.clone())?;
+            let document_yaml = serde_yaml::to_string(&value)?;
+
+            // match id is ignore (no add)
+            if db_metric_ids.contains_key(parsed.id.as_str()) {
+                continue;
+            }
+            metric_definitions.push((parsed, document_yaml));
+        }
 
         // Add metrics
         self.add_metrics(metric_definitions).await

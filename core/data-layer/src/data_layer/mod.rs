@@ -235,13 +235,15 @@ impl DataLayer {
     pub async fn add_definitions(&self, yaml_str: &str) -> Result<()> {
         debug!("Loading the definition string into the database");
 
-        let metric_definitions_result = self.sync_metric_yaml(yaml_str).await;
+        let metric_definitions_result = self.sync_metric_yaml_for_no_match_id(yaml_str).await;
         if metric_definitions_result.is_err() {
             return Err(anyhow!("Failed to save metric definitions into DataLayer"));
         }
 
         // Save definitions into DataLayer
-        let scaling_component_definitions_result = self.sync_scaling_component_yaml(yaml_str).await;
+        let scaling_component_definitions_result = self
+            .sync_scaling_component_yaml_for_no_match_id(yaml_str)
+            .await;
         if scaling_component_definitions_result.is_err() {
             return Err(anyhow!(
                 "Failed to save scaling component definitions into DataLayer"
