@@ -33,6 +33,7 @@ struct ExressionResult {
     result: bool,
     error: bool,
     message: Option<String>,
+    expression_values: Option<Vec<HashMap<String, Option<f64>>>>
 }
 
 /**
@@ -453,9 +454,12 @@ impl<'a> ScalingPlanner {
                             }
                             debug!("[ScalingPlanner] expression\n{}", expression);
                             // Evaluate the expression.
-                            let expression_result =
-                                async_with!(context => |ctx| {
+                            let expression_result = async_with!(context => |ctx| {
                                 let result = ctx.eval::<bool, _>(expression.clone());
+
+                                // expression get value (for history)
+                                let expression_map = expression_get_value(expression.clone(), ctx).await;
+                                
                                 if result.is_err() {
                                     let message = result.err().unwrap().to_string();
                                     error!("[ScalingPlanner] Failed to evaluate expression\n{}\n\n{}", expression, message);
@@ -464,6 +468,7 @@ impl<'a> ScalingPlanner {
                                         result: false,
                                         error: true,
                                         message: Some(message),
+                                        expression_values: Some(expression_map),
                                     };
                                 }
                                 let result = result.unwrap();
@@ -471,18 +476,20 @@ impl<'a> ScalingPlanner {
                                     result,
                                     error: false,
                                     message: None,
+                                    expression_values: Some(expression_map),
                                 }
                             }).await;
+
+                            if let Some(expression_values) = expression_result.clone().expression_values {
+                                let mut expression_values = expression_values.clone();
+                                expression_value_map_for_history.append(&mut expression_values);
+                            }
 
                             debug!(
                                 "[ScalingPlanner] expression result - {:?}",
                                 expression_result
                             );
 
-                            // expression get value (for history)
-                            let expression_map =
-                                expression_get_value(expression.clone(), context.clone()).await;
-                            expression_value_map_for_history.append(&mut expression_map.clone());
 
                             // If the expression is false, move to the next plan
                             if !expression_result.result {
@@ -698,10 +705,10 @@ async fn run_plan_item(
 
 async fn expression_get_value(
     expression: String,
-    context: rquickjs::AsyncContext,
+    ctx: rquickjs::Ctx<'_>,
 ) -> Vec<HashMap<String, Option<f64>>> {
-    let re_get_fn = regex::Regex::new(r"[get\()](.*?)[\)]").unwrap();
-    let re_varables = regex::Regex::new(r"\$[^\s]+\s").unwrap();
+    let re_get_fn = regex::Regex::new(r"get\([^)]*\)").unwrap();
+    let re_varables = regex::Regex::new(r"\$[A-Za-z0-9\_]+").unwrap();
     let expression = expression.replace('\n', "");
     let mut expression_value_map: Vec<HashMap<String, Option<f64>>> = Vec::new();
     let mut expression_arr = Vec::new();
@@ -714,17 +721,13 @@ async fn expression_get_value(
         expression_arr.push(cap.as_str().to_string());
     }
     for value in expression_arr.iter() {
-        let get_result: HashMap<String, Option<f64>> = async_with!(context => |ctx| {
-            let get_value =  ctx.eval::<f64, _>(value.as_str());
-            let mut history_map = HashMap::new();
-            history_map.insert(value.as_str().to_string(), match get_value {
-                Ok(value) => Some(value),
-                Err(_) => None,
-            });
-            history_map
-        })
-        .await;
-        expression_value_map.append(&mut vec![get_result.clone()]);
+        let get_value =  ctx.eval::<f64, _>(value.as_str());
+        let mut history_map = HashMap::new();
+        history_map.insert(value.as_str().to_string(), match get_value {
+            Ok(value) => Some(value),
+            Err(_) => None,
+        });
+        expression_value_map.append(&mut vec![history_map.clone()]);
     }
     expression_value_map
 }
@@ -829,27 +832,55 @@ mod tests {
             error!("Error creating context");
             return;
         };
-        let expression =
-            "get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'max',\n  period_sec: 120\n}) <= 30 || get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'min',\n  period_sec: 120\n}) <= 40\n";
-        assert_eq!(
-            expression_get_value(expression.to_string(), context.clone())
-                .await
-                .len(),
-            2
-        );
-        async_with!(context => |ctx| {
+
+        rquickjs::async_with!(context => |ctx| {
+            let expression =
+                "get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'max',\n  period_sec: 120\n}) <= 30 || get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'min',\n  period_sec: 120\n}) <= 40\n";
+            assert_eq!(
+                expression_get_value(expression.to_string(), ctx)
+                    .await
+                    .len(),
+                2
+            );
+
+            // variables setting
             let expression = "var $test = 1; var $test2 = 2;";
             let _ = ctx.eval::<(), _>(expression);
-        })
-        .await;
-        let expression =
-            "$test == 1 && $test2 > 1";
-        assert_eq!(
-            expression_get_value(expression.to_string(), context.clone())
-                .await
-                .len(),
-            2
-        );
+            // expression get value
+            let expression =
+                "$test == 1 && $test2 > 1";
+            assert_eq!(
+                expression_get_value(expression.to_string(), ctx)
+                    .await
+                    .len(),
+                2
+            );
+            
+            // variables setting
+            let expression = "var $max_cpu = 2;var $max_pod = 20;var $cpu_usage_max = 0.7627847295725013;var $min_cpu = 0.3;var $min_pod = 1;var $cpu_unit = 0.1;var $cpu_section_cnt = ($max_cpu - $min_cpu) / $cpu_unit;var $pod_unit = Math.max(($max_pod - $min_pod) / $cpu_section_cnt,0);var $metric_cpu_section_cnt = ($cpu_usage_max - $min_cpu) / $cpu_unit;";
+            let _ = ctx.eval::<(), _>(expression);
+            // expression get value
+            let expression = "$cpu_usage_max";
+            assert_eq!(expression_get_value(expression.to_string(), ctx).await.get(0).unwrap().get("$cpu_usage_max").unwrap().unwrap(), 0.7627847295725013);
+            let expression = "Math.max(Math.min(($metric_cpu_section_cnt * $pod_unit) + $min_pod, $max_pod),$min_pod)";
+            println!(" >> {:?}", expression_get_value(expression.to_string(), ctx).await);
+            assert_eq!(expression_get_value(expression.to_string(), ctx).await.get(0).unwrap().get("$metric_cpu_section_cnt").unwrap().unwrap(), 4.627847295725013);
+
+            // variables setting
+            let expression = "var $cpu_usage_max=0.5124647339792483;var $cpu_unit = 0.1;var $max_pod = 20;var $pod_unit = Math.max(($max_pod - $min_pod) / $cpu_section_cnt,0);var $metric_cpu_section_cnt = ($cpu_usage_max - $min_cpu) / $cpu_unit;var $max_cpu = 2;var $min_pod = 1;var $cpu_section_cnt = ($max_cpu - $min_cpu) / $cpu_unit;var $min_cpu = 0.3;";
+            let _ = ctx.eval::<(), _>(expression);
+            // expression get value
+            let expression = "$cpu_usage_max";
+            assert_eq!(expression_get_value(expression.to_string(), ctx).await.get(0).unwrap().get("$cpu_usage_max").unwrap().unwrap(), 0.5124647339792483);
+            let expression = "$metric_cpu_section_cnt";
+            println!(" >> $metric_cpu_section_cnt: {:?}", expression_get_value(expression.to_string(), ctx).await);
+            let expression = "Math.max(Math.min(($metric_cpu_section_cnt * $pod_unit) + $min_pod, $max_pod),$min_pod)";
+            println!(" >> {:?}", expression_get_value(expression.to_string(), ctx).await);
+
+            let result_val = ctx.eval::<f64, _>("$metric_cpu_section_cnt");
+            let result_cal = ctx.eval::<f64, _>("($cpu_usage_max - $min_cpu) / $cpu_unit");
+            assert_eq!(result_val.unwrap(), result_cal.unwrap());
+        }).await;
     }
 
     #[tokio::test]
