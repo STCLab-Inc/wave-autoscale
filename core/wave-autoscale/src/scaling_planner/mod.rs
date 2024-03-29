@@ -833,6 +833,23 @@ mod tests {
             return;
         };
 
+        let re_get_fn = regex::Regex::new(r"get\([^)]*\)").unwrap();
+        let re_varables = regex::Regex::new(r"\$[A-Za-z0-9\_]+").unwrap();
+        let expression = r"
+        Math.max((get({metric_id: 'test_id'}) <= 30 || get({metric_id: 'test_id'}) <= 40), 0)
+        Math.max(Math.min(($metric_cpu_section_cnt * $pod_unit) + $min_pod, $max_pod),$min_pod)
+        ";
+        let mut re_get_fn_len = 0;
+        let mut re_varables_len = 0;
+        for _ in re_get_fn.find_iter(expression) {
+            re_get_fn_len += 1;
+        }
+        for _ in re_varables.find_iter(expression) {
+            re_varables_len += 1;
+        }
+        assert_eq!(re_get_fn_len, 2);
+        assert_eq!(re_varables_len, 5);
+
         rquickjs::async_with!(context => |ctx| {
             let expression =
                 "get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'max',\n  period_sec: 120\n}) <= 30 || get({\n  metric_id: 'cloudwatch_dynamodb_id',\n  name: 'dynamodb_capacity_usage',\n  tags: {\n    tag1: 'value1'\n  },\n  stats: 'min',\n  period_sec: 120\n}) <= 40\n";
