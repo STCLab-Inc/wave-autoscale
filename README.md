@@ -1,5 +1,43 @@
 <img src="https://wave-autoscale-marketplace-resources.s3.amazonaws.com/wa-marketplace-logo.png" alt="drawing" style="width:400px;"/>
 
+# Wave Autoscale (Open Source Version) - Deprecated
+
+## ⚠️ Deprecation Notice
+
+This open-source version of Wave Autoscale has been deprecated. While Wave Autoscale was initially developed as an open-source project to support a variety of autoscaling patterns, we’ve made the decision to discontinue this version.
+
+## Why the Change?
+
+We heard from our customers that manual autoscaling efforts were no longer sufficient for modern, dynamic workloads. They wanted an AI-driven solution to manage autoscaling without the need for constant human intervention.
+
+To meet these needs, we have transitioned to a proprietary AI-powered version of Wave Autoscale. This enhanced version offers:
+- AI-driven scaling and optimization, eliminating manual efforts.
+- Real-time decision-making for Kubernetes autoscaling.
+- Cost-efficient scaling tailored to application demands.
+
+## What Does This Mean for You?
+
+- This repository will no longer be maintained or updated.
+- No new features or bug fixes will be provided.
+- We recommend users explore the new AI-powered Wave Autoscale for a more advanced and hands-free autoscaling experience.
+
+## Moving Forward
+
+If you’re interested in the enhanced version of Wave Autoscale:
+- Visit our website: https://waveautoscale.com
+- Explore how AI-driven autoscaling can improve your workload management, reduce costs, and optimize performance.
+
+For questions or feedback, please feel free to contact us via team@waveautoscale.com.
+
+## Archive and Access
+
+This repository will remain accessible for historical reference but will no longer be actively maintained. Users are free to fork the repository, but please note that it is provided as-is.
+
+Thank you for supporting Wave Autoscale! We look forward to helping you achieve AI-powered autoscaling for your modern infrastructure.
+
+
+---
+
 Wave Autoscale is an unified autoscaling & traffic management tool for clouds and Kubernetes. Customize autoscaling and traffic control of clouds to meet your availability and cost-efficiency needs.
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/STCLab-Inc/wave-autoscale)
